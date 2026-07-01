@@ -26,7 +26,6 @@ import {
   Copy,
   Share2,
   Bell,
-  Zap,
 } from "lucide-react";
 import type { Student } from "@/generated/prisma/client";
 import { extractOtpFromSms } from "@/lib/sms-otp";
