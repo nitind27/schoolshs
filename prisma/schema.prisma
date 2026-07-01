@@ -1,0 +1,289 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model School {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+  code      String   @unique
+  district  String?
+  address   String?
+  phone     String?
+  email     String?
+  isActive  Boolean  @default(true)
+
+  users           User[]
+  students        Student[]
+  staff           Staff[]
+  classes         SchoolClass[]
+  settings        SchoolSettings?
+  bulkSubmissions BulkSubmission[]
+  automationJobs  AutomationJob[]
+  smsInbox        SmsInboxMessage[]
+
+  @@index([isActive])
+}
+
+model User {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         String
+  schoolId     String?
+  school       School?   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+
+  @@index([schoolId])
+  @@index([role])
+}
+
+model SchoolSettings {
+  id                 String @id @default(cuid())
+  schoolId           String? @unique
+  school             School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolName         String @default("My School")
+  schoolAddress      String?
+  schoolPhone        String?
+  schoolEmail        String?
+  academicYear       String @default("2025-26")
+  logoPath           String?
+  idCardPrimaryColor String @default("#e91e8c")
+  idCardAccentColor  String @default("#1e3a8a")
+  tagline            String?
+  /** School SJED portal login — ek baar save, sab students ke liye same session */
+  dgSjedUsername     String?
+  dgSjedPassword     String?
+  /** Post-Matric Citizen portal (optional) */
+  dgCitizenLoginId   String?
+  dgCitizenPassword  String?
+  dgCitizenLoginMethod String? @default("mobile")
+  /** Phone SMS webhook secret — SMS Forwarder app is token se connect */
+  smsInboxToken      String?  @unique
+  /** DG OTP wala registered mobile — phone bridge link is number se connect */
+  dgOtpMobile        String?
+}
+
+model SmsInboxMessage {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sender     String?
+  body       String
+  otpCode    String?
+  consumed   Boolean  @default(false)
+
+  @@index([schoolId, createdAt])
+  @@index([schoolId, consumed])
+}
+
+model Staff {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  schoolId      String?
+  school        School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  employeeId    String?
+  firstName     String
+  lastName      String
+  designation   String
+  department    String?
+  mobileNumber  String
+  email         String?
+  gender        String?
+  dateOfJoining String?
+  isActive      Boolean  @default(true)
+  photoPath     String?
+  classes       SchoolClass[] @relation("ClassTeacher")
+
+  @@unique([schoolId, employeeId])
+  @@index([schoolId])
+  @@index([isActive])
+  @@index([designation])
+}
+
+model SchoolClass {
+  id                  String   @id @default(cuid())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  schoolId            String?
+  school              School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name                String
+  standard            String
+  section             String
+  academicYear        String   @default("2025-26")
+  institutionName     String?
+  institutionDistrict String?
+  classTeacherId      String?
+  classTeacher        Staff?   @relation("ClassTeacher", fields: [classTeacherId], references: [id])
+  students            Student[]
+
+  @@unique([schoolId, standard, section, academicYear])
+  @@index([schoolId])
+  @@index([standard])
+  @@index([academicYear])
+}
+
+model Student {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  schoolId  String?
+  school    School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  firstName        String
+  middleName       String?
+  surname          String
+  aadhaarName      String
+  dateOfBirth      String
+  gender           String
+  aadhaarNumber    String
+  rationCardNumber String?
+  mobileNumber     String
+  email            String?
+  motherName       String
+  fatherName       String
+  guardianName     String?
+  category         String
+  caste            String?
+  religion         String
+  maritalStatus    String  @default("Unmarried")
+  parentOccupation String
+  isOrphan         Boolean @default(false)
+  annualFamilyIncome Float
+
+  classId              String?
+  schoolClass          SchoolClass? @relation(fields: [classId], references: [id])
+  rollNumber           String?
+  grNumber             String?
+  section              String?
+  standard             String?
+  childUid             String?
+  bloodGroup           String?
+  idCardValidUpto      String?
+  idPhotoProcessedPath String?
+
+  currentAddress     String
+  currentDistrict    String
+  currentCity        String
+  currentPincode     String
+  permanentAddress   String
+  permanentDistrict  String
+  permanentCity      String
+  permanentPincode   String
+  habitationType     String  @default("Own")
+  familySize         Int     @default(4)
+  residentType       String  @default("Rural")
+  isHosteler         Boolean @default(false)
+  hostelType         String?
+  hostelName         String?
+
+  scholarshipScheme    String
+  financialYear        String
+  courseType           String
+  courseName           String
+  institutionDistrict  String
+  institutionName      String
+  currentYear          String
+  admissionType        String  @default("Regular")
+  startDate            String?
+  completionDate       String?
+  board10th            String
+  percentage10th       Float
+  year10th             String
+  board12th            String?
+  percentage12th       Float?
+  year12th             String?
+  previousQualification String?
+
+  bankName          String
+  branchName        String
+  accountNumber     String
+  ifscCode          String
+  accountHolderName String
+
+  dgLoginId       String?
+  dgPassword      String?
+  dgLoginMethod   String?  @default("mobile")
+
+  photoPath           String?
+  aadhaarDocPath      String?
+  incomeCertPath      String?
+  casteCertPath       String?
+  marksheet10Path     String?
+  marksheet12Path     String?
+  bankPassbookPath    String?
+  feeReceiptPath      String?
+
+  lastAutomationAt    DateTime?
+  lastAutomationLog   String?
+
+  status           String  @default("draft")
+  submissionDate   DateTime?
+  notes            String?
+  validationErrors String?
+
+  @@unique([schoolId, aadhaarNumber])
+  @@index([schoolId])
+  @@index([status])
+  @@index([category])
+  @@index([scholarshipScheme])
+  @@index([classId])
+  @@index([standard])
+  @@index([section])
+}
+
+model BulkSubmission {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  schoolId    String?
+  school      School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  totalCount  Int
+  successCount Int     @default(0)
+  failedCount  Int     @default(0)
+  status      String   @default("pending")
+  studentIds  String
+  results     String?
+
+  @@index([schoolId])
+}
+
+model AutomationJob {
+  id              String    @id @default(cuid())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  schoolId        String?
+  school          School?   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  status          String    @default("pending")
+  mode            String    @default("auto")
+  actionMode      String    @default("auto")
+  portalType      String    @default("sjed")
+  studentIds      String
+  currentIndex    Int       @default(0)
+  currentStep     String?
+  totalCount      Int       @default(0)
+  completedCount  Int       @default(0)
+  failedCount     Int       @default(0)
+  logs            String?
+  studentProgress String?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  errorMessage    String?
+  /** User/dashboard se OTP — automation auto-fill karega */
+  otpCode         String?
+
+  @@index([schoolId])
+  @@index([status])
+  @@index([createdAt])
+}
