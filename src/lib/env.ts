@@ -14,14 +14,32 @@ function enc(value: string): string {
   return encodeURIComponent(value);
 }
 
-/** Build DB URL from DB_* parts or use DATABASE_URL if set */
-export function buildDatabaseUrl(): string {
-  const direct = read("DATABASE_URL");
-  if (direct) return direct;
+/** DB mode — DB_PROVIDER wins over a stale DATABASE_URL on Vercel */
+export function getDbProvider(): DbProvider {
+  const explicit = read("DB_PROVIDER")?.toLowerCase();
+  if (explicit === "mysql" || explicit === "sqlite") {
+    return explicit;
+  }
 
-  const provider = (read("DB_PROVIDER") || "sqlite").toLowerCase() as DbProvider;
+  if (read("DB_HOST") && read("DB_USER") && read("DB_NAME")) {
+    return "mysql";
+  }
+
+  const direct = read("DATABASE_URL");
+  if (direct?.startsWith("mysql://")) return "mysql";
+  if (direct?.startsWith("file:") || direct?.startsWith("libsql:")) return "sqlite";
+
+  return "sqlite";
+}
+
+/** Build DB URL from DB_* parts or use DATABASE_URL if compatible */
+export function buildDatabaseUrl(): string {
+  const provider = getDbProvider();
 
   if (provider === "mysql") {
+    const direct = read("DATABASE_URL");
+    if (direct?.startsWith("mysql://")) return direct;
+
     const host = read("DB_HOST");
     const user = read("DB_USER");
     const database = read("DB_NAME");
@@ -30,22 +48,21 @@ export function buildDatabaseUrl(): string {
 
     if (!host || !user || !database) {
       throw new Error(
-        "MySQL config missing: set DB_HOST, DB_USER, DB_NAME (and DB_PASSWORD) in .env, or set DATABASE_URL"
+        "MySQL config missing: set DB_PROVIDER=mysql and DB_HOST, DB_USER, DB_NAME, DB_PASSWORD"
       );
     }
 
     return `mysql://${enc(user)}:${enc(password)}@${host}:${port}/${database}`;
   }
 
+  const direct = read("DATABASE_URL");
+  if (direct?.startsWith("file:") || direct?.startsWith("libsql:")) {
+    return direct;
+  }
+
   const file = read("DB_FILE") || "./dev.db";
   const absolute = path.isAbsolute(file) ? file : path.resolve(process.cwd(), file);
   return `file:${absolute}`;
-}
-
-export function getDbProvider(): DbProvider {
-  const url = buildDatabaseUrl();
-  if (url.startsWith("mysql://")) return "mysql";
-  return "sqlite";
 }
 
 export interface MysqlConnectionConfig {

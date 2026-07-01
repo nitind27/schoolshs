@@ -4,13 +4,15 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { applyDatabaseUrlFromEnv, getDbProvider, getMysqlConfig } from "./env";
 
 export function createPrismaClient(): PrismaClient {
-  const url = applyDatabaseUrlFromEnv();
+  const provider = getDbProvider();
+  applyDatabaseUrlFromEnv();
 
-  if (getDbProvider() === "mysql") {
+  if (provider === "mysql") {
     const adapter = new PrismaMariaDb(getMysqlConfig());
     return new PrismaClient({ adapter });
   }
 
+  const url = process.env.DATABASE_URL!;
   const adapter = new PrismaLibSql({ url });
   return new PrismaClient({ adapter });
 }
