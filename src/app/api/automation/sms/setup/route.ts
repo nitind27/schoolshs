@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { buildPhoneBridgeUrl, buildSmsWebhookUrl } from "@/lib/env-auth";
 
 function generateSmsToken(): string {
   return crypto.randomBytes(24).toString("hex");
@@ -27,8 +28,8 @@ export async function GET(request: NextRequest) {
 
     const origin = request.nextUrl.origin;
     const token = settings.smsInboxToken!;
-    const webhookUrl = `${origin}/api/automation/sms/webhook?token=${token}`;
-    const phoneBridgeUrl = `${origin}/m/sms-bridge?token=${token}`;
+    const webhookUrl = buildSmsWebhookUrl(origin, token);
+    const phoneBridgeUrl = buildPhoneBridgeUrl(origin, token);
     const mobile = settings.dgOtpMobile || "";
 
     return NextResponse.json({

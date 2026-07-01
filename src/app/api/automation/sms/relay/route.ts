@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { extractOtpFromSms } from "@/lib/sms-otp";
 
+export const dynamic = "force-dynamic";
+
 async function schoolFromToken(token: string) {
   if (!token) return null;
   return prisma.schoolSettings.findFirst({
@@ -52,6 +54,17 @@ export async function POST(request: NextRequest) {
         consumed: false,
       },
     });
+
+    const activeJob = await prisma.automationJob.findFirst({
+      where: { schoolId: settings.schoolId, status: { in: ["pending", "running"] } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (activeJob) {
+      await prisma.automationJob.update({
+        where: { id: activeJob.id },
+        data: { otpCode: otp },
+      });
+    }
 
     return NextResponse.json({ ok: true, message: "OTP website par bhej diya — auto-fill hoga" });
   } catch {

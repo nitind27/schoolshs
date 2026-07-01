@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { buildPhoneBridgeUrl } from "@/lib/env-auth";
 
 function generateSmsToken(): string {
   return crypto.randomBytes(24).toString("hex");
@@ -15,7 +16,7 @@ function normalizeMobile(raw: string): string | null {
 }
 
 function bridgeUrl(origin: string, token: string) {
-  return `${origin}/m/sms-bridge?token=${token}`;
+  return buildPhoneBridgeUrl(origin, token);
 }
 
 export async function POST(request: NextRequest) {

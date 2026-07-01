@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,8 @@ import {
   Smartphone,
   MessageSquare,
   Copy,
+  Share2,
+  Bell,
 } from "lucide-react";
 import type { Student } from "@/generated/prisma/client";
 
@@ -133,6 +135,8 @@ function AutoApplyContent() {
   >([]);
   const [smsLatestOtp, setSmsLatestOtp] = useState<string | null>(null);
   const [urlCopied, setUrlCopied] = useState(false);
+  const [smsOtpMode, setSmsOtpMode] = useState<"mine" | "remote">("remote");
+  const prevOtpRef = useRef<string | null>(null);
 
   const loadSmsSetup = useCallback(() => {
     fetch("/api/automation/sms/setup")
@@ -157,7 +161,10 @@ function AutoApplyContent() {
   const loadSessionStatus = useCallback(() => {
     fetch("/api/automation/session-status")
       .then((r) => r.json())
-      .then((d) => setSessionStatus(d));
+      .then((d) => {
+        if (d?.sjed && d?.citizen) setSessionStatus(d);
+      })
+      .catch(() => setSessionStatus(null));
   }, []);
 
   const loadDgSettings = useCallback(() => {
@@ -199,6 +206,26 @@ function AutoApplyContent() {
     const interval = setInterval(loadSmsInbox, 2500);
     return () => clearInterval(interval);
   }, [loadSmsInbox]);
+
+  useEffect(() => {
+    if (!smsLatestOtp || smsLatestOtp === prevOtpRef.current) return;
+    prevOtpRef.current = smsLatestOtp;
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      new Notification("DG OTP", { body: smsLatestOtp, tag: "dg-otp" });
+    }
+  }, [smsLatestOtp]);
+
+  const enableOtpNotify = () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      void Notification.requestPermission();
+    }
+  };
+
+  const shareBridgeWhatsApp = () => {
+    if (!phoneBridgeUrl) return;
+    const text = encodeURIComponent(`${t("autoApply.smsWhatsAppMsg")}\n\n${phoneBridgeUrl}`);
+    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+  };
 
   useEffect(() => {
     if (!activeJob || ["completed", "failed", "partial"].includes(activeJob.status)) return;
@@ -257,14 +284,14 @@ function AutoApplyContent() {
 
   const portalConfigured =
     portalType === "sjed"
-      ? sessionStatus?.sjed.configured || dgForm.dgSjedUsername.trim()
-      : sessionStatus?.citizen.configured || dgForm.dgCitizenLoginId.trim();
+      ? sessionStatus?.sjed?.configured || dgForm.dgSjedUsername.trim()
+      : sessionStatus?.citizen?.configured || dgForm.dgCitizenLoginId.trim();
 
   const portalSessionSaved =
-    portalType === "sjed" ? sessionStatus?.sjed.sessionSaved : sessionStatus?.citizen.sessionSaved;
+    portalType === "sjed" ? sessionStatus?.sjed?.sessionSaved : sessionStatus?.citizen?.sessionSaved;
 
   const portalLastLogin =
-    portalType === "sjed" ? sessionStatus?.sjed.lastLoginAt : sessionStatus?.citizen.lastLoginAt;
+    portalType === "sjed" ? sessionStatus?.sjed?.lastLoginAt : sessionStatus?.citizen?.lastLoginAt;
 
   const startJob = async () => {
     if (!portalConfigured) {
@@ -272,8 +299,8 @@ function AutoApplyContent() {
       return;
     }
     if (
-      (portalType === "sjed" && dgForm.dgSjedUsername.trim() && !sessionStatus?.sjed.configured) ||
-      (portalType === "citizen" && dgForm.dgCitizenLoginId.trim() && !sessionStatus?.citizen.configured)
+      (portalType === "sjed" && dgForm.dgSjedUsername.trim() && !sessionStatus?.sjed?.configured) ||
+      (portalType === "citizen" && dgForm.dgCitizenLoginId.trim() && !sessionStatus?.citizen?.configured)
     ) {
       await saveDgCredentials();
     }
@@ -390,6 +417,26 @@ function AutoApplyContent() {
         </Button>
       </div>
 
+      {smsLatestOtp && (
+        <div className="rounded-xl border-2 border-green-400 bg-gradient-to-r from-green-50 to-emerald-100 p-4 shadow-sm animate-pulse">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-green-800 uppercase tracking-wide">{t("autoApply.smsLiveOtpTitle")}</p>
+              <p className="text-4xl font-mono font-bold text-green-900 tracking-widest mt-1">{smsLatestOtp}</p>
+              <p className="text-[11px] text-green-700 mt-1">{t("autoApply.smsLiveOtpHint")}</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-green-600 text-green-800"
+              onClick={() => navigator.clipboard.writeText(smsLatestOtp)}
+            >
+              <Copy className="h-4 w-4" /> {t("autoApply.smsCopy")}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Card className="border-emerald-200 bg-gradient-to-br from-white to-emerald-50/40">
         <CardContent className="p-5">
           <div className="flex items-start gap-3">
@@ -499,6 +546,9 @@ function AutoApplyContent() {
             </CardHeader>
             <CardContent className="space-y-3 text-xs text-slate-600">
               <p>{t("autoApply.smsDesc")}</p>
+              <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 leading-relaxed">
+                {t("autoApply.smsHonestNote")}
+              </p>
 
               <Input
                 label={t("autoApply.smsPhoneLabel")}
@@ -520,22 +570,48 @@ function AutoApplyContent() {
                 {t("autoApply.smsConnect")}
               </Button>
 
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSmsOtpMode("mine")}
+                  className={`flex-1 rounded-lg border px-2 py-2 text-[11px] font-medium transition ${smsOtpMode === "mine" ? "border-violet-500 bg-violet-50 text-violet-900" : "border-slate-200 text-slate-600"}`}
+                >
+                  {t("autoApply.smsModeMine")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSmsOtpMode("remote")}
+                  className={`flex-1 rounded-lg border px-2 py-2 text-[11px] font-medium transition ${smsOtpMode === "remote" ? "border-violet-500 bg-violet-50 text-violet-900" : "border-slate-200 text-slate-600"}`}
+                >
+                  {t("autoApply.smsModeRemote")}
+                </button>
+              </div>
+
               {phoneBridgeUrl && (
                 <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/50 p-3">
-                  <p className="font-medium text-violet-900">{t("autoApply.smsOpenOnPhone")}</p>
-                  <p className="text-[10px] text-violet-700">{t("autoApply.smsPhoneHint")}</p>
+                  <p className="font-medium text-violet-900">
+                    {smsOtpMode === "mine" ? t("autoApply.smsOpenOnPhone") : t("autoApply.smsModeRemote")}
+                  </p>
+                  <p className="text-[10px] text-violet-700">
+                    {smsOtpMode === "mine" ? t("autoApply.smsModeMineHint") : t("autoApply.smsModeRemoteHint")}
+                  </p>
                   {phoneBridgeUrl.startsWith("http://localhost") && (
                     <p className="text-[10px] text-amber-700">{t("autoApply.smsNoteLocal")}</p>
                   )}
-                  <div className="flex justify-center py-2">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(phoneBridgeUrl)}`}
-                      alt="QR"
-                      className="rounded-lg border border-white shadow"
-                      width={160}
-                      height={160}
-                    />
-                  </div>
+                  {/192\.168\.|10\.\d+\./.test(phoneBridgeUrl) && smsOtpMode === "mine" && (
+                    <p className="text-[10px] text-green-700 font-medium">{t("autoApply.smsLanReady")}</p>
+                  )}
+                  {smsOtpMode === "mine" && (
+                    <div className="flex justify-center py-2">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(phoneBridgeUrl)}`}
+                        alt="QR"
+                        className="rounded-lg border border-white shadow"
+                        width={160}
+                        height={160}
+                      />
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <input
                       readOnly
@@ -547,8 +623,23 @@ function AutoApplyContent() {
                       {bridgeCopied ? t("autoApply.smsCopied") : t("autoApply.smsCopy")}
                     </Button>
                   </div>
+                  {smsOtpMode === "remote" && (
+                    <Button type="button" className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white" onClick={shareBridgeWhatsApp}>
+                      <Share2 className="h-4 w-4" />
+                      {t("autoApply.smsWhatsApp")}
+                    </Button>
+                  )}
+                  <Button type="button" variant="ghost" size="sm" className="w-full text-[11px]" onClick={enableOtpNotify}>
+                    <Bell className="h-3.5 w-3.5" />
+                    {t("autoApply.smsNotifyEnable")}
+                  </Button>
                 </div>
               )}
+
+              <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 space-y-1">
+                <p className="font-medium text-blue-900 text-[11px]">{t("autoApply.smsForwarderTitle")}</p>
+                <p className="text-[10px] text-blue-800">{t("autoApply.smsForwarderHint")}</p>
+              </div>
 
               <details className="rounded-lg border border-slate-200 p-2">
                 <summary className="cursor-pointer font-medium text-slate-600 text-[11px]">

@@ -41,6 +41,7 @@ export interface MysqlConnectionConfig {
   password: string;
   database: string;
   connectionLimit: number;
+  connectTimeout?: number;
 }
 
 export function getMysqlConfig(): MysqlConnectionConfig {
@@ -52,7 +53,8 @@ export function getMysqlConfig(): MysqlConnectionConfig {
   }
   return {
     ...parts,
-    connectionLimit: Number(read("DB_CONNECTION_LIMIT") || "5"),
+    connectionLimit: Number(read("DB_CONNECTION_LIMIT") || "3"),
+    connectTimeout: Number(read("DB_CONNECT_TIMEOUT") || "15000"),
   };
 }
 

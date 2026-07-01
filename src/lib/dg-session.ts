@@ -13,15 +13,26 @@ export interface SessionMeta {
 
 const META_FILE = ".dg-session.json";
 
-/** Browser profile dir — school-wise; OTP ke baad cookies yahan save rehte hain */
-export function getDgProfileDir(portalType: "citizen" | "sjed", scopeKey: string): string {
+/** Profile path only — safe on Vercel (no mkdir) */
+export function resolveDgProfileDir(portalType: "citizen" | "sjed", scopeKey: string): string {
   const safe = crypto
     .createHash("sha256")
     .update(`${portalType}:${scopeKey.trim().toLowerCase()}`)
     .digest("hex")
     .slice(0, 16);
-  const dir = path.join(process.cwd(), "automation", "profiles", `${portalType}-${safe}`);
-  fs.mkdirSync(dir, { recursive: true });
+  return path.join(process.cwd(), "automation", "profiles", `${portalType}-${safe}`);
+}
+
+/** Browser profile dir — local automation; mkdir skipped on Vercel (read-only FS) */
+export function getDgProfileDir(portalType: "citizen" | "sjed", scopeKey: string): string {
+  const dir = resolveDgProfileDir(portalType, scopeKey);
+  if (process.env.VERCEL !== "1") {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch {
+      /* ignore */
+    }
+  }
   return dir;
 }
 

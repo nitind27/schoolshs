@@ -17,3 +17,35 @@ export function getAuthSecret(): string {
 export function getAppUrl(): string | undefined {
   return read("APP_URL") || read("NEXT_PUBLIC_APP_URL");
 }
+
+/**
+ * Public base URL for phone QR / OTP bridge.
+ * Local: set LAN_HOST=192.168.1.5 (same WiFi) or APP_URL=http://192.168.1.5:3000
+ * Vercel: uses request origin unless APP_URL is set
+ */
+export function getPublicAppOrigin(fallbackOrigin: string): string {
+  const explicit = getAppUrl();
+  if (explicit) return explicit.replace(/\/$/, "");
+
+  const lanHost = read("LAN_HOST");
+  if (lanHost) {
+    const bare = lanHost.replace(/^https?:\/\//, "").split("/")[0]!;
+    if (bare.includes(":")) {
+      return bare.startsWith("http") ? bare : `http://${bare}`;
+    }
+    const port = read("LAN_PORT") || read("PORT") || "3000";
+    return `http://${bare}:${port}`;
+  }
+
+  return fallbackOrigin.replace(/\/$/, "");
+}
+
+export function buildPhoneBridgeUrl(requestOrigin: string, token: string): string {
+  const base = getPublicAppOrigin(requestOrigin);
+  return `${base}/m/sms-bridge?token=${encodeURIComponent(token)}`;
+}
+
+export function buildSmsWebhookUrl(requestOrigin: string, token: string): string {
+  const base = getPublicAppOrigin(requestOrigin);
+  return `${base}/api/automation/sms/webhook?token=${encodeURIComponent(token)}`;
+}
