@@ -14,7 +14,7 @@ function isClientFresh(client: PrismaClient): boolean {
   return "user" in client && "automationJob" in client && "school" in client && "smsInboxMessage" in client;
 }
 
-function getPrismaClient(): PrismaClient {
+export function getPrisma(): PrismaClient {
   const cached = globalForPrisma.prisma;
   if (cached && isClientFresh(cached) && globalForPrisma.prismaSchemaVersion === SCHEMA_VERSION) {
     return cached;
@@ -25,5 +25,16 @@ function getPrismaClient(): PrismaClient {
   return client;
 }
 
-export const prisma = getPrismaClient();
+/** Lazy proxy — no DB connect until first query (safer for Vercel build) */
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    const client = getPrisma();
+    const value = Reflect.get(client, prop, receiver);
+    if (typeof value === "function") {
+      return (value as (...args: unknown[]) => unknown).bind(client);
+    }
+    return value;
+  },
+});
+
 export { createPrismaClient };
