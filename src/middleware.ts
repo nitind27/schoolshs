@@ -5,6 +5,7 @@ const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
   "/api/auth/logout",
+  "/api/health",
   "/api/automation/sms/webhook",
   "/api/automation/sms/relay",
   "/m/sms-bridge",

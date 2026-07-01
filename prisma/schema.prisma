@@ -29,6 +29,7 @@ model School {
   smsInbox        SmsInboxMessage[]
 
   @@index([isActive])
+  @@map("school")
 }
 
 model User {
@@ -46,6 +47,7 @@ model User {
 
   @@index([schoolId])
   @@index([role])
+  @@map("user")
 }
 
 model SchoolSettings {
@@ -72,6 +74,8 @@ model SchoolSettings {
   smsInboxToken      String?  @unique
   /** DG OTP wala registered mobile — phone bridge link is number se connect */
   dgOtpMobile        String?
+
+  @@map("schoolsettings")
 }
 
 model SmsInboxMessage {
@@ -86,6 +90,7 @@ model SmsInboxMessage {
 
   @@index([schoolId, createdAt])
   @@index([schoolId, consumed])
+  @@map("smsinboxmessage")
 }
 
 model Staff {
@@ -111,6 +116,7 @@ model Staff {
   @@index([schoolId])
   @@index([isActive])
   @@index([designation])
+  @@map("staff")
 }
 
 model SchoolClass {
@@ -133,6 +139,7 @@ model SchoolClass {
   @@index([schoolId])
   @@index([standard])
   @@index([academicYear])
+  @@map("schoolclass")
 }
 
 model Student {
@@ -242,6 +249,7 @@ model Student {
   @@index([classId])
   @@index([standard])
   @@index([section])
+  @@map("student")
 }
 
 model BulkSubmission {
@@ -257,6 +265,7 @@ model BulkSubmission {
   results     String?  @db.Text
 
   @@index([schoolId])
+  @@map("bulksubmission")
 }
 
 model AutomationJob {
@@ -286,4 +295,5 @@ model AutomationJob {
   @@index([schoolId])
   @@index([status])
   @@index([createdAt])
+  @@map("automationjob")
 }
