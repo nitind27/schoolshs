@@ -1,18 +1,12 @@
 import { PrismaClient } from "@/generated/prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import { applyDatabaseUrlFromEnv, getDbProvider, getMysqlConfig } from "./env";
+import { applyDatabaseUrlFromEnv, getMysqlConfig } from "./env";
 
+/**
+ * Prisma schema uses MySQL — always MariaDB adapter (never libsql/sqlite).
+ */
 export function createPrismaClient(): PrismaClient {
-  const provider = getDbProvider();
   applyDatabaseUrlFromEnv();
-
-  if (provider === "mysql") {
-    const adapter = new PrismaMariaDb(getMysqlConfig());
-    return new PrismaClient({ adapter });
-  }
-
-  const url = process.env.DATABASE_URL!;
-  const adapter = new PrismaLibSql({ url });
+  const adapter = new PrismaMariaDb(getMysqlConfig());
   return new PrismaClient({ adapter });
 }
