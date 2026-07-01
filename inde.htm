@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Normal Function vs Arrow Function</title>
+
+    <style>
+        body{
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background: #f4f4f4;
+        }
+
+        button{
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #result{
+            margin-top: 20px;
+            font-size: 22px;
+            color: blue;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>JavaScript Function Example</h1>
+
+    <button onclick="normalFunction()">Normal Function</button>
+    <button onclick="arrowFunction()">Arrow Function</button>
+
+    <div id="result"></div>
+
+    <script>
+
+        // -----------------------------
+        // Normal Function
+        // -----------------------------
+        function normalFunction() {
+            let name = "Nitin";
+            let age = 22;
+
+            document.getElementById("result").innerHTML =
+                "Normal Function <br>Name : " + name + "<br>Age : " + age;
+
+            console.log("Normal Function Called");
+        }
+
+        // -----------------------------
+        // Arrow Function
+        // -----------------------------
+        const arrowFunction = () => {
+            let name = "Rahul";
+            let age = 25;
+
+            document.getElementById("result").innerHTML =
+                `Arrow Function <br>Name : ${name}<br>Age : ${age}`;
+
+            console.log("Arrow Function Called");
+        };
+
+    </script>
+
+</body>
+</html>

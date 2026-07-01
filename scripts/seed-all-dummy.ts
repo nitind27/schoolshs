@@ -3,10 +3,20 @@
  * Run: npm run db:seed
  */
 import crypto from "crypto";
+import type { Prisma } from "../src/generated/prisma/client";
 import { prisma } from "../src/lib/db";
 import { hashPassword } from "../src/lib/auth";
 
-function studentBase(overrides: Record<string, unknown>) {
+type StudentSeed = Prisma.StudentUncheckedCreateInput;
+type StudentSeedRow = Omit<StudentSeed, "schoolId" | "aadhaarNumber"> & {
+  schoolId: string;
+  aadhaarNumber: string;
+};
+
+function studentBase(
+  overrides: Partial<StudentSeed> &
+    Pick<StudentSeed, "schoolId" | "aadhaarNumber" | "firstName" | "surname" | "aadhaarName">
+): StudentSeedRow {
   return {
     dateOfBirth: "01/01/2010",
     gender: "Male",
@@ -51,7 +61,7 @@ function studentBase(overrides: Record<string, unknown>) {
     accountHolderName: "STUDENT NAME",
     status: "ready",
     ...overrides,
-  };
+  } as StudentSeedRow;
 }
 
 async function main() {
@@ -330,17 +340,17 @@ async function main() {
     }),
   ];
 
-  const savedStudents = [];
+  const savedStudents: Prisma.StudentGetPayload<object>[] = [];
   for (const s of students) {
     const st = await prisma.student.upsert({
       where: {
         schoolId_aadhaarNumber: {
-          schoolId: s.schoolId as string,
-          aadhaarNumber: s.aadhaarNumber as string,
+          schoolId: s.schoolId,
+          aadhaarNumber: s.aadhaarNumber,
         },
       },
-      create: s as Parameters<typeof prisma.student.create>[0]["data"],
-      update: s as Parameters<typeof prisma.student.update>[0]["data"],
+      create: s,
+      update: s,
     });
     savedStudents.push(st);
   }
