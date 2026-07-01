@@ -1,6 +1,6 @@
+import "dotenv/config";
 import { PrismaClient } from "@/generated/prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import path from "path";
+import { createPrismaClient } from "./prisma-factory";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -8,21 +8,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** Bump when schema changes — forces fresh client in dev HMR */
-const SCHEMA_VERSION = 8;
-
-function getDbUrl(): string {
-  const dbPath = process.env.DATABASE_URL || "file:./dev.db";
-  if (dbPath.startsWith("file:")) {
-    const relative = dbPath.replace(/^file:/, "");
-    return `file:${path.resolve(process.cwd(), relative)}`;
-  }
-  return dbPath;
-}
-
-function createPrismaClient() {
-  const adapter = new PrismaLibSql({ url: getDbUrl() });
-  return new PrismaClient({ adapter });
-}
+const SCHEMA_VERSION = 9;
 
 function isClientFresh(client: PrismaClient): boolean {
   return "user" in client && "automationJob" in client && "school" in client && "smsInboxMessage" in client;
@@ -40,3 +26,4 @@ function getPrismaClient(): PrismaClient {
 }
 
 export const prisma = getPrismaClient();
+export { createPrismaClient };

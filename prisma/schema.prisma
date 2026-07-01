@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
 }
 
 model School {
@@ -80,7 +80,7 @@ model SmsInboxMessage {
   schoolId   String
   school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   sender     String?
-  body       String
+  body       String   @db.Text
   otpCode    String?
   consumed   Boolean  @default(false)
 
@@ -174,11 +174,11 @@ model Student {
   idCardValidUpto      String?
   idPhotoProcessedPath String?
 
-  currentAddress     String
+  currentAddress     String   @db.Text
   currentDistrict    String
   currentCity        String
   currentPincode     String
-  permanentAddress   String
+  permanentAddress   String   @db.Text
   permanentDistrict  String
   permanentCity      String
   permanentPincode   String
@@ -227,12 +227,12 @@ model Student {
   feeReceiptPath      String?
 
   lastAutomationAt    DateTime?
-  lastAutomationLog   String?
+  lastAutomationLog   String?  @db.Text
 
   status           String  @default("draft")
   submissionDate   DateTime?
-  notes            String?
-  validationErrors String?
+  notes            String?  @db.Text
+  validationErrors String?  @db.Text
 
   @@unique([schoolId, aadhaarNumber])
   @@index([schoolId])
@@ -253,8 +253,8 @@ model BulkSubmission {
   successCount Int     @default(0)
   failedCount  Int     @default(0)
   status      String   @default("pending")
-  studentIds  String
-  results     String?
+  studentIds  String   @db.Text
+  results     String?  @db.Text
 
   @@index([schoolId])
 }
@@ -269,14 +269,14 @@ model AutomationJob {
   mode            String    @default("auto")
   actionMode      String    @default("auto")
   portalType      String    @default("sjed")
-  studentIds      String
+  studentIds      String    @db.Text
   currentIndex    Int       @default(0)
   currentStep     String?
   totalCount      Int       @default(0)
   completedCount  Int       @default(0)
   failedCount     Int       @default(0)
-  logs            String?
-  studentProgress String?
+  logs            String?   @db.Text
+  studentProgress String?   @db.Text
   startedAt       DateTime?
   finishedAt      DateTime?
   errorMessage    String?

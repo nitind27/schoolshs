@@ -1,10 +1,5 @@
-import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import path from "path";
+import { prisma } from "../src/lib/db";
 import { hashPassword } from "../src/lib/auth";
-
-const filePath = path.resolve(process.cwd(), (process.env.DATABASE_URL || "file:./dev.db").replace(/^file:/, ""));
-const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: `file:${filePath}` }) });
 
 async function main() {
   console.log("Migrating to multi-tenant...");

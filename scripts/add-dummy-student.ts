@@ -1,10 +1,5 @@
 /** One-time script: add fully filled dummy student (REHAN - Songadh) */
-import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import path from "path";
-
-const filePath = path.resolve(process.cwd(), (process.env.DATABASE_URL || "file:./dev.db").replace(/^file:/, ""));
-const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: `file:${filePath}` }) });
+import { prisma } from "../src/lib/db";
 
 async function main() {
   const school = await prisma.school.findUnique({ where: { code: "SONGADH001" } });

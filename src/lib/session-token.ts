@@ -1,3 +1,5 @@
+import { getAuthSecret } from "./env-auth";
+
 export type UserRole = "super_admin" | "school_admin";
 
 export interface SessionUser {
@@ -9,8 +11,6 @@ export interface SessionUser {
   schoolName?: string | null;
   schoolCode?: string | null;
 }
-
-const SECRET = process.env.AUTH_SECRET || "shs-dev-secret-change-in-production-2026";
 
 function toBase64Url(bytes: Uint8Array): string {
   let binary = "";
@@ -38,7 +38,7 @@ async function getHmacKey(): Promise<CryptoKey> {
   if (!hmacKey) {
     hmacKey = await crypto.subtle.importKey(
       "raw",
-      new TextEncoder().encode(SECRET),
+      new TextEncoder().encode(getAuthSecret()),
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign", "verify"]

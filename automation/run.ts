@@ -1,8 +1,5 @@
 import "dotenv/config";
 import { chromium, type BrowserContext, type Page } from "playwright";
-import path from "path";
-import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { buildFieldMappings, DG_DROPDOWN_MAPPINGS } from "./selectors";
 import { getDgPortalByType, parsePortalType, type DgPortalConfig } from "../src/lib/dg-portal";
 import {
@@ -26,6 +23,7 @@ import {
   type ApplyActionMode,
 } from "./portal-navigator";
 import { JobReporter, buildInitialProgress, type StudentProgressItem } from "./status-reporter";
+import { prisma } from "../src/lib/db";
 
 const jobId = process.env.AUTOMATION_JOB_ID || "";
 const schoolId = process.env.AUTOMATION_SCHOOL_ID || "";
@@ -46,10 +44,6 @@ if (studentIds.length === 0) {
   console.error("       npx tsx automation/run.ts batch <id1,id2> [auto|full|fill-only]");
   process.exit(1);
 }
-
-const filePath = path.resolve(process.cwd(), (process.env.DATABASE_URL || "file:./dev.db").replace(/^file:/, ""));
-const adapter = new PrismaLibSql({ url: `file:${filePath}` });
-const prisma = new PrismaClient({ adapter });
 
 let reporter: JobReporter | null = null;
 
