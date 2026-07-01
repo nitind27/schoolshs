@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
-import { buildPhoneBridgeUrl, buildSmsWebhookUrl } from "@/lib/env-auth";
+import { buildPhoneBridgeUrl, buildSmsWebhookUrl, buildSmsForwarderWebhookUrl, buildForwarderSetupUrl } from "@/lib/env-auth";
 
 function generateSmsToken(): string {
   return crypto.randomBytes(24).toString("hex");
@@ -30,6 +30,8 @@ export async function GET(request: NextRequest) {
     const token = settings.smsInboxToken!;
     const webhookUrl = buildSmsWebhookUrl(origin, token);
     const phoneBridgeUrl = buildPhoneBridgeUrl(origin, token);
+    const forwarderWebhookUrl = buildSmsForwarderWebhookUrl(origin, token);
+    const forwarderSetupUrl = buildForwarderSetupUrl(origin, token);
     const mobile = settings.dgOtpMobile || "";
 
     return NextResponse.json({
@@ -38,6 +40,8 @@ export async function GET(request: NextRequest) {
       mobileMasked: mobile.length >= 10 ? `${mobile.slice(0, 2)}xxxxx${mobile.slice(-3)}` : null,
       webhookUrl,
       phoneBridgeUrl,
+      forwarderWebhookUrl,
+      forwarderSetupUrl,
       tokenPreview: `${token.slice(0, 8)}...`,
     });
   } catch (error) {

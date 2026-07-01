@@ -26,8 +26,10 @@ import {
   Copy,
   Share2,
   Bell,
+  Zap,
 } from "lucide-react";
 import type { Student } from "@/generated/prisma/client";
+import { extractOtpFromSms } from "@/lib/sms-otp";
 
 interface StudentProgressItem {
   studentId: string;
@@ -125,6 +127,8 @@ function AutoApplyContent() {
   const [otpSending, setOtpSending] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [smsWebhookUrl, setSmsWebhookUrl] = useState("");
+  const [forwarderWebhookUrl, setForwarderWebhookUrl] = useState("");
+  const [forwarderSetupUrl, setForwarderSetupUrl] = useState("");
   const [phoneBridgeUrl, setPhoneBridgeUrl] = useState("");
   const [phoneMobile, setPhoneMobile] = useState("");
   const [phoneConnected, setPhoneConnected] = useState<string | null>(null);
@@ -134,8 +138,11 @@ function AutoApplyContent() {
     { id: string; sender: string | null; body: string; otpCode: string | null; consumed: boolean; createdAt: string }[]
   >([]);
   const [smsLatestOtp, setSmsLatestOtp] = useState<string | null>(null);
+  const [smsLatestConsumed, setSmsLatestConsumed] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
+  const [forwarderCopied, setForwarderCopied] = useState(false);
   const [smsOtpMode, setSmsOtpMode] = useState<"mine" | "remote">("remote");
+  const [smsDeliveryMethod, setSmsDeliveryMethod] = useState<"forwarder" | "bridge">("forwarder");
   const prevOtpRef = useRef<string | null>(null);
 
   const loadSmsSetup = useCallback(() => {
@@ -143,6 +150,8 @@ function AutoApplyContent() {
       .then((r) => r.json())
       .then((d) => {
         if (d.webhookUrl) setSmsWebhookUrl(d.webhookUrl);
+        if (d.forwarderWebhookUrl) setForwarderWebhookUrl(d.forwarderWebhookUrl);
+        if (d.forwarderSetupUrl) setForwarderSetupUrl(d.forwarderSetupUrl);
         if (d.phoneBridgeUrl) setPhoneBridgeUrl(d.phoneBridgeUrl);
         if (d.dgOtpMobile) setPhoneMobile(d.dgOtpMobile);
         if (d.mobileMasked) setPhoneConnected(d.mobileMasked);
@@ -155,6 +164,7 @@ function AutoApplyContent() {
       .then((d) => {
         setSmsInbox(d.messages || []);
         setSmsLatestOtp(d.latestOtp?.code || null);
+        setSmsLatestConsumed(Boolean(d.latestOtp?.consumed));
       });
   }, []);
 
@@ -222,9 +232,21 @@ function AutoApplyContent() {
   };
 
   const shareBridgeWhatsApp = () => {
-    if (!phoneBridgeUrl) return;
-    const text = encodeURIComponent(`${t("autoApply.smsWhatsAppMsg")}\n\n${phoneBridgeUrl}`);
+    const link = smsDeliveryMethod === "forwarder" ? forwarderSetupUrl : phoneBridgeUrl;
+    if (!link) return;
+    const msg =
+      smsDeliveryMethod === "forwarder"
+        ? t("autoApply.smsForwarderWhatsAppMsg")
+        : t("autoApply.smsWhatsAppMsg");
+    const text = encodeURIComponent(`${msg}\n\n${link}`);
     window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+  };
+
+  const copyForwarderUrl = async () => {
+    if (!forwarderWebhookUrl) return;
+    await navigator.clipboard.writeText(forwarderWebhookUrl);
+    setForwarderCopied(true);
+    setTimeout(() => setForwarderCopied(false), 2000);
   };
 
   useEffect(() => {
@@ -418,12 +440,16 @@ function AutoApplyContent() {
       </div>
 
       {smsLatestOtp && (
-        <div className="rounded-xl border-2 border-green-400 bg-gradient-to-r from-green-50 to-emerald-100 p-4 shadow-sm animate-pulse">
+        <div className={`rounded-xl border-2 p-4 shadow-sm ${smsLatestConsumed ? "border-slate-300 bg-slate-50" : "border-green-400 bg-gradient-to-r from-green-50 to-emerald-100 animate-pulse"}`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-medium text-green-800 uppercase tracking-wide">{t("autoApply.smsLiveOtpTitle")}</p>
+              <p className={`text-xs font-medium uppercase tracking-wide ${smsLatestConsumed ? "text-slate-600" : "text-green-800"}`}>
+                {smsLatestConsumed ? "OTP mil gaya (use ho chuka)" : t("autoApply.smsLiveOtpTitle")}
+              </p>
               <p className="text-4xl font-mono font-bold text-green-900 tracking-widest mt-1">{smsLatestOtp}</p>
-              <p className="text-[11px] text-green-700 mt-1">{t("autoApply.smsLiveOtpHint")}</p>
+              <p className="text-[11px] text-green-700 mt-1">
+                {smsLatestConsumed ? "Naya OTP chahiye to phone se dubara bhejein" : t("autoApply.smsLiveOtpHint")}
+              </p>
             </div>
             <Button
               type="button"
@@ -545,10 +571,7 @@ function AutoApplyContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-xs text-slate-600">
-              <p>{t("autoApply.smsDesc")}</p>
-              <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 leading-relaxed">
-                {t("autoApply.smsHonestNote")}
-              </p>
+              <p>{t("autoApply.smsDescNew")}</p>
 
               <Input
                 label={t("autoApply.smsPhoneLabel")}
@@ -573,39 +596,96 @@ function AutoApplyContent() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setSmsOtpMode("mine")}
-                  className={`flex-1 rounded-lg border px-2 py-2 text-[11px] font-medium transition ${smsOtpMode === "mine" ? "border-violet-500 bg-violet-50 text-violet-900" : "border-slate-200 text-slate-600"}`}
+                  onClick={() => setSmsDeliveryMethod("forwarder")}
+                  className={`flex-1 rounded-lg border px-2 py-2 text-[11px] font-medium transition ${smsDeliveryMethod === "forwarder" ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-slate-200 text-slate-600"}`}
                 >
-                  {t("autoApply.smsModeMine")}
+                  {t("autoApply.smsMethodForwarder")}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSmsOtpMode("remote")}
-                  className={`flex-1 rounded-lg border px-2 py-2 text-[11px] font-medium transition ${smsOtpMode === "remote" ? "border-violet-500 bg-violet-50 text-violet-900" : "border-slate-200 text-slate-600"}`}
+                  onClick={() => setSmsDeliveryMethod("bridge")}
+                  className={`flex-1 rounded-lg border px-2 py-2 text-[11px] font-medium transition ${smsDeliveryMethod === "bridge" ? "border-violet-500 bg-violet-50 text-violet-900" : "border-slate-200 text-slate-600"}`}
                 >
-                  {t("autoApply.smsModeRemote")}
+                  {t("autoApply.smsMethodBridge")}
                 </button>
               </div>
 
-              {phoneBridgeUrl && (
-                <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/50 p-3">
-                  <p className="font-medium text-violet-900">
-                    {smsOtpMode === "mine" ? t("autoApply.smsOpenOnPhone") : t("autoApply.smsModeRemote")}
+              {smsDeliveryMethod === "forwarder" && forwarderSetupUrl && (
+                <div className="space-y-2 rounded-lg border-2 border-emerald-300 bg-emerald-50/80 p-3">
+                  <p className="font-bold text-emerald-900 flex items-center gap-2">
+                    <Zap className="h-4 w-4" /> {t("autoApply.smsForwarderTitle")}
                   </p>
-                  <p className="text-[10px] text-violet-700">
-                    {smsOtpMode === "mine" ? t("autoApply.smsModeMineHint") : t("autoApply.smsModeRemoteHint")}
+                  <p className="text-[10px] text-emerald-800 leading-relaxed">{t("autoApply.smsForwarderHintNew")}</p>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSmsOtpMode("mine")}
+                      className={`flex-1 rounded border px-2 py-1.5 text-[10px] ${smsOtpMode === "mine" ? "border-emerald-600 bg-white font-medium" : "border-emerald-200"}`}
+                    >
+                      {t("autoApply.smsModeMine")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSmsOtpMode("remote")}
+                      className={`flex-1 rounded border px-2 py-1.5 text-[10px] ${smsOtpMode === "remote" ? "border-emerald-600 bg-white font-medium" : "border-emerald-200"}`}
+                    >
+                      {t("autoApply.smsModeRemote")}
+                    </button>
+                  </div>
+
+                  {smsOtpMode === "mine" && (
+                    <div className="flex justify-center py-2">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(forwarderSetupUrl)}`}
+                        alt="Forwarder QR"
+                        className="rounded-lg border border-white shadow"
+                        width={160}
+                        height={160}
+                      />
+                    </div>
+                  )}
+
+                  <input
+                    readOnly
+                    value={forwarderSetupUrl}
+                    className="w-full rounded border border-emerald-200 bg-white px-2 py-1.5 text-[10px] font-mono"
+                  />
+
+                  {forwarderWebhookUrl && (
+                    <div className="flex gap-1">
+                      <input
+                        readOnly
+                        value={forwarderWebhookUrl}
+                        className="flex-1 rounded border border-emerald-200 bg-white px-1 py-1 font-mono text-[9px]"
+                      />
+                      <Button type="button" variant="outline" size="sm" onClick={copyForwarderUrl} className="text-[10px] h-8 shrink-0">
+                        {forwarderCopied ? t("autoApply.smsCopied") : t("autoApply.smsCopy")}
+                      </Button>
+                    </div>
+                  )}
+
+                  <Button type="button" className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white" onClick={shareBridgeWhatsApp}>
+                    <Share2 className="h-4 w-4" />
+                    {smsOtpMode === "remote" ? t("autoApply.smsForwarderWhatsApp") : t("autoApply.smsOpenForwarderOnPhone")}
+                  </Button>
+                </div>
+              )}
+
+              {smsDeliveryMethod === "bridge" && phoneBridgeUrl && (
+                <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/50 p-3">
+                  <p className="font-medium text-violet-900">{t("autoApply.smsBridgeFallback")}</p>
+                  <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
+                    {t("autoApply.smsBridgeWarning")}
                   </p>
                   {phoneBridgeUrl.startsWith("http://localhost") && (
                     <p className="text-[10px] text-amber-700">{t("autoApply.smsNoteLocal")}</p>
-                  )}
-                  {/192\.168\.|10\.\d+\./.test(phoneBridgeUrl) && smsOtpMode === "mine" && (
-                    <p className="text-[10px] text-green-700 font-medium">{t("autoApply.smsLanReady")}</p>
                   )}
                   {smsOtpMode === "mine" && (
                     <div className="flex justify-center py-2">
                       <img
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(phoneBridgeUrl)}`}
-                        alt="QR"
+                        alt="Bridge QR"
                         className="rounded-lg border border-white shadow"
                         width={160}
                         height={160}
@@ -613,52 +693,22 @@ function AutoApplyContent() {
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <input
-                      readOnly
-                      value={phoneBridgeUrl}
-                      className="flex-1 rounded border border-violet-200 bg-white px-2 py-1.5 text-[10px] font-mono"
-                    />
+                    <input readOnly value={phoneBridgeUrl} className="flex-1 rounded border border-violet-200 bg-white px-2 py-1.5 text-[10px] font-mono" />
                     <Button type="button" variant="outline" size="sm" onClick={copyBridgeUrl}>
                       <Copy className="h-3.5 w-3.5" />
-                      {bridgeCopied ? t("autoApply.smsCopied") : t("autoApply.smsCopy")}
                     </Button>
                   </div>
-                  {smsOtpMode === "remote" && (
-                    <Button type="button" className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white" onClick={shareBridgeWhatsApp}>
-                      <Share2 className="h-4 w-4" />
-                      {t("autoApply.smsWhatsApp")}
-                    </Button>
-                  )}
-                  <Button type="button" variant="ghost" size="sm" className="w-full text-[11px]" onClick={enableOtpNotify}>
-                    <Bell className="h-3.5 w-3.5" />
-                    {t("autoApply.smsNotifyEnable")}
+                  <Button type="button" className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white" onClick={shareBridgeWhatsApp}>
+                    <Share2 className="h-4 w-4" />
+                    {t("autoApply.smsWhatsApp")}
                   </Button>
                 </div>
               )}
 
-              <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 space-y-1">
-                <p className="font-medium text-blue-900 text-[11px]">{t("autoApply.smsForwarderTitle")}</p>
-                <p className="text-[10px] text-blue-800">{t("autoApply.smsForwarderHint")}</p>
-              </div>
-
-              <details className="rounded-lg border border-slate-200 p-2">
-                <summary className="cursor-pointer font-medium text-slate-600 text-[11px]">
-                  {t("autoApply.smsAdvanced")}
-                </summary>
-                <div className="mt-2 space-y-1 text-[10px] text-slate-500">
-                  <p>{t("autoApply.smsStep1")}</p>
-                  <p>{t("autoApply.smsStep2")}</p>
-                  <p>{t("autoApply.smsStep3")}</p>
-                  {smsWebhookUrl && (
-                    <div className="flex gap-1 pt-1">
-                      <input readOnly value={smsWebhookUrl} className="flex-1 rounded border px-1 py-0.5 font-mono text-[9px]" />
-                      <Button type="button" variant="ghost" size="sm" onClick={copyWebhookUrl} className="text-[10px] h-7">
-                        {t("autoApply.smsCopy")}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </details>
+              <Button type="button" variant="ghost" size="sm" className="w-full text-[11px]" onClick={enableOtpNotify}>
+                <Bell className="h-3.5 w-3.5" />
+                {t("autoApply.smsNotifyEnable")}
+              </Button>
 
               <div>
                 <p className="font-medium text-slate-700 mb-2 flex items-center gap-2">
@@ -779,7 +829,11 @@ function AutoApplyContent() {
                         inputMode="numeric"
                         maxLength={8}
                         value={otpInput}
-                        onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          const extracted = extractOtpFromSms(raw) || raw.replace(/\D/g, "");
+                          setOtpInput(extracted.slice(0, 8));
+                        }}
                         placeholder={t("autoApply.otpPlaceholder")}
                         className="flex-1 rounded-lg border border-amber-200 px-3 py-2 text-lg font-mono tracking-widest"
                       />

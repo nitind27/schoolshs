@@ -1,12 +1,15 @@
-/** SMS body se Digital Gujarat / Sandes OTP nikaalo */
+/** SMS body se Digital Gujarat / Sandes / Google OTP nikaalo */
 export function extractOtpFromSms(text: string): string | null {
   const trimmed = text.trim();
   if (/^\d{4,8}$/.test(trimmed)) return trimmed;
 
   const patterns = [
+    /^(\d{4,8})\s+is your\b/i,
+    /\b(\d{4,8})\s+is your\s+(?:google\s+)?verification\s+code\b/i,
+    /\bverification\s+code[\s:.-]*(\d{4,8})\b/i,
     /\bOTP[\s:.-]*(?:is|no\.?|number|code)?[\s:.-]*(\d{4,8})\b/i,
     /\b(?:code|pin)[\s:.-]*(\d{4,8})\b/i,
-    /\b(\d{6})\b.*(?:otp|sandes|digitalgujarat|dg)/i,
+    /\b(\d{6})\b.*(?:otp|sandes|digitalgujarat|dg|verification)/i,
     /(?:otp|sandes|digitalgujarat|dg).*?\b(\d{6})\b/i,
     /\b(\d{6})\b/,
     /\b(\d{4,8})\b/,

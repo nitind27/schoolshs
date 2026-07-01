@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { extractOtpFromSms, isLikelyDgOtpSms } from "@/lib/sms-otp";
+import { pushOtpToSchool } from "@/lib/sms-inbox-push";
 import crypto from "crypto";
+
+export const dynamic = "force-dynamic";
 
 function parseSmsPayload(request: NextRequest, body: Record<string, unknown>): { sender: string | null; text: string } {
   const q = request.nextUrl.searchParams;
@@ -85,12 +88,27 @@ async function storeSms(schoolId: string, sender: string | null, text: string) {
   const otpCode = extractOtpFromSms(text);
   const relevant = isLikelyDgOtpSms(text, sender);
 
+  if (otpCode) {
+    await pushOtpToSchool(prisma, schoolId, otpCode, sender, text);
+    const msg = await prisma.smsInboxMessage.findFirst({
+      where: { schoolId, otpCode },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json({
+      ok: true,
+      id: msg?.id,
+      otpDetected: true,
+      otpCode: `${otpCode.slice(0, 2)}****`,
+      relevant,
+    });
+  }
+
   const msg = await prisma.smsInboxMessage.create({
     data: {
       schoolId,
       sender,
       body: text.slice(0, 2000),
-      otpCode: otpCode || null,
+      otpCode: null,
       consumed: false,
     },
   });
@@ -98,8 +116,8 @@ async function storeSms(schoolId: string, sender: string | null, text: string) {
   return NextResponse.json({
     ok: true,
     id: msg.id,
-    otpDetected: Boolean(otpCode),
-    otpCode: otpCode ? `${otpCode.slice(0, 2)}****` : null,
+    otpDetected: false,
+    otpCode: null,
     relevant,
   });
 }

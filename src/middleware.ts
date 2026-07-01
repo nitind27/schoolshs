@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   "/api/automation/sms/webhook",
   "/api/automation/sms/relay",
   "/m/sms-bridge",
+  "/m/forwarder-setup",
 ];
 
 export async function middleware(request: NextRequest) {

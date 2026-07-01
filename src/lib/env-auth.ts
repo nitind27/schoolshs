@@ -49,3 +49,14 @@ export function buildSmsWebhookUrl(requestOrigin: string, token: string): string
   const base = getPublicAppOrigin(requestOrigin);
   return `${base}/api/automation/sms/webhook?token=${encodeURIComponent(token)}`;
 }
+
+/** SMS Forwarder app ke liye template URL ({{msg}} = poora SMS) */
+export function buildSmsForwarderWebhookUrl(requestOrigin: string, token: string): string {
+  const base = buildSmsWebhookUrl(requestOrigin, token);
+  return `${base}&text={{msg}}&from={{from}}`;
+}
+
+export function buildForwarderSetupUrl(requestOrigin: string, token: string): string {
+  const base = getPublicAppOrigin(requestOrigin);
+  return `${base}/m/forwarder-setup?token=${encodeURIComponent(token)}`;
+}

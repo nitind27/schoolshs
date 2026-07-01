@@ -13,7 +13,7 @@ export async function GET() {
     });
 
     const latestOtp = await prisma.smsInboxMessage.findFirst({
-      where: { schoolId: session.schoolId, otpCode: { not: null }, consumed: false },
+      where: { schoolId: session.schoolId, otpCode: { not: null } },
       orderBy: { createdAt: "desc" },
     });
 

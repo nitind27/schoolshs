@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { extractOtpFromSms } from "@/lib/sms-otp";
+import { pushOtpToSchool } from "@/lib/sms-inbox-push";
 
 export const dynamic = "force-dynamic";
 
@@ -44,30 +45,17 @@ export async function POST(request: NextRequest) {
     }
 
     const sender = settings.dgOtpMobile ? `+91${settings.dgOtpMobile}` : "phone-bridge";
+    await pushOtpToSchool(
+      prisma,
+      settings.schoolId,
+      otp,
+      sender,
+      `OTP from phone bridge: ${otp}`
+    );
 
-    await prisma.smsInboxMessage.create({
-      data: {
-        schoolId: settings.schoolId,
-        sender,
-        body: `OTP from phone bridge: ${otp}`,
-        otpCode: otp,
-        consumed: false,
-      },
-    });
-
-    const activeJob = await prisma.automationJob.findFirst({
-      where: { schoolId: settings.schoolId, status: { in: ["pending", "running"] } },
-      orderBy: { createdAt: "desc" },
-    });
-    if (activeJob) {
-      await prisma.automationJob.update({
-        where: { id: activeJob.id },
-        data: { otpCode: otp },
-      });
-    }
-
-    return NextResponse.json({ ok: true, message: "OTP website par bhej diya — auto-fill hoga" });
-  } catch {
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return NextResponse.json({ ok: true, message: "OTP website par bhej diya" });
+  } catch (err) {
+    console.error("[sms/relay] POST failed:", err);
+    return NextResponse.json({ error: "OTP save nahi hua" }, { status: 500 });
   }
 }

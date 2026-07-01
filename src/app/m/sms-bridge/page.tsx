@@ -2,126 +2,85 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Smartphone, CheckCircle, Loader2, Radio, ClipboardPaste } from "lucide-react";
-
-function extractSixDigitOtp(text: string): string | null {
-  const m = text.match(/\b(\d{6})\b/);
-  return m ? m[1] : null;
-}
+import Link from "next/link";
+import { Smartphone, CheckCircle, Loader2, AlertCircle, Wifi, Zap } from "lucide-react";
+import { extractOtpFromSms } from "@/lib/sms-otp";
 
 function SmsBridgeContent() {
   const params = useSearchParams();
   const token = params.get("token") || "";
-  const inputRef = useRef<HTMLInputElement>(null);
+  const sendingRef = useRef(false);
+
   const [info, setInfo] = useState<{ schoolName?: string; mobileMasked?: string } | null>(null);
+  const [linkOk, setLinkOk] = useState<boolean | null>(null);
   const [otp, setOtp] = useState("");
-  const [listening, setListening] = useState(false);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
-  const [sentCount, setSentCount] = useState(0);
+  const [lastSent, setLastSent] = useState("");
   const [error, setError] = useState("");
-  const listenAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!token) return;
     fetch(`/api/automation/sms/relay?token=${encodeURIComponent(token)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) setError(d.error);
-        else setInfo(d);
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok || d.error) {
+          setLinkOk(false);
+          setError(d.error || "Link invalid — PC par dubara Connect karein");
+          return;
+        }
+        setLinkOk(true);
+        setInfo(d);
       })
-      .catch(() => setError("Link invalid — dubara Connect karein"));
+      .catch(() => {
+        setLinkOk(false);
+        setError("PC se connect nahi — same WiFi check karein");
+      });
   }, [token]);
 
   const sendOtp = useCallback(
     async (code: string) => {
-      if (!token || !/^\d{4,8}$/.test(code) || sending) return;
+      const normalized = code.replace(/\D/g, "");
+      if (!token || !/^\d{4,8}$/.test(normalized) || sendingRef.current) return;
+
+      sendingRef.current = true;
       setSending(true);
       setError("");
+
       try {
         const res = await fetch("/api/automation/sms/relay", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, otp: code }),
+          body: JSON.stringify({ token, otp: normalized }),
         });
         const data = await res.json();
         if (res.ok) {
           setDone(true);
-          setSentCount((c) => c + 1);
+          setLastSent(normalized);
           setOtp("");
-          setTimeout(() => setDone(false), 2500);
+          setTimeout(() => setDone(false), 3000);
         } else {
-          setError(data.error || "Send failed — internet check karein");
+          setError(data.error || "Send failed");
         }
       } catch {
-        setError("Network error — WiFi/data check karein");
+        setError("Network error — phone aur PC same WiFi par hone chahiye");
       } finally {
+        sendingRef.current = false;
         setSending(false);
       }
     },
-    [token, sending]
+    [token]
   );
 
-  const startSmsListen = useCallback(() => {
-    if (typeof window === "undefined" || !("OTPCredential" in window)) {
-      setListening(false);
+  const onOtpChange = (raw: string) => {
+    setError("");
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length <= 8) {
+      setOtp(digits);
       return;
     }
-    listenAbort.current?.abort();
-    const ac = new AbortController();
-    listenAbort.current = ac;
-    setListening(true);
-
-    navigator.credentials
-      .get({
-        otp: { transport: ["sms"] },
-        signal: ac.signal,
-      } as CredentialRequestOptions)
-      .then((cred) => {
-        const code = (cred as { code?: string } | null)?.code;
-        if (code && /^\d{4,8}$/.test(code)) {
-          setOtp(code);
-        }
-      })
-      .catch(() => {
-        /* timeout / unsupported — normal */
-      })
-      .finally(() => {
-        if (!ac.signal.aborted) setListening(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (!token) return;
-    startSmsListen();
-    return () => listenAbort.current?.abort();
-  }, [token, startSmsListen]);
-
-  useEffect(() => {
-    if (/^\d{6}$/.test(otp)) {
-      void sendOtp(otp);
-    }
-  }, [otp, sendOtp]);
-
-  useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState !== "visible") return;
-      inputRef.current?.focus();
-      startSmsListen();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, [startSmsListen]);
-
-  const pasteFromClipboard = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      const code = extractSixDigitOtp(text);
-      if (code) setOtp(code);
-      else setError("Clipboard me 6 digit OTP nahi mila");
-    } catch {
-      setError("Paste allow karein — ya SMS notification se OTP select karein");
-    }
+    const fromSms = extractOtpFromSms(raw);
+    setOtp(fromSms || digits.slice(0, 8));
   };
 
   const readyToSend = /^\d{4,8}$/.test(otp);
@@ -129,107 +88,94 @@ function SmsBridgeContent() {
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-slate-100">
-        <p className="text-red-600 text-center">Invalid link — PC par Auto Apply se dubara Connect karein</p>
+        <p className="text-red-600 text-center">Invalid link</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-950 text-white p-5 flex flex-col safe-area-pb">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-950 text-white p-5 flex flex-col">
+      <div className="flex items-center gap-3 mb-3">
         <div className="p-3 bg-white/10 rounded-xl">
           <Smartphone className="h-8 w-8" />
         </div>
-        <div>
-          <h1 className="text-xl font-bold">OTP Bridge</h1>
+        <div className="flex-1">
+          <h1 className="text-xl font-bold">OTP Bridge (Manual)</h1>
           <p className="text-blue-200 text-sm">{info?.schoolName || "Scholarship Portal"}</p>
         </div>
+        {linkOk === true && (
+          <span className="flex items-center gap-1 text-[10px] text-green-300 bg-green-900/40 px-2 py-1 rounded-full">
+            <Wifi className="h-3 w-3" /> OK
+          </span>
+        )}
+        {linkOk === false && (
+          <span className="flex items-center gap-1 text-[10px] text-red-300 bg-red-900/40 px-2 py-1 rounded-full">
+            <AlertCircle className="h-3 w-3" /> Error
+          </span>
+        )}
       </div>
 
-      {info?.mobileMasked && (
-        <p className="text-sm text-blue-100 mb-3 rounded-lg bg-white/5 px-3 py-2">
-          DG Mobile: <strong>{info.mobileMasked}</strong>
-          {sentCount > 0 && <span className="ml-2 text-green-300">• {sentCount} OTP bheje</span>}
-        </p>
-      )}
+      <Link
+        href={`/m/forwarder-setup?token=${encodeURIComponent(token)}`}
+        className="mb-4 block rounded-xl bg-emerald-500/25 border border-emerald-400/50 p-4"
+      >
+        <div className="flex items-start gap-3">
+          <Zap className="h-6 w-6 text-emerald-300 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold text-emerald-100">Automatic chahiye? (Recommended)</p>
+            <p className="text-sm text-emerald-200/90 mt-1">
+              SMS Forwarder app lagao — Chrome band, screen off — OTP khud website par jayega. Koi Allow popup nahi.
+            </p>
+            <p className="text-xs text-emerald-300 mt-2 underline">Setup guide kholo →</p>
+          </div>
+        </div>
+      </Link>
 
       <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
-        <div className="rounded-xl bg-white/10 p-3 mb-4 text-center">
-          <p className="text-sm text-blue-50 leading-relaxed">
-            <strong>Har OTP par:</strong> SMS aaye → keyboard par OTP <strong>auto-suggest</strong> dabao → khud website
-            par chala jayega
-          </p>
-          <p className="text-[11px] text-blue-200 mt-2">Button tab active hoga jab OTP box me 6 digit aaye</p>
-        </div>
+        <p className="text-sm text-blue-100 mb-4 text-center">
+          Manual backup: SMS aaye → sirf <strong>6 digit</strong> type karo → Bhejein
+        </p>
 
-        {listening && (
-          <div className="flex items-center justify-center gap-2 text-cyan-200 text-xs mb-3 animate-pulse">
-            <Radio className="h-4 w-4" />
-            SMS OTP sun rahe hain (auto-capture)...
-          </div>
-        )}
-
-        <label className="text-xs text-blue-200 mb-2 block">OTP (6 digit)</label>
         <input
-          ref={inputRef}
           type="text"
           inputMode="numeric"
           autoComplete="one-time-code"
-          autoFocus
           maxLength={8}
           value={otp}
-          onChange={(e) => {
-            setError("");
-            setOtp(e.target.value.replace(/\D/g, ""));
-          }}
-          placeholder="• • • • • •"
-          className="w-full text-center text-4xl font-mono tracking-[0.35em] rounded-2xl border-2 border-blue-300/40 py-5 text-slate-900 bg-white shadow-lg focus:border-green-400 focus:ring-2 focus:ring-green-400/50 outline-none"
-          disabled={sending}
+          onChange={(e) => onOtpChange(e.target.value)}
+          placeholder="306187"
+          className="w-full text-center text-4xl font-mono tracking-[0.35em] rounded-2xl border-2 border-blue-300/40 py-5 text-slate-900 bg-white shadow-lg outline-none focus:border-green-400"
+          disabled={sending || linkOk === false}
         />
 
         <button
           type="button"
-          onClick={pasteFromClipboard}
-          className="mt-3 w-full py-3 rounded-xl border border-blue-400/50 text-blue-100 text-sm font-medium flex items-center justify-center gap-2"
-        >
-          <ClipboardPaste className="h-4 w-4" />
-          SMS se copy kiya? Paste karein
-        </button>
-
-        <button
-          type="button"
-          onClick={() => readyToSend && sendOtp(otp)}
-          disabled={sending}
-          className={`mt-4 w-full py-4 rounded-xl font-bold text-lg transition-all ${
-            readyToSend
-              ? "bg-green-500 text-white shadow-lg shadow-green-500/30 scale-100"
-              : "bg-white/15 text-blue-100 border-2 border-dashed border-white/30"
-          } ${sending ? "opacity-70" : ""}`}
+          onClick={() => sendOtp(otp)}
+          disabled={sending || !readyToSend || linkOk === false}
+          className={`mt-4 w-full py-4 rounded-xl font-bold text-lg ${
+            readyToSend ? "bg-green-500 text-white" : "bg-white/15 text-blue-100 border-2 border-dashed border-white/30"
+          }`}
         >
           {sending ? (
             <span className="flex items-center justify-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin" /> Bhej rahe hain...
             </span>
-          ) : readyToSend ? (
-            "OTP Website par Bhejein ✓"
           ) : (
-            "OTP SMS aane ka wait — auto-fill hoga"
+            "OTP Website par Bhejein"
           )}
         </button>
 
-        {done && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-green-300 font-medium text-sm">
-            <CheckCircle className="h-5 w-5" />
-            Bhej diya! PC par dikhega — agla OTP ke liye ready
+        {done && lastSent && (
+          <div className="mt-4 text-center text-green-300 font-medium">
+            <CheckCircle className="h-6 w-6 inline mr-1" /> {lastSent} bhej diya!
           </div>
         )}
-        {error && <p className="mt-3 text-center text-red-300 text-sm bg-red-900/30 rounded-lg p-2">{error}</p>}
+        {error && <p className="mt-3 text-center text-red-200 text-sm bg-red-900/40 rounded-lg p-3">{error}</p>}
       </div>
 
-      <div className="mt-6 space-y-2 text-[10px] text-blue-300/90 text-center leading-relaxed">
-        <p>📌 Home screen par add karein — har baar fast khulega</p>
-        <p>100% automatic chahiye? OTP phone par &quot;SMS Forwarder&quot; app + webhook (PC Advanced section)</p>
-      </div>
+      <p className="mt-6 text-[10px] text-blue-300/80 text-center">
+        Is page ko band kar sakte ho agar SMS Forwarder setup ho chuka hai
+      </p>
     </div>
   );
 }

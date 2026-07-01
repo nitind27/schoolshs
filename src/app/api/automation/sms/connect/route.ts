@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
-import { buildPhoneBridgeUrl } from "@/lib/env-auth";
+import { buildPhoneBridgeUrl, buildForwarderSetupUrl, buildSmsForwarderWebhookUrl } from "@/lib/env-auth";
 
 function generateSmsToken(): string {
   return crypto.randomBytes(24).toString("hex");
@@ -47,14 +47,17 @@ export async function POST(request: NextRequest) {
     });
 
     const origin = request.nextUrl.origin;
-    const url = bridgeUrl(origin, settings.smsInboxToken!);
+    const smsToken = settings.smsInboxToken!;
+    const url = bridgeUrl(origin, smsToken);
 
     return NextResponse.json({
       success: true,
       mobile: normalized,
       mobileMasked: `${normalized.slice(0, 2)}xxxxx${normalized.slice(-3)}`,
       phoneBridgeUrl: url,
-      message: "Phone connected — ab phone par link kholein",
+      forwarderSetupUrl: buildForwarderSetupUrl(origin, smsToken),
+      forwarderWebhookUrl: buildSmsForwarderWebhookUrl(origin, smsToken),
+      message: "Phone connected — ab OTP phone par SMS Forwarder setup karein (recommended)",
     });
   } catch (error) {
     if (error instanceof AuthError) {
