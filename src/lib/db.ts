@@ -1,6 +1,8 @@
-import "dotenv/config";
+import { loadEnv } from "./load-env";
 import { PrismaClient } from "@/generated/prisma/client";
 import { createPrismaClient } from "./prisma-factory";
+
+loadEnv();
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

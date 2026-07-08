@@ -1,4 +1,4 @@
-import "dotenv/config";
+import { loadEnv } from "../src/lib/load-env";
 import { chromium, type BrowserContext, type Page } from "playwright";
 import { buildFieldMappings, DG_DROPDOWN_MAPPINGS } from "./selectors";
 import { getDgPortalByType, parsePortalType, type DgPortalConfig } from "../src/lib/dg-portal";
@@ -24,6 +24,8 @@ import {
 } from "./portal-navigator";
 import { JobReporter, buildInitialProgress, type StudentProgressItem } from "./status-reporter";
 import { prisma } from "../src/lib/db";
+
+loadEnv();
 
 const jobId = process.env.AUTOMATION_JOB_ID || "";
 const schoolId = process.env.AUTOMATION_SCHOOL_ID || "";
