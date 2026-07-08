@@ -199,6 +199,12 @@ async function launchBrowser(
   const forceHeadless = process.env.AUTOMATION_HEADLESS === "1";
   const headless = forceHeadless || (isLinux && !hasDisplay);
 
+  log(
+    `Launching Chromium: headless=${headless} isLinux=${isLinux} DISPLAY=${process.env.DISPLAY || "—"} WAYLAND_DISPLAY=${
+      process.env.WAYLAND_DISPLAY || "—"
+    } AUTOMATION_HEADLESS=${process.env.AUTOMATION_HEADLESS || "—"}`
+  );
+
   if (isLinux && !headless && !hasDisplay) {
     throw new Error(
       "Auto Apply needs a display on VPS. Start with xvfb or set AUTOMATION_HEADLESS=1."
