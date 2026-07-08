@@ -16,7 +16,12 @@ function getTsxRunner(): { command: string; args: string[] } {
     ".bin",
     process.platform === "win32" ? "tsx.cmd" : "tsx"
   );
-  return { command: tsxBin, args: [] };
+  if (fs.existsSync(tsxBin)) {
+    return { command: tsxBin, args: [] };
+  }
+  throw new Error(
+    "tsx runner not found. Install production dependencies correctly (npm install) so automation worker can start."
+  );
 }
 
 export async function POST(request: NextRequest) {
