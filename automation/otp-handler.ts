@@ -164,12 +164,21 @@ export async function waitForLoginWithOtpAutoFill(
 ): Promise<void> {
   log("⏳ CAPTCHA + LOGIN karein → OTP phone SMS se auto-fill hoga (website inbox connected)");
   const deadline = Date.now() + timeoutMs;
+  let currentPage: Page = page;
   let otpAnnounced = false;
   let lastClipboard = "";
   let lastUsedOtp = "";
   let stable = 0;
 
   let lastHeartbeat = 0;
+
+  function pickAnyOpenPage(fromPage: Page): Page | null {
+    try {
+      return fromPage.context().pages().find((p) => !p.isClosed()) || null;
+    } catch {
+      return null;
+    }
+  }
 
   while (Date.now() < deadline) {
     const now = Date.now();
@@ -178,19 +187,20 @@ export async function waitForLoginWithOtpAutoFill(
       log("⏳ Waiting: CAPTCHA/LOGIN/OTP… (manual may be required)");
       if (reporter) await reporter.flush({ currentStep: "Waiting: CAPTCHA/Login/OTP..." });
     }
-    if (await isDgSessionActive(page.url(), portal.loginPagePattern)) {
-      stable++;
-      if (stable >= 4) {
-        log("✓ Login successful");
-        if (reporter) await reporter.flush({ currentStep: "Login complete" });
-        return;
+    try {
+      if (await isDgSessionActive(currentPage.url(), portal.loginPagePattern)) {
+        stable++;
+        if (stable >= 4) {
+          log("✓ Login successful");
+          if (reporter) await reporter.flush({ currentStep: "Login complete" });
+          return;
+        }
+        await currentPage.waitForTimeout(500);
+        continue;
       }
-      await page.waitForTimeout(500);
-      continue;
-    }
-    stable = 0;
+      stable = 0;
 
-    if (await isOtpDialogVisible(page)) {
+      if (await isOtpDialogVisible(currentPage)) {
       if (!otpAnnounced) {
         otpAnnounced = true;
         log("📱 OTP Verify screen detect — auto-fill shuru");
@@ -214,7 +224,7 @@ export async function waitForLoginWithOtpAutoFill(
       }
 
       if (!otp) {
-        const clip = await readClipboardOtp(page, lastClipboard);
+        const clip = await readClipboardOtp(currentPage, lastClipboard);
         lastClipboard = clip.raw;
         if (clip.otp && clip.otp !== lastUsedOtp) {
           otp = clip.otp;
@@ -223,17 +233,29 @@ export async function waitForLoginWithOtpAutoFill(
       }
 
       if (otp && otp !== lastUsedOtp) {
-        const ok = await fillOtpAndConfirm(page, otp, log);
+        const ok = await fillOtpAndConfirm(currentPage, otp, log);
         if (ok) {
           lastUsedOtp = otp;
           otpAnnounced = false;
-          await page.waitForTimeout(2500);
+          await currentPage.waitForTimeout(2500);
           continue;
         }
       }
-    }
+      }
 
-    await page.waitForTimeout(450);
+      await currentPage.waitForTimeout(450);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      log(`⚠ OTP/Login loop error: ${errMsg}`);
+      const replacement = pickAnyOpenPage(currentPage);
+      if (replacement && replacement !== currentPage) {
+        currentPage = replacement;
+        stable = 0;
+        otpAnnounced = false;
+        continue;
+      }
+      throw err;
+    }
   }
 
   throw new Error("Login timeout — CAPTCHA + LOGIN + OTP complete karein");
