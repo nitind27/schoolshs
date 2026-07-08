@@ -194,12 +194,28 @@ async function launchBrowser(
   const profileDir = getProfileDirForSchool(portal, schoolId || String(loginStudent.schoolId || ""), fallbackLoginId);
   log(`Browser profile (${portal.type}): ${profileDir}`);
 
+  const isLinux = process.platform === "linux";
+  const hasDisplay = Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+  const forceHeadless = process.env.AUTOMATION_HEADLESS === "1";
+  const headless = forceHeadless || (isLinux && !hasDisplay);
+
+  if (isLinux && !headless && !hasDisplay) {
+    throw new Error(
+      "Auto Apply needs a display on VPS. Start with xvfb or set AUTOMATION_HEADLESS=1."
+    );
+  }
+
+  const launchArgs = ["--start-maximized"];
+  if (isLinux) {
+    launchArgs.push("--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage");
+  }
+
   const context = await chromium.launchPersistentContext(profileDir, {
-    headless: false,
-    slowMo: 80,
-    viewport: null,
+    headless,
+    slowMo: headless ? 0 : 80,
+    viewport: headless ? { width: 1366, height: 768 } : null,
     acceptDownloads: true,
-    args: ["--start-maximized"],
+    args: launchArgs,
   });
 
   await context.grantPermissions(["clipboard-read", "clipboard-write"]).catch(() => {});
