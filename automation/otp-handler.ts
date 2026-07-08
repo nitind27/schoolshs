@@ -169,7 +169,15 @@ export async function waitForLoginWithOtpAutoFill(
   let lastUsedOtp = "";
   let stable = 0;
 
+  let lastHeartbeat = 0;
+
   while (Date.now() < deadline) {
+    const now = Date.now();
+    if (now - lastHeartbeat > 25000) {
+      lastHeartbeat = now;
+      log("⏳ Waiting: CAPTCHA/LOGIN/OTP… (manual may be required)");
+      if (reporter) await reporter.flush({ currentStep: "Waiting: CAPTCHA/Login/OTP..." });
+    }
     if (await isDgSessionActive(page.url(), portal.loginPagePattern)) {
       stable++;
       if (stable >= 4) {
