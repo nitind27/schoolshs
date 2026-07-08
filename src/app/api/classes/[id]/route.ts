@@ -28,7 +28,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await requireSchoolAuth();
+    const session = await requireSchoolAuth(["school_admin"]);
     const { id } = await params;
     const existing = await prisma.schoolClass.findFirst({ where: { id, schoolId: session.schoolId } });
     if (!existing) return NextResponse.json({ error: "Class not found" }, { status: 404 });
@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await requireSchoolAuth();
+    const session = await requireSchoolAuth(["school_admin"]);
     const { id } = await params;
     const existing = await prisma.schoolClass.findFirst({ where: { id, schoolId: session.schoolId } });
     if (!existing) return NextResponse.json({ error: "Class not found" }, { status: 404 });

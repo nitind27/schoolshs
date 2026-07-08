@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth();
+    const session = await requireSchoolAuth(["school_admin"]);
     const body = await request.json();
     const data = normalizeClass(body);
 

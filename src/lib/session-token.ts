@@ -1,6 +1,6 @@
 import { getAuthSecret } from "./env-auth";
-
-export type UserRole = "super_admin" | "school_admin";
+import type { UserRole } from "./roles";
+export type { UserRole };
 
 export interface SessionUser {
   userId: string;
@@ -10,6 +10,8 @@ export interface SessionUser {
   schoolId: string | null;
   schoolName?: string | null;
   schoolCode?: string | null;
+  staffId?: string | null;
+  studentId?: string | null;
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -87,6 +89,8 @@ export async function parseSessionToken(token: string): Promise<SessionUser | nu
       schoolId: data.schoolId ?? null,
       schoolName: data.schoolName ?? null,
       schoolCode: data.schoolCode ?? null,
+      staffId: data.staffId ?? null,
+      studentId: data.studentId ?? null,
     };
   } catch {
     return null;

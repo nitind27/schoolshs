@@ -35,6 +35,25 @@ export async function PUT(
 
     const body = await request.json();
     const data = normalizeStudentRow(body);
+
+    if (!data.classId) {
+      return NextResponse.json({ error: "Class is required. Please assign a class before updating student." }, { status: 400 });
+    }
+
+    const assignedClass = await prisma.schoolClass.findFirst({
+      where: { id: data.classId, schoolId: session.schoolId },
+    });
+    if (!assignedClass) {
+      return NextResponse.json({ error: "Selected class not found for this school" }, { status: 400 });
+    }
+
+    data.standard = assignedClass.standard;
+    data.section = assignedClass.section;
+    data.institutionName = assignedClass.institutionName || data.institutionName;
+    data.institutionDistrict = assignedClass.institutionDistrict || data.institutionDistrict;
+    data.financialYear = assignedClass.academicYear || data.financialYear;
+    data.courseName = data.courseName || `Class ${assignedClass.standard}`;
+
     const errors = validateStudent(data);
 
     const student = await prisma.student.update({

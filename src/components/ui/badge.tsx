@@ -17,7 +17,9 @@ export function Badge({
     pending: "bg-yellow-100 text-yellow-700",
     submitted: "bg-green-100 text-green-700",
     approved: "bg-emerald-100 text-emerald-700",
-    rejected: "bg-red-100 text-red-700",
+    flagged: "bg-red-100 text-red-800",
+    query: "bg-orange-100 text-orange-800",
+    verified: "bg-emerald-100 text-emerald-800",
   };
 
   const label = t(`status.${status}`);

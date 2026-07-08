@@ -32,6 +32,8 @@ function IdCardsContent() {
   const [academicYear, setAcademicYear] = useState("2025-26");
   const [showSettings, setShowSettings] = useState(false);
   const [settingsForm, setSettingsForm] = useState<Partial<SchoolSettings>>({});
+  const [logoPreview, setLogoPreview] = useState<string | undefined>();
+  const [signaturePreview, setSignaturePreview] = useState<string | undefined>();
 
   useEffect(() => {
     fetch("/api/classes?academicYear=2025-26")
@@ -134,6 +136,49 @@ function IdCardsContent() {
             <Input label={t("common.phone")} value={settingsForm.schoolPhone || ""} onChange={(e) => setSettingsForm({ ...settingsForm, schoolPhone: e.target.value })} />
             <Input label={t("idCards.primaryColor")} type="color" value={settingsForm.idCardPrimaryColor || "#e91e8c"} onChange={(e) => setSettingsForm({ ...settingsForm, idCardPrimaryColor: e.target.value })} />
             <Input label={t("idCards.accentColor")} type="color" value={settingsForm.idCardAccentColor || "#1e3a8a"} onChange={(e) => setSettingsForm({ ...settingsForm, idCardAccentColor: e.target.value })} />
+
+            {/* Logo upload */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700">School Logo</label>
+              <div className="flex items-center gap-3">
+                {logoPreview && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logoPreview} alt="logo" className="w-14 h-14 rounded-full object-cover border-2 border-slate-200" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setLogoPreview(URL.createObjectURL(f));
+                  }}
+                />
+              </div>
+              <p className="text-xs text-slate-400">PNG/JPG — shows as circle in header</p>
+            </div>
+
+            {/* Signature upload */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700">Principal Signature</label>
+              <div className="flex items-center gap-3">
+                {signaturePreview && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={signaturePreview} alt="signature" className="h-10 object-contain border border-slate-200 rounded px-2 bg-white" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setSignaturePreview(URL.createObjectURL(f));
+                  }}
+                />
+              </div>
+              <p className="text-xs text-slate-400">PNG with transparent background recommended</p>
+            </div>
+
             <div className="md:col-span-2 flex justify-end">
               <Button onClick={saveSettings}>{t("idCards.saveSettings")}</Button>
             </div>
@@ -171,6 +216,8 @@ function IdCardsContent() {
                 student={s}
                 settings={settings}
                 photoUrl={photoUrl(s)}
+                logoUrl={logoPreview}
+                signatureUrl={signaturePreview}
               />
             ))}
           </div>

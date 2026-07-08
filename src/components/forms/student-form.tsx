@@ -15,8 +15,6 @@ import {
   COURSE_TYPES,
   CURRENT_YEARS,
   BOARDS,
-  SCHOOL_STANDARDS,
-  CLASS_SECTIONS,
   BLOOD_GROUPS,
   standardToCourseName,
   standardToCurrentYear,
@@ -117,12 +115,6 @@ export function StudentForm({ initialData = {}, initialClassId, onSubmit, submit
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const applyStandard = (standard: string) => {
-    update("standard", standard);
-    update("courseName", standardToCourseName(standard));
-    update("currentYear", standardToCurrentYear(standard));
-  };
-
   const applySsgujaratData = (data: Partial<Student>) => {
     setForm((prev) => {
       const merged: FormData = { ...prev };
@@ -163,6 +155,11 @@ export function StudentForm({ initialData = {}, initialClassId, onSubmit, submit
   };
 
   const handleSubmit = async () => {
+    if (!form.classId) {
+      alert("Please select a class first. Class setup is managed by admin.");
+      setStep(1);
+      return;
+    }
     setLoading(true);
     try {
       await onSubmit(form);
@@ -266,13 +263,18 @@ export function StudentForm({ initialData = {}, initialClassId, onSubmit, submit
                     value={form.classId || ""}
                     onChange={(e) => update("classId", e.target.value || null)}
                   />
-                  <Select label={t("fields.standard")} options={SCHOOL_STANDARDS} value={form.standard || ""} onChange={(e) => applyStandard(e.target.value)} />
-                  <Select label={t("fields.section")} options={CLASS_SECTIONS} value={form.section || ""} onChange={(e) => update("section", e.target.value)} />
+                  <Input label={t("fields.standard")} value={form.standard || ""} disabled />
+                  <Input label={t("fields.section")} value={form.section || ""} disabled />
                   <Input label={t("fields.rollNumber")} value={form.rollNumber || ""} onChange={(e) => update("rollNumber", e.target.value)} />
                   <Input label={t("fields.grNumber")} value={form.grNumber || ""} onChange={(e) => update("grNumber", e.target.value)} />
                   <Input label={t("fields.childUid")} maxLength={18} placeholder="242610044011910032" value={form.childUid || ""} onChange={(e) => update("childUid", e.target.value.replace(/\s/g, ""))} />
                   <Select label={t("fields.bloodGroup")} options={["", ...BLOOD_GROUPS]} value={form.bloodGroup || ""} onChange={(e) => update("bloodGroup", e.target.value || null)} />
                 </div>
+                {classes.length === 0 && (
+                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    No classes configured. Admin must create classes/divisions first in Classes module.
+                  </div>
+                )}
               </div>
             </div>
           )}

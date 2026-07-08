@@ -6,6 +6,7 @@ import { StudentForm } from "@/components/forms/student-form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/i18n/locale-provider";
+import { PageShell } from "@/components/layout/page-shell";
 
 function NewStudentContent() {
   const t = useT();
@@ -31,20 +32,25 @@ function NewStudentContent() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
+    <PageShell
+      title={t("students.newStudent")}
+      subtitle={t("students.newStudentSubtitle")}
+      breadcrumbs={[
+        { label: t("nav.dashboard"), href: "/" },
+        { label: t("nav.classes"), href: "/classes" },
+        { label: t("nav.students"), href: "/students" },
+        { label: t("students.newStudent") },
+      ]}
+      actions={(
         <Link href={classId ? `/classes/${classId}` : "/students"}>
-          <button className="p-2 rounded-lg hover:bg-slate-100">
-            <ArrowLeft className="h-5 w-5" />
+          <button className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <ArrowLeft className="h-4 w-4" /> Back
           </button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t("students.newStudent")}</h1>
-          <p className="text-slate-500 mt-1">{t("students.newStudentSubtitle")}</p>
-        </div>
-      </div>
+      )}
+    >
       <StudentForm onSubmit={handleSubmit} initialClassId={classId} />
-    </div>
+    </PageShell>
   );
 }
 

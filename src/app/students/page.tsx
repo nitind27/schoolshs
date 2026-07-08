@@ -7,14 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Badge, CategoryBadge } from "@/components/ui/badge";
 import { CATEGORIES, STUDENT_STATUSES, SCHOOL_STANDARDS, CLASS_SECTIONS, GENDERS } from "@/lib/constants";
-import { Search, Plus, Trash2, Edit, Eye, Download, CheckSquare, Square, Play, CreditCard, Filter, X } from "lucide-react";
+import { Search, Plus, Trash2, Edit, Eye, Download, CheckSquare, Square, Play, CreditCard, Filter, X, Users, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
+import { PageShell } from "@/components/layout/page-shell";
 
 type StudentRow = Student & {
   schoolClass?: Pick<SchoolClass, "id" | "name" | "standard" | "section"> | null;
 };
+type ClassMeta = SchoolClass & { _count?: { students: number } };
 
 export default function StudentsPage() {
   return (
@@ -28,7 +30,7 @@ function StudentsContent() {
   const t = useT();
   const searchParams = useSearchParams();
   const [students, setStudents] = useState<StudentRow[]>([]);
-  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [classes, setClasses] = useState<ClassMeta[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -41,6 +43,7 @@ function StudentsContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     const cat = searchParams.get("category");
@@ -56,7 +59,20 @@ function StudentsContent() {
       .then((d) => setClasses(d.classes || []));
   }, []);
 
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setUserRole(d?.user?.role ?? null))
+      .catch(() => setUserRole(null));
+  }, []);
+
   const fetchStudents = useCallback(async () => {
+    if (!classFilter) {
+      setStudents([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "50" });
     if (search) params.set("search", search);
@@ -82,6 +98,7 @@ function StudentsContent() {
   useEffect(() => { fetchStudents(); }, [fetchStudents]);
 
   const activeFilters = [statusFilter, categoryFilter, classFilter, standardFilter, sectionFilter, genderFilter].filter(Boolean).length;
+  const selectedClass = classes.find((c) => c.id === classFilter);
 
   const clearFilters = () => {
     setStatusFilter("");
@@ -91,6 +108,7 @@ function StudentsContent() {
     setSectionFilter("");
     setGenderFilter("");
     setPage(1);
+    setSelected(new Set());
   };
 
   const toggleSelect = (id: string) => {
@@ -119,29 +137,65 @@ function StudentsContent() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t("students.title")}</h1>
-          <p className="text-slate-500 mt-1">
-            {t("students.totalCount", { count: total })}
-            {categoryFilter && (
-              <span className="ml-2 inline-flex items-center gap-1">
-                · {t("students.filterLabel")}: <CategoryBadge category={categoryFilter} />
-                <Link href="/students" className="text-xs text-blue-600 hover:underline">{t("students.clear")}</Link>
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={exportSelected}>
+    <PageShell
+      title={t("students.title")}
+      subtitle={
+        classFilter
+          ? t("students.totalCount", { count: total })
+          : `Select class first. ${classes.length} classes configured by admin.`
+      }
+      breadcrumbs={[
+        { label: t("nav.dashboard"), href: "/" },
+        { label: t("nav.classes"), href: "/classes" },
+        { label: t("nav.students") },
+      ]}
+      actions={(
+        <>
+          <Button variant="outline" onClick={exportSelected} disabled={!classFilter}>
             <Download className="h-4 w-4" /> {t("common.export")}
           </Button>
-          <Link href="/students/new">
+          <Link href={classFilter ? `/students/new?classId=${classFilter}` : "/classes"}>
             <Button><Plus className="h-4 w-4" /> {t("students.addStudent")}</Button>
           </Link>
-        </div>
-      </div>
+        </>
+      )}
+    >
+
+      {!classFilter && (
+        <Card>
+          <CardContent className="p-4">
+            {classes.length === 0 ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                No class configured yet. Admin should first create classes/divisions in `Classes` module.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {classes.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setClassFilter(c.id);
+                      setPage(1);
+                    }}
+                    className="text-left rounded-xl border border-slate-200 bg-white p-4 hover:border-blue-300 hover:bg-blue-50/40 transition-all"
+                  >
+                    <p className="font-semibold text-slate-900">{c.name}</p>
+                    <p className="text-xs text-slate-500 mt-1">{c.academicYear}</p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1 text-sm text-blue-700">
+                        <Users className="h-4 w-4" />
+                        {(c._count?.students || 0).toLocaleString("en-IN")} students
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-4 space-y-3">
@@ -182,7 +236,7 @@ function StudentsContent() {
                 emptyLabel={t("students.allClasses")}
                 options={classes.map((c) => ({ value: c.id, label: c.name }))}
                 value={classFilter}
-                onChange={(e) => { setClassFilter(e.target.value); setPage(1); }}
+                onChange={(e) => { setClassFilter(e.target.value); setPage(1); setSelected(new Set()); }}
               />
               <Select
                 label={t("students.filterByStandard")}
@@ -219,14 +273,23 @@ function StudentsContent() {
 
       <Card>
         <CardContent className="p-0">
+          {classFilter && selectedClass && (
+            <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              Showing students of <span className="font-semibold text-slate-900">{selectedClass.name}</span> ({selectedClass.academicYear})
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center h-48">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
+          ) : !classFilter ? (
+            <div className="text-center py-16 text-slate-500">
+              <p>Select any class above to view class-wise student list.</p>
+            </div>
           ) : students.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-slate-500 mb-4">{t("students.noStudents")}</p>
-              <Link href="/students/new"><Button>{t("students.addStudent")}</Button></Link>
+              <Link href={`/students/new?classId=${classFilter}`}><Button>{t("students.addStudent")}</Button></Link>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -298,13 +361,13 @@ function StudentsContent() {
         </CardContent>
       </Card>
 
-      {selected.size > 0 && (
+      {selected.size > 0 && classFilter && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 lg:translate-x-0 lg:left-auto lg:right-8 bg-white border border-slate-200 shadow-xl rounded-xl p-4 flex items-center gap-4 z-40 flex-wrap max-w-lg">
           <span className="text-sm font-medium">{t("students.selected", { count: selected.size })}</span>
           <Link href={`/bulk-submit?ids=${Array.from(selected).join(",")}`}>
             <Button size="sm">{t("students.bulkSubmitSelected")}</Button>
           </Link>
-          {selected.size > 1 && (
+          {selected.size > 1 && userRole === "school_admin" && (
             <Link href={`/auto-apply?ids=${Array.from(selected).join(",")}`}>
               <Button size="sm" variant="secondary">
                 <Play className="h-4 w-4" /> {t("autoApply.title")}
@@ -313,6 +376,6 @@ function StudentsContent() {
           )}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

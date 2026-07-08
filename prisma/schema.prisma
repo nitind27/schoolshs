@@ -27,6 +27,11 @@ model School {
   bulkSubmissions BulkSubmission[]
   automationJobs  AutomationJob[]
   smsInbox        SmsInboxMessage[]
+  financialYears  FinancialYear[]
+  accounts        Account[]
+  vouchers        Voucher[]
+  exams           Exam[]
+  auditSessions   CaAuditSession[]
 
   @@index([isActive])
   @@map("school")
@@ -42,8 +47,15 @@ model User {
   role         String
   schoolId     String?
   school       School?   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staffId      String?   @unique
+  staff        Staff?    @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  studentId    String?   @unique
+  student      Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
+
+  vouchersCreated Voucher[]      @relation("VoucherCreatedBy")
+  auditActions    AuditAction[]
 
   @@index([schoolId])
   @@index([role])
@@ -111,6 +123,7 @@ model Staff {
   isActive      Boolean  @default(true)
   photoPath     String?
   classes       SchoolClass[] @relation("ClassTeacher")
+  user          User?
 
   @@unique([schoolId, employeeId])
   @@index([schoolId])
@@ -237,9 +250,16 @@ model Student {
   lastAutomationLog   String?  @db.Text
 
   status           String  @default("draft")
+  admissionStatus  String  @default("pending")
+  verifiedAt       DateTime?
+  verifiedBy       String?
   submissionDate   DateTime?
   notes            String?  @db.Text
   validationErrors String?  @db.Text
+
+  user         User?
+  examResults  ExamResult[]
+  reportCards  ReportCard[]
 
   @@unique([schoolId, aadhaarNumber])
   @@index([schoolId])
@@ -296,4 +316,234 @@ model AutomationJob {
   @@index([status])
   @@index([createdAt])
   @@map("automationjob")
+}
+
+// ─── Financial Year (April–March, Indian FY) ───
+model FinancialYear {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  label      String
+  startDate  DateTime
+  endDate    DateTime
+  isActive   Boolean  @default(false)
+  isLocked   Boolean  @default(false)
+  auditStatus String  @default("pending")
+
+  accounts      Account[]
+  vouchers      Voucher[]
+  auditSessions CaAuditSession[]
+
+  @@unique([schoolId, label])
+  @@index([schoolId])
+  @@map("financialyear")
+}
+
+// ─── Chart of Accounts (Indian school accounting) ───
+model Account {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  schoolId        String
+  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  financialYearId String
+  financialYear   FinancialYear @relation(fields: [financialYearId], references: [id], onDelete: Cascade)
+  code            String
+  name            String
+  groupType       String
+  accountType     String
+  openingBalance  Float    @default(0)
+  balanceType     String   @default("debit")
+  isActive        Boolean  @default(true)
+  parentId        String?
+
+  voucherLines VoucherLine[]
+
+  @@unique([schoolId, financialYearId, code])
+  @@index([schoolId])
+  @@index([financialYearId])
+  @@index([groupType])
+  @@map("account")
+}
+
+// ─── Voucher (Payment / Receipt / Journal / Contra) ───
+model Voucher {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  schoolId        String
+  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  financialYearId String
+  financialYear   FinancialYear @relation(fields: [financialYearId], references: [id], onDelete: Cascade)
+  voucherNo       String
+  voucherType     String
+  voucherDate     DateTime
+  narration       String   @db.Text
+  totalAmount     Float
+  referenceNo     String?
+  partyName       String?
+  paymentMode     String?
+  chequeNo        String?
+  bankName        String?
+  billNo          String?
+  billDate        DateTime?
+  gstin           String?
+  auditStatus     String   @default("pending")
+  auditRemarks    String?  @db.Text
+  auditedAt       DateTime?
+  auditedBy       String?
+  createdById     String?
+  createdBy       User?    @relation("VoucherCreatedBy", fields: [createdById], references: [id])
+  isPosted        Boolean  @default(true)
+
+  lines VoucherLine[]
+
+  @@unique([schoolId, financialYearId, voucherNo])
+  @@index([schoolId])
+  @@index([financialYearId])
+  @@index([voucherType])
+  @@index([auditStatus])
+  @@index([voucherDate])
+  @@map("voucher")
+}
+
+model VoucherLine {
+  id          String  @id @default(cuid())
+  voucherId   String
+  voucher     Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     Account @relation(fields: [accountId], references: [id])
+  debit       Float   @default(0)
+  credit      Float   @default(0)
+  description String?
+
+  @@index([voucherId])
+  @@index([accountId])
+  @@map("voucherline")
+}
+
+// ─── CA Audit Session ───
+model CaAuditSession {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  schoolId        String
+  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  financialYearId String
+  financialYear   FinancialYear @relation(fields: [financialYearId], references: [id], onDelete: Cascade)
+  status          String   @default("in_progress")
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  caName          String?
+  caMembershipNo  String?
+  findings        String?  @db.Text
+  recommendation  String?  @db.Text
+
+  actions AuditAction[]
+
+  @@index([schoolId])
+  @@index([financialYearId])
+  @@map("caauditsession")
+}
+
+model AuditAction {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  sessionId   String
+  session     CaAuditSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  entityType  String
+  entityId    String?
+  remarks     String?  @db.Text
+
+  @@index([sessionId])
+  @@map("auditaction")
+}
+
+// ─── Exams & Results ───
+model Exam {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  schoolId        String
+  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name            String
+  examType        String
+  academicYear    String
+  standard        String?
+  term            String?
+  maxMarks        Int      @default(100)
+  passingMarks    Int      @default(33)
+  examDate        DateTime?
+  isPublished     Boolean  @default(false)
+  publishedAt     DateTime?
+
+  subjects ExamSubject[]
+  results  ExamResult[]
+
+  @@index([schoolId])
+  @@index([academicYear])
+  @@map("exam")
+}
+
+model ExamSubject {
+  id        String @id @default(cuid())
+  examId    String
+  exam      Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  name      String
+  code      String?
+  maxMarks  Int    @default(100)
+  sortOrder Int    @default(0)
+
+  results ExamResult[]
+
+  @@index([examId])
+  @@map("examsubject")
+}
+
+model ExamResult {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  examId      String
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  subjectId   String
+  subject     ExamSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  marksObtained Float
+  grade       String?
+  isAbsent    Boolean  @default(false)
+  remarks     String?
+
+  @@unique([examId, subjectId, studentId])
+  @@index([studentId])
+  @@index([examId])
+  @@map("examresult")
+}
+
+model ReportCard {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  examId       String?
+  academicYear String
+  standard     String
+  totalMarks   Float?
+  percentage   Float?
+  grade        String?
+  rank         Int?
+  result       String?
+  pdfPath      String?
+  isPublished  Boolean  @default(false)
+
+  @@index([studentId])
+  @@index([academicYear])
+  @@map("reportcard")
 }

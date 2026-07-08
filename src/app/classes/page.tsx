@@ -9,6 +9,7 @@ import { SCHOOL_STANDARDS, FINANCIAL_YEARS } from "@/lib/constants";
 import { Plus, Users, BookOpen, ChevronRight } from "lucide-react";
 import type { SchoolClass } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
+import { PageShell } from "@/components/layout/page-shell";
 
 type ClassWithMeta = SchoolClass & {
   classTeacher?: { firstName: string; lastName: string } | null;
@@ -42,16 +43,19 @@ export default function ClassesPage() {
   }, {});
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t("classes.title")}</h1>
-          <p className="text-slate-500 mt-1">{t("classes.subtitle")}</p>
-        </div>
+    <PageShell
+      title={t("classes.title")}
+      subtitle={t("classes.subtitle")}
+      breadcrumbs={[
+        { label: t("nav.dashboard"), href: "/" },
+        { label: t("nav.classes") },
+      ]}
+      actions={(
         <Link href="/classes/new">
           <Button><Plus className="h-4 w-4" /> {t("classes.addClass")}</Button>
         </Link>
-      </div>
+      )}
+    >
 
       <Card>
         <CardContent className="p-4 flex flex-wrap gap-3">
@@ -135,6 +139,6 @@ export default function ClassesPage() {
             </div>
           ))
       )}
-    </div>
+    </PageShell>
   );
 }

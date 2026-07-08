@@ -462,11 +462,117 @@ async function main() {
     });
   }
 
+  const clerkStaff = await prisma.staff.upsert({
+    where: { schoolId_employeeId: { schoolId: school1.id, employeeId: "EMP003" } },
+    create: {
+      schoolId: school1.id,
+      employeeId: "EMP003",
+      firstName: "Suresh",
+      lastName: "Clerk",
+      designation: "Clerk",
+      department: "Office",
+      mobileNumber: "9744444444",
+      email: "clerk@songadh.local",
+      gender: "Male",
+    },
+    update: {},
+  });
+
+  await prisma.user.upsert({
+    where: { email: "teacher@songadh.local" },
+    create: {
+      email: "teacher@songadh.local",
+      passwordHash: hashPassword("Teacher@123"),
+      name: "Priya Shah (Teacher)",
+      role: "teacher",
+      schoolId: school1.id,
+      staffId: staff2.id,
+    },
+    update: { staffId: staff2.id, role: "teacher" },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "clerk@songadh.local" },
+    create: {
+      email: "clerk@songadh.local",
+      passwordHash: hashPassword("Clerk@123"),
+      name: "Suresh Clerk",
+      role: "clerk",
+      schoolId: school1.id,
+      staffId: clerkStaff.id,
+    },
+    update: { staffId: clerkStaff.id, role: "clerk" },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "ca@songadh.local" },
+    create: {
+      email: "ca@songadh.local",
+      passwordHash: hashPassword("CA@12345"),
+      name: "CA Audit Firm",
+      role: "ca",
+      schoolId: school1.id,
+    },
+    update: { role: "ca" },
+  });
+
+  const firstStudent = savedStudents[0];
+  await prisma.user.upsert({
+    where: { email: "student@songadh.local" },
+    create: {
+      email: "student@songadh.local",
+      passwordHash: hashPassword("Student@123"),
+      name: `${firstStudent.firstName} ${firstStudent.surname}`,
+      role: "student",
+      schoolId: school1.id,
+      studentId: firstStudent.id,
+    },
+    update: { studentId: firstStudent.id, role: "student" },
+  });
+
+  await prisma.student.update({
+    where: { id: firstStudent.id },
+    data: { admissionStatus: "verified", email: "student@songadh.local" },
+  });
+
+  const fy = await prisma.financialYear.upsert({
+    where: { schoolId_label: { schoolId: school1.id, label: "2025-26" } },
+    create: {
+      schoolId: school1.id,
+      label: "2025-26",
+      startDate: new Date("2025-04-01"),
+      endDate: new Date("2026-03-31"),
+      isActive: true,
+    },
+    update: { isActive: true },
+  });
+
+  const { DEFAULT_ACCOUNTS } = await import("../src/lib/accounting");
+  const existingAccounts = await prisma.account.count({ where: { financialYearId: fy.id } });
+  if (existingAccounts === 0) {
+    await prisma.account.createMany({
+      data: DEFAULT_ACCOUNTS.map((a) => ({
+        schoolId: school1.id,
+        financialYearId: fy.id,
+        code: a.code,
+        name: a.name,
+        groupType: a.groupType,
+        accountType: a.accountType,
+        balanceType: a.balanceType,
+      })),
+    });
+  }
+
   console.log("✓ Schools: 2");
-  console.log("✓ Users: superadmin@shs.local / SuperAdmin@123");
-  console.log("✓        admin@songadh.local / SchoolAdmin@123");
-  console.log("✓        admin@vyara.local / SchoolAdmin@123");
-  console.log(`✓ Staff: 3 | Classes: 3 | Students: ${savedStudents.length}`);
+  console.log("✓ Users:");
+  console.log("   superadmin@shs.local / SuperAdmin@123  (Super Admin)");
+  console.log("   admin@songadh.local / SchoolAdmin@123  (School Admin)");
+  console.log("   teacher@songadh.local / Teacher@123      (Teacher)");
+  console.log("   clerk@songadh.local / Clerk@123        (Clerk)");
+  console.log("   ca@songadh.local / CA@12345            (CA Portal)");
+  console.log("   student@songadh.local / Student@123    (Student Portal)");
+  console.log(`✓ Staff: 4 | Classes: 3 | Students: ${savedStudents.length}`);
+  console.log("✓ Financial Year 2025-26 + Chart of Accounts");
   console.log("✓ SMS messages, BulkSubmission, AutomationJobs");
   console.log("\nDone — http://localhost:3000/login");
 }

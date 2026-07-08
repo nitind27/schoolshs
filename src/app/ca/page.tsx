@@ -1,0 +1,119 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Shield, FileSearch, BarChart3, CheckCircle, AlertTriangle, ArrowRight, Clock3 } from "lucide-react";
+import { formatIndianCurrency } from "@/lib/accounting";
+import { useT } from "@/i18n/locale-provider";
+
+export default function CaDashboard() {
+  const t = useT();
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/accounting")
+      .then(async (r) => {
+        const payload = await r.json();
+        if (!r.ok) throw new Error(payload?.error || "Failed to load accounting dashboard");
+        setData(payload);
+      })
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed to load accounting dashboard"));
+  }, []);
+
+  const pending = (data?.voucherStats as { auditStatus: string; _count: number }[])?.find((s) => s.auditStatus === "pending")?._count || 0;
+  const verified = (data?.voucherStats as { auditStatus: string; _count: number }[])?.find((s) => s.auditStatus === "verified")?._count || 0;
+  const flagged = (data?.voucherStats as { auditStatus: string; _count: number }[])?.find((s) => s.auditStatus === "flagged")?._count || 0;
+  const fy = data?.financialYear as { label: string; auditStatus: string } | null;
+  const recentVouchers =
+    (data?.recentVouchers as { id: string; voucherDate: string; voucherType: string; voucherNo: string; totalAmount: number; auditStatus: string }[] | undefined) || [];
+
+  if (!data && !error) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
+      </div>
+    );
+  }
+
+  const auditStatusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      pending: t("auditStatus.pending"),
+      verified: t("auditStatus.verified"),
+      flagged: t("auditStatus.flagged"),
+      query: t("auditStatus.query"),
+    };
+    return map[status] || status;
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="rounded-2xl border border-violet-200 bg-gradient-to-r from-white via-violet-50/50 to-indigo-50/50 p-5">
+        <h1 className="text-2xl font-bold text-slate-900">{t("caPortal.dashboardTitle")}</h1>
+        <p className="text-slate-600">{t("caPortal.dashboardSubtitle")}</p>
+      </div>
+
+      {error && (
+        <Card className="border-red-200">
+          <CardContent className="py-4 text-sm text-red-700">{error}</CardContent>
+        </Card>
+      )}
+
+      <Card className="border-violet-200 bg-violet-50">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-4">
+            <Shield className="h-12 w-12 text-violet-700" />
+            <div>
+              <p className="font-semibold text-violet-900">{t("caPortal.financialYear")}: {fy?.label || t("accounting.fyNotSet")}</p>
+              <p className="text-sm text-violet-700">{t("caPortal.auditStatusLabel")}: <span className="font-bold">{auditStatusLabel(fy?.auditStatus || "pending")}</span></p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid sm:grid-cols-4 gap-4">
+        <Card><CardContent className="p-6"><AlertTriangle className="h-8 w-8 text-amber-600 mb-2" /><p className="text-sm text-slate-500">{t("caPortal.pendingVerification")}</p><p className="text-3xl font-bold text-amber-600">{pending.toLocaleString("en-IN")}</p></CardContent></Card>
+        <Card><CardContent className="p-6"><CheckCircle className="h-8 w-8 text-emerald-600 mb-2" /><p className="text-sm text-slate-500">{t("caPortal.verifiedVouchers")}</p><p className="text-3xl font-bold text-emerald-600">{verified.toLocaleString("en-IN")}</p></CardContent></Card>
+        <Card><CardContent className="p-6"><Shield className="h-8 w-8 text-red-600 mb-2" /><p className="text-sm text-slate-500">{t("auditStatus.flagged")}</p><p className="text-3xl font-bold text-red-600">{flagged.toLocaleString("en-IN")}</p></CardContent></Card>
+        <Card><CardContent className="p-6"><BarChart3 className="h-8 w-8 text-violet-600 mb-2" /><p className="text-sm text-slate-500">{t("accounting.totalVouchers")}</p><p className="text-3xl font-bold">{((fy as { _count?: { vouchers: number } })?._count?.vouchers || 0).toLocaleString("en-IN")}</p></CardContent></Card>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Link href="/ca/verify"><Card className="hover:border-violet-300"><CardContent className="p-6 flex gap-4"><FileSearch className="h-10 w-10 text-violet-600" /><div><h3 className="font-semibold">{t("caPortal.verifyVouchersTitle")}</h3><p className="text-sm text-slate-500">{t("caPortal.verifyVouchersDesc")}</p><ArrowRight className="h-4 w-4 text-violet-600 mt-2" /></div></CardContent></Card></Link>
+        <Link href="/accounting/trial-balance"><Card className="hover:border-violet-300"><CardContent className="p-6 flex gap-4"><BarChart3 className="h-10 w-10 text-blue-600" /><div><h3 className="font-semibold">{t("caNav.trialBalance")}</h3><p className="text-sm text-slate-500">{t("caPortal.trialBalanceDesc")}</p><ArrowRight className="h-4 w-4 text-blue-600 mt-2" /></div></CardContent></Card></Link>
+        <Link href="/accounting/reports"><Card className="hover:border-violet-300"><CardContent className="p-6 flex gap-4"><Shield className="h-10 w-10 text-emerald-600" /><div><h3 className="font-semibold">{t("caNav.financialReports")}</h3><p className="text-sm text-slate-500">{t("caPortal.financialReportsDesc")}</p><ArrowRight className="h-4 w-4 text-emerald-600 mt-2" /></div></CardContent></Card></Link>
+        <Link href="/ca/audit"><Card className="hover:border-violet-300"><CardContent className="p-6 flex gap-4"><CheckCircle className="h-10 w-10 text-amber-600" /><div><h3 className="font-semibold">{t("caPortal.auditSession")}</h3><p className="text-sm text-slate-500">{t("caPortal.auditSessionDesc")}</p><ArrowRight className="h-4 w-4 text-amber-600 mt-2" /></div></CardContent></Card></Link>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock3 className="h-5 w-5 text-violet-600" />
+            Recent vouchers
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentVouchers.length === 0 ? (
+            <p className="text-sm text-slate-500">No vouchers in current financial year.</p>
+          ) : (
+            <div className="space-y-2">
+              {recentVouchers.map((v) => (
+                <div key={v.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium">{v.voucherNo} - {v.voucherType}</p>
+                    <p className="text-xs text-slate-500">{new Date(v.voucherDate).toLocaleDateString("en-IN")}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-slate-900">{formatIndianCurrency(v.totalAmount || 0)}</p>
+                    <p className="text-xs text-slate-500 capitalize">{auditStatusLabel(v.auditStatus)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

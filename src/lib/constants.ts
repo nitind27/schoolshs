@@ -53,12 +53,21 @@ export const SCHOOL_STANDARDS = [
 ] as const;
 
 export const CLASS_SECTIONS = ["A", "B", "C", "D", "E", "F"] as const;
+export const CLASS_STREAMS = ["Arts", "Commerce", "Science"] as const;
+
+export function getRecommendedSectionsForStandard(standard: string): string[] {
+  if (["6", "7", "8"].includes(standard)) return ["A", "B"];
+  if (["9", "10"].includes(standard)) return ["A", "B", "C", "D"];
+  if (["11", "12"].includes(standard)) return ["A", "B", "C", "D"];
+  return ["A"];
+}
 
 export const STAFF_DESIGNATIONS = [
   "Principal",
   "Vice Principal",
   "Teacher",
   "Head Teacher",
+  "Supervisor",
   "Clerk",
   "Peon",
   "Lab Assistant",
@@ -66,6 +75,32 @@ export const STAFF_DESIGNATIONS = [
   "Accountant",
   "Other",
 ] as const;
+
+export const STAFF_ROLE_WORK: Record<string, string[]> = {
+  teacher: [
+    "Teach subjects as per timetable and syllabus plan",
+    "Maintain class discipline, attendance, and student learning records",
+    "Assess students and coordinate with parents on progress",
+  ],
+  peon: [
+    "Support daily school operations and classroom logistics",
+    "Handle file/document movement and official internal deliveries",
+    "Assist with campus upkeep, bell duties, and event arrangements",
+  ],
+  supervisor: [
+    "Supervise daily operations, staff duties, and compliance tasks",
+    "Monitor attendance, discipline, and process quality across sections",
+    "Report issues to management and ensure timely execution of tasks",
+  ],
+};
+
+export function getStaffRoleWork(designation: string | null | undefined): string[] {
+  const normalized = String(designation || "").trim().toLowerCase();
+  if (normalized === "teacher" || normalized === "head teacher") return STAFF_ROLE_WORK.teacher;
+  if (normalized === "peon" || normalized === "puen") return STAFF_ROLE_WORK.peon;
+  if (normalized === "supervisor") return STAFF_ROLE_WORK.supervisor;
+  return [];
+}
 
 export const BLOOD_GROUPS = [
   "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-",

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { hashPassword, verifyPassword, setSessionCookie, type SessionUser } from "@/lib/auth";
+import { verifyPassword, setSessionCookie, type SessionUser } from "@/lib/auth";
+import { getRoleHome } from "@/lib/roles";
+import type { UserRole } from "@/lib/roles";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    if (user.role === "school_admin" && (!user.schoolId || !user.school?.isActive)) {
+    if (user.role !== "super_admin" && (!user.schoolId || !user.school?.isActive)) {
       return NextResponse.json({ error: "School inactive or not assigned" }, { status: 403 });
     }
 
@@ -35,15 +37,17 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       name: user.name,
-      role: user.role as SessionUser["role"],
+      role: user.role as UserRole,
       schoolId: user.schoolId,
       schoolName: user.school?.name ?? null,
       schoolCode: user.school?.code ?? null,
+      staffId: user.staffId,
+      studentId: user.studentId,
     };
 
     const res = NextResponse.json({
       user: sessionUser,
-      redirect: user.role === "super_admin" ? "/admin" : "/",
+      redirect: getRoleHome(user.role),
     });
     await setSessionCookie(res, sessionUser);
     return res;

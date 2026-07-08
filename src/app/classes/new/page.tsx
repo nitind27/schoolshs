@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ClassForm } from "@/components/forms/class-form";
 import type { SchoolClass } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
+import { PageShell } from "@/components/layout/page-shell";
 
 export default function NewClassPage() {
   const t = useT();
@@ -24,12 +25,16 @@ export default function NewClassPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">{t("classes.addClass")}</h1>
-        <p className="text-slate-500 mt-1">{t("classes.newClassSubtitle")}</p>
-      </div>
+    <PageShell
+      title={t("classes.addClass")}
+      subtitle={t("classes.newClassSubtitle")}
+      breadcrumbs={[
+        { label: t("nav.dashboard"), href: "/" },
+        { label: t("nav.classes"), href: "/classes" },
+        { label: t("classes.addClass") },
+      ]}
+    >
       <ClassForm onSubmit={handleSubmit} />
-    </div>
+    </PageShell>
   );
 }

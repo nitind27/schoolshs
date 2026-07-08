@@ -18,6 +18,35 @@ function normalizeStaff(body: Record<string, unknown>) {
   };
 }
 
+async function generateEmployeeId(schoolId: string): Promise<string> {
+  const staffRows = await prisma.staff.findMany({
+    where: { schoolId, employeeId: { not: null } },
+    select: { employeeId: true },
+  });
+
+  const used = new Set(
+    staffRows
+      .map((s) => String(s.employeeId || "").trim().toUpperCase())
+      .filter(Boolean)
+  );
+
+  let maxSeq = 0;
+  for (const id of used) {
+    const match = /^EMP(\d+)$/.exec(id);
+    if (!match) continue;
+    const seq = Number.parseInt(match[1], 10);
+    if (!Number.isNaN(seq)) maxSeq = Math.max(maxSeq, seq);
+  }
+
+  let nextSeq = maxSeq + 1;
+  let candidate = `EMP${String(nextSeq).padStart(4, "0")}`;
+  while (used.has(candidate)) {
+    nextSeq += 1;
+    candidate = `EMP${String(nextSeq).padStart(4, "0")}`;
+  }
+  return candidate;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth();
@@ -59,6 +88,10 @@ export async function POST(request: NextRequest) {
 
     if (!data.firstName || !data.lastName || !data.designation || !data.mobileNumber) {
       return NextResponse.json({ error: "Name, designation and mobile are required" }, { status: 400 });
+    }
+
+    if (!data.employeeId) {
+      data.employeeId = await generateEmployeeId(session.schoolId);
     }
 
     if (data.employeeId) {

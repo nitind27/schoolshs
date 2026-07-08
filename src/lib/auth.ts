@@ -5,8 +5,13 @@ import {
   createSessionToken,
   parseSessionToken,
   type SessionUser,
-  type UserRole,
 } from "@/lib/session-token";
+import type { UserRole } from "@/lib/roles";
+import {
+  ACCOUNTING_ROLES,
+  SCHOOL_ROLES,
+  STAFF_ROLES,
+} from "@/lib/roles";
 
 export type { SessionUser, UserRole };
 export { parseSessionToken };
@@ -56,10 +61,25 @@ export async function requireAuth(roles?: UserRole[]): Promise<SessionUser> {
   return session;
 }
 
-export async function requireSchoolAuth(): Promise<SessionUser & { schoolId: string }> {
-  const session = await requireAuth(["school_admin"]);
+export async function requireSchoolAuth(roles?: UserRole[]): Promise<SessionUser & { schoolId: string }> {
+  const allowed = roles || SCHOOL_ROLES;
+  const session = await requireAuth(allowed);
   if (!session.schoolId) throw new AuthError("School not assigned", 403);
   return session as SessionUser & { schoolId: string };
+}
+
+export async function requireStaffAuth(): Promise<SessionUser & { schoolId: string }> {
+  return requireSchoolAuth(STAFF_ROLES);
+}
+
+export async function requireAccountingAuth(roles?: UserRole[]): Promise<SessionUser & { schoolId: string }> {
+  return requireSchoolAuth(roles || ACCOUNTING_ROLES);
+}
+
+export async function requireStudentAuth(): Promise<SessionUser & { schoolId: string; studentId: string }> {
+  const session = await requireSchoolAuth(["student"]);
+  if (!session.studentId) throw new AuthError("Student profile not linked", 403);
+  return session as SessionUser & { schoolId: string; studentId: string };
 }
 
 export class AuthError extends Error {
@@ -70,6 +90,7 @@ export class AuthError extends Error {
 
 export function studentWhere(session: SessionUser) {
   if (session.role === "super_admin") return {};
+  if (session.role === "student" && session.studentId) return { id: session.studentId };
   return { schoolId: session.schoolId! };
 }
 
