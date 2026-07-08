@@ -17,15 +17,16 @@ function extractOtp(text: string): string | null {
 
 export async function isOtpDialogVisible(page: Page): Promise<boolean> {
   try {
-    const body = await page.locator("body").innerText({ timeout: 2000 });
-    const lower = body.toLowerCase();
-    if (!lower.includes("otp")) return false;
-    return (
-      lower.includes("otp verify") ||
-      lower.includes("enter otp") ||
-      lower.includes("otp has been delivered") ||
-      lower.includes("otp no")
-    );
+    // Language/text unreliable ho sakta hai, isliye OTP inputs ke selectors se detect karein.
+    for (const sel of DG_OTP_SELECTORS.otpInput) {
+      try {
+        const loc = page.locator(sel).first();
+        if (await loc.isVisible({ timeout: 1500 })) return true;
+      } catch {
+        continue;
+      }
+    }
+    return false;
   } catch {
     return false;
   }
@@ -84,9 +85,14 @@ export async function fillOtpAndConfirm(page: Page, otp: string, log: LogFn): Pr
     return false;
   }
 
+  // Agar user ne manual OTP already fill kiya hai, usko overwrite nahi karte.
+  const existingValue = (await input.inputValue()).trim();
+  const useOtp = existingValue && OTP_PATTERN.test(existingValue) ? existingValue : otp;
+
   await input.click({ timeout: 2000 }).catch(() => {});
-  await input.fill("");
-  await input.fill(otp);
+  if (useOtp !== existingValue) {
+    await input.fill(otp);
+  }
   log(`✓ OTP filled (${otp.slice(0, 2)}****)`);
 
   await page.waitForTimeout(400);
@@ -170,6 +176,9 @@ export async function waitForLoginWithOtpAutoFill(
   let lastUsedOtp = "";
   let stable = 0;
 
+  let hadOtpDialog = false;
+  let otpPostStable = 0;
+
   let lastHeartbeat = 0;
 
   function pickAnyOpenPage(fromPage: Page): Page | null {
@@ -188,6 +197,65 @@ export async function waitForLoginWithOtpAutoFill(
       if (reporter) await reporter.flush({ currentStep: "Waiting: CAPTCHA/Login/OTP..." });
     }
     try {
+      const otpVisible = await isOtpDialogVisible(currentPage);
+
+      if (otpVisible) {
+        hadOtpDialog = true;
+        otpPostStable = 0;
+
+        if (!otpAnnounced) {
+          otpAnnounced = true;
+          log("📱 OTP Verify screen detect — auto-fill shuru");
+          if (reporter) {
+            await reporter.flush({
+              currentStep: "OTP required — phone SMS website par aayega, auto-fill hoga",
+            });
+          }
+        }
+
+        let otp: string | null = null;
+
+        otp = await readSmsInboxOtp(prisma, schoolId, lastUsedOtp);
+        if (otp) log("✓ OTP phone SMS inbox se mila (website)");
+
+        if (!otp) {
+          otp = await readJobOtp(prisma, jobId);
+          if (otp && otp !== lastUsedOtp) log("✓ OTP dashboard se mila");
+        }
+
+        if (!otp) {
+          const clip = await readClipboardOtp(currentPage, lastClipboard);
+          lastClipboard = clip.raw;
+          if (clip.otp && clip.otp !== lastUsedOtp) {
+            otp = clip.otp;
+            log("✓ OTP clipboard se detect hua");
+          }
+        }
+
+        if (otp && otp !== lastUsedOtp) {
+          const ok = await fillOtpAndConfirm(currentPage, otp, log);
+          if (ok) {
+            lastUsedOtp = otp;
+            otpAnnounced = false;
+            await currentPage.waitForTimeout(2500);
+            continue;
+          }
+        } else {
+          // If user ne manual OTP already submit kar diya, dialog disappear hone ke baad we exit karein.
+          await currentPage.waitForTimeout(450);
+          continue;
+        }
+      } else {
+        if (hadOtpDialog) {
+          otpPostStable++;
+          if (otpPostStable >= 3) {
+            log("✓ Login successful (OTP screen gone)");
+            if (reporter) await reporter.flush({ currentStep: "Login complete" });
+            return;
+          }
+        }
+      }
+
       if (await isDgSessionActive(currentPage.url(), portal.loginPagePattern)) {
         stable++;
         if (stable >= 4) {
@@ -195,52 +263,8 @@ export async function waitForLoginWithOtpAutoFill(
           if (reporter) await reporter.flush({ currentStep: "Login complete" });
           return;
         }
-        await currentPage.waitForTimeout(500);
-        continue;
-      }
-      stable = 0;
-
-      if (await isOtpDialogVisible(currentPage)) {
-      if (!otpAnnounced) {
-        otpAnnounced = true;
-        log("📱 OTP Verify screen detect — auto-fill shuru");
-        if (reporter) {
-          await reporter.flush({
-            currentStep: "OTP required — phone SMS website par aayega, auto-fill hoga",
-          });
-        }
-      }
-
-      let otp: string | null = null;
-
-      otp = await readSmsInboxOtp(prisma, schoolId, lastUsedOtp);
-      if (otp) {
-        log("✓ OTP phone SMS inbox se mila (website)");
-      }
-
-      if (!otp) {
-        otp = await readJobOtp(prisma, jobId);
-        if (otp && otp !== lastUsedOtp) log("✓ OTP dashboard se mila");
-      }
-
-      if (!otp) {
-        const clip = await readClipboardOtp(currentPage, lastClipboard);
-        lastClipboard = clip.raw;
-        if (clip.otp && clip.otp !== lastUsedOtp) {
-          otp = clip.otp;
-          log("✓ OTP clipboard se detect hua");
-        }
-      }
-
-      if (otp && otp !== lastUsedOtp) {
-        const ok = await fillOtpAndConfirm(currentPage, otp, log);
-        if (ok) {
-          lastUsedOtp = otp;
-          otpAnnounced = false;
-          await currentPage.waitForTimeout(2500);
-          continue;
-        }
-      }
+      } else {
+        stable = 0;
       }
 
       await currentPage.waitForTimeout(450);
