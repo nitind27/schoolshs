@@ -18,21 +18,41 @@ export async function GET(
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
+    let resolvedJob = job;
+    const staleMinutes = Number.parseInt(process.env.AUTOMATION_STALE_MINUTES || "20", 10);
+    const staleMs = Number.isNaN(staleMinutes) ? 20 * 60 * 1000 : staleMinutes * 60 * 1000;
+    const isActive = ["pending", "running"].includes(job.status);
+    const isStale = Date.now() - new Date(job.updatedAt).getTime() > staleMs;
+
+    if (isActive && isStale) {
+      const staleMessage = `Automation worker seems stopped (no updates for ${Math.round(staleMs / 60000)} minutes). Please restart job.`;
+      resolvedJob = await prisma.automationJob.update({
+        where: { id: job.id },
+        data: {
+          status: "failed",
+          currentStep: "Worker stopped",
+          errorMessage: staleMessage,
+          finishedAt: new Date(),
+          logs: `${job.logs || ""}\n[${new Date().toLocaleTimeString("en-IN")}] ${staleMessage}`.trim(),
+        },
+      });
+    }
+
     let studentProgress = [];
     try {
-      studentProgress = job.studentProgress ? JSON.parse(job.studentProgress) : [];
+      studentProgress = resolvedJob.studentProgress ? JSON.parse(resolvedJob.studentProgress) : [];
     } catch {
       studentProgress = [];
     }
 
     const overallPercent =
-      job.totalCount > 0
-        ? Math.round(((job.completedCount + job.failedCount) / job.totalCount) * 100)
+      resolvedJob.totalCount > 0
+        ? Math.round(((resolvedJob.completedCount + resolvedJob.failedCount) / resolvedJob.totalCount) * 100)
         : 0;
 
     return NextResponse.json({
       job: {
-        ...job,
+        ...resolvedJob,
         studentProgress,
         overallPercent,
       },
