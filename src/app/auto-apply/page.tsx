@@ -10,7 +10,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { useT } from "@/i18n/locale-provider";
 import {
   Play, RefreshCw, Zap, CheckCircle, XCircle, Clock, Loader2,
-  Square, CheckSquare, Bot, LogIn, Shield, Save,
+  Square, CheckSquare, Bot, LogIn, Shield, Save, ExternalLink,
   Users, BookOpen, Filter, ChevronDown, ChevronRight,
 } from "lucide-react";
 import type { Student } from "@/generated/prisma/client";
@@ -46,6 +46,12 @@ interface JobData {
   studentProgress: StudentProgressItem[];
   startedAt?: string;
   finishedAt?: string;
+}
+
+interface RemoteBrowserConfig {
+  enabled: boolean;
+  url: string | null;
+  label: string;
 }
 
 const PORTAL_OPTIONS = [
@@ -120,6 +126,7 @@ function AutoApplyContent() {
   const [sessionStatus, setSessionStatus] = useState<SessionStatus | null>(null);
   const [savingCreds, setSavingCreds] = useState(false);
   const [credsSaved, setCredsSaved] = useState(false);
+  const [remoteBrowser, setRemoteBrowser] = useState<RemoteBrowserConfig | null>(null);
 
   /* Class expansion */
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
@@ -188,6 +195,15 @@ function AutoApplyContent() {
   }, [loadStudents, loadDgSettings, loadSessionStatus]);
 
   useEffect(() => {
+    fetch("/api/automation/remote-browser")
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d?.enabled === "boolean") setRemoteBrowser(d as RemoteBrowserConfig);
+      })
+      .catch(() => setRemoteBrowser(null));
+  }, []);
+
+  useEffect(() => {
     if (!activeJob || ["completed", "failed", "partial"].includes(activeJob.status)) return;
     const interval = setInterval(async () => {
       const res = await fetch(`/api/automation/jobs/${activeJob.id}`);
@@ -253,6 +269,17 @@ function AutoApplyContent() {
     const data = await res.json();
     setStarting(false);
     if (!res.ok) { alert(data.error || "Failed to start automation"); return; }
+
+    if (remoteBrowser?.enabled && remoteBrowser.url) {
+      window.open(remoteBrowser.url, "_blank", "noopener,noreferrer");
+    } else if (data.portalUrl) {
+      const isLocal =
+        window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      if (!isLocal) {
+        window.open(data.portalUrl, "_blank", "noopener,noreferrer");
+      }
+    }
+
     const jobRes = await fetch(`/api/automation/jobs/${data.jobId}`);
     const jobData = await jobRes.json();
     setActiveJob(jobData.job);
@@ -288,7 +315,7 @@ function AutoApplyContent() {
                 3. Hit Start — automation will fill & submit forms automatically
               </p>
               <p className="text-xs text-slate-500 mt-2">
-                Browser me Digital Gujarat khulega — CAPTCHA, OTP, login wahi manually karein
+                Localhost: Chromium browser khulega · VPS: Remote Browser URL se login karein
               </p>
             </div>
           </div>
@@ -461,6 +488,17 @@ function AutoApplyContent() {
 
                 {selected.size === 0 && (
                   <p className="text-xs text-amber-600 text-center">Select at least one student to continue</p>
+                )}
+
+                {remoteBrowser?.enabled && remoteBrowser.url && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.open(remoteBrowser.url!, "_blank", "noopener,noreferrer")}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    {remoteBrowser.label}
+                  </Button>
                 )}
               </CardContent>
             </Card>
@@ -638,11 +676,11 @@ function AutoApplyContent() {
                   <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
                     <Users className="h-10 w-10 opacity-40" />
                     <p className="text-sm font-medium">No ready students found</p>
-                    <p className="text-xs opacity-60">Mark students as "ready" to appear here</p>
+                    <p className="text-xs opacity-60">Mark students as &quot;ready&quot; to appear here</p>
                   </div>
                 ) : classGroups.size === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-400">
-                    <p className="text-sm">No results for "{searchTerm}"</p>
+                    <p className="text-sm">No results for &quot;{searchTerm}&quot;</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100">

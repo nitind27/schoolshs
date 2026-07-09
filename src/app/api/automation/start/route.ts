@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
 import { chromium } from "playwright";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
+import { DG_PORTALS } from "@/lib/dg-portal";
+import { spawnAutomationWorker } from "@/lib/spawn-automation";
 
 function assertPlaywrightReady(): void {
   try {
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
     const logFile = path.join(logsDir, `${job.id}.log`);
     const logFd = fs.openSync(logFile, "a");
 
-    const child = spawn(command, scriptArgs, {
+    const child = spawnAutomationWorker(command, scriptArgs, {
       detached: true,
       stdio: ["ignore", logFd, logFd],
       cwd: process.cwd(),
@@ -112,9 +113,42 @@ export async function POST(request: NextRequest) {
         AUTOMATION_JOB_ID: job.id,
         AUTOMATION_SCHOOL_ID: session.schoolId,
         AUTOMATION_PORTAL_TYPE: validPortal,
+        NODE_ENV: process.env.NODE_ENV || "production",
       },
-      windowsHide: true,
+      windowsHide: process.platform === "win32",
     });
+
+    child.on("error", (err) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      fs.appendFileSync(logFile, `\n[spawn error] ${msg}\n`);
+      void prisma.automationJob
+        .update({
+          where: { id: job.id },
+          data: {
+            status: "failed",
+            errorMessage: `Worker start failed: ${msg}`,
+            currentStep: "Failed to start browser",
+            finishedAt: new Date(),
+          },
+        })
+        .catch(() => {});
+    });
+
+    if (!child.pid) {
+      fs.appendFileSync(logFile, "\n[spawn error] No PID — browser worker did not start\n");
+      await prisma.automationJob.update({
+        where: { id: job.id },
+        data: {
+          status: "failed",
+          errorMessage: "Browser worker could not start. Check automation/logs on server.",
+          currentStep: "Failed to start browser",
+          finishedAt: new Date(),
+        },
+      });
+      return NextResponse.json({ error: "Browser worker could not start" }, { status: 500 });
+    }
+
+    fs.appendFileSync(logFile, `[spawn] pid=${child.pid} cmd=${command}\n`);
 
     fs.closeSync(logFd);
     child.unref();
@@ -123,7 +157,9 @@ export async function POST(request: NextRequest) {
       success: true,
       jobId: job.id,
       count: validIds.length,
-      message: "Auto Apply started — live status dashboard par dekhein",
+      portalUrl: DG_PORTALS[validPortal].loginUrl,
+      portalLabel: DG_PORTALS[validPortal].label,
+      message: "Auto Apply started — Digital Gujarat browser khul raha hai",
     });
   } catch (error) {
     if (error instanceof AuthError) {

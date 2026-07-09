@@ -10,6 +10,7 @@ import {
 } from "./session";
 import { goToPortalEntry, navigateDg, needsLogin } from "./dg-nav";
 import { waitForContinueConfirm, waitForPortalLogin, type LogFn } from "./form-filler";
+import { isAutomationHeadless } from "./headless";
 import type { JobReporter } from "./status-reporter";
 
 export interface DgCredentials {
@@ -85,24 +86,28 @@ export async function ensureDgLoggedIn(
 ): Promise<void> {
   const creds = await resolveDgCredentials(prisma, schoolId, student, portal);
 
-  if (!creds.loginId) {
-    throw new Error(
-      portal.type === "sjed"
-        ? "SJED User ID missing — Auto Apply page par school login save karein"
-        : "Citizen login ID missing — Auto Apply page par save karein"
-    );
-  }
-
-  const meta = readSessionMeta(profileDir);
   log(`Portal: ${portal.labelHi} (${portal.loginUrl.split("/").pop()})`);
 
-  const sessionState = await probeDgSession(page, portal, log, profileDir);
+  // Pehle seedha Digital Gujarat login URL kholo
+  log(`Opening Digital Gujarat → ${portal.loginUrl}`);
+  if (reporter) {
+    await reporter.flush({ currentStep: "Digital Gujarat portal khul raha hai..." });
+  }
+  await navigateDg(page, portal.loginUrl, log, portal);
+  await page.bringToFront().catch(() => {});
 
-  if (sessionState === "active") {
+  if (!creds.loginId) {
+    log("⚠ Login ID save nahi — browser me manually login karein");
+  } else if (creds.source === "school") {
+    log(`School login: ${creds.loginId.substring(0, 3)}*** (${portal.type.toUpperCase()})`);
+  }
+
+  if (isDgSessionActive(page.url(), portal.loginPagePattern)) {
     log(`✓ ${portal.label} session active — seedha dashboard`);
     const postLoginUrl = page.url();
+    const meta = readSessionMeta(profileDir);
     writeSessionMeta(profileDir, {
-      loginId: creds.loginId,
+      loginId: creds.loginId || meta?.loginId || "",
       portalType: portal.type,
       lastLoginAt: meta?.lastLoginAt || new Date().toISOString(),
       postLoginUrl,
@@ -111,23 +116,47 @@ export async function ensureDgLoggedIn(
     return;
   }
 
-  log(`Login required → ${portal.loginUrl.split("/").pop()}`);
-  if (creds.source === "school") {
-    log(`School login: ${creds.loginId.substring(0, 3)}*** (${portal.type.toUpperCase()})`);
+  const sessionState = await probeDgSession(page, portal, log, profileDir);
+
+  if (sessionState === "active") {
+    log(`✓ ${portal.label} session active`);
+    const postLoginUrl = page.url();
+    const meta = readSessionMeta(profileDir);
+    writeSessionMeta(profileDir, {
+      loginId: creds.loginId || meta?.loginId || "",
+      portalType: portal.type,
+      lastLoginAt: meta?.lastLoginAt || new Date().toISOString(),
+      postLoginUrl,
+      source: creds.source,
+    });
+    return;
+  }
+
+  if (!creds.loginId) {
+    log("Digital Gujarat khula — login ID save karein ya browser me manually login karein");
+  } else {
+    log(`Login required → ${portal.loginUrl.split("/").pop()}`);
   }
 
   await navigateDg(page, portal.loginUrl, log, portal);
+  await page.bringToFront().catch(() => {});
   await page.waitForTimeout(1000);
 
   if (isDgSessionActive(page.url(), portal.loginPagePattern)) {
     log("✓ Already logged in after redirect");
-    writeSessionMeta(profileDir, buildSessionMeta(creds, portal.type, page.url()));
+    if (creds.loginId) {
+      writeSessionMeta(profileDir, buildSessionMeta(creds, portal.type, page.url()));
+    }
     return;
   }
 
   log("Digital Gujarat portal khula — CAPTCHA, OTP, LOGIN browser me khud karein");
   if (reporter) {
     await reporter.flush({ currentStep: "DG portal open — login manually in browser (CAPTCHA + OTP)" });
+  }
+
+  if (isAutomationHeadless()) {
+    log("⚠ VPS headless mode — browser dikhega nahi. Install: sudo apt install -y xvfb");
   }
 
   await waitForPortalLogin(
@@ -143,7 +172,9 @@ export async function ensureDgLoggedIn(
     `${portal.label} — Ready`
   );
 
-  writeSessionMeta(profileDir, buildSessionMeta(creds, portal.type, page.url()));
+  if (creds.loginId) {
+    writeSessionMeta(profileDir, buildSessionMeta(creds, portal.type, page.url()));
+  }
   log(`✓ Login complete — agli baar seedha yahi page khulega (${page.url().split("/").pop()})`);
 }
 
@@ -153,7 +184,7 @@ function buildSessionMeta(
   postLoginUrl: string
 ): SessionMeta {
   return {
-    loginId: creds.loginId,
+    loginId: creds.loginId || "manual",
     portalType,
     lastLoginAt: new Date().toISOString(),
     postLoginUrl,

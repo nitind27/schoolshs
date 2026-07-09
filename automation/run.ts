@@ -233,17 +233,24 @@ async function launchBrowser(
     );
   }
 
-  const launchArgs = ["--start-maximized"];
+  const launchArgs = [
+    "--start-maximized",
+    "--disable-blink-features=AutomationControlled",
+  ];
   if (isLinux) {
     launchArgs.push("--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage");
+  }
+  if (!headless) {
+    launchArgs.push("--window-position=0,0");
   }
 
   try {
     const context = await chromium.launchPersistentContext(profileDir, {
       headless,
-      slowMo: headless ? 0 : 80,
+      slowMo: headless ? 0 : 50,
       viewport: headless ? { width: 1366, height: 768 } : null,
       acceptDownloads: true,
+      ignoreDefaultArgs: ["--enable-automation"],
       args: launchArgs,
     });
 
@@ -295,6 +302,12 @@ async function main() {
 
   const { context, profileDir } = await launchBrowser(portal, firstStudent as unknown as Record<string, unknown>);
   const page = context.pages()[0] || (await context.newPage());
+
+  log(`Opening Digital Gujarat browser → ${portal.loginUrl}`);
+  if (reporter) await reporter.flush({ currentStep: "Digital Gujarat browser khul raha hai..." });
+  await page.goto(portal.loginUrl, { waitUntil: "domcontentloaded", timeout: 90000 }).catch(() => {});
+  await page.bringToFront().catch(() => {});
+  log(`Browser URL: ${page.url()}`);
 
   try {
     if (mode !== "fill-only") {

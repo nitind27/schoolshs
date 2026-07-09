@@ -23,6 +23,11 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
+## VPS Client Login (Remote Browser)
+
+If Auto Apply is hosted on VPS, browser opens on server machine (not client PC).  
+Setup remote browser view for client CAPTCHA/OTP flow: `REMOTE_BROWSER_SETUP.md`.
+
 ## Bulk Import Steps
 
 1. **Import** page pe jao

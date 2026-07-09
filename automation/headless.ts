@@ -7,5 +7,5 @@ export function isAutomationHeadless(): boolean {
 }
 
 export const VPS_LOGIN_HELP =
-  "VPS par browser dikhane ke liye: sudo apt install -y xvfb && xvfb-run -a npm start. " +
-  "Playwright fix: npm run playwright:setup";
+  "VPS par: sudo apt install -y xvfb && pm2 restart school-shs (xvfb-run ke saath). " +
+  "Playwright: npm run playwright:setup";
