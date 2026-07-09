@@ -10,8 +10,25 @@ export interface RemoteBrowserConfig {
   label: string;
 }
 
+function withNoVncDefaults(input: string): string {
+  try {
+    const url = new URL(input);
+    // If user configured plain vnc.html URL, enforce working defaults.
+    if (url.pathname.endsWith("/remote-browser/vnc.html")) {
+      if (!url.searchParams.get("autoconnect")) url.searchParams.set("autoconnect", "true");
+      if (!url.searchParams.get("host")) url.searchParams.set("host", url.hostname);
+      if (!url.searchParams.get("port")) url.searchParams.set("port", url.protocol === "https:" ? "443" : "80");
+      if (!url.searchParams.get("path")) url.searchParams.set("path", "remote-browser/websockify");
+    }
+    return url.toString();
+  } catch {
+    return input;
+  }
+}
+
 export function getRemoteBrowserConfig(): RemoteBrowserConfig {
-  const url = read("REMOTE_BROWSER_URL") || null;
+  const raw = read("REMOTE_BROWSER_URL");
+  const url = raw ? withNoVncDefaults(raw) : null;
   return {
     enabled: Boolean(url),
     url,
