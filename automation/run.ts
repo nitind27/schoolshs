@@ -1,5 +1,6 @@
 import { loadEnv } from "../src/lib/load-env";
 import { chromium, type BrowserContext, type Page } from "playwright";
+import fs from "fs";
 import { buildFieldMappings, DG_DROPDOWN_MAPPINGS } from "./selectors";
 import { getDgPortalByType, parsePortalType, type DgPortalConfig } from "../src/lib/dg-portal";
 import {
@@ -23,6 +24,7 @@ import {
   type ApplyActionMode,
 } from "./portal-navigator";
 import { JobReporter, buildInitialProgress, type StudentProgressItem } from "./status-reporter";
+import { isAutomationHeadless, VPS_LOGIN_HELP } from "./headless";
 import { prisma } from "../src/lib/db";
 
 loadEnv();
@@ -188,6 +190,23 @@ async function runStudentFlow(
   log(`✅ ${name} — ${submitted ? "submitted" : "filled"} (${pagesDone} pages)`);
 }
 
+function verifyPlaywrightChromium(log: LogFn): void {
+  let execPath: string;
+  try {
+    execPath = chromium.executablePath();
+  } catch {
+    throw new Error(
+      `Playwright Chromium install nahi mila. VPS par chalao: npm run playwright:setup — ${VPS_LOGIN_HELP}`
+    );
+  }
+  if (!fs.existsSync(execPath)) {
+    throw new Error(
+      `Chromium missing at ${execPath}. Run: npm run playwright:setup`
+    );
+  }
+  log(`Chromium ready: ${execPath}`);
+}
+
 async function launchBrowser(
   portal: DgPortalConfig,
   loginStudent: Record<string, unknown>
@@ -196,10 +215,11 @@ async function launchBrowser(
   const profileDir = getProfileDirForSchool(portal, schoolId || String(loginStudent.schoolId || ""), fallbackLoginId);
   log(`Browser profile (${portal.type}): ${profileDir}`);
 
+  verifyPlaywrightChromium(log);
+
   const isLinux = process.platform === "linux";
   const hasDisplay = Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
-  const forceHeadless = process.env.AUTOMATION_HEADLESS === "1";
-  const headless = forceHeadless || (isLinux && !hasDisplay);
+  const headless = isAutomationHeadless();
 
   log(
     `Launching Chromium: headless=${headless} isLinux=${isLinux} DISPLAY=${process.env.DISPLAY || "—"} WAYLAND_DISPLAY=${
@@ -207,9 +227,9 @@ async function launchBrowser(
     } AUTOMATION_HEADLESS=${process.env.AUTOMATION_HEADLESS || "—"}`
   );
 
-  if (isLinux && !headless && !hasDisplay) {
+  if (isLinux && !hasDisplay && !headless) {
     throw new Error(
-      "Auto Apply needs a display on VPS. Start with xvfb or set AUTOMATION_HEADLESS=1."
+      `Linux VPS par browser dikhane ke liye xvfb chahiye. ${VPS_LOGIN_HELP}`
     );
   }
 
@@ -218,17 +238,27 @@ async function launchBrowser(
     launchArgs.push("--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage");
   }
 
-  const context = await chromium.launchPersistentContext(profileDir, {
-    headless,
-    slowMo: headless ? 0 : 80,
-    viewport: headless ? { width: 1366, height: 768 } : null,
-    acceptDownloads: true,
-    args: launchArgs,
-  });
+  try {
+    const context = await chromium.launchPersistentContext(profileDir, {
+      headless,
+      slowMo: headless ? 0 : 80,
+      viewport: headless ? { width: 1366, height: 768 } : null,
+      acceptDownloads: true,
+      args: launchArgs,
+    });
 
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]).catch(() => {});
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]).catch(() => {});
 
-  return { context, profileDir };
+    return { context, profileDir };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Executable doesn't exist") || msg.includes("browserType.launch")) {
+      throw new Error(
+        `Playwright browser launch fail. VPS par: npm run playwright:setup — ${msg}`
+      );
+    }
+    throw err;
+  }
 }
 
 async function main() {

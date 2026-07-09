@@ -2,8 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
+import { chromium } from "playwright";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
+
+function assertPlaywrightReady(): void {
+  try {
+    const execPath = chromium.executablePath();
+    if (!fs.existsSync(execPath)) {
+      throw new Error("Chromium browser missing on server. Run: npm run playwright:setup");
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      msg.includes("Chromium") || msg.includes("missing")
+        ? msg
+        : "Playwright not ready. VPS par SSH se chalao: npm run playwright:setup"
+    );
+  }
+}
 
 function getTsxRunner(): { command: string; args: string[] } {
   const tsxCli = path.join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
@@ -45,6 +62,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No valid students found" }, { status: 404 });
     }
 
+    assertPlaywrightReady();
+
     const validIds = students.map((s) => s.id);
 
     const initialProgress = students.map((s) => ({
@@ -79,9 +98,14 @@ export async function POST(request: NextRequest) {
         ? [...runnerArgs, scriptPath, validIds[0], mode]
         : [...runnerArgs, scriptPath, "batch", validIds.join(","), mode];
 
+    const logsDir = path.join(process.cwd(), "automation", "logs");
+    fs.mkdirSync(logsDir, { recursive: true });
+    const logFile = path.join(logsDir, `${job.id}.log`);
+    const logFd = fs.openSync(logFile, "a");
+
     const child = spawn(command, scriptArgs, {
       detached: true,
-      stdio: "ignore",
+      stdio: ["ignore", logFd, logFd],
       cwd: process.cwd(),
       env: {
         ...process.env,
@@ -92,6 +116,7 @@ export async function POST(request: NextRequest) {
       windowsHide: true,
     });
 
+    fs.closeSync(logFd);
     child.unref();
 
     return NextResponse.json({
@@ -105,6 +130,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("Automation start error:", error);
-    return NextResponse.json({ error: "Failed to start automation" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to start automation";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

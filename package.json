@@ -5,13 +5,14 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
     "build": "prisma generate && next build",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && playwright install chromium",
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx scripts/seed-all-dummy.ts",
     "db:push": "prisma db push",
     "db:switch-mysql": "tsx scripts/switch-to-mysql.ts && prisma generate",
-    "auto-fill": "tsx automation/run.ts"
+    "auto-fill": "tsx automation/run.ts",
+    "playwright:setup": "playwright install chromium && playwright install-deps chromium"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

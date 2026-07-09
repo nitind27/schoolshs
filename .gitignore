@@ -43,5 +43,6 @@ next-env.d.ts
 /uploads
 
 /automation/profiles
+/automation/logs
 
 /src/generated/prisma

@@ -5,6 +5,7 @@ import { isDgSessionActive } from "./session";
 import { DG_OTP_SELECTORS } from "./selectors";
 import type { LogFn } from "./form-filler";
 import type { JobReporter } from "./status-reporter";
+import { isAutomationHeadless, VPS_LOGIN_HELP } from "./headless";
 
 const OTP_PATTERN = /^\d{4,8}$/;
 
@@ -168,8 +169,15 @@ export async function waitForLoginWithOtpAutoFill(
   reporter: JobReporter | null,
   timeoutMs = 300000
 ): Promise<void> {
-  log("⏳ CAPTCHA + LOGIN karein → OTP phone SMS se auto-fill hoga (website inbox connected)");
-  const deadline = Date.now() + timeoutMs;
+  const headless = isAutomationHeadless();
+  const effectiveTimeout = headless ? Math.min(timeoutMs, 120000) : timeoutMs;
+
+  if (headless) {
+    log("⏳ Headless VPS — CAPTCHA manual nahi ho sakta. Saved session ya dashboard se OTP bhejein.");
+  } else {
+    log("⏳ CAPTCHA + LOGIN karein → OTP phone SMS se auto-fill hoga (website inbox connected)");
+  }
+  const deadline = Date.now() + effectiveTimeout;
   let currentPage: Page = page;
   let otpAnnounced = false;
   let lastClipboard = "";
@@ -193,8 +201,10 @@ export async function waitForLoginWithOtpAutoFill(
     const now = Date.now();
     if (now - lastHeartbeat > 25000) {
       lastHeartbeat = now;
-      log("⏳ Waiting: CAPTCHA/LOGIN/OTP… (manual may be required)");
-      if (reporter) await reporter.flush({ currentStep: "Waiting: CAPTCHA/Login/OTP..." });
+      const waitMsg = headless
+        ? "VPS: login/CAPTCHA wait — dashboard se OTP bhejein ya localhost se profile copy karein"
+        : "Waiting: CAPTCHA/Login/OTP… (manual may be required)";
+      log(`⏳ ${waitMsg}`);
     }
     try {
       const otpVisible = await isOtpDialogVisible(currentPage);
@@ -282,5 +292,9 @@ export async function waitForLoginWithOtpAutoFill(
     }
   }
 
-  throw new Error("Login timeout — CAPTCHA + LOGIN + OTP complete karein");
+  throw new Error(
+    headless
+      ? `VPS login timeout — CAPTCHA headless me solve nahi hota. ${VPS_LOGIN_HELP}`
+      : "Login timeout — CAPTCHA + LOGIN + OTP complete karein"
+  );
 }

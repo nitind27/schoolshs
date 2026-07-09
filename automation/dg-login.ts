@@ -1,7 +1,6 @@
 import type { Page } from "playwright";
 import type { PrismaClient } from "../src/generated/prisma/client";
 import type { DgPortalConfig } from "../src/lib/dg-portal";
-import { DG_LOGIN_SELECTORS, SJED_LOGIN_SELECTORS } from "./selectors";
 import {
   getDgProfileDir,
   isDgSessionActive,
@@ -10,8 +9,7 @@ import {
   type SessionMeta,
 } from "./session";
 import { goToPortalEntry, navigateDg, needsLogin } from "./dg-nav";
-import { waitForContinueConfirm, type LogFn } from "./form-filler";
-import { waitForLoginWithOtpAutoFill } from "./otp-handler";
+import { waitForContinueConfirm, waitForPortalLogin, type LogFn } from "./form-filler";
 import type { JobReporter } from "./status-reporter";
 
 export interface DgCredentials {
@@ -53,36 +51,6 @@ export async function resolveDgCredentials(
     loginMethod: (String(student.dgLoginMethod || "mobile") as "mobile" | "email") || "mobile",
     source: "student",
   };
-}
-
-async function clickFirstVisible(page: Page, selectors: string[]): Promise<boolean> {
-  for (const sel of selectors) {
-    try {
-      const loc = page.locator(sel).first();
-      if (await loc.isVisible({ timeout: 2000 })) {
-        await loc.click();
-        return true;
-      }
-    } catch {
-      continue;
-    }
-  }
-  return false;
-}
-
-async function fillFirstVisible(page: Page, selectors: string[], value: string): Promise<boolean> {
-  for (const sel of selectors) {
-    try {
-      const loc = page.locator(sel).first();
-      if (await loc.isVisible({ timeout: 2000 })) {
-        await loc.fill(value);
-        return true;
-      }
-    } catch {
-      continue;
-    }
-  }
-  return false;
 }
 
 export async function probeDgSession(
@@ -131,7 +99,7 @@ export async function ensureDgLoggedIn(
   const sessionState = await probeDgSession(page, portal, log, profileDir);
 
   if (sessionState === "active") {
-    log(`✓ ${portal.label} session active — OTP skip, seedha dashboard`);
+    log(`✓ ${portal.label} session active — seedha dashboard`);
     const postLoginUrl = page.url();
     writeSessionMeta(profileDir, {
       loginId: creds.loginId,
@@ -157,19 +125,16 @@ export async function ensureDgLoggedIn(
     return;
   }
 
-  if (portal.type === "citizen") {
-    await clickFirstVisible(
-      page,
-      creds.loginMethod === "email" ? DG_LOGIN_SELECTORS.emailRadio : DG_LOGIN_SELECTORS.mobileRadio
-    );
-    await fillFirstVisible(page, DG_LOGIN_SELECTORS.username, creds.loginId);
-    if (creds.password) await fillFirstVisible(page, DG_LOGIN_SELECTORS.password, creds.password);
-  } else {
-    await fillFirstVisible(page, SJED_LOGIN_SELECTORS.username, creds.loginId);
-    if (creds.password) await fillFirstVisible(page, SJED_LOGIN_SELECTORS.password, creds.password);
+  log("Digital Gujarat portal khula — CAPTCHA, OTP, LOGIN browser me khud karein");
+  if (reporter) {
+    await reporter.flush({ currentStep: "DG portal open — login manually in browser (CAPTCHA + OTP)" });
   }
 
-  await waitForLoginWithOtpAutoFill(page, portal, prisma, jobId, schoolId || "", log, reporter);
+  await waitForPortalLogin(
+    page,
+    async () => isDgSessionActive(page.url(), portal.loginPagePattern),
+    log
+  );
 
   await waitForContinueConfirm(
     page,

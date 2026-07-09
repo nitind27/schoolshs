@@ -10,7 +10,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { useT } from "@/i18n/locale-provider";
 import {
   Play, RefreshCw, Zap, CheckCircle, XCircle, Clock, Loader2,
-  Square, CheckSquare, Bot, LogIn, Shield, Save, Smartphone,
+  Square, CheckSquare, Bot, LogIn, Shield, Save,
   Users, BookOpen, Filter, ChevronDown, ChevronRight,
 } from "lucide-react";
 import type { Student } from "@/generated/prisma/client";
@@ -120,9 +120,6 @@ function AutoApplyContent() {
   const [sessionStatus, setSessionStatus] = useState<SessionStatus | null>(null);
   const [savingCreds, setSavingCreds] = useState(false);
   const [credsSaved, setCredsSaved] = useState(false);
-  const [otpInput, setOtpInput] = useState("");
-  const [otpSending, setOtpSending] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
 
   /* Class expansion */
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
@@ -262,24 +259,6 @@ function AutoApplyContent() {
     loadSessionStatus();
   };
 
-  const awaitingOtp = activeJob?.status === "running" && activeJob.currentStep?.toLowerCase().includes("otp");
-
-  const submitOtp = async () => {
-    if (!activeJob?.id || !/^\d{4,8}$/.test(otpInput.trim())) return;
-    setOtpSending(true);
-    const res = await fetch(`/api/automation/jobs/${activeJob.id}/otp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ otp: otpInput.trim() }),
-    });
-    setOtpSending(false);
-    if (res.ok) {
-      setOtpSent(true);
-      setOtpInput("");
-      setTimeout(() => setOtpSent(false), 2500);
-    }
-  };
-
   return (
     <PageShell
       title="Auto Apply Scholarship"
@@ -309,7 +288,7 @@ function AutoApplyContent() {
                 3. Hit Start — automation will fill & submit forms automatically
               </p>
               <p className="text-xs text-slate-500 mt-2">
-                ⚡ Browser automation powered by Playwright · OTP relay via phone SMS bridge
+                Browser me Digital Gujarat khulega — CAPTCHA, OTP, login wahi manually karein
               </p>
             </div>
           </div>
@@ -545,31 +524,6 @@ function AutoApplyContent() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-
-                  {/* OTP input (if awaiting) */}
-                  {awaitingOtp && (
-                    <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3">
-                      <div className="flex items-center gap-2 text-amber-900 font-semibold text-sm">
-                        <Smartphone className="h-4 w-4" />
-                        OTP Required — Enter code from SMS
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={8}
-                          value={otpInput}
-                          onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                          placeholder="Enter OTP"
-                          className="flex-1 rounded-xl border border-amber-200 px-4 py-2.5 text-lg font-mono tracking-widest bg-white"
-                        />
-                        <Button onClick={submitOtp} disabled={otpSending || otpInput.length < 4}>
-                          {otpSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Submit"}
-                        </Button>
-                      </div>
-                      {otpSent && <p className="text-xs text-green-700 font-medium">✓ OTP submitted successfully</p>}
-                    </div>
-                  )}
 
                   {/* Progress bar */}
                   <div className="rounded-xl border border-slate-200 bg-white p-4">

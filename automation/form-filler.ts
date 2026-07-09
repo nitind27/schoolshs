@@ -1,4 +1,5 @@
 import type { Page, Locator } from "playwright";
+import { isAutomationHeadless } from "./headless";
 
 export type LogFn = (msg: string) => void;
 
@@ -273,6 +274,19 @@ async function removeOverlay(page: Page) {
   await page.evaluate((id) => document.getElementById(id)?.remove(), OVERLAY_ID).catch(() => {});
 }
 
+/** Headless VPS par user click nahi kar sakta — overlay auto-continue */
+async function autoContinueInHeadless(page: Page, log: LogFn, delayMs = 1500) {
+  if (!isAutomationHeadless()) return;
+  await page.waitForTimeout(delayMs);
+  await page
+    .evaluate(() => {
+      (window as unknown as { __dgAutomationDone: boolean }).__dgAutomationDone = true;
+      document.getElementById("dg-automation-overlay")?.remove();
+    })
+    .catch(() => {});
+  log("▶ Headless VPS — Continue auto-clicked");
+}
+
 /** Login page free rehne do — overlay nahi, jab tak login complete na ho */
 export async function waitForPortalLogin(
   page: Page,
@@ -280,7 +294,7 @@ export async function waitForPortalLogin(
   log: LogFn,
   timeoutMs = 300000
 ): Promise<void> {
-  log("⏳ CAPTCHA + OTP + LOGIN page par karein (overlay abhi nahi — page free hai)");
+  log("⏳ Digital Gujarat portal me CAPTCHA + OTP + LOGIN karein — automation wait kar rahi hai");
   const deadline = Date.now() + timeoutMs;
   let stable = 0;
 
@@ -318,6 +332,13 @@ export async function waitForContinueConfirm(
   await injectContinueOverlay(page, message, stepLabel);
   log(`⏸ ${message}`);
 
+  if (isAutomationHeadless()) {
+    await autoContinueInHeadless(page, log);
+    await removeOverlay(page);
+    log("▶ Automation continue...");
+    return;
+  }
+
   try {
     await page.waitForFunction(
       () => (window as unknown as { __dgAutomationDone?: boolean }).__dgAutomationDone === true,
@@ -343,6 +364,13 @@ export async function waitForUserAction(
 
   await injectContinueOverlay(page, message, options?.stepLabel);
   const startUrl = page.url();
+
+  if (isAutomationHeadless()) {
+    await autoContinueInHeadless(page, log);
+    await removeOverlay(page);
+    log("▶ Continuing automation...");
+    return;
+  }
 
   try {
     await Promise.race([
