@@ -6,20 +6,21 @@ import { getVoucherPrefix } from "@/lib/accounting";
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAccountingAuth();
+    const schoolId = session.accountingSchoolId;
     const { searchParams } = new URL(request.url);
     const fyId = searchParams.get("financialYearId");
     const type = searchParams.get("type");
     const auditStatus = searchParams.get("auditStatus");
 
     const fy = fyId
-      ? await prisma.financialYear.findFirst({ where: { id: fyId, schoolId: session.schoolId } })
-      : await prisma.financialYear.findFirst({ where: { schoolId: session.schoolId, isActive: true } });
+      ? await prisma.financialYear.findFirst({ where: { id: fyId, schoolId } })
+      : await prisma.financialYear.findFirst({ where: { schoolId, isActive: true } });
 
     if (!fy) return NextResponse.json({ vouchers: [], financialYear: null });
 
     const vouchers = await prisma.voucher.findMany({
       where: {
-        schoolId: session.schoolId,
+        schoolId,
         financialYearId: fy.id,
         ...(type ? { voucherType: type } : {}),
         ...(auditStatus ? { auditStatus } : {}),
@@ -51,6 +52,18 @@ export async function POST(request: NextRequest) {
 
     if (!lines?.length || lines.length < 2) {
       return NextResponse.json({ error: "Minimum 2 ledger entries required (double entry)" }, { status: 400 });
+    }
+
+    const accountIds = [...new Set(lines.map((l: { accountId: string }) => l.accountId))] as string[];
+    const validAccounts = await prisma.account.count({
+      where: {
+        id: { in: accountIds },
+        schoolId: session.schoolId,
+        financialYearId: fy.id,
+      },
+    });
+    if (validAccounts !== accountIds.length) {
+      return NextResponse.json({ error: "Invalid account selected for this school" }, { status: 400 });
     }
 
     const totalDebit = lines.reduce((s: number, l: { debit?: number }) => s + (l.debit || 0), 0);

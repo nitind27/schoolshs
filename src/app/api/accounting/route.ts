@@ -6,20 +6,21 @@ import { DEFAULT_ACCOUNTS, getFinancialYearDates } from "@/lib/accounting";
 export async function GET() {
   try {
     const session = await requireAccountingAuth();
+    const schoolId = session.accountingSchoolId;
     const fy = await prisma.financialYear.findFirst({
-      where: { schoolId: session.schoolId, isActive: true },
+      where: { schoolId, isActive: true },
       include: { _count: { select: { vouchers: true, accounts: true } } },
     });
 
     const allFy = await prisma.financialYear.findMany({
-      where: { schoolId: session.schoolId },
+      where: { schoolId },
       orderBy: { startDate: "desc" },
     });
 
     const voucherStats = fy
       ? await prisma.voucher.groupBy({
           by: ["auditStatus"],
-          where: { schoolId: session.schoolId, financialYearId: fy.id },
+          where: { schoolId, financialYearId: fy.id },
           _count: true,
           _sum: { totalAmount: true },
         })
@@ -27,14 +28,23 @@ export async function GET() {
 
     const recentVouchers = fy
       ? await prisma.voucher.findMany({
-          where: { schoolId: session.schoolId, financialYearId: fy.id },
+          where: { schoolId, financialYearId: fy.id },
           orderBy: { voucherDate: "desc" },
           take: 5,
           include: { lines: { include: { account: true } } },
         })
       : [];
 
-    return NextResponse.json({ financialYear: fy, allFinancialYears: allFy, voucherStats, recentVouchers });
+    return NextResponse.json({
+      financialYear: fy,
+      allFinancialYears: allFy,
+      voucherStats,
+      recentVouchers,
+      school: {
+        id: schoolId,
+        name: session.accountingSchoolName || session.schoolName,
+      },
+    });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Failed to load accounting" }, { status: 500 });

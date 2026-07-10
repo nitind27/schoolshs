@@ -504,7 +504,7 @@ async function main() {
     update: { staffId: clerkStaff.id, role: "clerk" },
   });
 
-  await prisma.user.upsert({
+  const caUser = await prisma.user.upsert({
     where: { email: "ca@songadh.local" },
     create: {
       email: "ca@songadh.local",
@@ -515,6 +515,14 @@ async function main() {
     },
     update: { role: "ca" },
   });
+
+  for (const [school, isPrimary] of [[school1, true], [school2, false]] as const) {
+    await prisma.caSchoolAssignment.upsert({
+      where: { userId_schoolId: { userId: caUser.id, schoolId: school.id } },
+      create: { userId: caUser.id, schoolId: school.id, isPrimary },
+      update: { isPrimary },
+    });
+  }
 
   const firstStudent = savedStudents[0];
   await prisma.user.upsert({

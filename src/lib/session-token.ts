@@ -10,6 +10,8 @@ export interface SessionUser {
   schoolId: string | null;
   schoolName?: string | null;
   schoolCode?: string | null;
+  activeSchoolId?: string | null;
+  activeSchoolName?: string | null;
   staffId?: string | null;
   studentId?: string | null;
 }
@@ -89,6 +91,8 @@ export async function parseSessionToken(token: string): Promise<SessionUser | nu
       schoolId: data.schoolId ?? null,
       schoolName: data.schoolName ?? null,
       schoolCode: data.schoolCode ?? null,
+      activeSchoolId: data.activeSchoolId ?? data.schoolId ?? null,
+      activeSchoolName: data.activeSchoolName ?? data.schoolName ?? null,
       staffId: data.staffId ?? null,
       studentId: data.studentId ?? null,
     };

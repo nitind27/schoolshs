@@ -104,17 +104,17 @@ export default function BoardRecordsPage() {
   return (
     <PageShell
       title={t("boardRecords.title")}
-      subtitle="Class 10 & 12 board results — GSEB direct check"
+      subtitle={t("boardRecords.subtitle")}
       icon={<GraduationCap className="h-6 w-6" />}
       accentColor="border-blue-500"
-      breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Board Records" }]}
+      breadcrumbs={[{ label: t("nav.dashboard"), href: "/" }, { label: t("navExt.boardRecords") }]}
       actions={
         <button
           onClick={load}
           className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 transition-colors"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          Refresh
+          {t("boardRecords.refresh")}
         </button>
       }
     >
@@ -127,25 +127,25 @@ export default function BoardRecordsPage() {
             style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)" }}
             onClick={() => setFilter(filter === "10" ? "" : "10")}
           >
-            <p className="text-xs font-medium text-white/70 mb-1">Class 10 (SSC)</p>
+            <p className="text-xs font-medium text-white/70 mb-1">{t("boardRecords.class10Ssc")}</p>
             <p className="text-3xl font-bold">{class10.length}</p>
-            {avg10 && <p className="text-xs text-white/60 mt-1">avg {avg10}%</p>}
+            {avg10 && <p className="text-xs text-white/60 mt-1">{t("boardRecords.avgPercent", { pct: avg10 })}</p>}
           </div>
           <div
             className="rounded-2xl p-5 text-white shadow-md cursor-pointer transition-all hover:scale-[1.02]"
             style={{ background: "linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%)" }}
             onClick={() => setFilter(filter === "12" ? "" : "12")}
           >
-            <p className="text-xs font-medium text-white/70 mb-1">Class 12 (HSC)</p>
+            <p className="text-xs font-medium text-white/70 mb-1">{t("boardRecords.class12Hsc")}</p>
             <p className="text-3xl font-bold">{class12.length}</p>
-            {avg12 && <p className="text-xs text-white/60 mt-1">avg {avg12}%</p>}
+            {avg12 && <p className="text-xs text-white/60 mt-1">{t("boardRecords.avgPercent", { pct: avg12 })}</p>}
           </div>
           <div className="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm">
-            <p className="text-xs font-medium text-slate-500 mb-1">Total Board Students</p>
+            <p className="text-xs font-medium text-slate-500 mb-1">{t("boardRecords.totalBoardStudents")}</p>
             <p className="text-3xl font-bold text-slate-900">{students.length}</p>
           </div>
           <div className="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm">
-            <p className="text-xs font-medium text-slate-500 mb-1">Marksheets Uploaded</p>
+            <p className="text-xs font-medium text-slate-500 mb-1">{t("boardRecords.marksheetsUploaded")}</p>
             <p className="text-3xl font-bold text-emerald-700">
               {students.filter((s) => s.marksheet10Path || s.marksheet12Path).length}
             </p>
@@ -159,8 +159,8 @@ export default function BoardRecordsPage() {
               <TrendingUp className="h-4 w-4 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-900">GSEB Result Portal — Direct Links</p>
-              <p className="text-xs text-slate-500">Click to open official GSEB result page in a new tab</p>
+              <p className="text-sm font-bold text-slate-900">{t("boardRecords.gsebPortalTitle")}</p>
+              <p className="text-xs text-slate-500">{t("boardRecords.gsebPortalDesc")}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -171,7 +171,7 @@ export default function BoardRecordsPage() {
               className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 transition-colors"
             >
               <GraduationCap className="h-3.5 w-3.5" />
-              SSC (Class 10) Results
+              {t("boardRecords.sscResults")}
               <ExternalLink className="h-3 w-3 opacity-70" />
             </a>
             <a
@@ -181,7 +181,7 @@ export default function BoardRecordsPage() {
               className="flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-4 py-2.5 transition-colors"
             >
               <GraduationCap className="h-3.5 w-3.5" />
-              HSC (Class 12) Results
+              {t("boardRecords.hscResults")}
               <ExternalLink className="h-3 w-3 opacity-70" />
             </a>
             <a
@@ -191,7 +191,7 @@ export default function BoardRecordsPage() {
               className="flex items-center gap-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold px-4 py-2.5 transition-colors"
             >
               <BookOpen className="h-3.5 w-3.5" />
-              GSEB Official Website
+              {t("boardRecords.gsebOfficial")}
               <ExternalLink className="h-3 w-3 opacity-60" />
             </a>
           </div>
@@ -207,13 +207,13 @@ export default function BoardRecordsPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, GR No, roll number, Aadhaar..."
+                placeholder={t("boardRecords.searchPlaceholder")}
                 className="w-full h-9 pl-8 pr-3 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
               />
             </div>
             {/* Filter tabs */}
             <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
-              {([["", "All"], ["10", "Std 10 (SSC)"], ["12", "Std 12 (HSC)"]] as const).map(([v, label]) => (
+              {([["", t("boardRecords.filterAll")], ["10", t("boardRecords.filterStd10")], ["12", t("boardRecords.filterStd12")]] as const).map(([v, label]) => (
                 <button
                   key={v}
                   onClick={() => setFilter(v)}
@@ -239,22 +239,22 @@ export default function BoardRecordsPage() {
               <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
                 <GraduationCap className="h-3.5 w-3.5 text-blue-600" />
               </div>
-              <p className="text-sm font-semibold text-slate-800">Board Academic Records</p>
+              <p className="text-sm font-semibold text-slate-800">{t("boardRecords.boardAcademicRecords")}</p>
             </div>
             <span className="text-xs text-slate-500 bg-slate-100 rounded-full px-2.5 py-1">
-              {visible.length} students
+              {t("boardRecords.studentsCount", { count: visible.length })}
             </span>
           </div>
 
           {loading ? (
             <div className="flex flex-col items-center justify-center h-48 gap-3">
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-200 border-t-blue-600" />
-              <p className="text-sm text-slate-500">Loading records...</p>
+              <p className="text-sm text-slate-500">{t("boardRecords.loadingRecords")}</p>
             </div>
           ) : visible.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-slate-400 gap-2">
               <GraduationCap className="h-8 w-8 opacity-40" />
-              <p className="text-sm">No records found</p>
+              <p className="text-sm">{t("boardRecords.noRecordsFound")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -262,8 +262,16 @@ export default function BoardRecordsPage() {
                 <thead>
                   <tr className="border-b border-slate-100">
                     {[
-                      "Student", "Class", "GR No.", "10th Board", "10th %",
-                      "12th Board", "12th %", "Marksheet", "GSEB Check", "Profile",
+                      t("boardRecords.colStudent"),
+                      t("boardRecords.colClass"),
+                      t("boardRecords.colGrNo"),
+                      t("boardRecords.colBoard10"),
+                      t("boardRecords.colPct10"),
+                      t("boardRecords.colBoard12"),
+                      t("boardRecords.colPct12"),
+                      t("boardRecords.colMarksheet"),
+                      t("boardRecords.colGsebCheck"),
+                      t("boardRecords.colProfile"),
                     ].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-50">
                         {h}
@@ -292,7 +300,7 @@ export default function BoardRecordsPage() {
                                 {s.firstName} {s.surname}
                               </p>
                               {s.rollNumber && (
-                                <p className="text-xs text-slate-400">Roll: {s.rollNumber}</p>
+                                <p className="text-xs text-slate-400">{t("boardRecords.rollLabel", { no: s.rollNumber })}</p>
                               )}
                             </div>
                           </div>
@@ -301,7 +309,7 @@ export default function BoardRecordsPage() {
                         {/* Class */}
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${s.standard === "10" ? "bg-blue-100 text-blue-700" : "bg-violet-100 text-violet-700"}`}>
-                            Std {s.standard}{s.section ? `-${s.section}` : ""}
+                            {t("boardRecords.stdLabel", { std: s.standard, section: s.section ? `-${s.section}` : "" })}
                           </span>
                         </td>
 
@@ -335,7 +343,7 @@ export default function BoardRecordsPage() {
                               <p className="font-medium text-slate-800 text-xs">{s.board12th}</p>
                               {s.year12th && <p className="text-[11px] text-slate-400">{s.year12th}</p>}
                             </div>
-                          ) : <span className="text-slate-300 text-xs">N/A</span>}
+                          ) : <span className="text-slate-300 text-xs">{t("boardRecords.notAvailable")}</span>}
                         </td>
 
                         {/* 12th % */}
@@ -358,7 +366,7 @@ export default function BoardRecordsPage() {
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium"
                               >
-                                <FileText className="h-3 w-3" /> 10th
+                                <FileText className="h-3 w-3" /> {t("boardRecords.marksheet10")}
                               </a>
                             )}
                             {s.marksheet12Path && (
@@ -368,7 +376,7 @@ export default function BoardRecordsPage() {
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 font-medium"
                               >
-                                <FileText className="h-3 w-3" /> 12th
+                                <FileText className="h-3 w-3" /> {t("boardRecords.marksheet12")}
                               </a>
                             )}
                             {!s.marksheet10Path && !s.marksheet12Path && (
@@ -383,7 +391,7 @@ export default function BoardRecordsPage() {
                             href={gsebResultUrl(s.standard)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            title={`Check ${s.firstName}'s result on GSEB portal`}
+                            title={t("boardRecords.gsebCheckTitle", { name: s.firstName })}
                             className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white transition-all hover:opacity-90 ${s.standard === "10" ? "bg-blue-600 hover:bg-blue-700" : "bg-violet-600 hover:bg-violet-700"}`}
                           >
                             <Eye className="h-3 w-3" />
@@ -399,7 +407,7 @@ export default function BoardRecordsPage() {
                             className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors"
                           >
                             <ExternalLink className="h-3 w-3" />
-                            Profile
+                            {t("boardRecords.profile")}
                           </Link>
                         </td>
                       </tr>
@@ -413,7 +421,7 @@ export default function BoardRecordsPage() {
 
         {/* ── Result status legend ─────────────────── */}
         <div className="rounded-2xl bg-white border border-slate-200 p-4">
-          <p className="text-xs font-semibold text-slate-600 mb-2.5">Grade Legend</p>
+          <p className="text-xs font-semibold text-slate-600 mb-2.5">{t("boardRecords.gradeLegend")}</p>
           <div className="flex flex-wrap gap-3">
             {[
               { grade: "A1", range: "≥80%", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },

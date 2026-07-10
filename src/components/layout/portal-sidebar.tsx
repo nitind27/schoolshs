@@ -45,6 +45,7 @@ export function PortalSidebar({
   navItems,
   homeHref,
   roleIcon: RoleIcon,
+  footerExtra,
 }: {
   title: string;
   subtitle: string;
@@ -52,6 +53,7 @@ export function PortalSidebar({
   navItems: NavItem[];
   homeHref: string;
   roleIcon?: React.ComponentType<{ className?: string }>;
+  footerExtra?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -192,6 +194,7 @@ export function PortalSidebar({
 
         {/* Footer */}
         <div className="shrink-0 p-3 space-y-2" style={{ borderTop: "1px solid rgba(255,255,255,.08)" }}>
+          {footerExtra}
           <LanguageSwitcher variant="sidebar" />
 
           {user && (

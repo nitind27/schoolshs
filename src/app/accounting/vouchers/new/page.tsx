@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { VOUCHER_TYPES, PAYMENT_MODES } from "@/lib/accounting";
 import { useT } from "@/i18n/locale-provider";
+import { AddLedgerAccount } from "@/components/accounting/add-ledger-account";
 
 interface Account { id: string; code: string; name: string }
 interface Line { accountId: string; debit: number; credit: number; description: string }
@@ -39,8 +40,24 @@ export default function NewVoucherPage() {
   ]);
 
   useEffect(() => {
-    fetch("/api/accounting/trial-balance").then((r) => r.json()).then((d) => setAccounts(d.accounts || []));
+    loadAccounts();
   }, []);
+
+  const loadAccounts = () => {
+    fetch("/api/accounting/trial-balance").then((r) => r.json()).then((d) => setAccounts(d.accounts || []));
+  };
+
+  const paymentModeOptions = PAYMENT_MODES.map((mode) => {
+    const labels: Record<string, string> = {
+      Cash: t("accounting.payCash"),
+      Cheque: t("accounting.payCheque"),
+      "NEFT/RTGS": t("accounting.payNeft"),
+      UPI: t("accounting.payUpi"),
+      DD: t("accounting.payDd"),
+      Online: t("accounting.payOnline"),
+    };
+    return { value: mode, label: labels[mode] || mode };
+  });
 
   const voucherTypeLabel = (type: string) => {
     const map: Record<string, string> = {
@@ -103,7 +120,7 @@ export default function NewVoucherPage() {
             <Select
               value={form.paymentMode}
               onChange={(e) => setForm({ ...form, paymentMode: e.target.value })}
-              options={[...PAYMENT_MODES]}
+              options={paymentModeOptions}
               emptyLabel=""
             />
           </div>
@@ -133,9 +150,12 @@ export default function NewVoucherPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{t("accounting.ledgerEntries")}</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => setLines([...lines, { accountId: "", debit: 0, credit: 0, description: "" }])}>
-            <Plus className="h-4 w-4" /> {t("accounting.addLine")}
-          </Button>
+          <div className="flex gap-2">
+            <AddLedgerAccount size="sm" onAdded={loadAccounts} />
+            <Button variant="outline" size="sm" onClick={() => setLines([...lines, { accountId: "", debit: 0, credit: 0, description: "" }])}>
+              <Plus className="h-4 w-4" /> {t("accounting.addLine")}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {lines.map((line, i) => (

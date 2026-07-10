@@ -24,7 +24,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    if (user.role !== "super_admin" && (!user.schoolId || !user.school?.isActive)) {
+    if (user.role === "ca") {
+      const assignments = await prisma.caSchoolAssignment.findMany({
+        where: { userId: user.id },
+        include: { school: true },
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      });
+      const activeSchool =
+        user.school ||
+        assignments.find((a) => a.isPrimary)?.school ||
+        assignments[0]?.school;
+      if (!activeSchool?.isActive) {
+        return NextResponse.json({ error: "No active school assigned for CA" }, { status: 403 });
+      }
+    } else if (user.role !== "super_admin" && (!user.schoolId || !user.school?.isActive)) {
       return NextResponse.json({ error: "School inactive or not assigned" }, { status: 403 });
     }
 
@@ -33,14 +46,29 @@ export async function POST(request: NextRequest) {
       data: { lastLoginAt: new Date() },
     });
 
+    let activeSchoolId = user.schoolId;
+    let activeSchool = user.school;
+
+    if (user.role === "ca") {
+      const primaryAssignment = await prisma.caSchoolAssignment.findFirst({
+        where: { userId: user.id },
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+        include: { school: true },
+      });
+      activeSchoolId = user.schoolId || primaryAssignment?.schoolId || null;
+      activeSchool = user.school || primaryAssignment?.school || null;
+    }
+
     const sessionUser: SessionUser = {
       userId: user.id,
       email: user.email,
       name: user.name,
       role: user.role as UserRole,
-      schoolId: user.schoolId,
-      schoolName: user.school?.name ?? null,
-      schoolCode: user.school?.code ?? null,
+      schoolId: activeSchoolId,
+      schoolName: activeSchool?.name ?? null,
+      schoolCode: activeSchool?.code ?? null,
+      activeSchoolId,
+      activeSchoolName: activeSchool?.name ?? null,
       staffId: user.staffId,
       studentId: user.studentId,
     };

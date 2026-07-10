@@ -12,6 +12,7 @@ import {
   SCHOOL_ROLES,
   STAFF_ROLES,
 } from "@/lib/roles";
+import { buildAccountingSession, type AccountingSession } from "@/lib/accounting-scope";
 
 export type { SessionUser, UserRole };
 export { parseSessionToken };
@@ -72,9 +73,12 @@ export async function requireStaffAuth(): Promise<SessionUser & { schoolId: stri
   return requireSchoolAuth(STAFF_ROLES);
 }
 
-export async function requireAccountingAuth(roles?: UserRole[]): Promise<SessionUser & { schoolId: string }> {
-  return requireSchoolAuth(roles || ACCOUNTING_ROLES);
+export async function requireAccountingAuth(roles?: UserRole[]): Promise<AccountingSession> {
+  const session = await requireSchoolAuth(roles || ACCOUNTING_ROLES);
+  return buildAccountingSession(session);
 }
+
+export type { AccountingSession };
 
 export async function requireStudentAuth(): Promise<SessionUser & { schoolId: string; studentId: string }> {
   const session = await requireSchoolAuth(["student"]);

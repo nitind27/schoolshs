@@ -5,8 +5,10 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Smartphone, CheckCircle, Loader2, AlertCircle, Wifi, Zap } from "lucide-react";
 import { extractOtpFromSms } from "@/lib/sms-otp";
+import { useT } from "@/i18n/locale-provider";
 
 function SmsBridgeContent() {
+  const t = useT();
   const params = useSearchParams();
   const token = params.get("token") || "";
   const sendingRef = useRef(false);
@@ -26,7 +28,7 @@ function SmsBridgeContent() {
         const d = await r.json();
         if (!r.ok || d.error) {
           setLinkOk(false);
-          setError(d.error || "Link invalid — PC par dubara Connect karein");
+          setError(d.error || t("otpMobile.linkInvalid"));
           return;
         }
         setLinkOk(true);
@@ -34,9 +36,9 @@ function SmsBridgeContent() {
       })
       .catch(() => {
         setLinkOk(false);
-        setError("PC se connect nahi — same WiFi check karein");
+        setError(t("otpMobile.pcConnectFailed"));
       });
-  }, [token]);
+  }, [token, t]);
 
   const sendOtp = useCallback(
     async (code: string) => {
@@ -60,16 +62,16 @@ function SmsBridgeContent() {
           setOtp("");
           setTimeout(() => setDone(false), 3000);
         } else {
-          setError(data.error || "Send failed");
+          setError(data.error || t("otpMobile.sendFailed"));
         }
       } catch {
-        setError("Network error — phone aur PC same WiFi par hone chahiye");
+        setError(t("otpMobile.networkError"));
       } finally {
         sendingRef.current = false;
         setSending(false);
       }
     },
-    [token]
+    [token, t]
   );
 
   const onOtpChange = (raw: string) => {
@@ -88,7 +90,7 @@ function SmsBridgeContent() {
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-slate-100">
-        <p className="text-red-600 text-center">Invalid link</p>
+        <p className="text-red-600 text-center">{t("otpMobile.invalidLink")}</p>
       </div>
     );
   }
@@ -100,17 +102,17 @@ function SmsBridgeContent() {
           <Smartphone className="h-8 w-8" />
         </div>
         <div className="flex-1">
-          <h1 className="text-xl font-bold">OTP Bridge (Manual)</h1>
-          <p className="text-blue-200 text-sm">{info?.schoolName || "Scholarship Portal"}</p>
+          <h1 className="text-xl font-bold">{t("otpMobile.bridgeTitle")}</h1>
+          <p className="text-blue-200 text-sm">{info?.schoolName || t("otpMobile.scholarshipPortal")}</p>
         </div>
         {linkOk === true && (
           <span className="flex items-center gap-1 text-[10px] text-green-300 bg-green-900/40 px-2 py-1 rounded-full">
-            <Wifi className="h-3 w-3" /> OK
+            <Wifi className="h-3 w-3" /> {t("otpMobile.statusOk")}
           </span>
         )}
         {linkOk === false && (
           <span className="flex items-center gap-1 text-[10px] text-red-300 bg-red-900/40 px-2 py-1 rounded-full">
-            <AlertCircle className="h-3 w-3" /> Error
+            <AlertCircle className="h-3 w-3" /> {t("otpMobile.statusError")}
           </span>
         )}
       </div>
@@ -122,19 +124,15 @@ function SmsBridgeContent() {
         <div className="flex items-start gap-3">
           <Zap className="h-6 w-6 text-emerald-300 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-emerald-100">Automatic chahiye? (Recommended)</p>
-            <p className="text-sm text-emerald-200/90 mt-1">
-              SMS Forwarder app lagao — Chrome band, screen off — OTP khud website par jayega. Koi Allow popup nahi.
-            </p>
-            <p className="text-xs text-emerald-300 mt-2 underline">Setup guide kholo →</p>
+            <p className="font-bold text-emerald-100">{t("otpMobile.wantAutomatic")}</p>
+            <p className="text-sm text-emerald-200/90 mt-1">{t("otpMobile.forwarderPromo")}</p>
+            <p className="text-xs text-emerald-300 mt-2 underline">{t("otpMobile.openSetupGuide")}</p>
           </div>
         </div>
       </Link>
 
       <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
-        <p className="text-sm text-blue-100 mb-4 text-center">
-          Manual backup: SMS aaye → sirf <strong>6 digit</strong> type karo → Bhejein
-        </p>
+        <p className="text-sm text-blue-100 mb-4 text-center">{t("otpMobile.manualBackupHint")}</p>
 
         <input
           type="text"
@@ -158,24 +156,22 @@ function SmsBridgeContent() {
         >
           {sending ? (
             <span className="flex items-center justify-center gap-2">
-              <Loader2 className="h-5 w-5 animate-spin" /> Bhej rahe hain...
+              <Loader2 className="h-5 w-5 animate-spin" /> {t("otpMobile.sending")}
             </span>
           ) : (
-            "OTP Website par Bhejein"
+            t("otpMobile.sendToWebsite")
           )}
         </button>
 
         {done && lastSent && (
           <div className="mt-4 text-center text-green-300 font-medium">
-            <CheckCircle className="h-6 w-6 inline mr-1" /> {lastSent} bhej diya!
+            <CheckCircle className="h-6 w-6 inline mr-1" /> {t("otpMobile.sentSuccess", { otp: lastSent })}
           </div>
         )}
         {error && <p className="mt-3 text-center text-red-200 text-sm bg-red-900/40 rounded-lg p-3">{error}</p>}
       </div>
 
-      <p className="mt-6 text-[10px] text-blue-300/80 text-center">
-        Is page ko band kar sakte ho agar SMS Forwarder setup ho chuka hai
-      </p>
+      <p className="mt-6 text-[10px] text-blue-300/80 text-center">{t("otpMobile.canClosePage")}</p>
     </div>
   );
 }

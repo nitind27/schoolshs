@@ -30,6 +30,75 @@ export const AUDIT_STATUSES = [
   { value: "query", label: "Query Raised", color: "bg-orange-100 text-orange-800" },
 ] as const;
 
+/** Quick-add templates — school apni zarurat ke hisaab se select karke add kare */
+export const INDIAN_BANK_TEMPLATES = [
+  "Bank - State Bank of India (SBI)",
+  "Bank - Bank of Baroda (BOB)",
+  "Bank - Punjab National Bank (PNB)",
+  "Bank - HDFC Bank",
+  "Bank - ICICI Bank",
+  "Bank - Axis Bank",
+  "Bank - Canara Bank",
+  "Bank - Union Bank of India",
+  "Bank - Bank of India",
+  "Bank - Central Bank of India",
+  "Bank - Indian Bank",
+  "Bank - IDBI Bank",
+  "Bank - Kotak Mahindra Bank",
+  "Bank - Yes Bank",
+  "Bank - IndusInd Bank",
+  "Bank - UCO Bank",
+  "Bank - Bank of Maharashtra",
+  "Bank - Dena Bank / merged",
+  "Bank - Post Office Savings",
+  "Bank - District Co-operative Bank",
+] as const;
+
+export const COMMON_SCHOOL_EXPENSE_TEMPLATES = [
+  "Water & Drinking Expense",
+  "Tea / Refreshment Expense",
+  "Cleaning & Sweeper Expense",
+  "Security Guard Salary",
+  "Printing & Xerox Expense",
+  "Internet & Broadband Expense",
+  "Telephone / Mobile Expense",
+  "Exam Paper & Printing",
+  "Sports & PT Expense",
+  "Lab Chemicals & Materials",
+  "Library Books Expense",
+  "Furniture Repair",
+  "Building Repair & White Wash",
+  "Generator / Diesel Expense",
+  "Bus / Transport Expense",
+  "Mid-day Meal Expense",
+  "Uniform / Dress Expense",
+  "Medical / First Aid Expense",
+  "Festival & Function Expense",
+  "Miscellaneous Small Expense",
+] as const;
+
+const GROUP_CODE_PREFIX: Record<string, number> = {
+  assets: 1000,
+  liabilities: 3000,
+  capital: 4000,
+  income: 5000,
+  expenses: 6000,
+};
+
+export function suggestNextAccountCode(groupType: string, existingCodes: string[]): string {
+  const prefix = GROUP_CODE_PREFIX[groupType] ?? 9000;
+  const sameGroup = existingCodes
+    .map((c) => parseInt(c, 10))
+    .filter((n) => !Number.isNaN(n) && n >= prefix && n < prefix + 1000);
+  const next = sameGroup.length ? Math.max(...sameGroup) + 1 : prefix + 1;
+  return String(next);
+}
+
+export function getGroupBalanceType(groupType: string): "debit" | "credit" {
+  const g = ACCOUNT_GROUPS.find((x) => x.value === groupType);
+  return (g?.type as "debit" | "credit") || "debit";
+}
+
 export const DEFAULT_ACCOUNTS = [
   { code: "1001", name: "Cash in Hand", groupType: "assets", accountType: "cash", balanceType: "debit" },
   { code: "1002", name: "Bank Account - SBI", groupType: "assets", accountType: "bank", balanceType: "debit" },

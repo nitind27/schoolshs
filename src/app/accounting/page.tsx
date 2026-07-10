@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InfoModal } from "@/components/ui/info-modal";
 import { AccountingHelpContent } from "@/components/accounting/accounting-help-content";
+import { AddLedgerAccount } from "@/components/accounting/add-ledger-account";
 import { PageShell } from "@/components/layout/page-shell";
 import {
   Calculator,
@@ -21,16 +22,18 @@ import {
   CheckCircle2,
   Circle,
   AlertCircle,
+  Send,
 } from "lucide-react";
 import { formatIndianCurrency } from "@/lib/accounting";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import { useT } from "@/i18n/locale-provider";
 
 interface AccountingData {
-  financialYear: { id: string; label: string; auditStatus: string; _count: { vouchers: number; accounts: number } } | null;
+  financialYear: { id: string; label: string; auditStatus: string; isLocked?: boolean; submittedAt?: string | null; _count: { vouchers: number; accounts: number } } | null;
   allFinancialYears: { id: string; label: string; isActive: boolean }[];
   voucherStats: { auditStatus: string; _count: number; _sum: { totalAmount: number | null } }[];
   recentVouchers: { id: string; voucherNo: string; voucherType: string; totalAmount: number; auditStatus: string; voucherDate: string; partyName: string | null }[];
+  school?: { id: string; name: string };
 }
 
 export default function AccountingPage() {
@@ -39,6 +42,9 @@ export default function AccountingPage() {
   const [loading, setLoading] = useState(true);
   const [newFy, setNewFy] = useState("2025-26");
   const [showHelp, setShowHelp] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState<string | null>(null);
 
   const load = () => {
     fetch("/api/accounting")
@@ -47,7 +53,10 @@ export default function AccountingPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+    fetch("/api/auth/me").then((r) => r.json()).then((d) => setUserRole(d.user?.role || null));
+  }, []);
 
   const initAccounts = async () => {
     if (!data?.financialYear) return;
@@ -66,6 +75,29 @@ export default function AccountingPage() {
       body: JSON.stringify({ label }),
     });
     load();
+  };
+
+  const submitToCa = async () => {
+    if (!confirm(t("accounting.submitToCaConfirm"))) return;
+    setSubmitting(true);
+    setSubmitMsg(null);
+    try {
+      const res = await fetch("/api/accounting/submit-audit", { method: "POST" });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || t("common.submitFailed"));
+      setSubmitMsg(t("accounting.submittedToCa"));
+      load();
+    } catch (e) {
+      setSubmitMsg(e instanceof Error ? e.message : t("common.submitFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const fyAuditLabel = (status: string) => {
+    const key = `auditStatus.${status}` as "auditStatus.open";
+    const val = t(key);
+    return val !== key ? val : status;
   };
 
   const voucherTypeLabel = (type: string) => {
@@ -94,15 +126,15 @@ export default function AccountingPage() {
 
   return (
     <PageShell
-      title="Accounting & Finance"
-      subtitle={`School financial management for ${fyLabel}`}
+      title={t("accounting.title")}
+      subtitle={t("accounting.subtitle", { year: fyLabel })}
       icon={<Calculator className="h-6 w-6" />}
       accentColor="border-blue-500"
-      breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Accounting" }]}
+      breadcrumbs={[{ label: t("nav.dashboard"), href: "/" }, { label: t("navExt.accounting") }]}
       actions={
         <>
           <Button variant="outline" size="sm" onClick={() => setShowHelp(true)}>
-            <HelpCircle className="h-3.5 w-3.5" /> How to Use
+            <HelpCircle className="h-3.5 w-3.5" /> {t("accounting.howToUse")}
           </Button>
           <select
             value={newFy}
@@ -114,11 +146,11 @@ export default function AccountingPage() {
             ))}
           </select>
           <Button variant="outline" size="sm" onClick={() => setFinancialYear(newFy)}>
-            Set Active FY
+            {t("accounting.setActiveFy")}
           </Button>
           <Link href="/accounting/vouchers/new">
             <Button size="sm">
-              <Plus className="h-3.5 w-3.5" /> New Voucher
+              <Plus className="h-3.5 w-3.5" /> {t("accounting.newVoucher")}
             </Button>
           </Link>
         </>
@@ -148,11 +180,52 @@ export default function AccountingPage() {
                 <BookOpen className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="font-semibold text-blue-900">Chart of Accounts not initialized</p>
+                <p className="font-semibold text-blue-900">{t("accounting.coaNotInitTitle")}</p>
                 <p className="text-sm text-blue-700 mt-0.5">{t("accounting.coaNotInit", { year: fy.label })}</p>
               </div>
             </div>
             <Button onClick={initAccounts} size="sm">{t("accounting.initStandardAccounts")}</Button>
+          </div>
+        </div>
+      )}
+
+      {fy && fy._count.accounts > 0 && userRole !== "ca" && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">{t("accounting.manageLedgers")}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{t("accounting.manageLedgersDesc")}</p>
+          </div>
+          <AddLedgerAccount onAdded={load} />
+        </div>
+      )}
+
+      {fy && userRole === "school_admin" && (
+        <div className={`rounded-xl border p-5 ${
+          fy.auditStatus === "submitted" || fy.auditStatus === "in_review" || fy.auditStatus === "verified"
+            ? "border-emerald-200 bg-emerald-50"
+            : "border-violet-200 bg-gradient-to-br from-violet-50 to-indigo-50"
+        }`}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center shrink-0">
+                <Send className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-violet-900">{t("accounting.submitToCa")}</p>
+                <p className="text-sm text-violet-700 mt-0.5">{t("accounting.submitToCaDesc")}</p>
+                <p className="text-xs text-violet-600 mt-1">
+                  {t("caPortal.fyStatus")}: <span className="font-semibold">{fyAuditLabel(fy.auditStatus)}</span>
+                  {fy.isLocked ? ` · ${t("accounting.booksLocked")}` : ""}
+                </p>
+                {submitMsg && <p className="text-xs mt-1 text-slate-600">{submitMsg}</p>}
+              </div>
+            </div>
+            {["open", "pending", "returned"].includes(fy.auditStatus) && !fy.isLocked && (
+              <Button onClick={submitToCa} size="sm" disabled={submitting || fy._count.vouchers === 0}>
+                <Send className="h-3.5 w-3.5" />
+                {submitting ? t("common.saving") : t("accounting.submitToCa")}
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -166,7 +239,7 @@ export default function AccountingPage() {
             </div>
           </div>
           <p className="text-3xl font-bold">{fy?._count.vouchers || 0}</p>
-          <p className="text-xs text-white/60 mt-1">this financial year</p>
+          <p className="text-xs text-white/60 mt-1">{t("accounting.statThisFy")}</p>
         </div>
 
         <div className="rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white shadow-md">
@@ -177,7 +250,7 @@ export default function AccountingPage() {
             </div>
           </div>
           <p className="text-3xl font-bold">{fy?._count.accounts || 0}</p>
-          <p className="text-xs text-white/60 mt-1">chart of accounts</p>
+          <p className="text-xs text-white/60 mt-1">{t("accounting.statChartOfAccounts")}</p>
         </div>
 
         <div className="rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-5 text-white shadow-md">
@@ -188,7 +261,7 @@ export default function AccountingPage() {
             </div>
           </div>
           <p className="text-3xl font-bold">{pendingAudit}</p>
-          <p className="text-xs text-white/60 mt-1">vouchers pending</p>
+          <p className="text-xs text-white/60 mt-1">{t("accounting.statVouchersPending")}</p>
         </div>
 
         <div className="rounded-2xl bg-gradient-to-br from-violet-600 to-purple-700 p-5 text-white shadow-md">
@@ -199,7 +272,7 @@ export default function AccountingPage() {
             </div>
           </div>
           <p className="text-xl font-bold leading-tight">{formatIndianCurrency(totalReceipts)}</p>
-          <p className="text-xs text-white/60 mt-1">verified total</p>
+          <p className="text-xs text-white/60 mt-1">{t("accounting.statVerifiedTotal")}</p>
         </div>
       </div>
 
@@ -271,7 +344,7 @@ export default function AccountingPage() {
                 ))}
                 <Link href="/accounting/vouchers">
                   <Button variant="outline" size="sm" className="w-full mt-2">
-                    View All Vouchers <ArrowRight className="h-3 w-3" />
+                    {t("accounting.viewAllVouchers")} <ArrowRight className="h-3 w-3" />
                   </Button>
                 </Link>
               </div>
@@ -280,7 +353,7 @@ export default function AccountingPage() {
                 <FileText className="h-8 w-8 mb-2 opacity-40" />
                 <p className="text-sm">{t("accounting.noVouchersYet")}</p>
                 <Link href="/accounting/vouchers/new" className="mt-3">
-                  <Button size="sm"><Plus className="h-3.5 w-3.5" /> Create First Voucher</Button>
+                  <Button size="sm"><Plus className="h-3.5 w-3.5" /> {t("accounting.createFirstVoucher")}</Button>
                 </Link>
               </div>
             )}

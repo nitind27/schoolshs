@@ -7,14 +7,17 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { formatIndianCurrency } from "@/lib/accounting";
 import { useT } from "@/i18n/locale-provider";
+import { AddLedgerAccount } from "@/components/accounting/add-ledger-account";
 
 export default function TrialBalancePage() {
   const t = useT();
   const [data, setData] = useState<{ trialBalance: Record<string, unknown>[]; totalDebit: number; totalCredit: number; financialYear: { label: string } | null } | null>(null);
 
-  useEffect(() => {
+  const load = () => {
     fetch("/api/accounting/trial-balance").then((r) => r.json()).then(setData);
-  }, []);
+  };
+
+  useEffect(load, []);
 
   const balanced = data && Math.abs(data.totalDebit - data.totalCredit) < 0.01;
 
@@ -37,6 +40,11 @@ export default function TrialBalancePage() {
           <h1 className="text-2xl font-bold">{t("accounting.trialBalanceTitle")}</h1>
           <p className="text-slate-500">{t("accounting.trialBalanceSubtitle", { year: data?.financialYear?.label || "" })}</p>
         </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <p className="text-sm text-slate-500">{t("accounting.trialBalanceLedgerHint")}</p>
+        <AddLedgerAccount onAdded={load} />
       </div>
 
       <Card>

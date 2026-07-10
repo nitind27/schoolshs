@@ -5,18 +5,19 @@ import { requireAccountingAuth, AuthError } from "@/lib/auth";
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAccountingAuth();
+    const schoolId = session.accountingSchoolId;
     const fy = await prisma.financialYear.findFirst({
-      where: { schoolId: session.schoolId, isActive: true },
+      where: { schoolId, isActive: true },
     });
     if (!fy) return NextResponse.json({ accounts: [], trialBalance: [] });
 
     const accounts = await prisma.account.findMany({
-      where: { schoolId: session.schoolId, financialYearId: fy.id, isActive: true },
+      where: { schoolId, financialYearId: fy.id, isActive: true },
       orderBy: { code: "asc" },
     });
 
     const lines = await prisma.voucherLine.findMany({
-      where: { voucher: { schoolId: session.schoolId, financialYearId: fy.id, isPosted: true } },
+      where: { voucher: { schoolId, financialYearId: fy.id, isPosted: true } },
       include: { account: true },
     });
 

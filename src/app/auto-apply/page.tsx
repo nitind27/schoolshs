@@ -54,17 +54,6 @@ interface RemoteBrowserConfig {
   label: string;
 }
 
-const PORTAL_OPTIONS = [
-  { value: "sjed",    label: "SJED Login (School Portal)" },
-  { value: "citizen", label: "Citizen Login (Student Portal)" },
-];
-
-const ACTION_OPTIONS = [
-  { value: "auto",      label: "Auto Detect" },
-  { value: "new_apply", label: "New Application" },
-  { value: "edit",      label: "Edit / Update" },
-];
-
 function statusColor(status: string) {
   switch (status) {
     case "submitted": case "filled":  return "bg-emerald-50 text-emerald-700 border border-emerald-200";
@@ -84,25 +73,17 @@ function statusDot(status: string) {
   }
 }
 
-function actionLabel(action: string) {
-  if (action === "new_apply")    return "New Apply";
-  if (action === "edit")         return "Edit";
-  if (action === "auto_detected") return "Auto";
-  return action;
-}
-
-/* ── Group students by class (standard + section) ── */
-function groupByClass(students: Student[]): Map<string, Student[]> {
+function groupByClass(students: Student[], unknownLabel: string): Map<string, Student[]> {
   const map = new Map<string, Student[]>();
   for (const s of students) {
-    const key = s.standard && s.section ? `${s.standard}-${s.section}` : s.standard ? `Std ${s.standard}` : "Unknown";
+    const key = s.standard && s.section ? `${s.standard}-${s.section}` : s.standard ? `Std ${s.standard}` : unknownLabel;
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(s);
   }
   // Sort: Balvatika first, then numerically, then unknown
   return new Map([...map.entries()].sort(([a], [b]) => {
-    if (a === "Unknown") return 1;
-    if (b === "Unknown") return -1;
+    if (a === unknownLabel) return 1;
+    if (b === unknownLabel) return -1;
     const numA = parseInt(a), numB = parseInt(b);
     if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
     return a.localeCompare(b);
@@ -111,6 +92,41 @@ function groupByClass(students: Student[]): Map<string, Student[]> {
 
 function AutoApplyContent() {
   const t = useT();
+
+  const portalOptions = [
+    { value: "sjed", label: t("autoApply.portalOptionSjed") },
+    { value: "citizen", label: t("autoApply.portalOptionCitizen") },
+  ];
+  const actionOptions = [
+    { value: "auto", label: t("autoApply.actionAutoDetect") },
+    { value: "new_apply", label: t("autoApply.actionNewApplication") },
+    { value: "edit", label: t("autoApply.actionEditUpdate") },
+  ];
+  const loginMethodOptions = [
+    { value: "mobile", label: t("autoApply.mobileNumber") },
+    { value: "email", label: t("autoApply.emailId") },
+  ];
+
+  const actionLabel = (action: string) => {
+    if (action === "new_apply") return t("autoApply.actionNewApplyLabel");
+    if (action === "edit") return t("autoApply.actionEditLabel");
+    if (action === "auto_detected") return t("autoApply.actionAutoLabel");
+    return action;
+  };
+
+  const statusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      submitted: t("autoApply.statusSubmitted"),
+      filled: t("autoApply.statusFilled"),
+      running: t("autoApply.statusRunning"),
+      failed: t("autoApply.statusFailed"),
+      pending: t("autoApply.statusPending"),
+      completed: t("autoApply.statusCompleted"),
+      partial: t("autoApply.statusPartial"),
+    };
+    return map[status] ?? status;
+  };
+
   const [students, setStudents] = useState<Student[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [actionMode, setActionMode] = useState("auto");
@@ -152,7 +168,7 @@ function AutoApplyContent() {
     );
   });
 
-  const classGroups = groupByClass(filteredStudents);
+  const classGroups = groupByClass(filteredStudents, t("autoApply.unknownClass"));
 
   const loadSessionStatus = useCallback(() => {
     fetch("/api/automation/session-status")
@@ -234,8 +250,8 @@ function AutoApplyContent() {
   };
 
   const saveDgCredentials = async () => {
-    if (portalType === "sjed" && !dgForm.dgSjedUsername.trim()) { alert("SJED username required"); return; }
-    if (portalType === "citizen" && !dgForm.dgCitizenLoginId.trim()) { alert("Citizen login ID required"); return; }
+    if (portalType === "sjed" && !dgForm.dgSjedUsername.trim()) { alert(t("autoApply.sjedUsernameRequired")); return; }
+    if (portalType === "citizen" && !dgForm.dgCitizenLoginId.trim()) { alert(t("autoApply.citizenSetupRequired")); return; }
     setSavingCreds(true);
     const body = portalType === "sjed"
       ? { dgSjedUsername: dgForm.dgSjedUsername, dgSjedPassword: dgForm.dgSjedPassword }
@@ -255,11 +271,11 @@ function AutoApplyContent() {
   const portalLastLogin = portalType === "sjed" ? sessionStatus?.sjed?.lastLoginAt : sessionStatus?.citizen?.lastLoginAt;
 
   const startJob = async () => {
-    if (!portalConfigured) { alert(portalType === "sjed" ? "Setup SJED login first" : "Setup Citizen login first"); return; }
+    if (!portalConfigured) { alert(portalType === "sjed" ? t("autoApply.setupSjedFirst") : t("autoApply.setupCitizenFirst")); return; }
     if ((portalType === "sjed" && dgForm.dgSjedUsername.trim() && !sessionStatus?.sjed?.configured) || (portalType === "citizen" && dgForm.dgCitizenLoginId.trim() && !sessionStatus?.citizen?.configured)) {
       await saveDgCredentials();
     }
-    if (selected.size === 0) { alert("Select at least one student"); return; }
+    if (selected.size === 0) { alert(t("autoApply.selectStudents")); return; }
     setStarting(true);
     const res = await fetch("/api/automation/start", {
       method: "POST",
@@ -268,7 +284,7 @@ function AutoApplyContent() {
     });
     const data = await res.json();
     setStarting(false);
-    if (!res.ok) { alert(data.error || "Failed to start automation"); return; }
+    if (!res.ok) { alert(data.error || t("autoApply.automationStartFailed")); return; }
 
     if (remoteBrowser?.enabled && remoteBrowser.url) {
       window.open(remoteBrowser.url, "_blank", "noopener,noreferrer");
@@ -288,14 +304,14 @@ function AutoApplyContent() {
 
   return (
     <PageShell
-      title="Auto Apply Scholarship"
-      subtitle="Automate bulk scholarship form filling for Digital Gujarat portal"
+      title={t("autoApply.pageTitle")}
+      subtitle={t("autoApply.pageSubtitle")}
       icon={<Bot className="h-6 w-6" />}
       accentColor="border-emerald-500"
-      breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Auto Apply" }]}
+      breadcrumbs={[{ label: t("nav.dashboard"), href: "/" }, { label: t("nav.autoApply") }]}
       actions={
         <Button variant="outline" size="sm" onClick={loadStudents}>
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+          <RefreshCw className="h-3.5 w-3.5" /> {t("autoApply.refresh")}
         </Button>
       }
     >
@@ -308,14 +324,12 @@ function AutoApplyContent() {
               <Zap className="h-5 w-5 text-white" />
             </div>
             <div className="text-sm space-y-1">
-              <p className="font-semibold text-slate-900">How It Works</p>
+              <p className="font-semibold text-slate-900">{t("autoApply.howItWorksTitle")}</p>
               <p className="text-slate-600">
-                1. Select portal type & enter login credentials ·
-                2. Choose students class-wise ·
-                3. Hit Start — automation will fill & submit forms automatically
+                {t("autoApply.howItWorksSteps")}
               </p>
               <p className="text-xs text-slate-500 mt-2">
-                Localhost: Chromium browser khulega · VPS: Remote Browser URL se login karein
+                {t("autoApply.localhostNote")}
               </p>
             </div>
           </div>
@@ -326,31 +340,31 @@ function AutoApplyContent() {
           <div className="rounded-xl bg-white border border-slate-200 p-4">
             <div className="flex items-center gap-2 mb-1">
               <Users className="h-4 w-4 text-blue-600" />
-              <p className="text-xs font-medium text-slate-500">Selected Students</p>
+              <p className="text-xs font-medium text-slate-500">{t("autoApply.selectedStudents")}</p>
             </div>
             <p className="text-2xl font-bold text-slate-900">{selected.size}</p>
-            <p className="text-xs text-slate-400 mt-0.5">out of {students.length}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{t("autoApply.outOf", { count: students.length })}</p>
           </div>
           <div className="rounded-xl bg-white border border-slate-200 p-4">
             <div className="flex items-center gap-2 mb-1">
               <LogIn className="h-4 w-4 text-violet-600" />
-              <p className="text-xs font-medium text-slate-500">Portal Type</p>
+              <p className="text-xs font-medium text-slate-500">{t("autoApply.portalTypeLabel")}</p>
             </div>
-            <p className="text-sm font-bold text-slate-900">{portalType === "sjed" ? "SJED Login" : "Citizen Login"}</p>
-            {portalSessionSaved && <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Session Active</p>}
+            <p className="text-sm font-bold text-slate-900">{portalType === "sjed" ? t("autoApply.sjedLoginShort") : t("autoApply.citizenLoginShort")}</p>
+            {portalSessionSaved && <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {t("autoApply.sessionActiveBadge")}</p>}
           </div>
           <div className="rounded-xl bg-white border border-slate-200 p-4">
             <div className="flex items-center gap-2 mb-1">
               <Clock className="h-4 w-4 text-amber-600" />
-              <p className="text-xs font-medium text-slate-500">Current Job</p>
+              <p className="text-xs font-medium text-slate-500">{t("autoApply.currentJob")}</p>
             </div>
-            <p className="text-sm font-bold text-slate-900 capitalize">{activeJob?.status || "Idle"}</p>
-            {activeJob && <p className="text-xs text-slate-400 mt-0.5">{activeJob.completedCount}/{activeJob.totalCount} done</p>}
+            <p className="text-sm font-bold text-slate-900 capitalize">{activeJob?.status ? statusLabel(activeJob.status) : t("autoApply.idle")}</p>
+            {activeJob && <p className="text-xs text-slate-400 mt-0.5">{t("autoApply.doneOfTotal", { done: activeJob.completedCount, total: activeJob.totalCount })}</p>}
           </div>
           <div className="rounded-xl bg-white border border-slate-200 p-4">
             <div className="flex items-center gap-2 mb-1">
               <BookOpen className="h-4 w-4 text-emerald-600" />
-              <p className="text-xs font-medium text-slate-500">Classes Found</p>
+              <p className="text-xs font-medium text-slate-500">{t("autoApply.classesFound")}</p>
             </div>
             <p className="text-2xl font-bold text-slate-900">{classGroups.size}</p>
           </div>
@@ -369,13 +383,13 @@ function AutoApplyContent() {
                   <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
                     <LogIn className="h-3.5 w-3.5 text-blue-600" />
                   </div>
-                  Portal Login Settings
+                  {t("autoApply.portalLoginSettings")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Select
-                  label="Portal Type"
-                  options={PORTAL_OPTIONS}
+                  label={t("autoApply.portalTypeLabel")}
+                  options={portalOptions}
                   value={portalType}
                   onChange={(e) => setPortalType(e.target.value as "sjed" | "citizen")}
                 />
@@ -385,14 +399,14 @@ function AutoApplyContent() {
                   <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5 text-xs text-emerald-800">
                     <Shield className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                     <div>
-                      <p className="font-semibold">Session active</p>
-                      {portalLastLogin && <p className="opacity-70">Last: {new Date(portalLastLogin).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</p>}
+                      <p className="font-semibold">{t("autoApply.sessionActiveCard")}</p>
+                      {portalLastLogin && <p className="opacity-70">{t("autoApply.lastLogin", { date: new Date(portalLastLogin).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" }) })}</p>}
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">
                     <Clock className="h-3.5 w-3.5 shrink-0" />
-                    <p>No saved session — enter credentials below</p>
+                    <p>{t("autoApply.noSavedSession")}</p>
                   </div>
                 )}
 
@@ -400,48 +414,48 @@ function AutoApplyContent() {
                 {portalType === "sjed" ? (
                   <div className="space-y-3">
                     <Input
-                      label="SJED Username"
+                      label={t("autoApply.sjedUsername")}
                       value={dgForm.dgSjedUsername}
                       onChange={(e) => setDgForm({ ...dgForm, dgSjedUsername: e.target.value })}
-                      placeholder="SJED User ID"
+                      placeholder={t("autoApply.sjedUserIdPlaceholder")}
                     />
                     <Input
-                      label="Password"
+                      label={t("autoApply.passwordLabel")}
                       type="password"
                       value={dgForm.dgSjedPassword}
                       onChange={(e) => setDgForm({ ...dgForm, dgSjedPassword: e.target.value })}
-                      placeholder="Enter DG password"
+                      placeholder={t("autoApply.enterDgPassword")}
                     />
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <Select
-                      label="Login Method"
-                      options={[{ value: "mobile", label: "Mobile Number" }, { value: "email", label: "Email ID" }]}
+                      label={t("autoApply.loginMethod")}
+                      options={loginMethodOptions}
                       value={dgForm.dgCitizenLoginMethod}
                       onChange={(e) => setDgForm({ ...dgForm, dgCitizenLoginMethod: e.target.value })}
                     />
                     <Input
-                      label="Login ID"
+                      label={t("autoApply.loginId")}
                       value={dgForm.dgCitizenLoginId}
                       onChange={(e) => setDgForm({ ...dgForm, dgCitizenLoginId: e.target.value })}
                       placeholder="9876543210"
                     />
                     <Input
-                      label="Password"
+                      label={t("autoApply.passwordLabel")}
                       type="password"
                       value={dgForm.dgCitizenPassword}
                       onChange={(e) => setDgForm({ ...dgForm, dgCitizenPassword: e.target.value })}
-                      placeholder="Enter password"
+                      placeholder={t("autoApply.enterPassword")}
                     />
                   </div>
                 )}
 
-                <p className="text-[11px] text-slate-400">Credentials stored securely — not shared outside this device.</p>
+                <p className="text-[11px] text-slate-400">{t("autoApply.credsSecureNote")}</p>
 
                 <Button variant="outline" className="w-full" onClick={saveDgCredentials} disabled={savingCreds}>
                   {savingCreds ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                  {credsSaved ? "✓ Saved!" : "Save Credentials"}
+                  {credsSaved ? t("autoApply.savedOk") : t("autoApply.saveCredentials")}
                 </Button>
               </CardContent>
             </Card>
@@ -453,18 +467,18 @@ function AutoApplyContent() {
                   <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
                     <Bot className="h-3.5 w-3.5 text-emerald-600" />
                   </div>
-                  Automation Settings
+                  {t("autoApply.automationSettings")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Select
-                  label="Action Mode"
-                  options={ACTION_OPTIONS}
+                  label={t("autoApply.actionModeLabel")}
+                  options={actionOptions}
                   value={actionMode}
                   onChange={(e) => setActionMode(e.target.value)}
                 />
                 <p className="text-xs text-slate-500 -mt-2">
-                  Auto: Detect if new form or edit needed · New: Fresh application · Edit: Update existing
+                  {t("autoApply.actionModeHint")}
                 </p>
 
                 {/* Launch button */}
@@ -477,17 +491,17 @@ function AutoApplyContent() {
                 >
                   <span className="flex items-center justify-center gap-2">
                     {starting ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Starting automation…</>
+                      <><Loader2 className="h-4 w-4 animate-spin" /> {t("autoApply.startingAutomation")}</>
                     ) : activeJob?.status === "running" ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Running ({activeJob.completedCount}/{activeJob.totalCount})</>
+                      <><Loader2 className="h-4 w-4 animate-spin" /> {t("autoApply.runningJob", { done: activeJob.completedCount, total: activeJob.totalCount })}</>
                     ) : (
-                      <><Play className="h-4 w-4" /> Start Auto Apply · {selected.size} students</>
+                      <><Play className="h-4 w-4" /> {t("autoApply.startWithCount", { count: selected.size })}</>
                     )}
                   </span>
                 </button>
 
                 {selected.size === 0 && (
-                  <p className="text-xs text-amber-600 text-center">Select at least one student to continue</p>
+                  <p className="text-xs text-amber-600 text-center">{t("autoApply.selectOneToContinue")}</p>
                 )}
 
                 {remoteBrowser?.enabled && remoteBrowser.url && (
@@ -509,7 +523,7 @@ function AutoApplyContent() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <Clock className="h-3.5 w-3.5 text-slate-600" />
-                    Recent Jobs
+                    {t("autoApply.recentJobs")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -527,7 +541,7 @@ function AutoApplyContent() {
                       <div className="flex items-center justify-between mb-1">
                         <span className={`font-semibold capitalize inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full ${statusColor(j.status)}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${statusDot(j.status)}`} />
-                          {j.status}
+                          {statusLabel(j.status)}
                         </span>
                         <span className="text-slate-600">{j.completedCount}/{j.totalCount}</span>
                       </div>
@@ -552,12 +566,12 @@ function AutoApplyContent() {
                         {activeJob.status === "running" ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : activeJob.status === "completed" ? <CheckCircle className="h-4 w-4 text-white" /> : <XCircle className="h-4 w-4 text-white" />}
                       </div>
                       <div>
-                        <CardTitle className="text-sm">Live Automation Status</CardTitle>
-                        <p className="text-xs text-slate-500 mt-0.5">{activeJob.currentStep || "Processing students..."}</p>
+                        <CardTitle className="text-sm">{t("autoApply.liveAutomationStatus")}</CardTitle>
+                        <p className="text-xs text-slate-500 mt-0.5">{activeJob.currentStep || t("autoApply.processingStudents")}</p>
                       </div>
                     </div>
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${statusColor(activeJob.status)}`}>
-                      {activeJob.status}
+                      {statusLabel(activeJob.status)}
                     </span>
                   </div>
                 </CardHeader>
@@ -566,16 +580,16 @@ function AutoApplyContent() {
                   {/* Progress bar */}
                   <div className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="flex justify-between text-xs text-slate-500 mb-2">
-                      <span>Overall Progress</span>
+                      <span>{t("autoApply.overallProgress")}</span>
                       <span className="font-semibold text-slate-800">{activeJob.overallPercent}%</span>
                     </div>
                     <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <div className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 transition-all duration-700" style={{ width: `${activeJob.overallPercent}%` }} />
                     </div>
                     <div className="flex gap-4 mt-2.5 text-xs">
-                      <span className="text-emerald-600 font-medium">✓ {activeJob.completedCount} done</span>
-                      <span className="text-red-600 font-medium">✗ {activeJob.failedCount} failed</span>
-                      <span className="text-slate-500">· {activeJob.totalCount} total</span>
+                      <span className="text-emerald-600 font-medium">✓ {activeJob.completedCount} {t("autoApply.done")}</span>
+                      <span className="text-red-600 font-medium">✗ {activeJob.failedCount} {t("autoApply.failed")}</span>
+                      <span className="text-slate-500">· {activeJob.totalCount} {t("autoApply.total")}</span>
                     </div>
                   </div>
 
@@ -586,7 +600,7 @@ function AutoApplyContent() {
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="font-medium text-sm text-slate-800">{sp.name}</span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusColor(sp.status)}`}>
-                            {sp.status}
+                            {statusLabel(sp.status)}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 mb-2">
@@ -610,7 +624,7 @@ function AutoApplyContent() {
                     <details className="group">
                       <summary className="cursor-pointer text-xs font-medium text-slate-600 hover:text-slate-800 flex items-center gap-1.5">
                         <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
-                        View execution logs
+                        {t("autoApply.viewExecutionLogs")}
                       </summary>
                       <pre className="mt-2 text-[10px] bg-slate-900 text-green-400 p-3 rounded-xl max-h-32 overflow-y-auto whitespace-pre-wrap">
                         {activeJob.logs.split("\n").slice(-30).join("\n")}
@@ -630,8 +644,8 @@ function AutoApplyContent() {
                       <BookOpen className="h-4 w-4 text-emerald-600" />
                     </div>
                     <div>
-                      <CardTitle className="text-sm">Select Students by Class</CardTitle>
-                      <p className="text-xs text-slate-500 mt-0.5">{students.length} ready students · {classGroups.size} classes</p>
+                      <CardTitle className="text-sm">{t("autoApply.selectStudentsByClass")}</CardTitle>
+                      <p className="text-xs text-slate-500 mt-0.5">{t("autoApply.readyStudentsSummary", { students: students.length, classes: classGroups.size })}</p>
                     </div>
                   </div>
 
@@ -641,14 +655,14 @@ function AutoApplyContent() {
                       onClick={() => setSelected(new Set(filteredStudents.map((s) => s.id)))}
                       className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 hover:bg-emerald-100 transition-colors"
                     >
-                      Select All
+                      {t("autoApply.selectAll")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setSelected(new Set())}
                       className="text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 hover:bg-slate-200 transition-colors"
                     >
-                      Deselect All
+                      {t("autoApply.deselectAll")}
                     </button>
                   </div>
                 </div>
@@ -660,7 +674,7 @@ function AutoApplyContent() {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by name, Aadhaar or category…"
+                    placeholder={t("autoApply.searchStudentsPlaceholder")}
                     className="w-full h-9 pl-8 pr-3 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
                   />
                 </div>
@@ -670,17 +684,17 @@ function AutoApplyContent() {
                 {loading ? (
                   <div className="flex flex-col items-center justify-center h-40 gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-                    <p className="text-sm text-slate-500">Loading students…</p>
+                    <p className="text-sm text-slate-500">{t("autoApply.loadingStudents")}</p>
                   </div>
                 ) : students.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
                     <Users className="h-10 w-10 opacity-40" />
-                    <p className="text-sm font-medium">No ready students found</p>
-                    <p className="text-xs opacity-60">Mark students as &quot;ready&quot; to appear here</p>
+                    <p className="text-sm font-medium">{t("autoApply.noReadyStudentsFound")}</p>
+                    <p className="text-xs opacity-60">{t("autoApply.markReadyHint")}</p>
                   </div>
                 ) : classGroups.size === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-400">
-                    <p className="text-sm">No results for &quot;{searchTerm}&quot;</p>
+                    <p className="text-sm">{t("autoApply.noSearchResults", { term: searchTerm })}</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
@@ -719,8 +733,8 @@ function AutoApplyContent() {
                                 {classKey.split("-")[0]}
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-slate-800">Class {classKey}</p>
-                                <p className="text-xs text-slate-500">{classStudents.length} students · {selectedCount} selected</p>
+                                <p className="text-sm font-semibold text-slate-800">{t("autoApply.classLabel", { name: classKey })}</p>
+                                <p className="text-xs text-slate-500">{t("autoApply.classStudentsSelected", { total: classStudents.length, selected: selectedCount })}</p>
                               </div>
                             </div>
 
@@ -799,14 +813,19 @@ function AutoApplyContent() {
   );
 }
 
+function AutoApplyLoading() {
+  const t = useT();
+  return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-200 border-t-emerald-600" />
+      <p className="text-sm text-slate-500">{t("autoApply.loadingPage")}</p>
+    </div>
+  );
+}
+
 export default function AutoApplyPage() {
   return (
-    <Suspense fallback={
-      <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-200 border-t-emerald-600" />
-        <p className="text-sm text-slate-500">Loading Auto Apply…</p>
-      </div>
-    }>
+    <Suspense fallback={<AutoApplyLoading />}>
       <AutoApplyContent />
     </Suspense>
   );

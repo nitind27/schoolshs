@@ -32,6 +32,7 @@ model School {
   vouchers        Voucher[]
   exams           Exam[]
   auditSessions   CaAuditSession[]
+  caAssignments   CaSchoolAssignment[]
 
   @@index([isActive])
   @@map("school")
@@ -56,6 +57,8 @@ model User {
 
   vouchersCreated Voucher[]      @relation("VoucherCreatedBy")
   auditActions    AuditAction[]
+  caSchoolAssignments CaSchoolAssignment[]
+  fySubmissions   FinancialYear[] @relation("FySubmittedBy")
 
   @@index([schoolId])
   @@index([role])
@@ -330,7 +333,11 @@ model FinancialYear {
   endDate    DateTime
   isActive   Boolean  @default(false)
   isLocked   Boolean  @default(false)
-  auditStatus String  @default("pending")
+  auditStatus String  @default("open")
+  submittedAt DateTime?
+  submittedById String?
+  submittedBy User?   @relation("FySubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  submittedRemarks String? @db.Text
 
   accounts      Account[]
   vouchers      Voucher[]
@@ -462,6 +469,22 @@ model AuditAction {
 
   @@index([sessionId])
   @@map("auditaction")
+}
+
+// ─── CA ↔ School assignment (one CA firm, multiple schools) ───
+model CaSchoolAssignment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  isPrimary Boolean  @default(false)
+
+  @@unique([userId, schoolId])
+  @@index([userId])
+  @@index([schoolId])
+  @@map("caschoolassignment")
 }
 
 // ─── Exams & Results ───

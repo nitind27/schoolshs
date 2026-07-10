@@ -6,6 +6,7 @@ import {
   BookOpen, BarChart3, ClipboardList, Briefcase,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
+import { CaSchoolSwitcher } from "@/components/ca/school-switcher";
 
 export function CaLayout({ children }: { children: React.ReactNode }) {
   const t = useT();
@@ -29,6 +30,7 @@ export function CaLayout({ children }: { children: React.ReactNode }) {
         navItems={navItems}
         homeHref="/ca"
         roleIcon={Briefcase}
+        footerExtra={<CaSchoolSwitcher />}
       />
       <main className="lg:pl-[260px]">
         <div className="p-4 lg:p-6 pt-16 lg:pt-6 max-w-[1600px]">{children}</div>
