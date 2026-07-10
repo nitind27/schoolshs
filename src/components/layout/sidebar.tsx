@@ -18,7 +18,7 @@ const useNavGroups = (t: (k: string) => string) => [
   {
     group: "Overview",
     items: [
-      { href: "/",           label: t("nav.dashboard"),   icon: LayoutDashboard },
+      { href: "/dashboard",  label: t("nav.dashboard"),   icon: LayoutDashboard },
     ],
   },
   {
@@ -103,7 +103,7 @@ export function Sidebar() {
       >
         {/* Brand header */}
         <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,.08)" }}>
-          <Link href="/" className="flex min-w-0 items-center gap-3">
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
             <div className="shrink-0 rounded-xl p-2.5 flex items-center justify-center" style={{ background: "rgba(59,130,246,.25)", border: "1px solid rgba(59,130,246,.4)" }}>
               <GraduationCap className="h-5 w-5 text-white" />
             </div>

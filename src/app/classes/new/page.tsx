@@ -29,7 +29,7 @@ export default function NewClassPage() {
       title={t("classes.addClass")}
       subtitle={t("classes.newClassSubtitle")}
       breadcrumbs={[
-        { label: t("nav.dashboard"), href: "/" },
+        { label: t("nav.dashboard"), href: "/dashboard" },
         { label: t("nav.classes"), href: "/classes" },
         { label: t("classes.addClass") },
       ]}

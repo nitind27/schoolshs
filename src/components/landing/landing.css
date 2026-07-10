@@ -1,0 +1,308 @@
+/* Landing — 3D slider, tilt cards, scroll reveal */
+.landing-site {
+  --landing-perspective: 1400px;
+}
+
+.landing-site a {
+  text-decoration: none;
+}
+
+/* ── 3D Hero Slider ─────────────────────────────────────── */
+.landing-3d-wrap {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.landing-3d-stage {
+  perspective: var(--landing-perspective);
+  perspective-origin: 50% 45%;
+  transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform 0.4s ease-out;
+  min-height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.landing-3d-ring {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  transform-style: preserve-3d;
+}
+
+.landing-3d-slide {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(90%, 400px);
+  height: 280px;
+  margin-left: min(-45%, -200px);
+  margin-top: -140px;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.65s ease,
+    filter 0.65s ease;
+}
+
+.landing-3d-slide--active {
+  transform: translateX(0) translateZ(120px) rotateY(0deg) scale(1);
+  opacity: 1;
+  filter: brightness(1);
+}
+
+.landing-3d-slide--prev {
+  transform: translateX(-55%) translateZ(-50px) rotateY(28deg) scale(0.82);
+  opacity: 0.55;
+  filter: brightness(0.85);
+}
+
+.landing-3d-slide--next {
+  transform: translateX(55%) translateZ(-50px) rotateY(-28deg) scale(0.82);
+  opacity: 0.55;
+  filter: brightness(0.85);
+}
+
+.landing-3d-slide--far {
+  transform: translateX(0) translateZ(-200px) scale(0.5);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.landing-3d-frame {
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  overflow: hidden;
+  position: relative;
+  background: #fff;
+  box-shadow:
+    0 24px 48px -12px rgba(15, 23, 42, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.5);
+  transform-style: preserve-3d;
+}
+
+.landing-3d-slide--active .landing-3d-frame {
+  animation: landing-float 5s ease-in-out infinite;
+}
+
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.landing-3d-img {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.landing-3d-slide--active .landing-3d-img {
+  animation: landing-zoom 14s ease-in-out infinite alternate;
+}
+
+@keyframes landing-zoom {
+  from { transform: scale(1.04); }
+  to { transform: scale(1.14); }
+}
+
+.landing-3d-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.88) 0%, transparent 55%);
+}
+
+.landing-3d-meta {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1rem 1.25rem;
+  text-align: left;
+  color: #fff;
+}
+
+.landing-3d-tag {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #93c5fd;
+  background: rgba(37, 99, 235, 0.35);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.landing-3d-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.landing-3d-sub {
+  font-size: 0.7rem;
+  color: #cbd5e1;
+  margin-top: 0.2rem;
+}
+
+.landing-3d-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.landing-3d-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  backdrop-filter: blur(8px);
+}
+
+.landing-3d-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: scale(1.06);
+}
+
+.landing-3d-dots {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.landing-3d-dot {
+  height: 0.4rem;
+  width: 0.4rem;
+  border-radius: 9999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: width 0.3s, background 0.3s;
+}
+
+.landing-3d-dot--on {
+  width: 1.5rem;
+  background: #fff;
+}
+
+/* ── 3D tilt cards ────────────────────────────────────────── */
+.landing-tilt {
+  transform-style: preserve-3d;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.landing-tilt:hover {
+  transform: translateY(-4px) rotateX(2deg) scale(1.02);
+  box-shadow: 0 20px 40px -12px rgba(37, 99, 235, 0.2);
+}
+
+/* ── Scroll reveal ────────────────────────────────────────── */
+.landing-fade {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.65s ease, transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.landing-fade--show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.landing-fade--d1 { transition-delay: 0.08s; }
+.landing-fade--d2 { transition-delay: 0.16s; }
+.landing-fade--d3 { transition-delay: 0.24s; }
+
+/* ── Gallery 3D strip ─────────────────────────────────────── */
+.landing-gallery-3d {
+  display: flex;
+  gap: 1rem;
+  width: max-content;
+  animation: landing-scroll 36s linear infinite;
+  padding: 0.5rem 0;
+}
+
+.landing-gallery-3d:hover {
+  animation-play-state: paused;
+}
+
+@keyframes landing-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.landing-gallery-card {
+  flex-shrink: 0;
+  width: 260px;
+  height: 168px;
+  border-radius: 0.875rem;
+  overflow: hidden;
+  border: 2px solid #fff;
+  box-shadow: 0 12px 28px -8px rgba(15, 23, 42, 0.25);
+  transition: transform 0.4s ease;
+  transform: perspective(800px) rotateY(-4deg);
+}
+
+.landing-gallery-card:nth-child(even) {
+  transform: perspective(800px) rotateY(4deg);
+}
+
+.landing-gallery-card:hover {
+  transform: perspective(800px) rotateY(0deg) scale(1.05);
+  z-index: 2;
+}
+
+.landing-gallery-img {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+
+/* ── Marquee ────────────────────────────────────────────── */
+.landing-ticker {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.landing-ticker-track {
+  display: inline-flex;
+  animation: landing-ticker 32s linear infinite;
+}
+
+@keyframes landing-ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.landing-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+@media (max-width: 640px) {
+  .landing-3d-stage { min-height: 280px; }
+  .landing-3d-ring { height: 260px; }
+  .landing-3d-slide { height: 230px; margin-top: -115px; }
+}

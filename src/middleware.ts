@@ -68,6 +68,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === "/" && !session) {
+    return NextResponse.next();
+  }
+
+  if (pathname === "/" && session) {
+    return NextResponse.redirect(new URL(getRoleHome(session.role), request.url));
+  }
+
   if (!token || !session) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Login required" }, { status: 401 });

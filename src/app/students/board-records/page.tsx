@@ -107,7 +107,7 @@ export default function BoardRecordsPage() {
       subtitle={t("boardRecords.subtitle")}
       icon={<GraduationCap className="h-6 w-6" />}
       accentColor="border-blue-500"
-      breadcrumbs={[{ label: t("nav.dashboard"), href: "/" }, { label: t("navExt.boardRecords") }]}
+      breadcrumbs={[{ label: t("nav.dashboard"), href: "/dashboard" }, { label: t("navExt.boardRecords") }]}
       actions={
         <button
           onClick={load}

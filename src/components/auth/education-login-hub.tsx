@@ -30,7 +30,7 @@ const MODULES = [
   { icon: BookOpen, labelKey: "loginHub.moduleCertificates" },
 ] as const;
 
-export function EducationLoginHub({ next = "/" }: { next?: string }) {
+export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
   const router = useRouter();
   const t = useT();
   const [email, setEmail] = useState("admin@songadh.local");

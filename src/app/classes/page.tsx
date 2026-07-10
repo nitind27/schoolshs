@@ -47,7 +47,7 @@ export default function ClassesPage() {
       title={t("classes.title")}
       subtitle={t("classes.subtitle")}
       breadcrumbs={[
-        { label: t("nav.dashboard"), href: "/" },
+        { label: t("nav.dashboard"), href: "/dashboard" },
         { label: t("nav.classes") },
       ]}
       actions={(

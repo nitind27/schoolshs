@@ -21,8 +21,8 @@ const notoGujarati = Noto_Sans_Gujarati({
 });
 
 export const metadata: Metadata = {
-  title: "Digital Gujarat Scholarship Portal | Bulk Management",
-  description: "100+ students ka scholarship form ek saath manage aur submit karein",
+  title: "Shri Sarvajanik High School | Fort-Songadh ERP Portal",
+  description: "Scholarship, Results, Accounting & Certificates — official digital portal for Shri Sarvajanik High School, Fort-Songadh",
 };
 
 export default function RootLayout({

@@ -40,7 +40,7 @@ export default function StaffPage() {
       title={t("staffPage.title")}
       subtitle={t("staffPage.staffCount", { count: staff.length })}
       breadcrumbs={[
-        { label: t("nav.dashboard"), href: "/" },
+        { label: t("nav.dashboard"), href: "/dashboard" },
         { label: t("nav.staff") },
       ]}
       actions={(

@@ -121,7 +121,7 @@ function CategoryReportContent() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <Link href="/">
+          <Link href="/dashboard">
             <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
           </Link>
           <div>

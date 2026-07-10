@@ -31,7 +31,7 @@ export default function NewStaffPage() {
       title={t("staffPage.addStaff")}
       subtitle={t("staffPage.newStaffSubtitle")}
       breadcrumbs={[
-        { label: t("nav.dashboard"), href: "/" },
+        { label: t("nav.dashboard"), href: "/dashboard" },
         { label: t("nav.staff"), href: "/staff" },
         { label: t("staffPage.addStaff") },
       ]}

@@ -20,7 +20,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 export const ROLE_HOME: Record<UserRole, string> = {
   super_admin: "/admin",
-  school_admin: "/",
+  school_admin: "/dashboard",
   teacher: "/teacher",
   clerk: "/clerk",
   ca: "/ca",

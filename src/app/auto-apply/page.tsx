@@ -308,7 +308,7 @@ function AutoApplyContent() {
       subtitle={t("autoApply.pageSubtitle")}
       icon={<Bot className="h-6 w-6" />}
       accentColor="border-emerald-500"
-      breadcrumbs={[{ label: t("nav.dashboard"), href: "/" }, { label: t("nav.autoApply") }]}
+      breadcrumbs={[{ label: t("nav.dashboard"), href: "/dashboard" }, { label: t("nav.autoApply") }]}
       actions={
         <Button variant="outline" size="sm" onClick={loadStudents}>
           <RefreshCw className="h-3.5 w-3.5" /> {t("autoApply.refresh")}

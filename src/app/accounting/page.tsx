@@ -130,7 +130,7 @@ export default function AccountingPage() {
       subtitle={t("accounting.subtitle", { year: fyLabel })}
       icon={<Calculator className="h-6 w-6" />}
       accentColor="border-blue-500"
-      breadcrumbs={[{ label: t("nav.dashboard"), href: "/" }, { label: t("navExt.accounting") }]}
+      breadcrumbs={[{ label: t("nav.dashboard"), href: "/dashboard" }, { label: t("navExt.accounting") }]}
       actions={
         <>
           <Button variant="outline" size="sm" onClick={() => setShowHelp(true)}>

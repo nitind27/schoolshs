@@ -37,7 +37,7 @@ export function PageShell({
         {/* Breadcrumbs */}
         {breadcrumbs.length > 0 && (
           <nav className="mb-3 flex flex-wrap items-center gap-1 text-xs text-slate-500" aria-label="Breadcrumb">
-            <Link href="/" className="flex items-center gap-1 hover:text-slate-700 transition-colors">
+            <Link href="/dashboard" className="flex items-center gap-1 hover:text-slate-700 transition-colors">
               <Home className="h-3 w-3" />
             </Link>
             {breadcrumbs.map((item, idx) => (

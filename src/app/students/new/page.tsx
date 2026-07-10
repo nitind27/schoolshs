@@ -36,7 +36,7 @@ function NewStudentContent() {
       title={t("students.newStudent")}
       subtitle={t("students.newStudentSubtitle")}
       breadcrumbs={[
-        { label: t("nav.dashboard"), href: "/" },
+        { label: t("nav.dashboard"), href: "/dashboard" },
         { label: t("nav.classes"), href: "/classes" },
         { label: t("nav.students"), href: "/students" },
         { label: t("students.newStudent") },

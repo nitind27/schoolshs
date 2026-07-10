@@ -52,7 +52,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     };
   }, [pathname]);
 
-  if (pathname === "/login" || pathname.startsWith("/m/")) {
+  if (pathname === "/login" || pathname.startsWith("/m/") || pathname === "/") {
     return <>{children}</>;
   }
 

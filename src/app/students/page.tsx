@@ -145,7 +145,7 @@ function StudentsContent() {
           : `Select class first. ${classes.length} classes configured by admin.`
       }
       breadcrumbs={[
-        { label: t("nav.dashboard"), href: "/" },
+        { label: t("nav.dashboard"), href: "/dashboard" },
         { label: t("nav.classes"), href: "/classes" },
         { label: t("nav.students") },
       ]}
