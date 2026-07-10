@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { AuthError, hashPassword, requireSchoolAuth } from "@/lib/auth";
 import { buildShareUrl, generateShareSlug } from "@/lib/id-card-share";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin"]);
     const links = await prisma.idCardShareLink.findMany({
@@ -26,7 +26,17 @@ export async function GET() {
         createdAt: true,
       },
     });
-    return NextResponse.json({ links });
+
+    const origin = request.nextUrl.origin;
+    const linksWithUrl = links.map((link) => ({
+      ...link,
+      shareUrl: buildShareUrl(origin, link.slug),
+    }));
+
+    return NextResponse.json({
+      links: linksWithUrl,
+      appUrl: buildShareUrl(origin, "").replace(/\/m\/id-cards\/$/, ""),
+    });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
     return NextResponse.json({ error: "Failed to list links" }, { status: 500 });

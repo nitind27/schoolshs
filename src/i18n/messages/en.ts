@@ -455,6 +455,10 @@ const en = {
     cardsCount: "{{count}} cards",
     logout: "Logout",
     printAll: "Print All (1 per page)",
+    openLink: "Open link",
+    linkUrl: "Share URL",
+    copied: "Copied!",
+    appUrlNote: "Links use site URL from APP_URL setting",
   },
   importPage: {
     title: "Bulk Import",

@@ -457,6 +457,10 @@ const gu: Messages = {
     cardsCount: "{{count}} કાર્ડ",
     logout: "લૉગ આઉટ",
     printAll: "બધા પ્રિન્ટ (1 પ્રતિ પેજ)",
+    openLink: "લિંક ખોલો",
+    linkUrl: "શેર URL",
+    copied: "કોપી થયું!",
+    appUrlNote: "લિંક APP_URL સેટિંગ થી બને છે",
   },
   importPage: {
     title: "બલ્ક આયાત",
