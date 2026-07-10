@@ -1,0 +1,154 @@
+/* Admin dashboard — professional card system */
+.dashboard-page {
+  --dash-radius: 1rem;
+}
+
+.dashboard-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 45%, #1d4ed8 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 1.4l2.83 2.83 1.41-1.41L1.41 0H0v1.41zM38.59 40l-2.83-2.83 1.41-1.41L40 38.59V40h-1.41zM40 1.41l-2.83 2.83-1.41-1.41L38.59 0H40v1.41zM20 18.6l2.83-2.83 1.41 1.41L21.41 20l2.83 2.83-1.41 1.41L20 21.41l-2.83 2.83-1.41-1.41L18.59 20l-2.83-2.83 1.41-1.41L20 18.59z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.dashboard-hero-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.dashboard-metric {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--dash-radius);
+  border: 1px solid rgb(226 232 240 / 0.9);
+  background: white;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.04), 0 1px 2px rgb(15 23 42 / 0.02);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.dashboard-metric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -8px rgb(15 23 42 / 0.12);
+}
+
+.dashboard-metric-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 4px 0 0 4px;
+}
+
+.dashboard-action-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-radius: var(--dash-radius);
+  border: 1px solid rgb(226 232 240 / 0.9);
+  background: white;
+  padding: 1rem;
+  min-height: 7.5rem;
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.dashboard-action-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 60%, rgb(59 130 246 / 0.04));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.dashboard-action-tile:hover {
+  border-color: rgb(147 197 253 / 0.8);
+  box-shadow: 0 8px 20px -6px rgb(37 99 235 / 0.15);
+  transform: translateY(-2px);
+}
+
+.dashboard-action-tile:hover::after {
+  opacity: 1;
+}
+
+.dashboard-section-card {
+  border-radius: var(--dash-radius);
+  border: 1px solid rgb(226 232 240 / 0.9);
+  background: white;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.04);
+  overflow: hidden;
+  transition: box-shadow 0.25s ease;
+}
+
+.dashboard-section-card:hover {
+  box-shadow: 0 8px 24px -8px rgb(15 23 42 / 0.1);
+}
+
+.dashboard-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.125rem 1.5rem;
+  border-bottom: 1px solid rgb(241 245 249);
+  background: linear-gradient(to right, rgb(248 250 252), white);
+}
+
+.dashboard-status-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.625rem;
+  transition: background 0.15s ease;
+}
+
+.dashboard-status-row:hover {
+  background: rgb(248 250 252);
+}
+
+.dashboard-submission-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(241 245 249);
+  background: linear-gradient(to right, rgb(248 250 252 / 0.6), white);
+  transition: all 0.2s ease;
+}
+
+.dashboard-submission-item:hover {
+  border-color: rgb(191 219 254);
+  background: white;
+  box-shadow: 0 4px 12px -4px rgb(37 99 235 / 0.12);
+}
+
+.dashboard-ring {
+  transform: rotate(-90deg);
+}
+
+@keyframes dashboard-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.dashboard-skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: dashboard-shimmer 1.5s infinite;
+  border-radius: 0.5rem;
+}

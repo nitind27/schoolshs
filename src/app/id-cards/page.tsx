@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { StudentIdCard } from "@/components/id-cards/student-id-card";
+import { IdCardShareLinkManager } from "@/components/id-cards/id-card-share-link-manager";
 import { SCHOOL_STANDARDS, CLASS_SECTIONS, FINANCIAL_YEARS } from "@/lib/constants";
 import { useT } from "@/i18n/locale-provider";
 import { CreditCard, Printer, Settings, Loader2, Sparkles } from "lucide-react";
@@ -194,6 +195,14 @@ function IdCardsContent() {
           <Select label={t("idCards.year")} options={FINANCIAL_YEARS} value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="w-32" />
         </CardContent>
       </Card>
+
+      <IdCardShareLinkManager
+        classId={classId}
+        standard={standard}
+        section={section}
+        academicYear={academicYear}
+        classes={classes}
+      />
 
       {loading ? (
         <div className="flex justify-center h-48 items-center">

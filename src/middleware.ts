@@ -11,6 +11,8 @@ const PUBLIC_PATHS = [
   "/api/automation/sms/relay",
   "/m/sms-bridge",
   "/m/forwarder-setup",
+  "/m/id-cards",
+  "/api/id-cards/share",
 ];
 
 const ROLE_ROUTES: Record<string, UserRole[]> = {

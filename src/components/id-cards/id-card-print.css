@@ -1,0 +1,73 @@
+/* ID card print — one card per A4 page, CR-80 size centered */
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@media print {
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print\:hidden,
+  .id-card-share-page > .sticky {
+    display: none !important;
+  }
+
+  .id-card-print-bundle {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .id-card-print-sheet {
+    page-break-after: always;
+    break-after: page;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .id-card-print-sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .id-card-print-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .id-card-print-size {
+    width: 85.6mm !important;
+    transform-origin: center center;
+    box-shadow: none !important;
+    border: 0.3mm solid #ccc !important;
+  }
+
+  .id-card-print-label {
+    display: none !important;
+  }
+}
+
+@media screen {
+  .id-card-print-sheet {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid rgb(226 232 240);
+    background: white;
+    box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+  }
+
+  .id-card-print-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+}

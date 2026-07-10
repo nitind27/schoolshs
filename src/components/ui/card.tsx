@@ -44,7 +44,7 @@ export function CardFooter({ className, ...props }: HTMLAttributes<HTMLDivElemen
   );
 }
 
-/* ── Stat card variant ────────────────────────────────────── */
+/* ── Stat card variant (gradient) ───────────────────────── */
 export function StatCard({
   label,
   value,
@@ -68,7 +68,6 @@ export function StatCard({
         className
       )}
     >
-      {/* Background decoration */}
       <div
         className="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10"
         style={{ background: "radial-gradient(circle, white 0%, transparent 70%)" }}
@@ -85,6 +84,88 @@ export function StatCard({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Professional light metric card ──────────────────────── */
+const METRIC_ACCENTS = {
+  blue:    { bar: "bg-blue-600",    icon: "bg-blue-600 shadow-blue-600/25",    text: "text-blue-600"    },
+  emerald: { bar: "bg-emerald-600", icon: "bg-emerald-600 shadow-emerald-600/25", text: "text-emerald-600" },
+  violet:  { bar: "bg-violet-600",  icon: "bg-violet-600 shadow-violet-600/25",  text: "text-violet-600"  },
+  amber:   { bar: "bg-amber-500",   icon: "bg-amber-500 shadow-amber-500/25",   text: "text-amber-600"   },
+  indigo:  { bar: "bg-indigo-600",  icon: "bg-indigo-600 shadow-indigo-600/25",  text: "text-indigo-600"  },
+  rose:    { bar: "bg-rose-600",    icon: "bg-rose-600 shadow-rose-600/25",    text: "text-rose-600"    },
+} as const;
+
+export function MetricCard({
+  label,
+  value,
+  sub,
+  icon,
+  accent = "blue",
+  className,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  icon?: React.ReactNode;
+  accent?: keyof typeof METRIC_ACCENTS;
+  className?: string;
+}) {
+  const a = METRIC_ACCENTS[accent];
+  return (
+    <div className={cn("dashboard-metric group", className)}>
+      <div className={cn("dashboard-metric-bar", a.bar)} />
+      <div className="flex items-start justify-between gap-3 pl-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+          <p className="mt-1.5 text-3xl font-bold tracking-tight text-slate-900 tabular-nums">{value}</p>
+          {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}
+        </div>
+        {icon && (
+          <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-lg transition-transform group-hover:scale-105", a.icon)}>
+            {icon}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Dashboard section wrapper ───────────────────────────── */
+export function DashboardSection({
+  icon,
+  title,
+  description,
+  action,
+  children,
+  className,
+  iconClassName = "bg-blue-600 shadow-blue-600/20",
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+  iconClassName?: string;
+}) {
+  return (
+    <div className={cn("dashboard-section-card", className)}>
+      <div className="dashboard-section-head">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-md", iconClassName)}>
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-base font-bold text-slate-900 leading-tight">{title}</h3>
+            {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
+          </div>
+        </div>
+        {action}
+      </div>
+      <div className="p-5">{children}</div>
     </div>
   );
 }
