@@ -476,8 +476,10 @@ model Exam {
   academicYear    String
   standard        String?
   term            String?
+  section         String?
   maxMarks        Int      @default(100)
   passingMarks    Int      @default(33)
+  reopeningDate   String?
   examDate        DateTime?
   isPublished     Boolean  @default(false)
   publishedAt     DateTime?
@@ -515,10 +517,12 @@ model ExamResult {
   subject     ExamSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   studentId   String
   student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  marksObtained Float
-  grade       String?
-  isAbsent    Boolean  @default(false)
-  remarks     String?
+  marksObtained    Float
+  achievementMarks Float   @default(0)
+  graceMarks       Float   @default(0)
+  grade            String?
+  isAbsent         Boolean @default(false)
+  remarks          String?
 
   @@unique([examId, subjectId, studentId])
   @@index([studentId])
@@ -534,14 +538,19 @@ model ReportCard {
   student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   examId       String?
   academicYear String
-  standard     String
-  totalMarks   Float?
-  percentage   Float?
-  grade        String?
-  rank         Int?
-  result       String?
-  pdfPath      String?
-  isPublished  Boolean  @default(false)
+  standard          String
+  section           String?
+  totalMarks        Float?
+  percentage        Float?
+  grade             String?
+  rank              Int?
+  result            String?
+  passNumber        String?
+  attendancePresent Int?
+  attendanceTotal   Int?
+  reopeningDate     String?
+  pdfPath           String?
+  isPublished       Boolean  @default(false)
 
   @@index([studentId])
   @@index([academicYear])

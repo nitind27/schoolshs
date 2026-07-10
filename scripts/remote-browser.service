@@ -1,0 +1,15 @@
+[Unit]
+Description=School SHS Remote Browser (Xvfb + x11vnc + websockify)
+After=network.target
+
+[Service]
+Type=forking
+Environment=DISPLAY=:99
+ExecStart=/opt/scholarship-portal/scripts/remote-browser-start.sh
+ExecStop=/bin/bash -c 'pkill -f "websockify.*6080" || true; pkill -f "x11vnc.*:99" || true; pkill -f "Xvfb :99" || true'
+Restart=on-failure
+RestartSec=10
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

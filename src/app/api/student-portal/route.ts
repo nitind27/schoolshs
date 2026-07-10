@@ -10,8 +10,12 @@ export async function GET() {
       where: { id: session.studentId },
       include: {
         schoolClass: true,
-        reportCards: { orderBy: { createdAt: "desc" } },
+        reportCards: {
+          where: { isPublished: true },
+          orderBy: { createdAt: "desc" },
+        },
         examResults: {
+          where: { exam: { isPublished: true } },
           include: { exam: true, subject: true },
           orderBy: { createdAt: "desc" },
         },

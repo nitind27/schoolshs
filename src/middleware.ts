@@ -32,6 +32,8 @@ const ROLE_ROUTES: Record<string, UserRole[]> = {
   "/api/admissions": ["school_admin", "clerk"],
   "/results": ["school_admin", "teacher"],
   "/api/results": ["school_admin", "teacher"],
+  "/api/results/print": ["school_admin", "teacher", "student"],
+  "/student/results/print": ["student"],
 };
 
 function getRouteRoles(pathname: string): UserRole[] | null {
