@@ -22,14 +22,30 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { schoolId: session.schoolId };
     if (status) where.status = status;
     if (category) where.category = category;
-    if (classId) where.classId = classId;
-    if (standard) where.standard = standard;
-    if (section) where.section = section;
     if (gender) where.gender = gender;
     if (institutionName) where.institutionName = { contains: institutionName };
     if (scholarshipScheme) where.scholarshipScheme = scholarshipScheme;
+
+    if (classId) {
+      const cls = await prisma.schoolClass.findFirst({
+        where: { id: classId, schoolId: session.schoolId },
+        select: { standard: true, section: true },
+      });
+      if (cls) {
+        where.OR = [
+          { classId },
+          { classId: null, standard: cls.standard, section: cls.section },
+        ];
+      } else {
+        where.classId = classId;
+      }
+    } else {
+      if (standard) where.standard = standard;
+      if (section) where.section = section;
+    }
+
     if (search) {
-      where.OR = [
+      const searchOr = [
         { firstName: { contains: search } },
         { surname: { contains: search } },
         { aadhaarNumber: { contains: search } },
@@ -39,6 +55,12 @@ export async function GET(request: NextRequest) {
         { grNumber: { contains: search } },
         { childUid: { contains: search } },
       ];
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: searchOr }];
+        delete where.OR;
+      } else {
+        where.OR = searchOr;
+      }
     }
 
     const [students, total] = await Promise.all([

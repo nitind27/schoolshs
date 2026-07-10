@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Badge, CategoryBadge } from "@/components/ui/badge";
 import { CATEGORIES, STUDENT_STATUSES, SCHOOL_STANDARDS, CLASS_SECTIONS, GENDERS } from "@/lib/constants";
-import { Search, Plus, Trash2, Edit, Eye, Download, CheckSquare, Square, Play, CreditCard, Filter, X, Users, ChevronRight } from "lucide-react";
+import { Search, Plus, Trash2, Edit, Eye, Download, CheckSquare, Square, Play, CreditCard, Filter, X, Users } from "lucide-react";
 import Link from "next/link";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 import { PageShell } from "@/components/layout/page-shell";
+import { cn } from "@/lib/utils";
 
 type StudentRow = Student & {
   schoolClass?: Pick<SchoolClass, "id" | "name" | "standard" | "section"> | null;
@@ -40,17 +41,21 @@ function StudentsContent() {
   const [standardFilter, setStandardFilter] = useState("");
   const [sectionFilter, setSectionFilter] = useState("");
   const [genderFilter, setGenderFilter] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
+    const classId = searchParams.get("classId");
     const cat = searchParams.get("category");
-    if (cat) {
-      setCategoryFilter(cat);
-      setShowFilters(true);
-    }
+    const std = searchParams.get("standard");
+    const sec = searchParams.get("section");
+    if (classId) setClassFilter(classId);
+    if (cat) setCategoryFilter(cat);
+    if (std) setStandardFilter(std);
+    if (sec) setSectionFilter(sec);
+    if (classId || cat || std || sec) setShowFilters(true);
   }, [searchParams]);
 
   useEffect(() => {
@@ -66,21 +71,30 @@ function StudentsContent() {
       .catch(() => setUserRole(null));
   }, []);
 
-  const fetchStudents = useCallback(async () => {
-    if (!classFilter) {
-      setStudents([]);
-      setTotal(0);
-      setLoading(false);
-      return;
+  const applyClassFilter = (classId: string) => {
+    setClassFilter(classId);
+    setPage(1);
+    setSelected(new Set());
+    if (classId) {
+      const cls = classes.find((c) => c.id === classId);
+      if (cls) {
+        setStandardFilter(cls.standard);
+        setSectionFilter(cls.section);
+      }
     }
+  };
+
+  const fetchStudents = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "50" });
-    if (search) params.set("search", search);
+    if (search.trim()) params.set("search", search.trim());
     if (statusFilter) params.set("status", statusFilter);
     if (categoryFilter) params.set("category", categoryFilter);
     if (classFilter) params.set("classId", classFilter);
-    if (standardFilter) params.set("standard", standardFilter);
-    if (sectionFilter) params.set("section", sectionFilter);
+    else {
+      if (standardFilter) params.set("standard", standardFilter);
+      if (sectionFilter) params.set("section", sectionFilter);
+    }
     if (genderFilter) params.set("gender", genderFilter);
 
     const res = await fetch(`/api/students?${params}`);
@@ -95,7 +109,12 @@ function StudentsContent() {
     setLoading(false);
   }, [page, search, statusFilter, categoryFilter, classFilter, standardFilter, sectionFilter, genderFilter]);
 
-  useEffect(() => { fetchStudents(); }, [fetchStudents]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchStudents();
+    }, search ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [fetchStudents, search]);
 
   const activeFilters = [statusFilter, categoryFilter, classFilter, standardFilter, sectionFilter, genderFilter].filter(Boolean).length;
   const selectedClass = classes.find((c) => c.id === classFilter);
@@ -107,6 +126,7 @@ function StudentsContent() {
     setStandardFilter("");
     setSectionFilter("");
     setGenderFilter("");
+    setSearch("");
     setPage(1);
     setSelected(new Set());
   };
@@ -139,60 +159,62 @@ function StudentsContent() {
   return (
     <PageShell
       title={t("students.title")}
-      subtitle={
-        classFilter
-          ? t("students.totalCount", { count: total })
-          : `Select class first. ${classes.length} classes configured by admin.`
-      }
+      subtitle={t("students.totalCount", { count: total })}
       breadcrumbs={[
         { label: t("nav.dashboard"), href: "/dashboard" },
-        { label: t("nav.classes"), href: "/classes" },
         { label: t("nav.students") },
       ]}
       actions={(
         <>
-          <Button variant="outline" onClick={exportSelected} disabled={!classFilter}>
+          <Button variant="outline" onClick={exportSelected}>
             <Download className="h-4 w-4" /> {t("common.export")}
           </Button>
-          <Link href={classFilter ? `/students/new?classId=${classFilter}` : "/classes"}>
+          <Link href={classFilter ? `/students/new?classId=${classFilter}` : "/students/new"}>
             <Button><Plus className="h-4 w-4" /> {t("students.addStudent")}</Button>
           </Link>
         </>
       )}
     >
-
-      {!classFilter && (
+      {classes.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            {classes.length === 0 ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                No class configured yet. Admin should first create classes/divisions in `Classes` module.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {classes.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      setClassFilter(c.id);
-                      setPage(1);
-                    }}
-                    className="text-left rounded-xl border border-slate-200 bg-white p-4 hover:border-blue-300 hover:bg-blue-50/40 transition-all"
-                  >
-                    <p className="font-semibold text-slate-900">{c.name}</p>
-                    <p className="text-xs text-slate-500 mt-1">{c.academicYear}</p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 text-sm text-blue-700">
-                        <Users className="h-4 w-4" />
-                        {(c._count?.students || 0).toLocaleString("en-IN")} students
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{t("students.quickClassFilter")}</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setClassFilter("");
+                  setStandardFilter("");
+                  setSectionFilter("");
+                  setPage(1);
+                  setSelected(new Set());
+                }}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                  !classFilter
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"
+                )}
+              >
+                {t("students.allClasses")}
+              </button>
+              {classes.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => applyClassFilter(c.id)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                    classFilter === c.id
+                      ? "border-blue-600 bg-blue-600 text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"
+                  )}
+                >
+                  {c.name}
+                  <span className="ml-1.5 opacity-80">({(c._count?.students || 0).toLocaleString("en-IN")})</span>
+                </button>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -213,10 +235,38 @@ function StudentsContent() {
               <Filter className="h-4 w-4" />
               {t("common.filter")} {activeFilters > 0 && `(${activeFilters})`}
             </Button>
+            {activeFilters > 0 && (
+              <Button variant="ghost" onClick={clearFilters}>
+                <X className="h-4 w-4" /> {t("students.clearFilters")}
+              </Button>
+            )}
           </div>
 
-          {(showFilters || activeFilters > 0) && (
+          {showFilters && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-3 border-t border-slate-100">
+              <Select
+                label={t("students.filterByClass")}
+                emptyLabel={t("students.allClasses")}
+                options={classes.map((c) => ({ value: c.id, label: `${c.name} (${c.standard}-${c.section})` }))}
+                value={classFilter}
+                onChange={(e) => applyClassFilter(e.target.value)}
+              />
+              <Select
+                label={t("students.filterByStandard")}
+                emptyLabel={t("students.allStandards")}
+                options={SCHOOL_STANDARDS.map((s) => ({ value: s, label: s }))}
+                value={standardFilter}
+                disabled={!!classFilter}
+                onChange={(e) => { setStandardFilter(e.target.value); setPage(1); }}
+              />
+              <Select
+                label={t("students.filterBySection")}
+                emptyLabel={t("students.allSections")}
+                options={CLASS_SECTIONS.map((s) => ({ value: s, label: s }))}
+                value={sectionFilter}
+                disabled={!!classFilter}
+                onChange={(e) => { setSectionFilter(e.target.value); setPage(1); }}
+              />
               <Select
                 label={t("students.filterByStatus")}
                 emptyLabel={t("students.allStatuses")}
@@ -232,40 +282,12 @@ function StudentsContent() {
                 onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
               />
               <Select
-                label={t("students.filterByClass")}
-                emptyLabel={t("students.allClasses")}
-                options={classes.map((c) => ({ value: c.id, label: c.name }))}
-                value={classFilter}
-                onChange={(e) => { setClassFilter(e.target.value); setPage(1); setSelected(new Set()); }}
-              />
-              <Select
-                label={t("students.filterByStandard")}
-                emptyLabel={t("students.allStandards")}
-                options={SCHOOL_STANDARDS.map((s) => ({ value: s, label: s }))}
-                value={standardFilter}
-                onChange={(e) => { setStandardFilter(e.target.value); setPage(1); }}
-              />
-              <Select
-                label={t("students.filterBySection")}
-                emptyLabel={t("students.allSections")}
-                options={CLASS_SECTIONS.map((s) => ({ value: s, label: s }))}
-                value={sectionFilter}
-                onChange={(e) => { setSectionFilter(e.target.value); setPage(1); }}
-              />
-              <Select
                 label={t("students.filterByGender")}
                 emptyLabel={t("students.allGenders")}
                 options={GENDERS.map((g) => ({ value: g, label: t(`gender.${g}`) }))}
                 value={genderFilter}
                 onChange={(e) => { setGenderFilter(e.target.value); setPage(1); }}
               />
-              {activeFilters > 0 && (
-                <div className="sm:col-span-2 lg:col-span-3 xl:col-span-6 flex justify-end">
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    <X className="h-4 w-4" /> {t("students.clearFilters")}
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </CardContent>
@@ -273,23 +295,34 @@ function StudentsContent() {
 
       <Card>
         <CardContent className="p-0">
-          {classFilter && selectedClass && (
+          {(classFilter && selectedClass) || activeFilters > 0 ? (
             <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              Showing students of <span className="font-semibold text-slate-900">{selectedClass.name}</span> ({selectedClass.academicYear})
+              {classFilter && selectedClass ? (
+                <span>
+                  {t("students.showingClass", { name: selectedClass.name, year: selectedClass.academicYear })}
+                </span>
+              ) : (
+                <span>{t("students.showingFiltered")}</span>
+              )}
+              {activeFilters > 0 && (
+                <span className="ml-2 text-slate-400">· {t("students.activeFilters", { count: activeFilters })}</span>
+              )}
             </div>
-          )}
+          ) : null}
+
           {loading ? (
             <div className="flex items-center justify-center h-48">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
-          ) : !classFilter ? (
-            <div className="text-center py-16 text-slate-500">
-              <p>Select any class above to view class-wise student list.</p>
-            </div>
           ) : students.length === 0 ? (
-            <div className="text-center py-16">
+            <div className="text-center py-16 px-4">
+              <Users className="mx-auto mb-3 h-12 w-12 text-slate-300" />
               <p className="text-slate-500 mb-4">{t("students.noStudents")}</p>
-              <Link href={`/students/new?classId=${classFilter}`}><Button>{t("students.addStudent")}</Button></Link>
+              {activeFilters > 0 || search ? (
+                <Button variant="outline" onClick={clearFilters}>{t("students.clearFilters")}</Button>
+              ) : (
+                <Link href="/students/new"><Button>{t("students.addStudent")}</Button></Link>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -324,7 +357,7 @@ function StudentsContent() {
                         <p className="text-xs text-slate-500">{student.mobileNumber}</p>
                       </td>
                       <td className="p-3">
-                        <p className="text-slate-700">{student.schoolClass?.name || (student.standard ? t("students.classLabel", { standard: student.standard, section: student.section || "" }) : student.courseName)}</p>
+                        <p className="text-slate-700">{student.schoolClass?.name || (student.standard ? t("students.classLabel", { standard: student.standard, section: student.section || "" }) : student.courseName || "—")}</p>
                       </td>
                       <td className="p-3"><CategoryBadge category={student.category} /></td>
                       <td className="p-3 font-mono text-xs">{student.aadhaarNumber}</td>
@@ -361,7 +394,7 @@ function StudentsContent() {
         </CardContent>
       </Card>
 
-      {selected.size > 0 && classFilter && (
+      {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 lg:translate-x-0 lg:left-auto lg:right-8 bg-white border border-slate-200 shadow-xl rounded-xl p-4 flex items-center gap-4 z-40 flex-wrap max-w-lg">
           <span className="text-sm font-medium">{t("students.selected", { count: selected.size })}</span>
           <Link href={`/bulk-submit?ids=${Array.from(selected).join(",")}`}>
