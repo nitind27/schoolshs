@@ -42,6 +42,74 @@ export function countMonthPresent(days: (string | null)[]): number {
   }, 0);
 }
 
+export function countMonthAbsent(days: (string | null)[]): number {
+  return days.filter((d) => d === "A").length;
+}
+
+export function countMonthHalf(days: (string | null)[]): number {
+  return days.filter((d) => d === "H").length;
+}
+
+export function countMarkedDays(days: (string | null)[]): number {
+  return days.filter((d) => d === "P" || d === "A" || d === "H").length;
+}
+
+export function attendancePercent(present: number, marked: number): number {
+  if (!marked) return 0;
+  return Math.round((present / marked) * 100);
+}
+
+export interface AttendanceStudentReport {
+  studentId: string;
+  serial: number;
+  name: string;
+  rollNumber: string;
+  grNumber: string;
+  present: number;
+  absent: number;
+  half: number;
+  notMarked: number;
+  markedDays: number;
+  monthTotal: number;
+  prevTotal: number;
+  cumulative: number;
+  percent: number;
+  hasData: boolean;
+  note: string;
+  attendance: (string | null)[];
+}
+
+export function buildStudentReports(rows: AttendanceRow[]): AttendanceStudentReport[] {
+  return rows.map((row) => {
+    const present = countMonthPresent(row.attendance);
+    const absent = countMonthAbsent(row.attendance);
+    const half = countMonthHalf(row.attendance);
+    const markedDays = countMarkedDays(row.attendance);
+    const notMarked = 31 - markedDays;
+    const hasData = markedDays > 0;
+
+    return {
+      studentId: row.studentId,
+      serial: row.serial,
+      name: row.name,
+      rollNumber: row.rollNumber,
+      grNumber: row.grNumber,
+      present,
+      absent,
+      half,
+      notMarked,
+      markedDays,
+      monthTotal: parseInt(row.monthTotal || "0", 10) || present,
+      prevTotal: parseInt(row.prevTotal || "0", 10) || 0,
+      cumulative: parseInt(row.cumulative || "0", 10) || 0,
+      percent: attendancePercent(present, markedDays),
+      hasData,
+      note: row.note || "",
+      attendance: row.attendance,
+    };
+  });
+}
+
 export function cycleMark(current: string | null): string | null {
   if (!current || current === "") return "P";
   if (current === "P") return "A";

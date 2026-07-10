@@ -123,6 +123,7 @@ export async function middleware(request: NextRequest) {
       "/export", "/api/students/export", "/categories",
       "/certificates", "/api/certificates",
       "/attendance", "/api/attendance",
+      "/attendance/reports", "/api/attendance/reports",
     ];
     const allowed =
       (session.role === "teacher" && (pathname.startsWith("/results") || pathname.startsWith("/api/results") || pathname.startsWith("/classes") || pathname.startsWith("/api/classes") || pathname.startsWith("/api/board-records") || pathname.startsWith("/api/teacher") || pathname.startsWith("/teacher/attendance") || pathname.startsWith("/api/attendance") || pathname.startsWith("/certificates/class-register") || pathname.startsWith("/api/certificates"))) ||
