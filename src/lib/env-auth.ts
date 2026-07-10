@@ -5,6 +5,34 @@ function read(name: string): string | undefined {
   return v?.trim() || undefined;
 }
 
+function isLocalHostname(host: string): boolean {
+  const h = host.split(":")[0]!.toLowerCase();
+  return (
+    h === "localhost" ||
+    h === "127.0.0.1" ||
+    h === "0.0.0.0" ||
+    h.startsWith("192.168.") ||
+    h.startsWith("10.") ||
+    h.endsWith(".local")
+  );
+}
+
+function isLocalOrigin(url: string): boolean {
+  try {
+    const u = new URL(url.includes("://") ? url : `http://${url}`);
+    return isLocalHostname(u.hostname);
+  } catch {
+    return true;
+  }
+}
+
+function originFromHost(host: string, proto = "https"): string {
+  const bare = host.replace(/^https?:\/\//, "").split("/")[0]!.trim();
+  if (!bare) return "";
+  if (bare.includes("://")) return bare.replace(/\/$/, "");
+  return `${proto}://${bare}`.replace(/\/$/, "");
+}
+
 export function getAuthSecret(): string {
   const secret = read("AUTH_SECRET");
   if (secret) return secret;
@@ -19,24 +47,74 @@ export function getAppUrl(): string | undefined {
 }
 
 /**
- * Public base URL for phone QR / OTP bridge.
- * Local: set LAN_HOST=192.168.1.5 (same WiFi) or APP_URL=http://192.168.1.5:3000
- * Vercel: uses request origin unless APP_URL is set
+ * Best public origin from an incoming HTTP request (nginx / reverse proxy aware).
+ * Prefers real domain from X-Forwarded-Host over localhost APP_URL.
  */
-export function getPublicAppOrigin(fallbackOrigin: string): string {
+export function getRequestPublicOrigin(request: {
+  nextUrl: { origin: string };
+  headers: { get(name: string): string | null };
+}): string {
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
+  const hostHeader = request.headers.get("host")?.split(",")[0]?.trim();
+
+  const candidates: string[] = [];
+
+  if (forwardedHost && !isLocalHostname(forwardedHost)) {
+    candidates.push(originFromHost(forwardedHost, forwardedProto));
+  }
+  if (hostHeader && !isLocalHostname(hostHeader)) {
+    candidates.push(originFromHost(hostHeader, forwardedProto));
+  }
+
   const explicit = getAppUrl();
+  if (explicit && !isLocalOrigin(explicit)) {
+    candidates.push(explicit.replace(/\/$/, ""));
+  }
+
+  const fallback = request.nextUrl.origin.replace(/\/$/, "");
+  if (!isLocalOrigin(fallback)) {
+    candidates.push(fallback);
+  }
+
+  if (candidates.length > 0) return candidates[0]!;
+
   if (explicit) return explicit.replace(/\/$/, "");
 
   const lanHost = read("LAN_HOST");
   if (lanHost) {
     const bare = lanHost.replace(/^https?:\/\//, "").split("/")[0]!;
     if (bare.includes(":")) {
-      return bare.startsWith("http") ? bare : `http://${bare}`;
+      return bare.startsWith("http") ? bare.replace(/\/$/, "") : `http://${bare}`;
     }
     const port = read("LAN_PORT") || read("PORT") || "3000";
     return `http://${bare}:${port}`;
   }
 
+  return fallback;
+}
+
+/**
+ * Public base URL for phone QR / OTP bridge.
+ * Local: set LAN_HOST=192.168.1.5 (same WiFi) or APP_URL=http://192.168.1.5:3000
+ */
+export function getPublicAppOrigin(fallbackOrigin: string): string {
+  const explicit = getAppUrl();
+  if (explicit && !isLocalOrigin(explicit)) return explicit.replace(/\/$/, "");
+
+  if (!isLocalOrigin(fallbackOrigin)) return fallbackOrigin.replace(/\/$/, "");
+
+  const lanHost = read("LAN_HOST");
+  if (lanHost) {
+    const bare = lanHost.replace(/^https?:\/\//, "").split("/")[0]!;
+    if (bare.includes(":")) {
+      return bare.startsWith("http") ? bare.replace(/\/$/, "") : `http://${bare}`;
+    }
+    const port = read("LAN_PORT") || read("PORT") || "3000";
+    return `http://${bare}:${port}`;
+  }
+
+  if (explicit) return explicit.replace(/\/$/, "");
   return fallbackOrigin.replace(/\/$/, "");
 }
 

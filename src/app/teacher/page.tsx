@@ -56,14 +56,21 @@ export default function TeacherDashboard() {
           {data?.classes?.length ? (
             <div className="grid md:grid-cols-2 gap-4">
               {data.classes.map((cls) => (
-                <Link key={cls.id} href={`/classes/${cls.id}`}>
-                  <div className="rounded-xl border border-slate-200 p-5 transition-all hover:border-emerald-300 hover:bg-emerald-50/60">
+                <div key={cls.id} className="rounded-xl border border-slate-200 p-5 transition-all hover:border-emerald-300 hover:bg-emerald-50/60">
+                  <Link href={`/classes/${cls.id}`}>
                     <h3 className="font-semibold text-lg text-slate-900">{cls.name}</h3>
                     <p className="text-slate-600">{t("results.classLabel", { standard: cls.standard })}-{cls.section}</p>
                     <p className="text-sm text-slate-500 mt-2">{t("teacherPortal.studentsEnrolled", { count: cls.students.length })}</p>
-                    <ArrowRight className="h-4 w-4 text-emerald-600 mt-3" />
-                  </div>
-                </Link>
+                  </Link>
+                  <Link
+                    href={`/teacher/attendance?classId=${cls.id}&month=${new Date().getMonth() + 1}&year=${new Date().getFullYear()}`}
+                    className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-emerald-700 hover:text-emerald-900"
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                    {t("teacherPortal.markAttendanceBtn")}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
               ))}
             </div>
           ) : (
@@ -72,7 +79,18 @@ export default function TeacherDashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Link href="/teacher/attendance">
+          <Card className="hover:border-emerald-300 border-emerald-100">
+            <CardContent className="p-6 flex items-center gap-4">
+              <ClipboardList className="h-10 w-10 text-emerald-600" />
+              <div>
+                <h3 className="font-semibold">{t("teacherNav.attendance")}</h3>
+                <p className="text-sm text-slate-500">{t("teacherPortal.markAttendance")}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
         <Link href="/results"><Card className="hover:border-blue-300"><CardContent className="p-6 flex items-center gap-4"><Award className="h-10 w-10 text-blue-600" /><div><h3 className="font-semibold">{t("teacherNav.results")}</h3><p className="text-sm text-slate-500">{t("teacherPortal.enterPublishMarks")}</p></div></CardContent></Card></Link>
         <Link href="/teacher/board-records"><Card className="hover:border-purple-300"><CardContent className="p-6 flex items-center gap-4"><FileText className="h-10 w-10 text-purple-600" /><div><h3 className="font-semibold">{t("teacherNav.boardRecords")}</h3><p className="text-sm text-slate-500">{t("teacherPortal.boardRecordsDesc")}</p></div></CardContent></Card></Link>
       </div>

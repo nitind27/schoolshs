@@ -10,10 +10,16 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** Bump when schema changes — forces fresh client in dev HMR */
-const SCHEMA_VERSION = 13;
+const SCHEMA_VERSION = 14;
 
 function isClientFresh(client: PrismaClient): boolean {
-  return "user" in client && "automationJob" in client && "school" in client && "voucher" in client;
+  return (
+    "user" in client &&
+    "automationJob" in client &&
+    "school" in client &&
+    "voucher" in client &&
+    "studentAttendanceMonth" in client
+  );
 }
 
 export function getPrisma(): PrismaClient {

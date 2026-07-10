@@ -9,13 +9,22 @@ import { SAMPLE_CLASS_REGISTER, SAMPLE_CLASS_REGISTER_META } from "@/lib/certifi
 import type { ClassRegisterRow } from "@/lib/certificates/types";
 import { useT } from "@/i18n/locale-provider";
 
+function filtersFromParams(searchParams: URLSearchParams) {
+  return {
+    classId: searchParams.get("classId") || "",
+    standard: searchParams.get("standard") || "",
+    section: searchParams.get("section") || "",
+    academicYear: "2025-26",
+    studentId: "",
+    month: searchParams.get("month") || String(new Date().getMonth() + 1),
+    year: searchParams.get("year") || String(new Date().getFullYear()),
+  };
+}
+
 function ClassRegisterContent() {
   const t = useT();
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState({
-    classId: "", standard: "", section: "", academicYear: "2025-26",
-    studentId: "", month: String(new Date().getMonth() + 1), year: String(new Date().getFullYear()),
-  });
+  const [filters, setFilters] = useState(() => filtersFromParams(searchParams));
   const [source, setSource] = useState<"none" | "preview" | "live">("none");
   const [rows, setRows] = useState<ClassRegisterRow[]>([]);
   const [meta, setMeta] = useState({ month: "", standard: "", section: "" });
@@ -37,6 +46,18 @@ function ClassRegisterContent() {
     setMeta({ month: data.month || filters.month, standard: data.standard || "", section: data.section || "" });
     setSource("live");
   }, [filters]);
+
+  useEffect(() => {
+    if (searchParams.get("auto") !== "1") return;
+    const next = filtersFromParams(searchParams);
+    setFilters(next);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get("auto") !== "1") return;
+    if (!filters.classId && !filters.standard) return;
+    load();
+  }, [searchParams, filters.classId, filters.standard, filters.month, filters.year, load]);
 
   const displayRows = source === "preview" ? SAMPLE_CLASS_REGISTER : rows;
   const displayMeta = source === "preview" ? SAMPLE_CLASS_REGISTER_META : meta;

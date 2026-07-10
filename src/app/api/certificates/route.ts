@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { studentFullName } from "@/lib/certificates/date-to-words";
-import type { MonthlyPatrakData, ClassRegisterRow, ScholarshipReportRow, AdmissionReportRow, LeaverReportRow } from "@/lib/certificates/types";
+import { buildAttendanceRows, toClassRegisterRows } from "@/lib/attendance";
+import { assertTeacherAttendanceAccess } from "@/lib/teacher-attendance";
+import type { MonthlyPatrakData, ScholarshipReportRow, AdmissionReportRow, LeaverReportRow } from "@/lib/certificates/types";
 
 function countByGender(students: { gender: string }[]) {
   const boys = students.filter((s) => s.gender === "Male").length;
@@ -53,21 +55,30 @@ function buildPatrak(students: { gender: string; category: string; religion: str
   };
 }
 
-function buildClassRegister(students: {
-  grNumber?: string | null; caste?: string | null; dateOfBirth: string;
-  firstName: string; middleName?: string | null; surname: string;
-  standard?: string | null; section?: string | null;
-}[]): ClassRegisterRow[] {
-  return students.map((s, i) => ({
-    grNumber: s.grNumber || "",
-    caste: s.caste || "",
-    dob: s.dateOfBirth,
-    schoolFee: "", termFee: "", admissionFee: "", otherFee: "", totalFee: "",
-    serial: i + 1,
-    name: studentFullName(s),
-    attendance: Array(31).fill(null),
-    monthTotal: "", prevTotal: "", cumulative: "", note: "",
-  }));
+function buildClassRegisterFromAttendance(
+  students: {
+    id: string;
+    grNumber?: string | null;
+    caste?: string | null;
+    dateOfBirth: string;
+    firstName: string;
+    middleName?: string | null;
+    surname: string;
+    rollNumber?: string | null;
+  }[],
+  saved: Map<string, {
+    daysJson: string;
+    monthTotal: number;
+    prevTotal: number;
+    cumulative: number;
+    schoolFee?: string | null;
+    termFee?: string | null;
+    admissionFee?: string | null;
+    otherFee?: string | null;
+    note?: string | null;
+  }>
+) {
+  return toClassRegisterRows(buildAttendanceRows(students, saved));
 }
 
 export async function GET(request: NextRequest) {
@@ -81,6 +92,10 @@ export async function GET(request: NextRequest) {
     const studentId = searchParams.get("studentId");
     const month = searchParams.get("month") || String(new Date().getMonth() + 1);
     const year = searchParams.get("year") || String(new Date().getFullYear());
+
+    if (session.role === "teacher" && type !== "class-register") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
 
     const where: Record<string, unknown> = { schoolId: session.schoolId, status: { not: "archived" } };
     if (classId) where.classId = classId;
@@ -102,7 +117,22 @@ export async function GET(request: NextRequest) {
     }
 
     if (type === "class-register") {
-      return NextResponse.json({ rows: buildClassRegister(students), month, standard: std, section: sec });
+      await assertTeacherAttendanceAccess(session, classId);
+      const monthNum = parseInt(month, 10);
+      const yearNum = parseInt(year, 10);
+      const studentIds = students.map((s) => s.id);
+      const records = studentIds.length
+        ? await prisma.studentAttendanceMonth.findMany({
+            where: { schoolId: session.schoolId, studentId: { in: studentIds }, month: monthNum, year: yearNum },
+          })
+        : [];
+      const saved = new Map(records.map((r) => [r.studentId, r]));
+      return NextResponse.json({
+        rows: buildClassRegisterFromAttendance(students, saved),
+        month,
+        standard: std,
+        section: sec,
+      });
     }
 
     if (type === "monthly-reports") {

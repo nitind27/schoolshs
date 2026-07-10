@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, UserPlus, Upload, Send, Download,
   GraduationCap, Menu, X, BookOpen, Briefcase, CreditCard,
   LogOut, Bot, Calculator, ClipboardCheck, Award, FileSearch,
-  FileText, ChevronRight, Settings,
+  FileText, ChevronRight, Settings, ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -29,6 +29,7 @@ const useNavGroups = (t: (k: string) => string) => [
       { href: "/staff",      label: t("nav.staff"),        icon: Briefcase },
       { href: "/admissions", label: t("navExt.admissions"),icon: ClipboardCheck },
       { href: "/results",    label: t("navExt.results"),   icon: Award },
+      { href: "/attendance", label: t("navExt.attendance"), icon: ClipboardList },
     ],
   },
   {

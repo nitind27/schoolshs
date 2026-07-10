@@ -109,6 +109,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/student", request.url));
   }
 
+  if (session.role === "teacher" && (pathname === "/attendance" || pathname.startsWith("/attendance/"))) {
+    const url = new URL("/teacher/attendance", request.url);
+    url.search = request.nextUrl.search;
+    return NextResponse.redirect(url);
+  }
+
   if (["teacher", "clerk", "ca"].includes(session.role) && isSchoolAdminRoute(pathname)) {
     const clerkRoutes = [
       "/students", "/api/students", "/admissions", "/api/admissions",
@@ -116,9 +122,10 @@ export async function middleware(request: NextRequest) {
       "/bulk-submit", "/api/students/bulk-submit",
       "/export", "/api/students/export", "/categories",
       "/certificates", "/api/certificates",
+      "/attendance", "/api/attendance",
     ];
     const allowed =
-      (session.role === "teacher" && (pathname.startsWith("/results") || pathname.startsWith("/api/results") || pathname.startsWith("/classes") || pathname.startsWith("/api/classes") || pathname.startsWith("/api/board-records") || pathname.startsWith("/api/teacher"))) ||
+      (session.role === "teacher" && (pathname.startsWith("/results") || pathname.startsWith("/api/results") || pathname.startsWith("/classes") || pathname.startsWith("/api/classes") || pathname.startsWith("/api/board-records") || pathname.startsWith("/api/teacher") || pathname.startsWith("/teacher/attendance") || pathname.startsWith("/api/attendance") || pathname.startsWith("/certificates/class-register") || pathname.startsWith("/api/certificates"))) ||
       (session.role === "clerk" && clerkRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"))) ||
       (session.role === "ca" && (pathname.startsWith("/accounting") || pathname.startsWith("/api/accounting") || pathname.startsWith("/ca") || pathname.startsWith("/api/ca")));
 

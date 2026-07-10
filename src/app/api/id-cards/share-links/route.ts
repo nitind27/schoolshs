@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { AuthError, hashPassword, requireSchoolAuth } from "@/lib/auth";
 import { buildShareUrl, generateShareSlug } from "@/lib/id-card-share";
+import { getRequestPublicOrigin } from "@/lib/env-auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,15 +28,15 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const origin = request.nextUrl.origin;
     const linksWithUrl = links.map((link) => ({
       ...link,
-      shareUrl: buildShareUrl(origin, link.slug),
+      shareUrl: buildShareUrl(request, link.slug),
     }));
 
+    const appBase = getRequestPublicOrigin(request);
     return NextResponse.json({
       links: linksWithUrl,
-      appUrl: buildShareUrl(origin, "").replace(/\/m\/id-cards\/$/, ""),
+      appUrl: appBase,
     });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const shareUrl = buildShareUrl(request.nextUrl.origin, slug);
+    const shareUrl = buildShareUrl(request, slug);
     return NextResponse.json({ link, shareUrl, message: "Share link created" });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });

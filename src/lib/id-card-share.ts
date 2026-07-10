@@ -1,15 +1,16 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import type { IdCardShareLink } from "@/generated/prisma/client";
-import { getPublicAppOrigin } from "@/lib/env-auth";
+import { getRequestPublicOrigin } from "@/lib/env-auth";
+import type { NextRequest } from "next/server";
 
 export function generateShareSlug(): string {
   return crypto.randomBytes(16).toString("hex");
 }
 
-/** Uses APP_URL on VPS so links never show localhost:3010 */
-export function buildShareUrl(fallbackOrigin: string, slug: string): string {
-  const base = getPublicAppOrigin(fallbackOrigin);
+/** Uses request host / APP_URL — never localhost when opened via real domain */
+export function buildShareUrl(request: NextRequest, slug: string): string {
+  const base = getRequestPublicOrigin(request);
   return `${base}/m/id-cards/${slug}`;
 }
 

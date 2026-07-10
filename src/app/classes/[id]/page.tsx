@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useT } from "@/i18n/locale-provider";
-import { Edit, UserPlus, CreditCard, Users } from "lucide-react";
+import { Edit, UserPlus, CreditCard, Users, ClipboardList } from "lucide-react";
 import type { SchoolClass, Student, Staff } from "@/generated/prisma/client";
 
 type ClassDetail = SchoolClass & {
@@ -54,6 +54,9 @@ export default function ClassDetailPage() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Link href={`/attendance?classId=${id}&month=${new Date().getMonth() + 1}&year=${new Date().getFullYear()}`}>
+            <Button variant="outline"><ClipboardList className="h-4 w-4" /> {t("navExt.attendance")}</Button>
+          </Link>
           <Link href={`/id-cards?classId=${id}`}>
             <Button variant="outline"><CreditCard className="h-4 w-4" /> {t("nav.idCards")}</Button>
           </Link>
