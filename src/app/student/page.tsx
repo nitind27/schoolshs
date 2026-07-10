@@ -1,105 +1,125 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Award, GraduationCap, FileCheck, FileText, CalendarDays, ArrowRight } from "lucide-react";
+import {
+  useStudentData,
+  StudentLoading,
+  StudentError,
+  StudentMetricCard,
+  StudentQuickLink,
+  StudentStatusPill,
+} from "@/components/student-portal/student-portal-ui";
+import {
+  User,
+  Award,
+  GraduationCap,
+  FileCheck,
+  FileText,
+  CalendarDays,
+  BookOpen,
+  ClipboardList,
+} from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 
 export default function StudentDashboard() {
   const t = useT();
-  const [student, setStudent] = useState<Record<string, unknown> | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { student, loading, error } = useStudentData();
 
-  useEffect(() => {
-    fetch("/api/student-portal")
-      .then(async (r) => {
-        const data = await r.json();
-        if (!r.ok) throw new Error(data?.error || "Failed to load student dashboard");
-        setStudent(data.student);
-      })
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed to load student dashboard"));
-  }, []);
-
-  if (!student && !error) return <div className="flex justify-center h-64 items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600" /></div>;
-  if (!student) return <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error || "Unable to load student data."}</div>;
+  if (loading) return <StudentLoading label={t("common.loadingPortal")} />;
+  if (error || !student) return <StudentError message={error || t("studentPortal.loadError")} />;
 
   const reportCards = (student.reportCards as unknown[]) || [];
   const examResults = (student.examResults as unknown[]) || [];
 
-  const cards = [
-    { href: "/student/profile", icon: User, label: t("studentNav.myProfile"), desc: `${student.firstName} ${student.surname}` },
-    { href: "/student/results", icon: Award, label: t("studentNav.myResults"), desc: `${reportCards.length.toLocaleString("en-IN")} ${t("results.entries")}` },
-    { href: "/student/board", icon: GraduationCap, label: t("studentNav.boardRecords"), desc: `GSEB — ${student.board10th}` },
-    { href: "/student/scholarship", icon: FileCheck, label: t("common.scholarship"), desc: student.scholarshipScheme as string },
-    { href: "/student/documents", icon: FileText, label: t("studentNav.documents"), desc: t("studentPortal.myDocuments") },
+  const quickLinks = [
+    { href: "/student/profile", icon: User, label: t("studentNav.myProfile"), desc: `${student.firstName} ${student.surname}`, accent: "sky" as const },
+    { href: "/student/results", icon: Award, label: t("studentNav.myResults"), desc: `${reportCards.length} ${t("studentPortal.reportCards")}`, accent: "blue" as const },
+    { href: "/student/board", icon: GraduationCap, label: t("studentNav.boardRecords"), desc: String(student.board10th || "GSEB"), accent: "violet" as const },
+    { href: "/student/scholarship", icon: FileCheck, label: t("studentNav.scholarshipStatus"), desc: String(student.scholarshipScheme || "—"), accent: "emerald" as const },
+    { href: "/student/documents", icon: FileText, label: t("studentNav.documents"), desc: t("studentPortal.myDocuments"), accent: "amber" as const },
   ];
 
   return (
-    <div className="space-y-8">
-      <Card className="bg-gradient-to-r from-sky-600 to-blue-700 text-white border-0">
-        <CardContent className="p-8">
-          <p className="text-sky-200 text-sm">{t("studentPortal.welcomeBack")}</p>
-          <h1 className="text-3xl font-bold mt-1">{student.firstName as string} {student.surname as string}</h1>
-          <p className="text-sky-100 mt-2">{t("studentPortal.classRoll", { standard: student.standard as string, section: student.section as string, roll: (student.rollNumber as string) || "—" })}</p>
-          <div className="mt-4 flex gap-3">
+    <div className="space-y-6">
+      <div className="student-hero relative">
+        <div className="relative z-10">
+          <p className="text-sky-200 text-sm font-medium">{t("studentPortal.welcomeBack")}</p>
+          <h1 className="text-3xl font-bold mt-1 sm:text-4xl">
+            {student.firstName} {student.surname}
+          </h1>
+          <p className="text-sky-100/90 mt-2 text-sm sm:text-base">
+            {t("studentPortal.classRoll", {
+              standard: student.standard || "—",
+              section: student.section || "—",
+              roll: student.rollNumber || "—",
+            })}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
             <Badge status={student.status as string} />
-            <span className="text-sm bg-white/20 px-3 py-1 rounded-full">{student.category as string}</span>
+            <StudentStatusPill variant="muted">{String(student.category)}</StudentStatusPill>
+            {typeof student.schoolClass === "object" && student.schoolClass !== null && (
+              <StudentStatusPill variant="default">
+                {String((student.schoolClass as { name?: string }).name || "")}
+              </StudentStatusPill>
+            )}
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-slate-500">{t("studentNav.myResults")}</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">{reportCards.length.toLocaleString("en-IN")}</p>
-            <p className="text-xs text-slate-500 mt-1">Report cards available</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-slate-500">{t("results.entries")}</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">{examResults.length.toLocaleString("en-IN")}</p>
-            <p className="text-xs text-slate-500 mt-1">Exam records synced</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-slate-500">{t("common.status")}</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1 capitalize">{String(student.status || "—")}</p>
-            <p className="text-xs text-slate-500 mt-1">{String(student.standard || "—")}-{String(student.section || "—")}</p>
-          </CardContent>
-        </Card>
+        </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.map((c) => (
-          <Link key={c.href} href={c.href}>
-            <Card className="hover:border-sky-300 transition-all h-full">
-              <CardContent className="p-6">
-                <c.icon className="h-10 w-10 text-sky-600 mb-3" />
-                <h3 className="font-semibold">{c.label}</h3>
-                <p className="text-sm text-slate-500">{c.desc}</p>
-                <ArrowRight className="h-4 w-4 text-slate-400 mt-3" />
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StudentMetricCard
+          label={t("studentNav.myResults")}
+          value={reportCards.length}
+          sub={t("studentPortal.reportCardsAvailable")}
+          icon={Award}
+          accent="blue"
+        />
+        <StudentMetricCard
+          label={t("studentPortal.examRecords")}
+          value={examResults.length}
+          sub={t("studentPortal.examRecordsSynced")}
+          icon={ClipboardList}
+          accent="sky"
+        />
+        <StudentMetricCard
+          label={t("studentPortal.currentClass")}
+          value={`${student.standard || "—"}-${student.section || "—"}`}
+          sub={t("studentPortal.rollLabel", { roll: student.rollNumber || "—" })}
+          icon={BookOpen}
+          accent="emerald"
+        />
+        <StudentMetricCard
+          label={t("common.status")}
+          value={String(student.status || "—")}
+          sub={String(student.scholarshipScheme || t("studentPortal.noScholarship"))}
+          icon={FileCheck}
+          accent="violet"
+        />
       </div>
 
-      <Card>
-        <CardContent className="p-5 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-slate-500">Last updated</p>
-            <p className="font-semibold text-slate-900">
-              {student.updatedAt ? new Date(student.updatedAt as string).toLocaleString("en-IN") : "—"}
-            </p>
-          </div>
-          <CalendarDays className="h-8 w-8 text-sky-600" />
-        </CardContent>
-      </Card>
+      <div>
+        <h2 className="text-lg font-bold text-slate-900 mb-4">{t("studentPortal.quickAccess")}</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {quickLinks.map((c) => (
+            <StudentQuickLink key={c.href} {...c} />
+          ))}
+        </div>
+      </div>
+
+      <div className="student-section flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("studentPortal.lastUpdated")}</p>
+          <p className="font-semibold text-slate-900 mt-1">
+            {student.updatedAt
+              ? new Date(student.updatedAt as string).toLocaleString("en-IN", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })
+              : "—"}
+          </p>
+        </div>
+        <CalendarDays className="h-10 w-10 text-sky-500 opacity-80" />
+      </div>
     </div>
   );
 }

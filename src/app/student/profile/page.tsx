@@ -1,50 +1,78 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  useStudentData,
+  StudentLoading,
+  StudentError,
+  StudentPageHeader,
+  StudentSection,
+  StudentField,
+} from "@/components/student-portal/student-portal-ui";
+import { User } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 
 export default function StudentProfilePage() {
   const t = useT();
-  const [student, setStudent] = useState<Record<string, unknown> | null>(null);
+  const { student, loading, error } = useStudentData();
 
-  useEffect(() => {
-    fetch("/api/student-portal").then((r) => r.json()).then((d) => setStudent(d.student));
-  }, []);
-
-  if (!student) return null;
-
-  const fields: [string, unknown][] = [
-    [t("studentPortal.fullName"), `${student.firstName} ${student.middleName || ""} ${student.surname}`],
-    [t("studentPortal.aadhaarName"), student.aadhaarName],
-    [t("studentPortal.dob"), student.dateOfBirth],
-    [t("studentPortal.gender"), student.gender],
-    [t("studentPortal.aadhaar"), student.aadhaarNumber],
-    [t("studentPortal.mobile"), student.mobileNumber],
-    [t("studentPortal.father"), student.fatherName],
-    [t("studentPortal.mother"), student.motherName],
-    [t("studentPortal.category"), student.category],
-    [t("studentPortal.class"), `${student.standard}-${student.section}`],
-    [t("studentPortal.rollNumber"), student.rollNumber],
-    [t("studentPortal.grNumber"), student.grNumber],
-    [t("studentPortal.bloodGroup"), student.bloodGroup],
-    [t("studentPortal.address"), student.currentAddress],
-  ];
+  if (loading) return <StudentLoading />;
+  if (error || !student) return <StudentError message={error || t("studentPortal.loadError")} />;
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold">{t("studentNav.myProfile")}</h1>
-      <Card>
-        <CardHeader><CardTitle>{t("studentPortal.personalInfo")}</CardTitle></CardHeader>
-        <CardContent className="grid sm:grid-cols-2 gap-4">
-          {fields.map(([label, value]) => (
-            <div key={label} className="p-3 bg-slate-50 rounded-lg">
-              <p className="text-xs text-slate-500">{label}</p>
-              <p className="font-medium text-sm mt-1">{(value as string) || "—"}</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+    <div className="space-y-6 max-w-4xl">
+      <StudentPageHeader
+        icon={User}
+        title={t("studentNav.myProfile")}
+        subtitle={t("studentPortal.profileSubtitle")}
+      />
+
+      <StudentSection title={t("studentPortal.personalInfo")} description={t("studentPortal.personalInfoDesc")}>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <StudentField
+            label={t("studentPortal.fullName")}
+            value={`${student.firstName} ${student.middleName || ""} ${student.surname}`.replace(/\s+/g, " ").trim()}
+          />
+          <StudentField label={t("studentPortal.aadhaarName")} value={student.aadhaarName as string} />
+          <StudentField label={t("studentPortal.dob")} value={student.dateOfBirth as string} />
+          <StudentField label={t("studentPortal.gender")} value={student.gender as string} />
+          <StudentField label={t("studentPortal.aadhaar")} value={student.aadhaarNumber as string} />
+          <StudentField label={t("studentPortal.mobile")} value={student.mobileNumber as string} />
+          <StudentField label={t("studentPortal.father")} value={student.fatherName as string} />
+          <StudentField label={t("studentPortal.mother")} value={student.motherName as string} />
+          <StudentField label={t("studentPortal.bloodGroup")} value={student.bloodGroup as string} />
+          <StudentField label={t("studentPortal.category")} value={student.category as string} />
+        </div>
+      </StudentSection>
+
+      <StudentSection title={t("studentPortal.academicInfo")} description={t("studentPortal.academicInfoDesc")}>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <StudentField
+            label={t("studentPortal.class")}
+            value={`${student.standard || "—"}-${student.section || "—"}`}
+          />
+          <StudentField label={t("studentPortal.rollNumber")} value={student.rollNumber as string} />
+          <StudentField label={t("studentPortal.grNumber")} value={student.grNumber as string} />
+          <StudentField label={t("fields.course")} value={String(student.courseName || "")} />
+          <StudentField label={t("fields.financialYear")} value={student.financialYear as string} />
+          <StudentField
+            label={t("studentPortal.institution")}
+            value={student.institutionName as string}
+            fullWidth
+          />
+        </div>
+      </StudentSection>
+
+      <StudentSection title={t("studentPortal.contactAddress")}>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <StudentField label={t("studentPortal.email")} value={student.email as string} />
+          <StudentField label={t("studentPortal.mobile")} value={student.mobileNumber as string} />
+          <StudentField label={t("studentPortal.address")} value={student.currentAddress as string} fullWidth />
+          <StudentField
+            label={t("studentPortal.cityDistrict")}
+            value={`${student.currentCity || ""}, ${student.currentDistrict || ""}`.replace(/^, |, $/g, "") || "—"}
+          />
+        </div>
+      </StudentSection>
     </div>
   );
 }

@@ -1,19 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  useStudentData,
+  StudentLoading,
+  StudentError,
+  StudentPageHeader,
+  StudentSection,
+  StudentField,
+  StudentStatusPill,
+} from "@/components/student-portal/student-portal-ui";
+import { FileCheck, IndianRupee, Building2, CheckCircle2 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 
 export default function StudentScholarshipPage() {
   const t = useT();
-  const [student, setStudent] = useState<Record<string, unknown> | null>(null);
+  const { student, loading, error } = useStudentData();
 
-  useEffect(() => {
-    fetch("/api/student-portal").then((r) => r.json()).then((d) => setStudent(d.student));
-  }, []);
-
-  if (!student) return null;
+  if (loading) return <StudentLoading />;
+  if (error || !student) return <StudentError message={error || t("studentPortal.loadError")} />;
 
   const admissionStatusLabel = (status: string) => {
     const map: Record<string, string> = {
@@ -24,26 +29,70 @@ export default function StudentScholarshipPage() {
     return map[status] || status;
   };
 
+  const scheme = String(student.scholarshipScheme || "");
+  const hasScheme = scheme && scheme !== "None";
+
   return (
-    <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold">{t("studentPortal.scholarshipStatus")}</h1>
-      <Card>
-        <CardContent className="p-8 text-center">
-          <Badge status={student.status as string} />
-          <h2 className="text-xl font-bold mt-4">{student.scholarshipScheme as string}</h2>
-          <p className="text-slate-500 mt-2">{t("fields.financialYear")}: {student.financialYear as string}</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader><CardTitle>{t("studentPortal.applicationDetails")}</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-          <div className="p-3 bg-slate-50 rounded-lg"><p className="text-slate-500">{t("studentPortal.category")}</p><p className="font-medium">{student.category as string}</p></div>
-          <div className="p-3 bg-slate-50 rounded-lg"><p className="text-slate-500">{t("fields.course")}</p><p className="font-medium">{student.courseName as string}</p></div>
-          <div className="p-3 bg-slate-50 rounded-lg"><p className="text-slate-500">{t("studentPortal.annualIncome")}</p><p className="font-medium">₹{student.annualFamilyIncome as number}</p></div>
-          <div className="p-3 bg-slate-50 rounded-lg"><p className="text-slate-500">{t("studentPortal.admission")}</p><p className="font-medium">{admissionStatusLabel(student.admissionStatus as string)}</p></div>
-          <div className="p-3 bg-slate-50 rounded-lg col-span-2"><p className="text-slate-500">{t("studentPortal.bank")}</p><p className="font-medium">{student.bankName as string} — {student.accountNumber as string}</p></div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6 max-w-3xl">
+      <StudentPageHeader
+        icon={FileCheck}
+        title={t("studentPortal.scholarshipStatus")}
+        subtitle={t("studentPortal.scholarshipSubtitle")}
+      />
+
+      <div className="student-section text-center py-8">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25">
+          <CheckCircle2 className="h-8 w-8" />
+        </div>
+        <Badge status={student.status as string} />
+        <h2 className="text-2xl font-bold text-slate-900 mt-4">
+          {hasScheme ? scheme : t("studentPortal.noScholarship")}
+        </h2>
+        <p className="text-slate-500 mt-2">
+          {t("fields.financialYear")}: <span className="font-semibold text-slate-700">{student.financialYear as string}</span>
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <StudentStatusPill variant={hasScheme ? "success" : "muted"}>
+            {hasScheme ? t("studentPortal.schemeActive") : t("studentPortal.schemeNone")}
+          </StudentStatusPill>
+          <StudentStatusPill variant="default">{student.category as string}</StudentStatusPill>
+        </div>
+      </div>
+
+      <StudentSection title={t("studentPortal.applicationDetails")}>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <StudentField label={t("studentPortal.category")} value={student.category as string} />
+          <StudentField label={t("fields.course")} value={student.courseName as string} />
+          <StudentField
+            label={t("studentPortal.annualIncome")}
+            value={
+              <span className="inline-flex items-center gap-1">
+                <IndianRupee className="h-3.5 w-3.5" />
+                {Number(student.annualFamilyIncome || 0).toLocaleString("en-IN")}
+              </span>
+            }
+          />
+          <StudentField
+            label={t("studentPortal.admission")}
+            value={admissionStatusLabel(String(student.admissionStatus || ""))}
+          />
+          <StudentField
+            label={t("studentPortal.bank")}
+            value={
+              student.bankName ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                  {student.bankName as string} — {student.accountNumber as string}
+                </span>
+              ) : (
+                "—"
+              )
+            }
+            fullWidth
+          />
+          <StudentField label={t("studentPortal.ifsc")} value={student.ifscCode as string} />
+        </div>
+      </StudentSection>
     </div>
   );
 }
