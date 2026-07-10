@@ -1,80 +1,209 @@
-/* Student Portal — shared page styles */
+/* Student Portal — shared page styles (plain CSS for Tailwind v4 build) */
 
 .student-portal-header {
-  @apply rounded-2xl border border-sky-100 bg-gradient-to-r from-white via-sky-50/70 to-cyan-50/50 px-5 py-5 shadow-sm;
+  border-radius: 1rem;
+  border: 1px solid #e0f2fe;
+  background: linear-gradient(to right, #fff, rgba(240, 249, 255, 0.7), rgba(236, 254, 255, 0.5));
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
 .student-metric-card {
-  @apply rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md;
+  border-radius: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  transition: box-shadow 0.2s ease;
+}
+
+.student-metric-card:hover {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .student-quick-link {
-  @apply group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-sky-300 hover:shadow-md hover:bg-sky-50/30;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  transition: all 0.2s ease;
+}
+
+.student-quick-link:hover {
+  border-color: #7dd3fc;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  background: rgba(240, 249, 255, 0.3);
+}
+
+.student-quick-link:hover svg:last-child {
+  transform: translateX(2px);
 }
 
 .student-section {
-  @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+@media (min-width: 640px) {
+  .student-section {
+    padding: 1.5rem;
+  }
 }
 
 .student-field {
-  @apply rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3 transition-colors hover:bg-slate-50;
+  border-radius: 0.75rem;
+  border: 1px solid #f1f5f9;
+  background: rgba(248, 250, 252, 0.8);
+  padding: 0.75rem 1rem;
+  transition: background-color 0.15s ease;
+}
+
+.student-field:hover {
+  background: #f8fafc;
 }
 
 .student-field-label {
-  @apply text-[11px] font-semibold uppercase tracking-wide text-slate-500;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
 }
 
 .student-field-value {
-  @apply mt-1 text-sm font-medium text-slate-900 break-words;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #0f172a;
+  word-break: break-word;
 }
 
 .student-empty {
-  @apply rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 px-6 py-14 text-center;
+  border-radius: 1rem;
+  border: 1px dashed #e2e8f0;
+  background: rgba(248, 250, 252, 0.5);
+  padding: 3.5rem 1.5rem;
+  text-align: center;
 }
 
 .student-hero {
-  @apply relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-sky-600 via-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-sky-900/20 sm:p-8;
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 0;
+  background: linear-gradient(to bottom right, #0284c7, #2563eb, #4338ca);
+  padding: 1.5rem;
+  color: #fff;
+  box-shadow: 0 20px 40px rgba(12, 74, 110, 0.2);
+}
+
+@media (min-width: 640px) {
+  .student-hero {
+    padding: 2rem;
+  }
 }
 
 .student-hero::before {
   content: "";
-  @apply absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl;
+  position: absolute;
+  right: -2rem;
+  top: -2rem;
+  height: 10rem;
+  width: 10rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  filter: blur(40px);
 }
 
 .student-hero::after {
   content: "";
-  @apply absolute -bottom-12 -left-8 h-48 w-48 rounded-full bg-cyan-400/20 blur-3xl;
+  position: absolute;
+  bottom: -3rem;
+  left: -2rem;
+  height: 12rem;
+  width: 12rem;
+  border-radius: 50%;
+  background: rgba(34, 211, 238, 0.2);
+  filter: blur(48px);
 }
 
 .student-doc-card {
-  @apply flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-sky-300 hover:shadow-md;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 1rem;
+  transition: all 0.2s ease;
+}
+
+.student-doc-card:hover {
+  border-color: #7dd3fc;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .student-result-card {
-  @apply rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm transition-all hover:border-sky-300 hover:shadow-md;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  transition: all 0.2s ease;
+}
+
+.student-result-card:hover {
+  border-color: #7dd3fc;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .student-board-card {
-  @apply rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/80 overflow-hidden shadow-sm;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(to bottom right, #fff, rgba(248, 250, 252, 0.8));
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
 .student-table-wrap {
-  @apply overflow-x-auto rounded-xl border border-slate-100;
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid #f1f5f9;
 }
 
 .student-table-wrap table {
-  @apply w-full text-sm;
+  width: 100%;
+  font-size: 0.875rem;
 }
 
 .student-table-wrap thead tr {
-  @apply border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
 }
 
 .student-table-wrap th,
 .student-table-wrap td {
-  @apply p-3;
+  padding: 0.75rem;
 }
 
 .student-table-wrap tbody tr {
-  @apply border-b border-slate-50 hover:bg-sky-50/30;
+  border-bottom: 1px solid #f8fafc;
+  transition: background-color 0.15s ease;
+}
+
+.student-table-wrap tbody tr:hover {
+  background: rgba(240, 249, 255, 0.3);
 }

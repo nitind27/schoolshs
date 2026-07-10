@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "../components/landing/landing.css";
 @import "../components/dashboard/dashboard.css";
+@import "../components/student-portal/student-portal.css";
 
 /* ── Design Tokens ─────────────────────────────────────────── */
 :root {
