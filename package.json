@@ -10,6 +10,8 @@
     "lint": "eslint",
     "db:seed": "tsx scripts/seed-all-dummy.ts",
     "db:push": "prisma db push",
+    "db:migrate-share-link": "tsx scripts/migrate-idcard-share-link.ts",
+    "db:migrate-deploy": "prisma migrate deploy",
     "db:switch-mysql": "tsx scripts/switch-to-mysql.ts && prisma generate",
     "auto-fill": "tsx automation/run.ts",
     "playwright:setup": "playwright install chromium && playwright install-deps chromium"
