@@ -6,7 +6,8 @@ import { initSocketServer, setIoInstance } from "./src/lib/chat/socket-server";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME || "0.0.0.0";
-const port = parseInt(process.env.PORT || "3000", 10);
+/** Dev default 3000; production default 3010 (override with PORT=). */
+const port = parseInt(process.env.PORT || (dev ? "3000" : "3010"), 10);
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();

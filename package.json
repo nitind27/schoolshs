@@ -7,6 +7,7 @@
     "build": "prisma generate && next build",
     "postinstall": "prisma generate && playwright install chromium",
     "start": "tsx server.ts",
+    "start:next": "next start -p 3010",
     "lint": "eslint",
     "db:seed": "tsx scripts/seed-all-dummy.ts",
     "db:seed-full": "tsx scripts/seed-full-school.ts",
