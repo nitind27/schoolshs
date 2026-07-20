@@ -823,6 +823,8 @@ const en = {
     attach: "Attach file or image",
     placeholder: "Type a message…",
     hint: "Enter to send · Shift+Enter for new line · Images & PDF up to 15MB",
+    uploadFailed: "Could not upload file",
+    sendFailed: "Could not send message",
     openFull: "Full page",
   },
   idCards: {

@@ -825,6 +825,8 @@ const gu: Messages = {
     attach: "ફાઇલ અથવા ફોટો જોડો",
     placeholder: "સંદેશ લખો…",
     hint: "Enter મોકલવા · Shift+Enter નવી લાઇન · ઇમેજ અને PDF 15MB સુધી",
+    uploadFailed: "ફાઇલ અપલોડ થઈ શકી નહીં",
+    sendFailed: "સંદેશ મોકલી શકાયો નહીં",
     openFull: "પૂરું પેજ",
   },
   idCards: {

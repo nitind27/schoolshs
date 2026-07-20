@@ -4,13 +4,22 @@ import path from "path";
 import { existsSync } from "fs";
 import { prisma } from "@/lib/db";
 import { AuthError, getSession } from "@/lib/auth";
+import { canUseChat } from "@/lib/chat/types";
 
 const MIME: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".png": "image/png",
   ".webp": "image/webp",
+  ".gif": "image/gif",
+  ".heic": "image/heic",
+  ".heif": "image/heif",
   ".pdf": "application/pdf",
+  ".doc": "application/msword",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xls": "application/vnd.ms-excel",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".txt": "text/plain",
 };
 
 async function assertUploadAccess(segments: string[]) {
@@ -33,7 +42,24 @@ async function assertUploadAccess(segments: string[]) {
   }
 
   if (segments[0] === "chat") {
-    if (!session.schoolId) throw new AuthError("Access denied", 403);
+    const [, schoolId, roomId] = segments;
+    if (!session.schoolId || !canUseChat(session.role)) {
+      throw new AuthError("Access denied", 403);
+    }
+    if (!schoolId || schoolId !== session.schoolId) {
+      throw new AuthError("Access denied", 403);
+    }
+    if (!roomId) throw new AuthError("Not found", 404);
+
+    const participant = await prisma.chatParticipant.findFirst({
+      where: {
+        roomId,
+        userId: session.userId,
+        room: { schoolId: session.schoolId },
+      },
+      select: { id: true },
+    });
+    if (!participant) throw new AuthError("Access denied", 403);
     return;
   }
 
@@ -67,11 +93,15 @@ export async function GET(
     const ext = path.extname(resolved).toLowerCase();
     const mime = MIME[ext] || "application/octet-stream";
     const buffer = await readFile(resolved);
+    const fileName = path.basename(resolved);
 
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": mime,
         "Cache-Control": "private, max-age=3600",
+        "Content-Disposition": mime.startsWith("image/")
+          ? "inline"
+          : `inline; filename="${encodeURIComponent(fileName)}"`,
       },
     });
   } catch (error) {

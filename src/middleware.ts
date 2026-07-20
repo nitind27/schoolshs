@@ -155,6 +155,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Chat attachments — staff in same school may view/download (room check in API route)
+  if (
+    pathname.startsWith("/api/uploads/chat/") &&
+    session.schoolId &&
+    ["school_admin", "teacher", "clerk"].includes(session.role)
+  ) {
+    return NextResponse.next();
+  }
+
   if (["teacher", "clerk", "ca"].includes(session.role) && isSchoolAdminRoute(pathname)) {
     const clerkRoutes = [
       "/dashboard",
@@ -172,6 +181,7 @@ export async function middleware(request: NextRequest) {
       "/staff", "/api/staff",
       "/staff/attendance", "/staff/payroll", "/api/staff-hr",
       "/chat", "/api/chat",
+      "/api/uploads/chat",
       "/api/notifications",
       "/api/help",
       "/id-cards", "/api/id-cards",
@@ -200,6 +210,7 @@ export async function middleware(request: NextRequest) {
         pathname.startsWith("/api/certificates") ||
         pathname.startsWith("/chat") ||
         pathname.startsWith("/api/chat") ||
+        pathname.startsWith("/api/uploads/chat") ||
         pathname.startsWith("/api/notifications") ||
         pathname.startsWith("/api/help") ||
         pathname.startsWith("/profile") ||

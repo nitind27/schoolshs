@@ -127,10 +127,22 @@ export async function getOrCreateDirectRoom(
 }
 
 export async function assertRoomAccess(roomId: string, userId: string, schoolId: string) {
-  const participant = await prisma.chatParticipant.findFirst({
+  let participant = await prisma.chatParticipant.findFirst({
     where: { roomId, userId, room: { schoolId } },
     include: { room: true },
   });
+
+  if (!participant) {
+    const room = await prisma.chatRoom.findFirst({ where: { id: roomId, schoolId } });
+    if (room?.type === "school") {
+      await syncSchoolDiscussionParticipants(schoolId);
+      participant = await prisma.chatParticipant.findFirst({
+        where: { roomId, userId, room: { schoolId } },
+        include: { room: true },
+      });
+    }
+  }
+
   if (!participant) throw new Error("Access denied");
   return participant;
 }
@@ -317,7 +329,8 @@ export async function listChatUsers(schoolId: string, excludeUserId: string) {
 export async function saveChatUpload(
   schoolId: string,
   roomId: string,
-  file: File
+  file: File,
+  mimeType?: string
 ): Promise<PendingAttachment> {
   const dir = path.join(process.cwd(), "uploads", "chat", schoolId, roomId);
   await mkdir(dir, { recursive: true });
@@ -331,7 +344,7 @@ export async function saveChatUpload(
 
   return {
     fileName: file.name,
-    mimeType: file.type || "application/octet-stream",
+    mimeType: mimeType || file.type || "application/octet-stream",
     filePath,
     fileSize: buffer.length,
   };

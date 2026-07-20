@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
-import { canUseChat, CHAT_ALLOWED_MIME, CHAT_MAX_FILE_BYTES } from "@/lib/chat/types";
+import {
+  canUseChat,
+  CHAT_MAX_FILE_BYTES,
+  resolveChatFileMime,
+  isChatImageMime,
+} from "@/lib/chat/types";
 import { assertRoomAccess, saveChatUpload } from "@/lib/chat/service";
 
 export async function POST(request: Request) {
@@ -22,17 +27,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "File too large (max 15MB)" }, { status: 400 });
     }
 
-    const mime = file.type || "application/octet-stream";
-    if (!CHAT_ALLOWED_MIME.has(mime)) {
-      return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+    const mime = resolveChatFileMime(file.name, file.type);
+    if (!mime) {
+      return NextResponse.json(
+        { error: "File type not allowed. Use image, PDF, Word, Excel or text." },
+        { status: 400 }
+      );
     }
 
     await assertRoomAccess(roomId, session.userId, session.schoolId);
-    const attachment = await saveChatUpload(session.schoolId, roomId, file);
+    const attachment = await saveChatUpload(session.schoolId, roomId, file, mime);
 
     return NextResponse.json({
       attachment,
-      messageType: mime.startsWith("image/") ? "image" : "file",
+      messageType: isChatImageMime(mime) ? "image" : "file",
     });
   } catch (e) {
     if (e instanceof AuthError) {

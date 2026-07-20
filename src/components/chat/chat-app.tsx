@@ -10,6 +10,7 @@ import { useT } from "@/i18n/locale-provider";
 import { useChatSocket } from "@/hooks/use-chat-socket";
 import type { ChatMessageDto, ChatRoomDto, ChatUserDto, PendingAttachment } from "@/lib/chat/types";
 import { ROLE_LABELS } from "@/lib/roles";
+import { toast } from "@/components/ui/toast";
 
 function avatarColor(name: string) {
   const colors = [
@@ -187,10 +188,13 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
       form.append("roomId", activeRoomId);
       form.append("file", file);
       const up = await fetch("/api/chat/upload", { method: "POST", body: form });
-      if (!up.ok) throw new Error("Upload failed");
-      const { attachment, messageType } = await up.json();
+      const upData = await up.json().catch(() => ({}));
+      if (!up.ok) {
+        throw new Error(String(upData.error || t("chat.uploadFailed")));
+      }
+      const { attachment, messageType } = upData;
 
-      await fetch(`/api/chat/rooms/${activeRoomId}/messages`, {
+      const msgRes = await fetch(`/api/chat/rooms/${activeRoomId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -199,10 +203,23 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
           attachments: [attachment as PendingAttachment],
         }),
       });
+      const msgData = await msgRes.json().catch(() => ({}));
+      if (!msgRes.ok) {
+        throw new Error(String(msgData.error || t("chat.sendFailed")));
+      }
+
+      if (msgData.message) {
+        setMessages((prev) =>
+          prev.some((m) => m.id === msgData.message.id) ? prev : [...prev, msgData.message as ChatMessageDto]
+        );
+      }
       await loadMessages(activeRoomId);
       await loadRooms();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("chat.uploadFailed"));
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
