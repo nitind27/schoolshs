@@ -10,7 +10,6 @@ import {
   Sparkles,
   ExternalLink,
   Loader2,
-  MessageCircleQuestion,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/i18n/locale-provider";
@@ -199,32 +198,32 @@ export function HelpChatbot() {
 
   return (
     <>
-      {/* Fixed right-edge vertical HELP tab (always visible when closed) */}
+      {/* Fixed right-edge HELP tab — text only, opens chatbot */}
       <button
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
           "help-side-tab fixed right-0 top-1/2 z-[90] -translate-y-1/2 touch-manipulation",
-          "flex items-center gap-2 rounded-l-xl border border-r-0 border-slate-700/80",
-          "bg-[#1a1a1a] px-2.5 py-3 shadow-lg shadow-black/30",
-          "transition-all duration-200 hover:bg-[#111] hover:pr-3.5 active:scale-[0.98]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60",
+          "flex min-h-[5.5rem] min-w-[2.25rem] flex-col items-center justify-center",
+          "rounded-l-md border border-r-0 border-neutral-700 bg-neutral-900",
+          "px-2 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.35)]",
+          "transition-colors duration-200 hover:bg-black active:bg-neutral-950",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
           open && "pointer-events-none translate-x-full opacity-0"
         )}
         aria-label={t("helpBot.open")}
         title={t("helpBot.open")}
       >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-blue-800 text-white shadow-sm ring-1 ring-white/20">
-          <MessageCircleQuestion className="h-4 w-4" strokeWidth={2.2} />
-        </span>
         <span
-          className="select-none text-[11px] font-extrabold tracking-[0.18em] text-amber-400"
-          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+          className="select-none font-bold uppercase text-amber-400"
+          style={{
+            writingMode: "vertical-rl",
+            textOrientation: "mixed",
+            letterSpacing: "0.2em",
+            fontSize: "11px",
+          }}
         >
           HELP
-        </span>
-        <span className="absolute -left-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-2 ring-white">
-          ?
         </span>
       </button>
 
