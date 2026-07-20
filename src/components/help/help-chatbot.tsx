@@ -199,21 +199,31 @@ export function HelpChatbot() {
 
   return (
     <>
-      {/* Floating open button — large touch target */}
+      {/* Fixed right-edge vertical HELP tab (always visible when closed) */}
       <button
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "fixed bottom-5 right-4 z-[90] flex h-14 w-14 touch-manipulation items-center justify-center rounded-2xl",
-          "bg-gradient-to-br from-cyan-600 via-sky-600 to-slate-800 text-white",
-          "shadow-xl shadow-cyan-700/30 transition-transform hover:scale-105 active:scale-95",
-          "ring-2 ring-white/30 sm:bottom-6 sm:right-5",
-          open && "pointer-events-none scale-90 opacity-0"
+          "help-side-tab fixed right-0 top-1/2 z-[90] -translate-y-1/2 touch-manipulation",
+          "flex items-center gap-2 rounded-l-xl border border-r-0 border-slate-700/80",
+          "bg-[#1a1a1a] px-2.5 py-3 shadow-lg shadow-black/30",
+          "transition-all duration-200 hover:bg-[#111] hover:pr-3.5 active:scale-[0.98]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60",
+          open && "pointer-events-none translate-x-full opacity-0"
         )}
         aria-label={t("helpBot.open")}
+        title={t("helpBot.open")}
       >
-        <MessageCircleQuestion className="h-6 w-6" strokeWidth={2} />
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-blue-800 text-white shadow-sm ring-1 ring-white/20">
+          <MessageCircleQuestion className="h-4 w-4" strokeWidth={2.2} />
+        </span>
+        <span
+          className="select-none text-[11px] font-extrabold tracking-[0.18em] text-amber-400"
+          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+        >
+          HELP
+        </span>
+        <span className="absolute -left-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-2 ring-white">
           ?
         </span>
       </button>
