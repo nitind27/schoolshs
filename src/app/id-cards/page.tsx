@@ -8,7 +8,8 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { StudentIdCard } from "@/components/id-cards/student-id-card";
 import { IdCardShareLinkManager } from "@/components/id-cards/id-card-share-link-manager";
-import { SCHOOL_STANDARDS, CLASS_SECTIONS, FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS } from "@/lib/constants";
+import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import { useT } from "@/i18n/locale-provider";
 import { CreditCard, Printer, Settings, Loader2, Sparkles } from "lucide-react";
 import type { Student, SchoolSettings, SchoolClass } from "@/generated/prisma/client";
@@ -28,12 +29,10 @@ function IdCardsContent() {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [classId, setClassId] = useState(initialClassId);
-  const [standard, setStandard] = useState("");
-  const [section, setSection] = useState("");
   const [academicYear, setAcademicYear] = useState("2025-26");
   const [showSettings, setShowSettings] = useState(false);
   const [settingsForm, setSettingsForm] = useState<Partial<SchoolSettings>>({});
-  const [logoPreview, setLogoPreview] = useState<string | undefined>();
+  const [logoPreview, setLogoPreview] = useState<string | undefined>(SCHOOL_LOGO_URL);
   const [signaturePreview, setSignaturePreview] = useState<string | undefined>();
 
   useEffect(() => {
@@ -42,17 +41,22 @@ function IdCardsContent() {
       .then((d) => setClasses(d.classes || []));
     fetch("/api/school/settings")
       .then((r) => r.json())
-      .then((s) => { setSettings(s); setSettingsForm(s); });
+      .then((s) => {
+        setSettings(s);
+        setSettingsForm(s);
+        // Prefer uploaded school logo; otherwise canonical public crest
+        if (s?.logoPath) {
+          setLogoPreview(`/api/uploads/${s.logoPath}`);
+        } else {
+          setLogoPreview(SCHOOL_LOGO_URL);
+        }
+      });
   }, []);
 
   const fetchCards = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ academicYear });
     if (classId) params.set("classId", classId);
-    else {
-      if (standard) params.set("standard", standard);
-      if (section) params.set("section", section);
-    }
     const res = await fetch(`/api/id-cards?${params}`);
     const data = await res.json();
     setStudents(data.students || []);
@@ -61,7 +65,7 @@ function IdCardsContent() {
       setSettingsForm(data.settings);
     }
     setLoading(false);
-  }, [classId, standard, section, academicYear]);
+  }, [classId, academicYear]);
 
   useEffect(() => { fetchCards(); }, [fetchCards]);
 
@@ -98,9 +102,11 @@ function IdCardsContent() {
     }
   };
 
+  const selectedClass = classes.find((c) => c.id === classId);
+
   const classOptions = [
     { value: "", label: t("idCards.allClassesOption") },
-    ...classes.map((c) => ({ value: c.id, label: `${c.name} (${c.academicYear})` })),
+    ...classes.map((c) => ({ value: c.id, label: c.name })),
   ];
 
   return (
@@ -142,9 +148,13 @@ function IdCardsContent() {
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700">School Logo</label>
               <div className="flex items-center gap-3">
-                {logoPreview && (
+                {(logoPreview || SCHOOL_LOGO_URL) && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logoPreview} alt="logo" className="w-14 h-14 rounded-full object-cover border-2 border-slate-200" />
+                  <img
+                    src={logoPreview || SCHOOL_LOGO_URL}
+                    alt="logo"
+                    className="w-14 h-14 rounded-full object-cover border-2 border-slate-200"
+                  />
                 )}
                 <input
                   type="file"
@@ -156,7 +166,9 @@ function IdCardsContent() {
                   }}
                 />
               </div>
-              <p className="text-xs text-slate-400">PNG/JPG — shows as circle in header</p>
+              <p className="text-xs text-slate-400">
+                Default: <code className="text-[11px]">/logo/school-logo.png</code> (Sarvajanik High School crest)
+              </p>
             </div>
 
             {/* Signature upload */}
@@ -189,17 +201,15 @@ function IdCardsContent() {
 
       <Card className="print:hidden">
         <CardContent className="p-4 flex flex-wrap gap-3">
-          <Select label={t("fields.class")} options={classOptions} value={classId} onChange={(e) => { setClassId(e.target.value); setStandard(""); setSection(""); }} className="w-48" />
-          <Select label={t("classes.standard")} options={["", ...SCHOOL_STANDARDS]} value={standard} onChange={(e) => { setStandard(e.target.value); setClassId(""); }} className="w-36" disabled={!!classId} />
-          <Select label={t("classes.section")} options={["", ...CLASS_SECTIONS]} value={section} onChange={(e) => setSection(e.target.value)} className="w-28" disabled={!!classId} />
+          <Select label={t("fields.class")} options={classOptions} value={classId} onChange={(e) => setClassId(e.target.value)} className="w-56" />
           <Select label={t("idCards.year")} options={FINANCIAL_YEARS} value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="w-32" />
         </CardContent>
       </Card>
 
       <IdCardShareLinkManager
         classId={classId}
-        standard={standard}
-        section={section}
+        standard={selectedClass?.standard || ""}
+        section={selectedClass?.section || ""}
         academicYear={academicYear}
         classes={classes}
       />
@@ -225,7 +235,7 @@ function IdCardsContent() {
                 student={s}
                 settings={settings}
                 photoUrl={photoUrl(s)}
-                logoUrl={logoPreview}
+                logoUrl={logoPreview || SCHOOL_LOGO_URL}
                 signatureUrl={signaturePreview}
               />
             ))}

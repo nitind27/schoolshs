@@ -55,7 +55,7 @@ function ClassRegisterContent() {
 
   useEffect(() => {
     if (searchParams.get("auto") !== "1") return;
-    if (!filters.classId && !filters.standard) return;
+    if (!filters.classId) return;
     load();
   }, [searchParams, filters.classId, filters.standard, filters.month, filters.year, load]);
 
@@ -73,7 +73,9 @@ function ClassRegisterContent() {
     >
       <CertificateFilters value={filters} onChange={setFilters} onLoad={load} showMonth />
       {displayRows.length > 0 ? (
-        <ClassRegisterView rows={displayRows} month={displayMeta.month} standard={displayMeta.standard} section={displayMeta.section} />
+        <div className="cr-print-wrap">
+          <ClassRegisterView rows={displayRows} month={displayMeta.month} standard={displayMeta.standard} section={displayMeta.section} />
+        </div>
       ) : (
         <p className="no-print text-slate-500 text-center py-12">{t("certificates.previewOrLoad")}</p>
       )}

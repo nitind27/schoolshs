@@ -42,6 +42,11 @@ export interface MysqlConnectionConfig {
   database: string;
   connectionLimit: number;
   connectTimeout?: number;
+  acquireTimeout?: number;
+  idleTimeout?: number;
+  minimumIdle?: number;
+  resetAfterUse?: boolean;
+  keepAliveDelay?: number;
 }
 
 export function getMysqlConfig(): MysqlConnectionConfig {
@@ -51,10 +56,19 @@ export function getMysqlConfig(): MysqlConnectionConfig {
       "MySQL env missing. On Vercel set DB_HOST, DB_USER, DB_NAME, DB_PASSWORD (or DATABASE_URL=mysql://...)"
     );
   }
+  const isProd = process.env.NODE_ENV === "production";
+  const connectionLimit = Number(read("DB_CONNECTION_LIMIT") || (isProd ? "8" : "12"));
+  // minimumIdle=0 breaks mariadb pool (0 < 0 → no connections created)
+  const minimumIdle = Math.max(1, Math.min(Number(read("DB_MINIMUM_IDLE") ?? "1"), connectionLimit));
   return {
     ...parts,
-    connectionLimit: Number(read("DB_CONNECTION_LIMIT") || "3"),
-    connectTimeout: Number(read("DB_CONNECT_TIMEOUT") || "15000"),
+    connectionLimit,
+    connectTimeout: Number(read("DB_CONNECT_TIMEOUT") || "30000"),
+    acquireTimeout: Number(read("DB_ACQUIRE_TIMEOUT") || "30000"),
+    idleTimeout: Number(read("DB_IDLE_TIMEOUT") || "120"),
+    minimumIdle,
+    resetAfterUse: read("DB_RESET_AFTER_USE") !== "false",
+    keepAliveDelay: Number(read("DB_KEEP_ALIVE_DELAY") || "10000"),
   };
 }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { processIdCardPhoto } from "@/lib/id-photo-processor";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { resolveDocAbsolutePath } from "@/lib/student-documents.server";
 import fs from "fs/promises";
 import path from "path";
 
@@ -23,7 +24,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Student photo not uploaded" }, { status: 400 });
     }
 
-    const photoPath = path.join(process.cwd(), "uploads", photoRel.replace(/^\/+/, ""));
+    const photoPath = resolveDocAbsolutePath(id, photoRel);
+    if (!photoPath) {
+      return NextResponse.json({ error: "Photo file not found on disk" }, { status: 404 });
+    }
+
     let inputBuffer: Buffer;
     try {
       inputBuffer = await fs.readFile(photoPath);

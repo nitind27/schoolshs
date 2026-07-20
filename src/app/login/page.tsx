@@ -8,11 +8,15 @@ import { useT } from "@/i18n/locale-provider";
 function LoginLoading() {
   const t = useT();
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-blue-50">
-      <div className="flex flex-col items-center gap-4">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-200 border-t-blue-600" />
-        <p className="text-sm text-slate-500">{t("common.loadingPortal")}</p>
-      </div>
+    <div
+      className="flex min-h-screen min-h-dvh flex-col items-center justify-center gap-4"
+      style={{ background: "linear-gradient(180deg, #eef4f1 0%, #f2f6f4 100%)" }}
+    >
+      <div
+        className="h-10 w-10 animate-spin rounded-full border-2 border-[#d4dfd9] border-t-[#1a6550]"
+        aria-hidden
+      />
+      <p className="text-sm font-medium text-[#5a6d65]">{t("common.loadingPortal")}</p>
     </div>
   );
 }

@@ -10,6 +10,8 @@ import { CaLayout } from "@/components/layout/ca-sidebar";
 import { StudentLayout } from "@/components/layout/student-sidebar";
 import { LocaleProvider } from "@/i18n/locale-provider";
 import { isUserRole, type UserRole } from "@/lib/roles";
+import { Toaster } from "@/components/ui/toast";
+import { HelpChatbot } from "@/components/help/help-chatbot";
 
 function LayoutForRole({ role, children }: { role: UserRole; children: React.ReactNode }) {
   switch (role) {
@@ -78,7 +80,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <LocaleProvider>
+      <Toaster />
       <AppShellInner>{children}</AppShellInner>
+      <HelpChatbot />
     </LocaleProvider>
   );
 }

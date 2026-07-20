@@ -57,7 +57,32 @@ export const SAMPLE_CHARACTER = {
   issueDate: "06/07/2026",
 };
 
-const zero = { boys: 0, girls: 0 };
+const z = { boys: 0, girls: 0 };
+const mv = (
+  opening: { boys: number; girls: number },
+  closing: { boys: number; girls: number },
+  extra?: Partial<{
+    admittedNew: number;
+    transferPaid: number;
+    transferUnpaid: number;
+    schoolPaid: number;
+    schoolUnpaid: number;
+    classPaid: number;
+    classUnpaid: number;
+    note: string;
+  }>,
+) => ({
+  opening,
+  admittedNew: extra?.admittedNew ?? 0,
+  transferPaid: extra?.transferPaid ?? 0,
+  transferUnpaid: extra?.transferUnpaid ?? 0,
+  schoolPaid: extra?.schoolPaid ?? 0,
+  schoolUnpaid: extra?.schoolUnpaid ?? 0,
+  classPaid: extra?.classPaid ?? 0,
+  classUnpaid: extra?.classUnpaid ?? 0,
+  closing,
+  note: extra?.note ?? "",
+});
 
 export const SAMPLE_PATRAK: MonthlyPatrakData = {
   month: "7",
@@ -65,49 +90,28 @@ export const SAMPLE_PATRAK: MonthlyPatrakData = {
   standard: "10",
   section: "A",
   classTeacher: "શ્રી રમેશભાઈ પટેલ",
-  opening: {
-    fullFee: { boys: 18, girls: 15 },
-    schoolWaiver: zero,
-    govtSt: { boys: 2, girls: 1 },
-    govtSc: { boys: 1, girls: 2 },
-    govtPoor: zero,
-    govtObc: { boys: 3, girls: 2 },
-    total: { boys: 24, girls: 20 },
+  movement: {
+    fullFee: mv({ boys: 18, girls: 15 }, { boys: 19, girls: 15 }, { admittedNew: 1 }),
+    govtSc: mv({ boys: 1, girls: 2 }, { boys: 1, girls: 2 }),
+    govtSt: mv({ boys: 2, girls: 1 }, { boys: 2, girls: 1 }),
+    nomadicTribe: mv(z, z),
+    denotifiedTribe: mv(z, z),
+    baxiSocial: mv(z, z),
+    baxiEconomic: mv(z, z),
+    minorityReligious: mv(z, z),
+    minorityLinguistic: mv(z, z),
+    other: mv({ boys: 3, girls: 2 }, { boys: 3, girls: 1 }),
+    total: mv({ boys: 24, girls: 20 }, { boys: 25, girls: 19 }, { admittedNew: 1, schoolUnpaid: 1 }),
   },
-  admitted: {
-    newPaid: { boys: 1, girls: 0 },
-    newUnpaid: zero,
-    transferPaid: zero,
-    transferUnpaid: zero,
+  classification: {
+    ujaniyat: 2,
+    madhyam: 8,
+    pachhat: 5,
+    groupTotal: 15,
+    other: { jain: 1, parsi: 0, muslim: 5, sikh: 0, christian: 2, total: 8 },
+    grandTotal: 44,
+    avgAttendance: 40,
   },
-  left: {
-    schoolPaid: { boys: 0, girls: 1 },
-    schoolUnpaid: zero,
-    classPaid: zero,
-    classUnpaid: zero,
-  },
-  change: { boys: 1, girls: -1 },
-  closing: { boys: 25, girls: 19 },
-  caste: {
-    sc: { boys: 1, girls: 2 },
-    st: { boys: 2, girls: 1 },
-    vj: zero,
-    obc: { boys: 3, girls: 2 },
-    hindu: { boys: 20, girls: 16 },
-    muslim: { boys: 3, girls: 2 },
-    sikh: zero,
-    parsi: zero,
-    christian: { boys: 1, girls: 1 },
-  },
-  avgAttendance: { boys: 22, girls: 18 },
-  workingDays: { full: 26, half: 0, sundays: 4, holidays: 1, prevTotal: 156, monthTotal: 26, cumulative: 182 },
-  fees: {
-    schoolCount: 44, schoolRs: 8800, schoolPs: 0,
-    termCount: 44, termRs: 4400, termPs: 0,
-    otherCount: 5, otherRs: 500, otherPs: 0,
-    arrearsSchool: 200, arrearsTerm: 100,
-  },
-  date: "06/07/2026",
 };
 
 const SAMPLE_NAMES = [
@@ -119,6 +123,7 @@ const SAMPLE_NAMES = [
 export const SAMPLE_CLASS_REGISTER: ClassRegisterRow[] = SAMPLE_NAMES.map((name, i) => ({
   grNumber: String(1200 + i),
   caste: ["Patel", "Shah", "Desai", "Vankar", "Chauhan", "Tadvi", "Gamit", "Solanki"][i],
+  category: ["General", "General", "OBC", "SC", "OBC", "ST", "ST", "OBC"][i],
   dob: `${String(10 + i).padStart(2, "0")}/0${(i % 6) + 3}/2010`,
   schoolFee: "200", termFee: "100", admissionFee: "", otherFee: "", totalFee: "300",
   serial: i + 1,

@@ -31,6 +31,8 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted) return;
     document.documentElement.lang = locale === "gu" ? "gu" : "en";
+    document.documentElement.classList.toggle("locale-gu", locale === "gu");
+    document.documentElement.classList.toggle("locale-en", locale !== "gu");
     localStorage.setItem(LOCALE_STORAGE_KEY, locale);
   }, [locale, mounted]);
 

@@ -56,12 +56,16 @@ export function canManageScholarship(role: string): boolean {
   return ["school_admin", "clerk"].includes(role);
 }
 
+export function canManageClasses(role: string): boolean {
+  return ["school_admin", "clerk"].includes(role);
+}
+
 export function canVerifyAdmission(role: string): boolean {
   return ["school_admin", "clerk"].includes(role);
 }
 
 export function canManageResults(role: string): boolean {
-  return ["school_admin", "teacher"].includes(role);
+  return ["school_admin", "teacher", "clerk"].includes(role);
 }
 
 export function canAudit(role: string): boolean {

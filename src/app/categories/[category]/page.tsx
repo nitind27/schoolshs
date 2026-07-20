@@ -24,6 +24,8 @@ import {
   Filter,
   X,
 } from "lucide-react";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { PAGE_SIZE } from "@/lib/pagination";
 
 interface CategoryStudent {
   id: string;
@@ -62,6 +64,7 @@ function CategoryReportContent() {
   const [total, setTotal] = useState(0);
   const [genderSummary, setGenderSummary] = useState({ male: 0, female: 0, other: 0, total: 0 });
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   const [genderFilter, setGenderFilter] = useState(searchParams.get("gender") || "all");
   const [standardFilter, setStandardFilter] = useState(searchParams.get("standard") || "");
@@ -87,6 +90,8 @@ function CategoryReportContent() {
       category: isAll ? "all" : category,
       list: "true",
       gender: genderFilter,
+      page: String(page),
+      limit: String(PAGE_SIZE),
     });
     if (standardFilter) qp.set("standard", standardFilter);
     if (sectionFilter) qp.set("section", sectionFilter);
@@ -99,12 +104,13 @@ function CategoryReportContent() {
     setTotal(data.total || 0);
     setGenderSummary(data.genderSummary || { male: 0, female: 0, other: 0, total: 0 });
     setLoading(false);
-  }, [isAll, category, genderFilter, standardFilter, sectionFilter, statusFilter, search]);
+  }, [isAll, category, genderFilter, standardFilter, sectionFilter, statusFilter, search, page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const setGender = (g: string) => {
     setGenderFilter(g);
+    setPage(1);
     syncUrl({ gender: g === "all" ? "" : g, standard: standardFilter, section: sectionFilter, status: statusFilter, search });
   };
 
@@ -169,26 +175,26 @@ function CategoryReportContent() {
               <input
                 placeholder={t("categoryPage.searchPlaceholder")}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
             <Select
               options={["", ...SCHOOL_STANDARDS]}
               value={standardFilter}
-              onChange={(e) => setStandardFilter(e.target.value)}
+              onChange={(e) => { setStandardFilter(e.target.value); setPage(1); }}
               className="w-32"
             />
             <Select
               options={["", ...CLASS_SECTIONS]}
               value={sectionFilter}
-              onChange={(e) => setSectionFilter(e.target.value)}
+              onChange={(e) => { setSectionFilter(e.target.value); setPage(1); }}
               className="w-28"
             />
             <Select
               options={STUDENT_STATUSES.map((s) => s.value)}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="w-36"
             />
             {(standardFilter || sectionFilter || statusFilter || search) && (
@@ -200,6 +206,7 @@ function CategoryReportContent() {
                   setSectionFilter("");
                   setStatusFilter("");
                   setSearch("");
+                  setPage(1);
                 }}
               >
                 <X className="h-4 w-4" /> {t("students.clear")}
@@ -270,6 +277,7 @@ function CategoryReportContent() {
               </table>
             </div>
           )}
+          <TablePagination page={page} total={total} onPageChange={setPage} />
         </CardContent>
       </Card>
     </div>

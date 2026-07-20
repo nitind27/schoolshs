@@ -41,8 +41,8 @@ export default function StudentResultsPage() {
               <div key={rc.id as string} className="student-result-card">
                 <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-4">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-500/20">
-                      <Award className="h-7 w-7" />
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--sp-ink,#0c1e2e)] text-white">
+                      <Award className="h-5 w-5" />
                     </div>
                     <div>
                       <h3 className="font-bold text-lg text-slate-900">
@@ -75,16 +75,16 @@ export default function StudentResultsPage() {
                         </div>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 rounded-xl bg-sky-50 border border-sky-200 px-4 py-2">
-                      <TrendingUp className="h-5 w-5 text-sky-600" />
+                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2">
+                      <TrendingUp className="h-5 w-5 text-[var(--sp-accent,#0d7377)]" />
                       <div>
-                        <p className="text-[10px] uppercase font-semibold text-sky-700">{t("studentPortal.percentage")}</p>
-                        <p className="text-xl font-bold text-sky-700">{pct}%</p>
+                        <p className="text-[10px] uppercase font-semibold text-slate-500">{t("studentPortal.percentage")}</p>
+                        <p className="text-xl font-bold text-slate-900">{pct}%</p>
                       </div>
                     </div>
                     {rc.examId != null && (
                       <Link href={`/student/results/print?examId=${rc.examId as string}`}>
-                        <Button className="bg-sky-600 hover:bg-sky-700">
+                        <Button className="bg-[var(--sp-ink,#0c1e2e)] hover:bg-[var(--sp-ink-soft,#16324a)]">
                           <Printer className="h-4 w-4" />
                           {t("results.print")}
                         </Button>
@@ -123,7 +123,7 @@ export default function StudentResultsPage() {
                   <tr key={r.id as string}>
                     <td className="font-medium">{(r.exam as { name: string })?.name}</td>
                     <td>{(r.subject as { name: string })?.name}</td>
-                    <td className="text-right font-bold text-sky-700">{r.marksObtained as number}</td>
+                    <td className="text-right font-bold text-[var(--sp-accent,#0d7377)]">{r.marksObtained as number}</td>
                     <td className="text-right text-slate-600">{(r.achievementMarks as number) || "—"}</td>
                     <td className="text-right text-slate-600">{(r.graceMarks as number) || "—"}</td>
                     <td>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { StaffForm } from "@/components/forms/staff-form";
+import { StaffPortalAccountPanel } from "@/components/staff/staff-portal-account-panel";
 import { useT } from "@/i18n/locale-provider";
 import type { Staff } from "@/generated/prisma/client";
 
@@ -12,11 +13,15 @@ export default function EditStaffPage() {
   const params = useParams();
   const id = params.id as string;
   const [staff, setStaff] = useState<Partial<Staff> | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     fetch(`/api/staff/${id}`)
       .then((r) => r.json())
       .then(setStaff);
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setIsAdmin(d.user?.role === "school_admin"));
   }, [id]);
 
   const handleSubmit = async (data: Partial<Staff>) => {
@@ -45,9 +50,12 @@ export default function EditStaffPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">{t("staffPage.editStaff")}</h1>
-        <p className="text-slate-500 mt-1">{staff.firstName} {staff.lastName}</p>
+        <p className="text-slate-500 mt-1">
+          {staff.firstName} {staff.lastName}
+        </p>
       </div>
       <StaffForm initialData={staff} onSubmit={handleSubmit} submitLabel={t("staffPage.updateStaff")} />
+      {isAdmin && <StaffPortalAccountPanel staffId={id} />}
     </div>
   );
 }

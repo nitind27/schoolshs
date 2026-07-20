@@ -1,0 +1,260 @@
+.admissions-page {
+  --adm-amber: #f59e0b;
+  --adm-emerald: #10b981;
+  --adm-red: #ef4444;
+  --adm-blue: #2563eb;
+  --adm-indigo: #4f46e5;
+}
+
+.adm-hero {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 45%, #4f46e5 100%);
+  border-radius: 1.25rem;
+  padding: 1.5rem 1.75rem;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 40px -12px rgb(37 99 235 / 0.35);
+}
+
+.adm-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 90% 10%, rgb(255 255 255 / 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 10% 90%, rgb(255 255 255 / 0.08) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+.adm-stat-pill {
+  background: rgb(255 255 255 / 0.12);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.adm-stat-pill:hover {
+  background: rgb(255 255 255 / 0.18);
+  transform: translateY(-1px);
+}
+
+.adm-stat-pill.active {
+  background: white;
+  color: #1e3a8a;
+  border-color: white;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+.adm-panel {
+  background: white;
+  border-radius: 1.25rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 24px -4px rgb(15 23 42 / 0.06);
+}
+
+.adm-class-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
+  min-width: 0;
+}
+
+.adm-class-strip-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.adm-class-scroll {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  mask-image: linear-gradient(to right, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
+}
+
+.adm-class-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.adm-class-chip {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  transition: all 0.15s;
+}
+
+.adm-class-chip-sm {
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-width: 1px;
+}
+
+.adm-class-chip:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.adm-class-chip.active {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 4px 14px rgb(37 99 235 / 0.35);
+}
+
+.adm-class-chip .badge {
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.adm-class-chip.active .badge {
+  background: rgb(255 255 255 / 0.25);
+  color: white;
+}
+
+.adm-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 0 0.75rem 0 1rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.adm-search:focus-within {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.12);
+  background: white;
+}
+
+.adm-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  transition: background 0.15s;
+}
+
+.adm-filter-tag:hover {
+  background: #dbeafe;
+}
+
+.adm-student-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1rem 1.15rem;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.adm-student-card:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 8px 24px -8px rgb(37 99 235 / 0.15);
+}
+
+.adm-student-card.selected {
+  border-color: #3b82f6;
+  background: linear-gradient(to right, #eff6ff, white);
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.adm-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.adm-progress-ring {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+}
+
+.adm-empty {
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+}
+
+.adm-empty-icon {
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 1rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #eff6ff, #e0e7ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+}
+
+.adm-grade-label {
+  display: none;
+}
+
+.adm-bulk-bar {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 20;
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: white;
+  border-radius: 1rem;
+  padding: 0.85rem 1.15rem;
+  box-shadow: 0 12px 32px -8px rgb(5 150 105 / 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  animation: adm-slide-up 0.25s ease-out;
+}
+
+@keyframes adm-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -68,8 +68,8 @@ export function useStudentData() {
 
 export function StudentLoading({ label }: { label?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[280px] gap-3">
-      <Loader2 className="h-9 w-9 animate-spin text-sky-600" />
+    <div className="flex min-h-[280px] flex-col items-center justify-center gap-3">
+      <Loader2 className="h-8 w-8 animate-spin text-[var(--sp-accent,#0d7377)]" />
       {label && <p className="text-sm text-slate-500">{label}</p>}
     </div>
   );
@@ -79,8 +79,8 @@ export function StudentError({ message }: { message: string }) {
   const { reload } = useStudentData();
   const t = useT();
   return (
-    <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-      <AlertCircle className="mx-auto h-10 w-10 text-red-500 mb-3" />
+    <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+      <AlertCircle className="mx-auto mb-3 h-9 w-9 text-red-500" />
       <p className="text-sm text-red-700">{message}</p>
       <button
         type="button"
@@ -104,15 +104,15 @@ export function StudentPageHeader({
 }) {
   return (
     <div className="student-portal-header">
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3.5">
         {Icon && (
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-lg shadow-sky-600/25">
-            <Icon className="h-6 w-6" />
+          <div className="sp-header-icon">
+            <Icon className="h-5 w-5" />
           </div>
         )}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-slate-600 sm:text-base">{subtitle}</p>}
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-[1.7rem]">{title}</h1>
+          {subtitle && <p className="mt-1 text-sm text-slate-500 sm:text-[0.95rem]">{subtitle}</p>}
         </div>
       </div>
     </div>
@@ -123,34 +123,25 @@ export function StudentMetricCard({
   label,
   value,
   sub,
-  accent = "sky",
   icon: Icon,
 }: {
   label: string;
   value: string | number;
   sub?: string;
-  accent?: "sky" | "blue" | "emerald" | "amber" | "violet";
+  accent?: string;
   icon?: React.ComponentType<{ className?: string }>;
 }) {
-  const accents = {
-    sky: "from-sky-500 to-cyan-600 shadow-sky-500/20",
-    blue: "from-blue-500 to-indigo-600 shadow-blue-500/20",
-    emerald: "from-emerald-500 to-teal-600 shadow-emerald-500/20",
-    amber: "from-amber-500 to-orange-500 shadow-amber-500/20",
-    violet: "from-violet-500 to-purple-600 shadow-violet-500/20",
-  };
-
   return (
-    <div className="student-metric-card group">
+    <div className="student-metric-card">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">{value}</p>
-          {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}
+        <div className="min-w-0">
+          <p className="sp-metric-label">{label}</p>
+          <p className="sp-metric-value truncate">{value}</p>
+          {sub && <p className="sp-metric-sub">{sub}</p>}
         </div>
         {Icon && (
-          <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg transition-transform group-hover:scale-105", accents[accent])}>
-            <Icon className="h-5 w-5" />
+          <div className="sp-metric-icon shrink-0">
+            <Icon className="h-4 w-4" />
           </div>
         )}
       </div>
@@ -163,32 +154,23 @@ export function StudentQuickLink({
   icon: Icon,
   label,
   desc,
-  accent = "sky",
 }: {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   desc: string;
-  accent?: "sky" | "blue" | "emerald" | "amber" | "violet";
+  accent?: string;
 }) {
-  const iconColors = {
-    sky: "text-sky-600 bg-sky-100",
-    blue: "text-blue-600 bg-blue-100",
-    emerald: "text-emerald-600 bg-emerald-100",
-    amber: "text-amber-600 bg-amber-100",
-    violet: "text-violet-600 bg-violet-100",
-  };
-
   return (
-    <Link href={href} className="student-quick-link">
-      <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl", iconColors[accent])}>
-        <Icon className="h-5 w-5" />
+    <Link href={href} className="student-quick-link group">
+      <div className="sp-ql-icon">
+        <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="font-semibold text-slate-900">{label}</h3>
-        <p className="text-sm text-slate-500 truncate">{desc}</p>
+        <h3>{label}</h3>
+        <p className="truncate">{desc}</p>
       </div>
-      <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
+      <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--sp-accent,#0d7377)]" />
     </Link>
   );
 }
@@ -208,8 +190,8 @@ export function StudentSection({
     <section className="student-section">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-          {description && <p className="text-sm text-slate-500 mt-0.5">{description}</p>}
+          <h2 className="student-section-title">{title}</h2>
+          {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
         </div>
         {action}
       </div>
@@ -246,22 +228,29 @@ export function StudentEmptyState({
 }) {
   return (
     <div className="student-empty">
-      <Icon className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-      <p className="font-medium text-slate-700">{title}</p>
-      {description && <p className="text-sm text-slate-500 mt-1">{description}</p>}
+      <Icon className="mx-auto mb-3 h-11 w-11 text-slate-300" />
+      <p className="font-semibold text-slate-700">{title}</p>
+      {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
     </div>
   );
 }
 
-export function StudentStatusPill({ children, variant = "default" }: { children: ReactNode; variant?: "default" | "success" | "warning" | "muted" }) {
-  const styles = {
-    default: "bg-sky-100 text-sky-800 border-sky-200",
-    success: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    warning: "bg-amber-100 text-amber-800 border-amber-200",
-    muted: "bg-slate-100 text-slate-600 border-slate-200",
-  };
+export function StudentStatusPill({
+  children,
+  variant = "default",
+}: {
+  children: ReactNode;
+  variant?: "default" | "success" | "warning" | "muted";
+}) {
   return (
-    <span className={cn("inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold", styles[variant])}>
+    <span
+      className={cn(
+        "student-status-pill",
+        variant === "muted" && "student-status-pill--muted",
+        variant === "success" && "student-status-pill--success",
+        variant === "warning" && "student-status-pill--warning"
+      )}
+    >
       {children}
     </span>
   );

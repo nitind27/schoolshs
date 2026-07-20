@@ -23,6 +23,7 @@ import {
   scrapePortalStatus,
   type ApplyActionMode,
 } from "./portal-navigator";
+import { resolveDocAbsolutePath } from "../src/lib/student-documents.server";
 import { JobReporter, buildInitialProgress, type StudentProgressItem } from "./status-reporter";
 import { isAutomationHeadless, VPS_LOGIN_HELP } from "./headless";
 import { prisma } from "../src/lib/db";
@@ -57,22 +58,25 @@ const log: LogFn = (msg) => {
   if (reporter) void reporter.appendLog(msg);
 };
 
-async function fillCurrentPage(page: Page, student: Record<string, unknown>) {
+async function fillCurrentPage(page: Page, student: Record<string, unknown>, studentId: string) {
   log("Auto-filling form...");
   const mappings = buildFieldMappings(student);
   const textFilled = await fillTextFields(page, mappings, log);
   const dropdownFilled = await fillDropdowns(page, student, DG_DROPDOWN_MAPPINGS, log);
   await fillRadioAndCheckboxes(page, student, log);
 
+  const docPath = (stored: unknown) =>
+    resolveDocAbsolutePath(studentId, stored ? String(stored) : null) || "";
+
   const docs = [
-    { label: "photo", path: String(student.photoPath || "") },
-    { label: "aadhaar", path: String(student.aadhaarDocPath || "") },
-    { label: "income", path: String(student.incomeCertPath || "") },
-    { label: "caste", path: String(student.casteCertPath || "") },
-    { label: "10th", path: String(student.marksheet10Path || "") },
-    { label: "12th", path: String(student.marksheet12Path || "") },
-    { label: "bank", path: String(student.bankPassbookPath || "") },
-    { label: "fee", path: String(student.feeReceiptPath || "") },
+    { label: "photo", path: docPath(student.photoPath) },
+    { label: "aadhaar", path: docPath(student.aadhaarDocPath) },
+    { label: "income", path: docPath(student.incomeCertPath) },
+    { label: "caste", path: docPath(student.casteCertPath) },
+    { label: "10th", path: docPath(student.marksheet10Path) },
+    { label: "12th", path: docPath(student.marksheet12Path) },
+    { label: "bank", path: docPath(student.bankPassbookPath) },
+    { label: "fee", path: docPath(student.feeReceiptPath) },
   ];
   const uploaded = await uploadDocuments(page, docs, log);
   log(`Filled ${textFilled} text, ${dropdownFilled} dropdowns, ${uploaded} docs`);
@@ -147,7 +151,7 @@ async function runStudentFlow(
     await reporter.flush();
   }
 
-  const fillFn = () => fillCurrentPage(page, student as unknown as Record<string, unknown>);
+  const fillFn = () => fillCurrentPage(page, student as unknown as Record<string, unknown>, studentId);
   await fillFn();
 
   const pagesDone = await autoFillAllPages(page, fillFn, log, 8);

@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
     const statusFilter = searchParams.get("status");
     const search = searchParams.get("search");
     const listStudents = searchParams.get("list") === "true";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
 
     const students = await prisma.student.findMany({
       where: { schoolId: session.schoolId },
@@ -112,12 +114,17 @@ export async function GET(request: NextRequest) {
           ? normalizeCategory(categoryFilter)
           : null;
 
+      const total = filtered.length;
+      const paged = filtered.slice((page - 1) * limit, page * limit);
+
       return NextResponse.json({
         category: catNorm || "ALL",
         gender: genderFilter,
         meta: catNorm ? getCategoryMeta(catNorm) : { label: "All Categories", id: "ALL" },
-        students: filtered,
-        total: filtered.length,
+        students: paged,
+        total,
+        page,
+        limit,
         genderSummary: catNorm ? byCategory[catNorm] : overall,
       });
     }

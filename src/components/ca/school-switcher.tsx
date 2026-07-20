@@ -69,8 +69,8 @@ export function CaSchoolSwitcher({ className }: { className?: string }) {
 
   if (loading) {
     return (
-      <div className={cn("rounded-xl border border-violet-900/50 bg-violet-950/40 px-3 py-2.5", className)}>
-        <Loader2 className="h-4 w-4 animate-spin text-violet-300" />
+      <div className={cn("rounded-xl border border-amber-900/40 bg-amber-950/40 px-3 py-2.5", className)}>
+        <Loader2 className="h-4 w-4 animate-spin text-amber-200" />
       </div>
     );
   }
@@ -78,10 +78,10 @@ export function CaSchoolSwitcher({ className }: { className?: string }) {
   if (schools.length <= 1) {
     if (!activeSchool) return null;
     return (
-      <div className={cn("rounded-xl border border-violet-900/50 bg-violet-950/40 px-3 py-2.5", className)}>
-        <p className="text-[10px] uppercase tracking-wider text-violet-300/70">{t("caPortal.activeSchool")}</p>
-        <p className="text-sm font-semibold text-white truncate">{activeSchool.name}</p>
-        <p className="text-[11px] text-violet-300/80">{activeSchool.code}</p>
+      <div className={cn("rounded-xl border border-amber-900/40 bg-amber-950/40 px-3 py-2.5", className)}>
+        <p className="text-[10px] uppercase tracking-wider text-amber-200/70">{t("caPortal.activeSchool")}</p>
+        <p className="truncate text-sm font-semibold text-white">{activeSchool.name}</p>
+        <p className="text-[11px] text-amber-200/80">{activeSchool.code}</p>
       </div>
     );
   }
@@ -92,40 +92,40 @@ export function CaSchoolSwitcher({ className }: { className?: string }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={switching}
-        className="w-full rounded-xl border border-violet-900/50 bg-violet-950/40 px-3 py-2.5 text-left hover:bg-violet-900/30 transition-colors"
+        className="w-full rounded-xl border border-amber-900/40 bg-amber-950/40 px-3 py-2.5 text-left transition-colors hover:bg-amber-900/35"
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-wider text-violet-300/70">{t("caPortal.activeSchool")}</p>
-            <p className="text-sm font-semibold text-white truncate">{activeSchool?.name}</p>
-            <p className="text-[11px] text-violet-300/80">{activeSchool?.code}</p>
+            <p className="text-[10px] uppercase tracking-wider text-amber-200/70">{t("caPortal.activeSchool")}</p>
+            <p className="truncate text-sm font-semibold text-white">{activeSchool?.name}</p>
+            <p className="text-[11px] text-amber-200/80">{activeSchool?.code}</p>
           </div>
           {switching ? (
-            <Loader2 className="h-4 w-4 animate-spin text-violet-300 shrink-0 mt-1" />
+            <Loader2 className="mt-1 h-4 w-4 shrink-0 animate-spin text-amber-200" />
           ) : (
-            <ChevronDown className={cn("h-4 w-4 text-violet-300 shrink-0 mt-1 transition-transform", open && "rotate-180")} />
+            <ChevronDown className={cn("mt-1 h-4 w-4 shrink-0 text-amber-200 transition-transform", open && "rotate-180")} />
           )}
         </div>
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-violet-900/60 bg-slate-900 shadow-xl overflow-hidden">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-amber-900/50 bg-stone-950 shadow-xl">
           {schools.map((school) => (
             <button
               key={school.id}
               type="button"
               onClick={() => switchSchool(school.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-violet-900/40 transition-colors",
-                school.id === activeId && "bg-violet-900/50"
+                "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-amber-900/35",
+                school.id === activeId && "bg-amber-900/45"
               )}
             >
-              <div className="w-8 h-8 rounded-lg bg-violet-800/60 flex items-center justify-center shrink-0">
-                <Building2 className="h-4 w-4 text-violet-200" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-800/55">
+                <Building2 className="h-4 w-4 text-amber-100" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-white truncate">{school.name}</p>
-                <p className="text-[11px] text-violet-300/80">
+                <p className="truncate text-sm font-medium text-white">{school.name}</p>
+                <p className="text-[11px] text-amber-200/80">
                   {school.code}
                   {school.financialYear ? ` · FY ${school.financialYear.label}` : ""}
                   {(school.pendingVouchers || 0) > 0 ? ` · ${school.pendingVouchers} pending` : ""}

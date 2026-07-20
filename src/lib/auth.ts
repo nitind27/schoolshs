@@ -1,5 +1,5 @@
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import {
   createSessionToken,
@@ -13,6 +13,7 @@ import {
   STAFF_ROLES,
 } from "@/lib/roles";
 import { buildAccountingSession, type AccountingSession } from "@/lib/accounting-scope";
+import { extractBearerToken } from "@/lib/mobile-api";
 
 export type { SessionUser, UserRole };
 export { parseSessionToken };
@@ -34,10 +35,19 @@ export function verifyPassword(password: string, stored: string): boolean {
 }
 
 export async function getSession(): Promise<SessionUser | null> {
+  const headerStore = await headers();
+  const bearer = extractBearerToken(headerStore.get("authorization"));
+
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const cookieToken = cookieStore.get(SESSION_COOKIE)?.value;
+
+  const token = bearer || cookieToken;
   if (!token) return null;
   return await parseSessionToken(token);
+}
+
+export async function createAuthToken(user: SessionUser): Promise<string> {
+  return createSessionToken(user);
 }
 
 export async function setSessionCookie(response: NextResponse, user: SessionUser) {

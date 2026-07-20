@@ -27,6 +27,7 @@ import {
 import { formatIndianCurrency } from "@/lib/accounting";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import { useT } from "@/i18n/locale-provider";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface AccountingData {
   financialYear: { id: string; label: string; auditStatus: string; isLocked?: boolean; submittedAt?: string | null; _count: { vouchers: number; accounts: number } } | null;
@@ -38,6 +39,7 @@ interface AccountingData {
 
 export default function AccountingPage() {
   const t = useT();
+  const { confirm, ConfirmDialog } = useConfirm();
   const [data, setData] = useState<AccountingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [newFy, setNewFy] = useState("2025-26");
@@ -78,20 +80,27 @@ export default function AccountingPage() {
   };
 
   const submitToCa = async () => {
-    if (!confirm(t("accounting.submitToCaConfirm"))) return;
-    setSubmitting(true);
-    setSubmitMsg(null);
-    try {
-      const res = await fetch("/api/accounting/submit-audit", { method: "POST" });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || t("common.submitFailed"));
-      setSubmitMsg(t("accounting.submittedToCa"));
-      load();
-    } catch (e) {
-      setSubmitMsg(e instanceof Error ? e.message : t("common.submitFailed"));
-    } finally {
-      setSubmitting(false);
-    }
+    await confirm({
+      title: t("common.confirm"),
+      message: t("accounting.submitToCaConfirm"),
+      confirmLabel: t("common.submit"),
+      variant: "warning",
+      onConfirm: async () => {
+        setSubmitting(true);
+        setSubmitMsg(null);
+        try {
+          const res = await fetch("/api/accounting/submit-audit", { method: "POST" });
+          const payload = await res.json();
+          if (!res.ok) throw new Error(payload.error || t("common.submitFailed"));
+          setSubmitMsg(t("accounting.submittedToCa"));
+          load();
+        } catch (e) {
+          setSubmitMsg(e instanceof Error ? e.message : t("common.submitFailed"));
+        } finally {
+          setSubmitting(false);
+        }
+      },
+    });
   };
 
   const fyAuditLabel = (status: string) => {
@@ -125,6 +134,7 @@ export default function AccountingPage() {
   const pendingAudit = data?.voucherStats?.find((s) => s.auditStatus === "pending")?._count || 0;
 
   return (
+    <>
     <PageShell
       title={t("accounting.title")}
       subtitle={t("accounting.subtitle", { year: fyLabel })}
@@ -362,5 +372,7 @@ export default function AccountingPage() {
       </div>
     </div>
     </PageShell>
+    <ConfirmDialog />
+    </>
   );
 }

@@ -6,30 +6,53 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { STAFF_DESIGNATIONS, getStaffRoleWork } from "@/lib/constants";
-import { Plus, Edit, Search, Users } from "lucide-react";
+import { Plus, Edit, Search, Users, ClipboardList, IndianRupee } from "lucide-react";
 import type { Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 import { PageShell } from "@/components/layout/page-shell";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { PAGE_SIZE } from "@/lib/pagination";
 
 export default function StaffPage() {
   const t = useT();
   const [staff, setStaff] = useState<(Staff & { _count?: { classes: number } })[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [designation, setDesignation] = useState("");
+  const [dashHref, setDashHref] = useState("/dashboard");
+  const [hrSummary, setHrSummary] = useState<{
+    totalStaff: number; withSalary: number; attendanceMarked: number;
+    payrollPending: number; totalNet: number;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.user?.role === "clerk") setDashHref("/clerk");
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchStaff = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     if (search) params.set("search", search);
     if (designation) params.set("designation", designation);
     const res = await fetch(`/api/staff?${params}`);
     const data = await res.json();
     setStaff(data.staff || []);
+    setTotal(data.total ?? 0);
     setLoading(false);
-  }, [search, designation]);
+  }, [search, designation, page]);
 
   useEffect(() => { fetchStaff(); }, [fetchStaff]);
+
+  useEffect(() => {
+    fetch("/api/staff-hr/summary").then((r) => r.json()).then(setHrSummary).catch(() => {});
+  }, []);
 
   const teacherCount = staff.filter((s) => ["teacher", "head teacher"].includes(String(s.designation || "").toLowerCase())).length;
   const peonCount = staff.filter((s) => ["peon", "puen"].includes(String(s.designation || "").toLowerCase())).length;
@@ -38,15 +61,20 @@ export default function StaffPage() {
   return (
     <PageShell
       title={t("staffPage.title")}
-      subtitle={t("staffPage.staffCount", { count: staff.length })}
+      subtitle={t("staffPage.staffCount", { count: total })}
       breadcrumbs={[
-        { label: t("nav.dashboard"), href: "/dashboard" },
+        { label: t("nav.dashboard"), href: dashHref },
         { label: t("nav.staff") },
       ]}
       actions={(
-        <Link href="/staff/new">
-          <Button><Plus className="h-4 w-4" /> {t("staffPage.addStaff")}</Button>
-        </Link>
+        <>
+          <Link href="/staff/register">
+            <Button variant="outline"><ClipboardList className="h-4 w-4" /> {t("staffRegister.title")}</Button>
+          </Link>
+          <Link href="/staff/new">
+            <Button><Plus className="h-4 w-4" /> {t("staffPage.addStaff")}</Button>
+          </Link>
+        </>
       )}
     >
 
@@ -67,6 +95,32 @@ export default function StaffPage() {
         </CardContent>
       </Card>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link href="/staff/attendance" className="rounded-2xl bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-200 p-5 hover:shadow-md transition-all">
+          <div className="flex items-start justify-between">
+            <div>
+              <ClipboardList className="h-8 w-8 text-violet-600 mb-2" />
+              <p className="font-bold text-slate-900 text-lg">{t("staffHr.attendanceTitle")}</p>
+              <p className="text-sm text-slate-600 mt-1">{t("staffHr.attendanceCardDesc")}</p>
+            </div>
+            <span className="text-2xl font-black text-violet-600">{hrSummary?.attendanceMarked ?? 0}/{hrSummary?.totalStaff ?? 0}</span>
+          </div>
+        </Link>
+        <Link href="/staff/payroll" className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 p-5 hover:shadow-md transition-all">
+          <div className="flex items-start justify-between">
+            <div>
+              <IndianRupee className="h-8 w-8 text-emerald-600 mb-2" />
+              <p className="font-bold text-slate-900 text-lg">{t("staffHr.payrollTitle")}</p>
+              <p className="text-sm text-slate-600 mt-1">{t("staffHr.payrollCardDesc")}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-black text-emerald-700">₹{(hrSummary?.totalNet ?? 0).toLocaleString("en-IN")}</p>
+              <p className="text-xs text-amber-600">{hrSummary?.payrollPending ?? 0} {t("staffHr.pending")}</p>
+            </div>
+          </div>
+        </Link>
+      </div>
+
       <Card>
         <CardContent className="p-4 flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
@@ -74,14 +128,14 @@ export default function StaffPage() {
             <input
               placeholder={t("staffPage.searchPlaceholder")}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
           <Select
             options={["", ...STAFF_DESIGNATIONS]}
             value={designation}
-            onChange={(e) => setDesignation(e.target.value)}
+            onChange={(e) => { setDesignation(e.target.value); setPage(1); }}
             className="w-full sm:w-48"
           />
         </CardContent>
@@ -143,6 +197,7 @@ export default function StaffPage() {
               </table>
             </div>
           )}
+          <TablePagination page={page} total={total} onPageChange={setPage} />
         </CardContent>
       </Card>
     </PageShell>

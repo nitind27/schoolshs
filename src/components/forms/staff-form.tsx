@@ -1,14 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GENDERS, STAFF_DESIGNATIONS, getStaffRoleWork } from "@/lib/constants";
-import { Save } from "lucide-react";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  Banknote,
+  Briefcase,
+  Save,
+  UserRound,
+} from "lucide-react";
 import type { Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
+import Link from "next/link";
 
 type StaffFormData = Partial<Staff>;
 
@@ -16,9 +23,32 @@ interface StaffFormProps {
   initialData?: StaffFormData;
   onSubmit: (data: StaffFormData) => Promise<void>;
   submitLabel?: string;
+  cancelHref?: string;
 }
 
-export function StaffForm({ initialData = {}, onSubmit, submitLabel }: StaffFormProps) {
+function SectionHead({
+  icon: Icon,
+  title,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+}) {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+        <Icon className="h-3.5 w-3.5" />
+      </span>
+      <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+    </div>
+  );
+}
+
+export function StaffForm({
+  initialData = {},
+  onSubmit,
+  submitLabel,
+  cancelHref = "/staff",
+}: StaffFormProps) {
   const t = useT();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<StaffFormData>({
@@ -55,9 +85,7 @@ export function StaffForm({ initialData = {}, onSubmit, submitLabel }: StaffForm
         const next = `EMP${String(maxSeq + 1).padStart(4, "0")}`;
         setForm((prev) => (prev.employeeId ? prev : { ...prev, employeeId: next }));
       })
-      .catch(() => {
-        // Server also auto-generates employee ID on save.
-      });
+      .catch(() => {});
   }, [isEditMode, form.employeeId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,12 +99,14 @@ export function StaffForm({ initialData = {}, onSubmit, submitLabel }: StaffForm
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>{t("staffPage.staffDetails")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm shadow-slate-200/40"
+    >
+      {/* Basic identity */}
+      <section className="border-b border-slate-100 p-4 md:p-5">
+        <SectionHead icon={UserRound} title={t("staffPage.staffDetails")} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Input
             label={t("staffPage.employeeId")}
             placeholder="EMP0001"
@@ -84,36 +114,187 @@ export function StaffForm({ initialData = {}, onSubmit, submitLabel }: StaffForm
             onChange={(e) => update("employeeId", e.target.value)}
             disabled={!isEditMode}
           />
-          <Input label={t("staffPage.firstName")} required value={form.firstName || ""} onChange={(e) => update("firstName", e.target.value)} />
-          <Input label={t("staffPage.lastName")} required value={form.lastName || ""} onChange={(e) => update("lastName", e.target.value)} />
-          <Select label={t("staffPage.designation")} required options={STAFF_DESIGNATIONS} value={form.designation || ""} onChange={(e) => update("designation", e.target.value)} />
-          <Input label={t("staffPage.department")} value={form.department || ""} onChange={(e) => update("department", e.target.value)} />
-          <Select label={t("staffPage.gender")} options={GENDERS} value={form.gender || ""} onChange={(e) => update("gender", e.target.value)} />
-          <Input label={t("staffPage.mobileNumber")} required maxLength={10} value={form.mobileNumber || ""} onChange={(e) => update("mobileNumber", e.target.value)} />
-          <Input label={t("common.email")} type="email" value={form.email || ""} onChange={(e) => update("email", e.target.value)} />
-          <Input label={t("staffPage.dateOfJoining")} value={form.dateOfJoining || ""} onChange={(e) => update("dateOfJoining", e.target.value)} />
-          {roleWork.length > 0 && (
-            <div className="md:col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-3">
-              <p className="text-sm font-semibold text-blue-900">Main Work - {form.designation}</p>
-              <ul className="mt-2 space-y-1 text-sm text-blue-800 list-disc pl-5">
-                {roleWork.map((task) => (
-                  <li key={task}>{task}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <label className="flex items-center gap-2 text-sm md:col-span-2">
-            <input type="checkbox" checked={form.isActive !== false} onChange={(e) => update("isActive", e.target.checked)} className="rounded" />
-            {t("staffPage.activeStaff")}
-          </label>
-          <div className="md:col-span-2 flex justify-end pt-4">
-            <Button type="submit" variant="success" disabled={loading}>
-              <Save className="h-4 w-4" />
-              {loading ? t("common.saving") : resolvedSubmitLabel}
-            </Button>
+          <Input
+            label={t("staffPage.firstName")}
+            required
+            value={form.firstName || ""}
+            onChange={(e) => update("firstName", e.target.value)}
+          />
+          <Input
+            label={t("staffPage.lastName")}
+            required
+            value={form.lastName || ""}
+            onChange={(e) => update("lastName", e.target.value)}
+          />
+          <Select
+            label={t("staffPage.designation")}
+            required
+            options={STAFF_DESIGNATIONS}
+            value={form.designation || ""}
+            onChange={(e) => update("designation", e.target.value)}
+          />
+          <Input
+            label={t("staffPage.department")}
+            value={form.department || ""}
+            onChange={(e) => update("department", e.target.value)}
+          />
+          <Select
+            label={t("staffPage.gender")}
+            options={GENDERS}
+            value={form.gender || ""}
+            onChange={(e) => update("gender", e.target.value)}
+          />
+          <Input
+            label={t("staffPage.mobileNumber")}
+            required
+            maxLength={10}
+            value={form.mobileNumber || ""}
+            onChange={(e) => update("mobileNumber", e.target.value.replace(/\D/g, "").slice(0, 10))}
+          />
+          <Input
+            label={t("common.email")}
+            type="email"
+            value={form.email || ""}
+            onChange={(e) => update("email", e.target.value)}
+          />
+          <Input
+            label={t("staffPage.dateOfJoining")}
+            placeholder="DD-MM-YYYY"
+            value={form.dateOfJoining || ""}
+            onChange={(e) => update("dateOfJoining", e.target.value)}
+          />
+        </div>
+        {roleWork.length > 0 && (
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <p className="text-xs font-semibold text-slate-700">
+              {t("staffPage.mainWork")} — {form.designation}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              {roleWork.join(" · ")}
+            </p>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        )}
+      </section>
+
+      {/* Service register */}
+      <section className="border-b border-slate-100 p-4 md:p-5">
+        <SectionHead icon={Briefcase} title={t("staffRegister.serviceSection")} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Input
+            label={t("staffRegister.dateOfBirth")}
+            placeholder="DD-MM-YYYY"
+            value={form.dateOfBirth || ""}
+            onChange={(e) => update("dateOfBirth", e.target.value)}
+          />
+          <Input
+            label={t("staffRegister.panNumber")}
+            placeholder="ABCDE1234F"
+            maxLength={10}
+            value={form.panNumber || ""}
+            onChange={(e) => update("panNumber", e.target.value.toUpperCase())}
+          />
+          <Input
+            label={t("staffRegister.gpfCpfNo")}
+            placeholder="TP/167/019"
+            value={form.gpfCpfNo || ""}
+            onChange={(e) => update("gpfCpfNo", e.target.value)}
+          />
+          <Input
+            label={t("staffRegister.aadhaarNumber")}
+            maxLength={12}
+            value={form.aadhaarNumber || ""}
+            onChange={(e) => update("aadhaarNumber", e.target.value.replace(/\D/g, "").slice(0, 12))}
+          />
+          <Input
+            label={t("staffRegister.qualification")}
+            placeholder="M.A. B.ED"
+            value={form.qualification || ""}
+            onChange={(e) => update("qualification", e.target.value)}
+          />
+          <Input
+            label={t("staffRegister.payLevel")}
+            placeholder="LEVEL-8 / FIX PAY"
+            value={form.payLevel || ""}
+            onChange={(e) => update("payLevel", e.target.value)}
+          />
+        </div>
+      </section>
+
+      {/* Salary & bank */}
+      <section className="border-b border-slate-100 p-4 md:p-5">
+        <SectionHead icon={Banknote} title={t("staffHr.salarySection")} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Input
+            label={t("staffHr.monthlySalary")}
+            type="number"
+            min={0}
+            value={form.monthlySalary ?? ""}
+            onChange={(e) => update("monthlySalary", e.target.value)}
+          />
+          <Input
+            label={t("staffHr.hra")}
+            type="number"
+            min={0}
+            value={form.hra ?? ""}
+            onChange={(e) => update("hra", e.target.value)}
+          />
+          <Input
+            label={t("staffHr.conveyance")}
+            type="number"
+            min={0}
+            value={form.conveyance ?? ""}
+            onChange={(e) => update("conveyance", e.target.value)}
+          />
+          <Input
+            label={t("staffHr.pfDeduction")}
+            type="number"
+            min={0}
+            value={form.pfDeduction ?? ""}
+            onChange={(e) => update("pfDeduction", e.target.value)}
+          />
+          <Input
+            label={t("staffHr.bankName")}
+            value={form.bankName || ""}
+            onChange={(e) => update("bankName", e.target.value)}
+          />
+          <Input
+            label={t("staffHr.bankAccount")}
+            value={form.bankAccount || ""}
+            onChange={(e) => update("bankAccount", e.target.value)}
+          />
+          <Input
+            label={t("staffHr.ifscCode")}
+            value={form.ifscCode || ""}
+            onChange={(e) => update("ifscCode", e.target.value.toUpperCase())}
+          />
+        </div>
+      </section>
+
+      {/* Footer */}
+      <div className="flex flex-col gap-3 bg-slate-50/80 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between md:px-5">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={form.isActive !== false}
+            onChange={(e) => update("isActive", e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30"
+          />
+          <BadgeCheck className="h-4 w-4 text-emerald-600" />
+          {t("staffPage.activeStaff")}
+        </label>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <Link href={cancelHref}>
+            <Button type="button" variant="outline" className="w-full sm:w-auto">
+              <ArrowLeft className="h-4 w-4" />
+              {t("common.cancel")}
+            </Button>
+          </Link>
+          <Button type="submit" disabled={loading} className="w-full min-w-[140px] sm:w-auto">
+            <Save className="h-4 w-4" />
+            {loading ? t("common.saving") : resolvedSubmitLabel}
+          </Button>
+        </div>
+      </div>
+    </form>
   );
 }

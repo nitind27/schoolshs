@@ -10,6 +10,7 @@ import {
 } from "@/components/student-portal/student-portal-ui";
 import { User } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
+import { studentFullNameGu } from "@/lib/student-names";
 
 export default function StudentProfilePage() {
   const t = useT();
@@ -30,7 +31,7 @@ export default function StudentProfilePage() {
         <div className="grid sm:grid-cols-2 gap-3">
           <StudentField
             label={t("studentPortal.fullName")}
-            value={`${student.firstName} ${student.middleName || ""} ${student.surname}`.replace(/\s+/g, " ").trim()}
+            value={studentFullNameGu(student)}
           />
           <StudentField label={t("studentPortal.aadhaarName")} value={student.aadhaarName as string} />
           <StudentField label={t("studentPortal.dob")} value={student.dateOfBirth as string} />

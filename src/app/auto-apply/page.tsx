@@ -1,17 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState, Suspense } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Badge, CategoryBadge } from "@/components/ui/badge";
-import { PageShell } from "@/components/layout/page-shell";
+import { CategoryBadge } from "@/components/ui/badge";
 import { useT } from "@/i18n/locale-provider";
 import {
-  Play, RefreshCw, Zap, CheckCircle, XCircle, Clock, Loader2,
+  Play, RefreshCw, CheckCircle, XCircle, Clock, Loader2,
   Square, CheckSquare, Bot, LogIn, Shield, Save, ExternalLink,
-  Users, BookOpen, Filter, ChevronDown, ChevronRight,
+  Users, BookOpen, Search, ChevronDown, Info, X,
 } from "lucide-react";
 import type { Student } from "@/generated/prisma/client";
 
@@ -56,20 +54,11 @@ interface RemoteBrowserConfig {
 
 function statusColor(status: string) {
   switch (status) {
-    case "submitted": case "filled":  return "bg-emerald-50 text-emerald-700 border border-emerald-200";
-    case "running":                   return "bg-blue-50 text-blue-700 border border-blue-200";
-    case "failed":                    return "bg-red-50 text-red-700 border border-red-200";
-    case "pending":                   return "bg-slate-100 text-slate-600 border border-slate-200";
-    default:                          return "bg-amber-50 text-amber-700 border border-amber-200";
-  }
-}
-
-function statusDot(status: string) {
-  switch (status) {
-    case "submitted": case "filled": case "completed": return "bg-emerald-500";
-    case "running":   return "bg-blue-500 animate-pulse";
-    case "failed":    return "bg-red-500";
-    default:          return "bg-slate-400";
+    case "submitted": case "filled":  return "bg-emerald-50 text-emerald-700";
+    case "running":                   return "bg-blue-50 text-blue-700";
+    case "failed":                    return "bg-red-50 text-red-700";
+    case "pending":                   return "bg-slate-100 text-slate-600";
+    default:                          return "bg-amber-50 text-amber-700";
   }
 }
 
@@ -80,7 +69,6 @@ function groupByClass(students: Student[], unknownLabel: string): Map<string, St
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(s);
   }
-  // Sort: Balvatika first, then numerically, then unknown
   return new Map([...map.entries()].sort(([a], [b]) => {
     if (a === unknownLabel) return 1;
     if (b === unknownLabel) return -1;
@@ -143,32 +131,41 @@ function AutoApplyContent() {
   const [savingCreds, setSavingCreds] = useState(false);
   const [credsSaved, setCredsSaved] = useState(false);
   const [remoteBrowser, setRemoteBrowser] = useState<RemoteBrowserConfig | null>(null);
-
-  /* Class expansion */
-  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
-  const toggleClass = (key: string) => {
-    setExpandedClasses((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  /* Filter */
+  const [activeClassKey, setActiveClassKey] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const filteredStudents = students.filter((s) => {
-    if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
-    return (
-      s.firstName.toLowerCase().includes(q) ||
-      s.surname.toLowerCase().includes(q) ||
-      s.aadhaarNumber.includes(q) ||
-      s.category.toLowerCase().includes(q)
-    );
-  });
+  const [showLoginPanel, setShowLoginPanel] = useState(false);
+  const [showJobDetail, setShowJobDetail] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
-  const classGroups = groupByClass(filteredStudents, t("autoApply.unknownClass"));
+  const allClassGroups = useMemo(
+    () => groupByClass(students, t("autoApply.unknownClass")),
+    [students, t]
+  );
+
+  const classOptions = useMemo(
+    () =>
+      [...allClassGroups.entries()].map(([key, list]) => ({
+        value: key,
+        label: `${t("autoApply.classLabel", { name: key })} (${list.length})`,
+      })),
+    [allClassGroups, t]
+  );
+
+  const activeClassStudents = useMemo(() => {
+    if (!activeClassKey) return [];
+    const base = allClassGroups.get(activeClassKey) || [];
+    if (!searchTerm.trim()) return base;
+    const q = searchTerm.toLowerCase();
+    return base.filter(
+      (s) =>
+        s.firstName.toLowerCase().includes(q) ||
+        s.surname.toLowerCase().includes(q) ||
+        s.aadhaarNumber.includes(q) ||
+        s.category.toLowerCase().includes(q)
+    );
+  }, [activeClassKey, allClassGroups, searchTerm]);
+
+  const activeClassTotal = activeClassKey ? (allClassGroups.get(activeClassKey)?.length || 0) : 0;
 
   const loadSessionStatus = useCallback(() => {
     fetch("/api/automation/session-status")
@@ -192,6 +189,7 @@ function AutoApplyContent() {
   }, []);
 
   const loadStudents = useCallback(() => {
+    setLoading(true);
     fetch("/api/students?limit=500&status=ready")
       .then((r) => r.json())
       .then((d) => {
@@ -269,6 +267,7 @@ function AutoApplyContent() {
   const portalConfigured = portalType === "sjed" ? sessionStatus?.sjed?.configured || dgForm.dgSjedUsername.trim() : sessionStatus?.citizen?.configured || dgForm.dgCitizenLoginId.trim();
   const portalSessionSaved = portalType === "sjed" ? sessionStatus?.sjed?.sessionSaved : sessionStatus?.citizen?.sessionSaved;
   const portalLastLogin = portalType === "sjed" ? sessionStatus?.sjed?.lastLoginAt : sessionStatus?.citizen?.lastLoginAt;
+  const jobRunning = activeJob?.status === "running";
 
   const startJob = async () => {
     if (!portalConfigured) { alert(portalType === "sjed" ? t("autoApply.setupSjedFirst") : t("autoApply.setupCitizenFirst")); return; }
@@ -289,527 +288,394 @@ function AutoApplyContent() {
     if (remoteBrowser?.enabled && remoteBrowser.url) {
       window.open(remoteBrowser.url, "_blank", "noopener,noreferrer");
     } else if (data.portalUrl) {
-      const isLocal =
-        window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-      if (!isLocal) {
-        window.open(data.portalUrl, "_blank", "noopener,noreferrer");
-      }
+      const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      if (!isLocal) window.open(data.portalUrl, "_blank", "noopener,noreferrer");
     }
 
     const jobRes = await fetch(`/api/automation/jobs/${data.jobId}`);
     const jobData = await jobRes.json();
     setActiveJob(jobData.job);
+    setShowJobDetail(true);
     loadSessionStatus();
   };
 
+  const fullClassStudents = activeClassKey ? allClassGroups.get(activeClassKey) || [] : [];
+  const activeClassSelected = fullClassStudents.filter((s) => selected.has(s.id)).length;
+  const allActiveClassSelected = fullClassStudents.length > 0 && fullClassStudents.every((s) => selected.has(s.id));
+
   return (
-    <PageShell
-      title={t("autoApply.pageTitle")}
-      subtitle={t("autoApply.pageSubtitle")}
-      icon={<Bot className="h-6 w-6" />}
-      accentColor="border-emerald-500"
-      breadcrumbs={[{ label: t("nav.dashboard"), href: "/dashboard" }, { label: t("nav.autoApply") }]}
-      actions={
-        <Button variant="outline" size="sm" onClick={loadStudents}>
-          <RefreshCw className="h-3.5 w-3.5" /> {t("autoApply.refresh")}
-        </Button>
-      }
-    >
-      <div className="space-y-6">
-
-        {/* Info banner */}
-        <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-cyan-50 border border-emerald-200 p-5">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
-              <Zap className="h-5 w-5 text-white" />
-            </div>
-            <div className="text-sm space-y-1">
-              <p className="font-semibold text-slate-900">{t("autoApply.howItWorksTitle")}</p>
-              <p className="text-slate-600">
-                {t("autoApply.howItWorksSteps")}
-              </p>
-              <p className="text-xs text-slate-500 mt-2">
-                {t("autoApply.localhostNote")}
-              </p>
-            </div>
+    <div className="flex flex-col h-[calc(100vh-5.5rem)] min-h-[520px] -m-1">
+      {/* Compact top bar */}
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200/80">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 text-white shadow-lg shadow-emerald-200/40">
+            <Bot className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 truncate">{t("autoApply.pageTitle")}</h1>
+            <p className="text-xs text-slate-500 truncate">{t("autoApply.pageSubtitle")}</p>
           </div>
         </div>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-xl bg-white border border-slate-200 p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Users className="h-4 w-4 text-blue-600" />
-              <p className="text-xs font-medium text-slate-500">{t("autoApply.selectedStudents")}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2">
+            <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white px-3 py-2 text-xs shadow-sm">
+              <span className="text-slate-500">{t("autoApply.selectedStudents")}</span>
+              <span className="ml-1.5 text-lg font-bold text-emerald-700">{selected.size}</span>
             </div>
-            <p className="text-2xl font-bold text-slate-900">{selected.size}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{t("autoApply.outOf", { count: students.length })}</p>
-          </div>
-          <div className="rounded-xl bg-white border border-slate-200 p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <LogIn className="h-4 w-4 text-violet-600" />
-              <p className="text-xs font-medium text-slate-500">{t("autoApply.portalTypeLabel")}</p>
+            <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white px-3 py-2 text-xs shadow-sm">
+              <span className="text-slate-500">{t("autoApply.classesFound")}</span>
+              <span className="ml-1.5 text-lg font-bold text-violet-700">{allClassGroups.size}</span>
             </div>
-            <p className="text-sm font-bold text-slate-900">{portalType === "sjed" ? t("autoApply.sjedLoginShort") : t("autoApply.citizenLoginShort")}</p>
-            {portalSessionSaved && <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {t("autoApply.sessionActiveBadge")}</p>}
           </div>
-          <div className="rounded-xl bg-white border border-slate-200 p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Clock className="h-4 w-4 text-amber-600" />
-              <p className="text-xs font-medium text-slate-500">{t("autoApply.currentJob")}</p>
-            </div>
-            <p className="text-sm font-bold text-slate-900 capitalize">{activeJob?.status ? statusLabel(activeJob.status) : t("autoApply.idle")}</p>
-            {activeJob && <p className="text-xs text-slate-400 mt-0.5">{t("autoApply.doneOfTotal", { done: activeJob.completedCount, total: activeJob.totalCount })}</p>}
-          </div>
-          <div className="rounded-xl bg-white border border-slate-200 p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <BookOpen className="h-4 w-4 text-emerald-600" />
-              <p className="text-xs font-medium text-slate-500">{t("autoApply.classesFound")}</p>
-            </div>
-            <p className="text-2xl font-bold text-slate-900">{classGroups.size}</p>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowHelp((v) => !v)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+            title={t("autoApply.howItWorksTitle")}
+          >
+            <Info className="h-4 w-4" />
+          </button>
+          <Button variant="outline" size="sm" onClick={loadStudents}>
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t("autoApply.refresh")}</span>
+          </Button>
         </div>
+      </div>
 
-        {/* Main layout: left config panel + right student selector */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {showHelp && (
+        <div className="shrink-0 mb-3 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+          <Info className="h-4 w-4 shrink-0 mt-0.5" />
+          <p className="flex-1">{t("autoApply.howItWorksSteps")}</p>
+          <button type="button" onClick={() => setShowHelp(false)} className="text-emerald-600 hover:text-emerald-800">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
-          {/* ── LEFT: Config + Controls ────────────────────────── */}
-          <div className="lg:col-span-4 space-y-4">
+      {/* Main split — fixed height, internal scroll only */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 pt-3 lg:flex-row lg:gap-4">
 
-            {/* Portal config */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <LogIn className="h-3.5 w-3.5 text-blue-600" />
-                  </div>
-                  {t("autoApply.portalLoginSettings")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Select
-                  label={t("autoApply.portalTypeLabel")}
-                  options={portalOptions}
-                  value={portalType}
-                  onChange={(e) => setPortalType(e.target.value as "sjed" | "citizen")}
-                />
+        {/* Left controls — sticky, compact */}
+        <aside className="lg:w-72 xl:w-80 shrink-0 flex flex-col gap-3 lg:overflow-y-auto lg:max-h-full">
+          {/* Quick settings card */}
+          <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/50 p-4 shadow-md shadow-slate-200/30 space-y-3">
+            <Select
+              label={t("autoApply.portalTypeLabel")}
+              options={portalOptions}
+              value={portalType}
+              onChange={(e) => setPortalType(e.target.value as "sjed" | "citizen")}
+            />
+            <Select
+              label={t("autoApply.actionModeLabel")}
+              options={actionOptions}
+              value={actionMode}
+              onChange={(e) => setActionMode(e.target.value)}
+            />
 
-                {/* Session indicator */}
+            <div className="flex items-center justify-between rounded-lg bg-slate-50 px-2.5 py-2 text-xs">
+              <div className="flex items-center gap-1.5 text-slate-600">
                 {portalSessionSaved ? (
-                  <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5 text-xs text-emerald-800">
-                    <Shield className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                    <div>
-                      <p className="font-semibold">{t("autoApply.sessionActiveCard")}</p>
-                      {portalLastLogin && <p className="opacity-70">{t("autoApply.lastLogin", { date: new Date(portalLastLogin).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" }) })}</p>}
-                    </div>
-                  </div>
+                  <><Shield className="h-3.5 w-3.5 text-emerald-600" /><span className="text-emerald-700 font-medium">{t("autoApply.sessionActiveBadge")}</span></>
                 ) : (
-                  <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">
-                    <Clock className="h-3.5 w-3.5 shrink-0" />
-                    <p>{t("autoApply.noSavedSession")}</p>
-                  </div>
+                  <><Clock className="h-3.5 w-3.5 text-amber-500" /><span className="text-amber-700">{t("autoApply.noSavedSession")}</span></>
                 )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLoginPanel((v) => !v)}
+                className="font-medium text-blue-600 hover:text-blue-800 flex items-center gap-0.5"
+              >
+                <LogIn className="h-3 w-3" />
+                {showLoginPanel ? t("common.cancel") : t("autoApply.saveCredentials")}
+                <ChevronDown className={`h-3 w-3 transition-transform ${showLoginPanel ? "rotate-180" : ""}`} />
+              </button>
+            </div>
 
-                {/* Credentials form */}
+            {showLoginPanel && (
+              <div className="space-y-2 border-t border-slate-100 pt-3">
                 {portalType === "sjed" ? (
-                  <div className="space-y-3">
-                    <Input
-                      label={t("autoApply.sjedUsername")}
-                      value={dgForm.dgSjedUsername}
-                      onChange={(e) => setDgForm({ ...dgForm, dgSjedUsername: e.target.value })}
-                      placeholder={t("autoApply.sjedUserIdPlaceholder")}
-                    />
-                    <Input
-                      label={t("autoApply.passwordLabel")}
-                      type="password"
-                      value={dgForm.dgSjedPassword}
-                      onChange={(e) => setDgForm({ ...dgForm, dgSjedPassword: e.target.value })}
-                      placeholder={t("autoApply.enterDgPassword")}
-                    />
-                  </div>
+                  <>
+                    <Input label={t("autoApply.sjedUsername")} value={dgForm.dgSjedUsername} onChange={(e) => setDgForm({ ...dgForm, dgSjedUsername: e.target.value })} placeholder={t("autoApply.sjedUserIdPlaceholder")} />
+                    <Input label={t("autoApply.passwordLabel")} type="password" value={dgForm.dgSjedPassword} onChange={(e) => setDgForm({ ...dgForm, dgSjedPassword: e.target.value })} placeholder={t("autoApply.enterDgPassword")} />
+                  </>
                 ) : (
-                  <div className="space-y-3">
-                    <Select
-                      label={t("autoApply.loginMethod")}
-                      options={loginMethodOptions}
-                      value={dgForm.dgCitizenLoginMethod}
-                      onChange={(e) => setDgForm({ ...dgForm, dgCitizenLoginMethod: e.target.value })}
-                    />
-                    <Input
-                      label={t("autoApply.loginId")}
-                      value={dgForm.dgCitizenLoginId}
-                      onChange={(e) => setDgForm({ ...dgForm, dgCitizenLoginId: e.target.value })}
-                      placeholder="9876543210"
-                    />
-                    <Input
-                      label={t("autoApply.passwordLabel")}
-                      type="password"
-                      value={dgForm.dgCitizenPassword}
-                      onChange={(e) => setDgForm({ ...dgForm, dgCitizenPassword: e.target.value })}
-                      placeholder={t("autoApply.enterPassword")}
-                    />
-                  </div>
+                  <>
+                    <Select label={t("autoApply.loginMethod")} options={loginMethodOptions} value={dgForm.dgCitizenLoginMethod} onChange={(e) => setDgForm({ ...dgForm, dgCitizenLoginMethod: e.target.value })} />
+                    <Input label={t("autoApply.loginId")} value={dgForm.dgCitizenLoginId} onChange={(e) => setDgForm({ ...dgForm, dgCitizenLoginId: e.target.value })} placeholder="9876543210" />
+                    <Input label={t("autoApply.passwordLabel")} type="password" value={dgForm.dgCitizenPassword} onChange={(e) => setDgForm({ ...dgForm, dgCitizenPassword: e.target.value })} placeholder={t("autoApply.enterPassword")} />
+                  </>
                 )}
-
-                <p className="text-[11px] text-slate-400">{t("autoApply.credsSecureNote")}</p>
-
-                <Button variant="outline" className="w-full" onClick={saveDgCredentials} disabled={savingCreds}>
+                {portalLastLogin && (
+                  <p className="text-[10px] text-slate-400">{t("autoApply.lastLogin", { date: new Date(portalLastLogin).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" }) })}</p>
+                )}
+                <Button variant="outline" size="sm" className="w-full" onClick={saveDgCredentials} disabled={savingCreds}>
                   {savingCreds ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                   {credsSaved ? t("autoApply.savedOk") : t("autoApply.saveCredentials")}
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            )}
 
-            {/* Action settings + Start button */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <Bot className="h-3.5 w-3.5 text-emerald-600" />
-                  </div>
-                  {t("autoApply.automationSettings")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Select
-                  label={t("autoApply.actionModeLabel")}
-                  options={actionOptions}
-                  value={actionMode}
-                  onChange={(e) => setActionMode(e.target.value)}
-                />
-                <p className="text-xs text-slate-500 -mt-2">
-                  {t("autoApply.actionModeHint")}
-                </p>
-
-                {/* Launch button */}
-                <button
-                  type="button"
-                  onClick={startJob}
-                  disabled={starting || selected.size === 0 || activeJob?.status === "running"}
-                  className="w-full relative overflow-hidden rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: "linear-gradient(135deg, #059669 0%, #0284c7 100%)" }}
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    {starting ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> {t("autoApply.startingAutomation")}</>
-                    ) : activeJob?.status === "running" ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> {t("autoApply.runningJob", { done: activeJob.completedCount, total: activeJob.totalCount })}</>
-                    ) : (
-                      <><Play className="h-4 w-4" /> {t("autoApply.startWithCount", { count: selected.size })}</>
-                    )}
-                  </span>
-                </button>
-
-                {selected.size === 0 && (
-                  <p className="text-xs text-amber-600 text-center">{t("autoApply.selectOneToContinue")}</p>
+            <button
+              type="button"
+              onClick={startJob}
+              disabled={starting || selected.size === 0 || jobRunning}
+              className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-emerald-200/50"
+              style={{ background: "linear-gradient(135deg, #059669 0%, #0284c7 100%)" }}
+            >
+              <span className="flex items-center justify-center gap-2">
+                {starting || jobRunning ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" />{jobRunning ? t("autoApply.runningJob", { done: activeJob!.completedCount, total: activeJob!.totalCount }) : t("autoApply.startingAutomation")}</>
+                ) : (
+                  <><Play className="h-4 w-4" />{t("autoApply.startWithCount", { count: selected.size })}</>
                 )}
+              </span>
+            </button>
 
-                {remoteBrowser?.enabled && remoteBrowser.url && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => window.open(remoteBrowser.url!, "_blank", "noopener,noreferrer")}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    {remoteBrowser.label}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Recent jobs */}
-            {recentJobs.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <Clock className="h-3.5 w-3.5 text-slate-600" />
-                    {t("autoApply.recentJobs")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {recentJobs.slice(0, 5).map((j) => (
-                    <button
-                      key={j.id}
-                      type="button"
-                      onClick={async () => {
-                        const res = await fetch(`/api/automation/jobs/${j.id}`);
-                        const d = await res.json();
-                        setActiveJob(d.job);
-                      }}
-                      className="w-full text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3 py-2.5 text-xs transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={`font-semibold capitalize inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full ${statusColor(j.status)}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${statusDot(j.status)}`} />
-                          {statusLabel(j.status)}
-                        </span>
-                        <span className="text-slate-600">{j.completedCount}/{j.totalCount}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400">{new Date(j.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</p>
-                    </button>
-                  ))}
-                </CardContent>
-              </Card>
+            {remoteBrowser?.enabled && remoteBrowser.url && (
+              <Button variant="outline" size="sm" className="w-full" onClick={() => window.open(remoteBrowser.url!, "_blank", "noopener,noreferrer")}>
+                <ExternalLink className="h-3.5 w-3.5" />{remoteBrowser.label}
+              </Button>
             )}
           </div>
 
-          {/* ── RIGHT: Student Selector + Live Status ─────────── */}
-          <div className="lg:col-span-8 space-y-4">
+          {/* Recent jobs — compact list */}
+          {recentJobs.length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <p className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />{t("autoApply.recentJobs")}
+              </p>
+              <div className="space-y-1 max-h-28 overflow-y-auto">
+                {recentJobs.slice(0, 4).map((j) => (
+                  <button
+                    key={j.id}
+                    type="button"
+                    onClick={async () => {
+                      const res = await fetch(`/api/automation/jobs/${j.id}`);
+                      const d = await res.json();
+                      setActiveJob(d.job);
+                      setShowJobDetail(true);
+                    }}
+                    className="w-full flex items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs hover:bg-slate-50"
+                  >
+                    <span className={`px-1.5 py-0.5 rounded font-medium capitalize ${statusColor(j.status)}`}>{statusLabel(j.status)}</span>
+                    <span className="text-slate-500">{j.completedCount}/{j.totalCount}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </aside>
 
-            {/* Live job status */}
-            {activeJob && (
-              <Card className="border-blue-200 bg-gradient-to-br from-white to-blue-50/30">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${activeJob.status === "running" ? "bg-blue-500" : activeJob.status === "completed" ? "bg-emerald-500" : "bg-red-500"}`}>
-                        {activeJob.status === "running" ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : activeJob.status === "completed" ? <CheckCircle className="h-4 w-4 text-white" /> : <XCircle className="h-4 w-4 text-white" />}
-                      </div>
-                      <div>
-                        <CardTitle className="text-sm">{t("autoApply.liveAutomationStatus")}</CardTitle>
-                        <p className="text-xs text-slate-500 mt-0.5">{activeJob.currentStep || t("autoApply.processingStudents")}</p>
-                      </div>
-                    </div>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${statusColor(activeJob.status)}`}>
-                      {statusLabel(activeJob.status)}
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+        {/* Right — class dropdown + student list */}
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg shadow-slate-200/40">
+          {/* Panel header */}
+          <div className="shrink-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-4 py-4 text-white">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
+                  <BookOpen className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold">{t("autoApply.selectStudentsByClass")}</h2>
+                  <p className="text-[11px] text-white/80">{t("autoApply.readyStudentsSummary", { students: students.length, classes: allClassGroups.size })}</p>
+                </div>
+              </div>
+              {activeClassKey && (
+                <div className="flex items-center gap-2 rounded-xl bg-white/15 px-3 py-1.5 text-xs backdrop-blur">
+                  <Users className="h-3.5 w-3.5" />
+                  <span className="font-semibold">{activeClassSelected}/{activeClassTotal}</span>
+                  <span className="text-white/70">{t("autoApply.selectedStudents").toLowerCase()}</span>
+                </div>
+              )}
+            </div>
+          </div>
 
-                  {/* Progress bar */}
-                  <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="flex justify-between text-xs text-slate-500 mb-2">
-                      <span>{t("autoApply.overallProgress")}</span>
-                      <span className="font-semibold text-slate-800">{activeJob.overallPercent}%</span>
-                    </div>
-                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 transition-all duration-700" style={{ width: `${activeJob.overallPercent}%` }} />
-                    </div>
-                    <div className="flex gap-4 mt-2.5 text-xs">
-                      <span className="text-emerald-600 font-medium">✓ {activeJob.completedCount} {t("autoApply.done")}</span>
-                      <span className="text-red-600 font-medium">✗ {activeJob.failedCount} {t("autoApply.failed")}</span>
-                      <span className="text-slate-500">· {activeJob.totalCount} {t("autoApply.total")}</span>
-                    </div>
-                  </div>
+          {loading ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
+              <div className="relative">
+                <div className="h-12 w-12 rounded-full border-4 border-violet-100" />
+                <Loader2 className="absolute inset-0 m-auto h-12 w-12 animate-spin text-violet-600" />
+              </div>
+              <p className="text-sm text-slate-500">{t("autoApply.loadingStudents")}</p>
+            </div>
+          ) : students.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center text-slate-400">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+                <Users className="h-8 w-8 opacity-40" />
+              </div>
+              <p className="text-sm font-medium text-slate-600">{t("autoApply.noReadyStudentsFound")}</p>
+              <p className="text-xs">{t("autoApply.markReadyHint")}</p>
+            </div>
+          ) : (
+            <>
+              {/* Class selector + search */}
+              <div className="shrink-0 space-y-3 border-b border-slate-100 bg-gradient-to-b from-violet-50/50 to-white px-4 py-4">
+                <Select
+                  label={t("autoApply.selectClassLabel")}
+                  options={classOptions}
+                  value={activeClassKey}
+                  onChange={(e) => {
+                    setActiveClassKey(e.target.value);
+                    setSearchTerm("");
+                  }}
+                  emptyLabel={t("autoApply.selectClassPlaceholder")}
+                  className="h-11 text-base font-medium border-violet-200 focus:border-violet-500 focus:ring-violet-500/20 bg-white shadow-sm"
+                />
 
-                  {/* Student progress list */}
-                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                    {activeJob.studentProgress?.map((sp) => (
-                      <div key={sp.studentId} className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="font-medium text-sm text-slate-800">{sp.name}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusColor(sp.status)}`}>
-                            {statusLabel(sp.status)}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {sp.dgAction && sp.dgAction !== "unknown" && (
-                            <span className="text-[10px] bg-white border border-slate-200 px-2 py-0.5 rounded-full text-slate-600">{actionLabel(sp.dgAction)}</span>
-                          )}
-                          {sp.dgPortalStatus && (
-                            <span className="text-[10px] bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-full text-violet-700">DG: {sp.dgPortalStatus}</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-600 mb-2">{sp.step}</p>
-                        <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${sp.percent}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Logs */}
-                  {activeJob.logs && (
-                    <details className="group">
-                      <summary className="cursor-pointer text-xs font-medium text-slate-600 hover:text-slate-800 flex items-center gap-1.5">
-                        <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
-                        {t("autoApply.viewExecutionLogs")}
-                      </summary>
-                      <pre className="mt-2 text-[10px] bg-slate-900 text-green-400 p-3 rounded-xl max-h-32 overflow-y-auto whitespace-pre-wrap">
-                        {activeJob.logs.split("\n").slice(-30).join("\n")}
-                      </pre>
-                    </details>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Class-wise student selection */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <BookOpen className="h-4 w-4 text-emerald-600" />
+                {activeClassKey ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative min-w-[160px] flex-1">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder={t("autoApply.searchStudentsPlaceholder")}
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                      />
                     </div>
-                    <div>
-                      <CardTitle className="text-sm">{t("autoApply.selectStudentsByClass")}</CardTitle>
-                      <p className="text-xs text-slate-500 mt-0.5">{t("autoApply.readyStudentsSummary", { students: students.length, classes: classGroups.size })}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setSelected(new Set(filteredStudents.map((s) => s.id)))}
-                      className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 hover:bg-emerald-100 transition-colors"
+                      onClick={() => toggleClassSelection(fullClassStudents)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
                     >
-                      {t("autoApply.selectAll")}
+                      {allActiveClassSelected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+                      {t("autoApply.selectAllInClass")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setSelected(new Set())}
-                      className="text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 hover:bg-slate-200 transition-colors"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
                     >
                       {t("autoApply.deselectAll")}
                     </button>
                   </div>
-                </div>
+                ) : null}
+              </div>
 
-                {/* Search */}
-                <div className="relative mt-3">
-                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder={t("autoApply.searchStudentsPlaceholder")}
-                    className="w-full h-9 pl-8 pr-3 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                  />
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-0 pb-2">
-                {loading ? (
-                  <div className="flex flex-col items-center justify-center h-40 gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-                    <p className="text-sm text-slate-500">{t("autoApply.loadingStudents")}</p>
+              {/* Student list or empty state */}
+              <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/30">
+                {!activeClassKey ? (
+                  <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-3 p-8 text-center">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-100 to-indigo-100 shadow-inner">
+                      <BookOpen className="h-9 w-9 text-violet-500" />
+                    </div>
+                    <p className="max-w-xs text-sm font-medium text-slate-600">{t("autoApply.selectClassFirst")}</p>
+                    <p className="text-xs text-slate-400">{t("autoApply.selectClassPlaceholder")}</p>
                   </div>
-                ) : students.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
-                    <Users className="h-10 w-10 opacity-40" />
-                    <p className="text-sm font-medium">{t("autoApply.noReadyStudentsFound")}</p>
-                    <p className="text-xs opacity-60">{t("autoApply.markReadyHint")}</p>
-                  </div>
-                ) : classGroups.size === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-400">
+                ) : activeClassStudents.length === 0 ? (
+                  <div className="flex h-full min-h-[160px] flex-col items-center justify-center gap-2 p-8 text-slate-400">
+                    <Search className="h-8 w-8 opacity-30" />
                     <p className="text-sm">{t("autoApply.noSearchResults", { term: searchTerm })}</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-100">
-                    {[...classGroups.entries()].map(([classKey, classStudents]) => {
-                      const allSelected = classStudents.every((s) => selected.has(s.id));
-                      const someSelected = classStudents.some((s) => selected.has(s.id));
-                      const isOpen = expandedClasses.has(classKey);
-                      const selectedCount = classStudents.filter((s) => selected.has(s.id)).length;
-
+                  <div className="p-3 space-y-2">
+                    <p className="px-1 text-xs font-medium text-slate-500">
+                      {t("autoApply.studentsInClass", { count: activeClassTotal })}
+                      {searchTerm.trim() ? ` · ${activeClassStudents.length} shown` : ""}
+                    </p>
+                    {activeClassStudents.map((s, idx) => {
+                      const isSelected = selected.has(s.id);
                       return (
-                        <div key={classKey}>
-                          {/* Class header row */}
-                          <div
-                            className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors"
-                          >
-                            {/* Checkbox for whole class */}
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); toggleClassSelection(classStudents); }}
-                              className="shrink-0"
-                            >
-                              {allSelected ? (
-                                <CheckSquare className="h-4.5 w-4.5 text-emerald-600" />
-                              ) : someSelected ? (
-                                <div className="h-4 w-4 rounded border-2 border-emerald-500 bg-emerald-100 flex items-center justify-center">
-                                  <div className="h-1.5 w-2.5 bg-emerald-500 rounded" />
-                                </div>
-                              ) : (
-                                <Square className="h-4 w-4 text-slate-400" />
-                              )}
-                            </button>
-
-                            {/* Class label */}
-                            <div className="flex-1 flex items-center gap-3" onClick={() => toggleClass(classKey)}>
-                              <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-white shrink-0" style={{ background: "linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)" }}>
-                                {classKey.split("-")[0]}
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-slate-800">{t("autoApply.classLabel", { name: classKey })}</p>
-                                <p className="text-xs text-slate-500">{t("autoApply.classStudentsSelected", { total: classStudents.length, selected: selectedCount })}</p>
-                              </div>
-                            </div>
-
-                            {/* Selection progress pill */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <div className="hidden sm:flex items-center gap-1.5">
-                                <div className="w-16 h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                                  <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${(selectedCount / classStudents.length) * 100}%` }} />
-                                </div>
-                                <span className="text-xs text-slate-500">{selectedCount}/{classStudents.length}</span>
-                              </div>
-                              <button type="button" onClick={() => toggleClass(classKey)} className="text-slate-400 hover:text-slate-600">
-                                {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                              </button>
-                            </div>
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => toggleSelect(s.id)}
+                          className={`w-full flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all ${
+                            isSelected
+                              ? "border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-sm shadow-emerald-100/50"
+                              : "border-slate-200/80 bg-white hover:border-violet-200 hover:shadow-md hover:shadow-violet-100/30"
+                          }`}
+                        >
+                          <span className="w-6 text-center text-xs font-medium text-slate-400 shrink-0">{idx + 1}</span>
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm ${isSelected ? "bg-gradient-to-br from-emerald-500 to-teal-600" : "bg-gradient-to-br from-slate-400 to-slate-500"}`}>
+                            {s.firstName.charAt(0)}
                           </div>
-
-                          {/* Expanded student list */}
-                          {isOpen && (
-                            <div className="bg-slate-50/50 border-t border-slate-100">
-                              {classStudents.map((s, idx) => {
-                                const isSelected = selected.has(s.id);
-                                return (
-                                  <div
-                                    key={s.id}
-                                    onClick={() => toggleSelect(s.id)}
-                                    className={`flex items-center gap-3 px-5 py-2.5 cursor-pointer transition-colors border-b border-slate-100/80 last:border-b-0 ${isSelected ? "bg-emerald-50/60" : "hover:bg-white"}`}
-                                  >
-                                    {/* Seq */}
-                                    <span className="shrink-0 w-5 text-xs text-slate-400 text-right">{idx + 1}</span>
-
-                                    {/* Checkbox */}
-                                    {isSelected ? (
-                                      <CheckSquare className="h-4 w-4 text-emerald-600 shrink-0" />
-                                    ) : (
-                                      <Square className="h-4 w-4 text-slate-400 shrink-0" />
-                                    )}
-
-                                    {/* Student avatar */}
-                                    <div className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold text-white uppercase" style={{ background: isSelected ? "#059669" : "#94a3b8" }}>
-                                      {s.firstName.charAt(0)}
-                                    </div>
-
-                                    {/* Student info */}
-                                    <div className="flex-1 min-w-0">
-                                      <p className={`text-sm font-medium truncate ${isSelected ? "text-slate-900" : "text-slate-700"}`}>
-                                        {s.firstName} {s.middleName ? s.middleName + " " : ""}{s.surname}
-                                      </p>
-                                      <p className="text-xs text-slate-400 truncate">
-                                        {s.aadhaarNumber} · {s.scholarshipScheme}
-                                      </p>
-                                    </div>
-
-                                    {/* Badges */}
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                      <CategoryBadge category={s.category} />
-                                      <Badge status={s.status} />
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-slate-900 truncate">
+                              {s.firstName} {s.middleName ? s.middleName + " " : ""}{s.surname}
+                            </p>
+                            <p className="text-xs text-slate-500 truncate mt-0.5">
+                              {s.aadhaarNumber} · {s.scholarshipScheme}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <CategoryBadge category={s.category} />
+                            {isSelected ? (
+                              <CheckSquare className="h-5 w-5 text-emerald-600" />
+                            ) : (
+                              <Square className="h-5 w-5 text-slate-300" />
+                            )}
+                          </div>
+                        </button>
                       );
                     })}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-          </div>
-        </div>
+              </div>
+            </>
+          )}
+        </section>
       </div>
-    </PageShell>
+
+      {/* Live job — slim bottom bar, expand on click */}
+      {activeJob && (
+        <div className="shrink-0 mt-3 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-emerald-50 overflow-hidden shadow-sm">
+          <button
+            type="button"
+            onClick={() => setShowJobDetail((v) => !v)}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/40 transition-colors"
+          >
+            {activeJob.status === "running" ? (
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
+            ) : activeJob.status === "completed" ? (
+              <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+            ) : (
+              <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-sm font-semibold text-slate-800 truncate">{activeJob.currentStep || t("autoApply.processingStudents")}</span>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0 ${statusColor(activeJob.status)}`}>{statusLabel(activeJob.status)}</span>
+              </div>
+              <div className="h-1.5 bg-white/80 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 transition-all duration-500" style={{ width: `${activeJob.overallPercent}%` }} />
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {activeJob.overallPercent}% · ✓ {activeJob.completedCount} · ✗ {activeJob.failedCount} · {activeJob.totalCount} {t("autoApply.total")}
+              </p>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 transition-transform ${showJobDetail ? "rotate-180" : ""}`} />
+          </button>
+
+          {showJobDetail && (
+            <div className="border-t border-blue-100 bg-white/60 px-4 py-3 max-h-48 overflow-y-auto space-y-2">
+              {activeJob.studentProgress?.map((sp) => (
+                <div key={sp.studentId} className="flex items-center gap-3 text-xs">
+                  <span className="font-medium text-slate-800 min-w-[100px] truncate">{sp.name}</span>
+                  <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden min-w-[60px]">
+                    <div className="h-full bg-blue-500 transition-all" style={{ width: `${sp.percent}%` }} />
+                  </div>
+                  <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColor(sp.status)}`}>{statusLabel(sp.status)}</span>
+                  {sp.dgAction && sp.dgAction !== "unknown" && (
+                    <span className="hidden md:inline text-[10px] text-slate-500">{actionLabel(sp.dgAction)}</span>
+                  )}
+                </div>
+              ))}
+              {activeJob.logs && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[11px] font-medium text-slate-500">{t("autoApply.viewExecutionLogs")}</summary>
+                  <pre className="mt-1 text-[10px] bg-slate-900 text-green-400 p-2 rounded-lg max-h-24 overflow-y-auto whitespace-pre-wrap">
+                    {activeJob.logs.split("\n").slice(-20).join("\n")}
+                  </pre>
+                </details>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

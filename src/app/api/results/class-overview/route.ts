@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
-import { ANNUAL_RESULT_SUBJECTS, resultSessionName } from "@/lib/results/config";
+import { ensureClassExam, getClassMarksSheetConfig } from "@/lib/class-subjects";
 import { computeStudentTotals, subjectFinalMarks } from "@/lib/results/calculations";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth(["school_admin", "teacher"]);
+    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get("classId");
     const academicYear = searchParams.get("academicYear") || "2025-26";
@@ -73,7 +73,12 @@ export async function GET(request: NextRequest) {
       ? await prisma.reportCard.findMany({ where: { examId: exam.id } })
       : [];
 
-    const subjectCount = exam?.subjects.length || ANNUAL_RESULT_SUBJECTS.length;
+    const sheetConfig = await getClassMarksSheetConfig(
+      schoolClass.id,
+      schoolClass.standard,
+      schoolClass.stream,
+    );
+    const subjectCount = exam?.subjects.length || sheetConfig.subjects.length;
 
     const students = schoolClass.students.map((st) => {
       const studentResults = results.filter((r) => r.studentId === st.id);
@@ -144,7 +149,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth(["school_admin", "teacher"]);
+    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
     const body = await request.json();
 
     if (body.action === "ensure_session") {
@@ -154,42 +159,9 @@ export async function POST(request: NextRequest) {
       });
       if (!schoolClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
 
-      let exam = await prisma.exam.findFirst({
-        where: {
-          schoolId: session.schoolId,
-          standard: schoolClass.standard,
-          section: schoolClass.section,
-          academicYear: schoolClass.academicYear,
-          examType: "Annual",
-        },
-        include: { subjects: { orderBy: { sortOrder: "asc" } } },
+      const { exam } = await ensureClassExam(session.schoolId, schoolClass, {
+        reopeningDate: body.reopeningDate || null,
       });
-
-      if (!exam) {
-        exam = await prisma.exam.create({
-          data: {
-            schoolId: session.schoolId,
-            name: resultSessionName(schoolClass.standard, schoolClass.academicYear),
-            examType: "Annual",
-            academicYear: schoolClass.academicYear,
-            standard: schoolClass.standard,
-            section: schoolClass.section,
-            term: "Annual",
-            maxMarks: 1000,
-            passingMarks: 33,
-            reopeningDate: body.reopeningDate || null,
-            subjects: {
-              create: ANNUAL_RESULT_SUBJECTS.map((s, i) => ({
-                name: s.name,
-                code: s.nameEn,
-                maxMarks: s.maxMarks,
-                sortOrder: i,
-              })),
-            },
-          },
-          include: { subjects: { orderBy: { sortOrder: "asc" } } },
-        });
-      }
 
       return NextResponse.json({ exam, class: schoolClass });
     }

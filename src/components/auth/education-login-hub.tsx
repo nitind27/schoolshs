@@ -1,277 +1,491 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  GraduationCap, Lock, Mail, Loader2, Shield, BookOpen,
-  Calculator, UserCheck, Building2, ChevronRight, Award,
-  FileText, Users, Wallet, IdCard, Sparkles, CheckCircle2,
+  Lock,
+  Mail,
+  Loader2,
+  Building2,
+  ArrowRight,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  Check,
+  School,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { LoginBrandBook } from "@/components/auth/login-brand-book";
+import { LoginCaptcha } from "@/components/auth/login-captcha";
+import { LoginLockBanner } from "@/components/auth/login-lock-banner";
+import { OtpInput } from "@/components/ui/otp-input";
+import { toast } from "@/components/ui/toast";
 import { useT } from "@/i18n/locale-provider";
-import { CERTIFICATE_SCHOOL } from "@/lib/certificates/config";
+import { isUserRole } from "@/lib/roles";
+import "./login-portal.css";
 
-const PORTALS = [
-  { roleKey: "school_admin", email: "admin@songadh.local", pass: "SchoolAdmin@123", icon: Building2, gradient: "from-blue-600 to-indigo-600", ring: "ring-blue-500" },
-  { roleKey: "teacher", email: "teacher@songadh.local", pass: "Teacher@123", icon: BookOpen, gradient: "from-emerald-500 to-teal-600", ring: "ring-emerald-500" },
-  { roleKey: "clerk", email: "clerk@songadh.local", pass: "Clerk@123", icon: UserCheck, gradient: "from-amber-500 to-orange-500", ring: "ring-amber-500" },
-  { roleKey: "student", email: "student@songadh.local", pass: "Student@123", icon: GraduationCap, gradient: "from-sky-500 to-cyan-500", ring: "ring-sky-500" },
-  { roleKey: "ca", email: "ca@songadh.local", pass: "CA@12345", icon: Calculator, gradient: "from-rose-500 to-pink-600", ring: "ring-rose-500" },
-  { roleKey: "super_admin", email: "superadmin@shs.local", pass: "SuperAdmin@123", icon: Shield, gradient: "from-violet-600 to-purple-600", ring: "ring-violet-500" },
-] as const;
+type SchoolBranding = {
+  code: string;
+  name: string;
+  address?: string | null;
+  phone?: string | null;
+  udiseCode?: string | null;
+  district?: string | null;
+};
 
-const MODULES = [
-  { icon: Award, labelKey: "loginHub.moduleScholarship" },
-  { icon: FileText, labelKey: "loginHub.moduleResults" },
-  { icon: Wallet, labelKey: "loginHub.moduleAccounting" },
-  { icon: Users, labelKey: "loginHub.moduleAdmissions" },
-  { icon: IdCard, labelKey: "loginHub.moduleIdCards" },
-  { icon: BookOpen, labelKey: "loginHub.moduleCertificates" },
-] as const;
+const SCHOOL_CODE_KEY = "shs_school_code";
 
 export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useT();
-  const [email, setEmail] = useState("admin@songadh.local");
-  const [password, setPassword] = useState("SchoolAdmin@123");
+  const isCaPortal = searchParams.get("portal") === "ca";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [schoolCode, setSchoolCode] = useState("");
+  const [branding, setBranding] = useState<SchoolBranding | null>(null);
+  const [brandingLoading, setBrandingLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string>("school_admin");
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
+  const [captchaInvalid, setCaptchaInvalid] = useState(false);
+  const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<string | null>(null);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [verifyOtp, setVerifyOtp] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyMsg, setVerifyMsg] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMsg, setResendMsg] = useState("");
 
-  const selectPortal = (portal: (typeof PORTALS)[number]) => {
-    setSelectedRole(portal.roleKey);
-    setEmail(portal.email);
-    setPassword(portal.pass);
-    setError("");
-  };
+  useEffect(() => {
+    if (isCaPortal) {
+      setSchoolCode("");
+      setBranding(null);
+      return;
+    }
+    const fromUrl = searchParams.get("school")?.trim().toUpperCase();
+    const saved = typeof window !== "undefined" ? localStorage.getItem(SCHOOL_CODE_KEY) : null;
+    const code = fromUrl || saved || "";
+    if (code) setSchoolCode(code);
+  }, [searchParams, isCaPortal]);
+
+  useEffect(() => {
+    if (isCaPortal) {
+      setBranding(null);
+      setBrandingLoading(false);
+      return;
+    }
+    const code = schoolCode.trim().toUpperCase();
+    if (!code || code.length < 3) {
+      setBranding(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setBrandingLoading(true);
+      fetch(`/api/auth/school-branding?code=${encodeURIComponent(code)}`)
+        .then(async (r) => {
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || "School not found");
+          setBranding(data.school);
+          localStorage.setItem(SCHOOL_CODE_KEY, code);
+          setError("");
+        })
+        .catch(() => setBranding(null))
+        .finally(() => setBrandingLoading(false));
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [schoolCode, isCaPortal]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockedUntil && new Date(lockedUntil) > new Date()) return;
+
     setLoading(true);
     setError("");
+    setCaptchaInvalid(false);
+    setEmailNotVerified(false);
+    setVerifyOtp("");
+    setVerifyMsg("");
+    setResendMsg("");
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+          captchaToken,
+          captchaAnswer,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || t("common.loginFailed"));
+        const errMsg = data.error || t("common.loginFailed");
+        if (data.emailNotVerified) {
+          setEmailNotVerified(true);
+          setError(data.error || t("login.emailNotVerified"));
+          toast.warning(t("login.emailNotVerifiedTitle"), data.error || t("login.emailNotVerified"));
+        } else if (data.locked && data.lockedUntil) {
+          setLockedUntil(data.lockedUntil);
+          setError(data.error || t("login.accountLocked"));
+          toast.error(t("login.accountLocked"), data.error || t("login.accountLockedDesc", { time: "15 min" }));
+        } else if (data.captchaInvalid || data.captchaRequired) {
+          setCaptchaInvalid(true);
+          setError(data.error || t("login.captchaInvalid"));
+          setCaptchaRefreshKey((k) => k + 1);
+          toast.error(t("login.captchaInvalid"));
+        } else {
+          setError(errMsg);
+          setCaptchaRefreshKey((k) => k + 1);
+          toast.error(t("common.loginFailed"), errMsg);
+        }
+        setLoading(false);
         return;
       }
-      router.push(data.redirect || next);
+      if (!isCaPortal && schoolCode.trim()) {
+        localStorage.setItem(SCHOOL_CODE_KEY, schoolCode.trim().toUpperCase());
+      }
+      const redirectTo = data.redirect || next;
+      const userName = String(data.user?.name || email.split("@")[0] || "User");
+      const userRole = String(data.user?.role || "");
+      const roleLabel = isUserRole(userRole) ? t(`roles.${userRole}`) : userRole;
+
+      toast.success(
+        t("login.successTitle"),
+        t("login.successToastDesc", { name: userName, role: roleLabel || "portal" })
+      );
+
+      router.push(redirectTo);
       router.refresh();
     } catch {
       setError(t("common.networkError"));
-    } finally {
+      toast.error(t("common.networkError"));
       setLoading(false);
     }
   };
 
-  const activePortal = PORTALS.find((p) => p.roleKey === selectedRole);
+  const isLocked = Boolean(lockedUntil && new Date(lockedUntil) > new Date());
+
+  const resendVerification = async () => {
+    if (!email.trim() || !password) {
+      setResendMsg(t("login.resendNeedCredentials"));
+      return;
+    }
+    setResendLoading(true);
+    setResendMsg("");
+    setVerifyMsg("");
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      });
+      const data = await res.json();
+      setResendMsg(res.ok ? data.message || t("login.resendSuccess") : data.error || t("common.networkError"));
+    } catch {
+      setResendMsg(t("common.networkError"));
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const submitOtpVerification = async () => {
+    if (!email.trim() || !password) {
+      setVerifyMsg(t("login.resendNeedCredentials"));
+      return;
+    }
+    if (verifyOtp.replace(/\D/g, "").length !== 6) {
+      setVerifyMsg(t("login.otpInvalidLength"));
+      return;
+    }
+    setVerifyLoading(true);
+    setVerifyMsg("");
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+          otp: verifyOtp.replace(/\D/g, ""),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setVerifyMsg(data.error || t("login.otpVerifyFailed"));
+        return;
+      }
+      setVerifyMsg(data.message || t("login.otpVerifySuccess"));
+      setEmailNotVerified(false);
+      setVerifyOtp("");
+      setError("");
+    } catch {
+      setVerifyMsg(t("common.networkError"));
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const headline = isCaPortal
+    ? t("caNav.title")
+    : branding?.name || t("erp.systemName");
+  const metaLine = isCaPortal
+    ? t("login.caLoginHero")
+    : branding
+      ? [branding.district, branding.udiseCode ? `UDISE ${branding.udiseCode}` : null]
+          .filter(Boolean)
+          .join(" · ")
+      : t("login.subtitle");
 
   return (
-    <div className="login-hub min-h-screen flex flex-col lg:flex-row bg-[#f0f4fa]">
-      {/* ── Hero Panel ───────────────────────────────────── */}
-      <div className="login-hub-hero relative lg:w-[54%] xl:w-[58%] shrink-0 overflow-hidden text-white">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0c1e4a] via-[#1e3a8a] to-[#2563eb]" />
-        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
-        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -left-16 bottom-0 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
+    <div className={`auth-portal ${isCaPortal ? "is-ca-portal" : ""}`}>
+      <aside className="auth-portal-brand">
+        <div className="auth-brand-decor" aria-hidden>
+          <div className="auth-brand-orb auth-brand-orb-1" />
+          <div className="auth-brand-orb auth-brand-orb-2" />
+          <div className="auth-brand-orb auth-brand-orb-3" />
+          <div className="auth-brand-grid" />
+          <div className="auth-brand-arc" />
+        </div>
 
-        <div className="relative z-10 flex flex-col min-h-[320px] lg:min-h-screen p-8 lg:p-12 xl:p-14">
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur border border-white/20 flex items-center justify-center shadow-lg">
-                <GraduationCap className="h-7 w-7 text-white" />
+        <div className="auth-portal-brand-inner">
+          <div className="auth-portal-topbar">
+            <Link href="/" className="auth-portal-logo">
+              <div className="auth-portal-logo-mark">
+                <School className="h-5 w-5" strokeWidth={1.75} />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-200">{t("loginHub.badge")}</p>
-                <h1 className="text-lg font-bold leading-tight">{t("erp.systemName")}</h1>
+                <div className="auth-portal-logo-eyebrow">
+                  {isCaPortal ? t("login.caLoginBadge") : t("loginHub.badge")}
+                </div>
+                <div className="auth-portal-logo-title">
+                  {isCaPortal ? t("caNav.title") : t("landing.productName")}
+                </div>
               </div>
-            </div>
+            </Link>
             <LanguageSwitcher variant="hero" />
           </div>
 
-          {/* School branding */}
-          <div className="flex-1 flex flex-col justify-center max-w-xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-1.5 text-xs font-medium text-blue-100 mb-6 w-fit">
-              <Sparkles className="h-3.5 w-3.5" />
-              {t("loginHub.trustedPlatform")}
-            </div>
-            <h2 className="text-3xl xl:text-4xl font-bold leading-tight tracking-tight">
-              {CERTIFICATE_SCHOOL.nameGu}
-            </h2>
-            <p className="text-blue-100/90 text-sm mt-2 font-medium">{CERTIFICATE_SCHOOL.nameEnAlt}</p>
-            <p className="text-blue-200/80 text-sm mt-4 leading-relaxed max-w-md">
-              {t("loginHub.heroDesc")}
-            </p>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-3 mt-8">
-              {[
-                { val: "500+", label: t("loginHub.statStudents") },
-                { val: "6", label: t("loginHub.statPortals") },
-                { val: "100%", label: t("loginHub.statSecure") },
-              ].map((s) => (
-                <div key={s.label} className="rounded-2xl bg-white/10 backdrop-blur border border-white/15 px-4 py-3 text-center">
-                  <p className="text-2xl font-bold">{s.val}</p>
-                  <p className="text-[11px] text-blue-200 mt-0.5">{s.label}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Modules grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-8">
-              {MODULES.map((m) => (
-                <div key={m.labelKey} className="flex items-center gap-2.5 rounded-xl bg-white/8 border border-white/10 px-3 py-2.5 backdrop-blur-sm">
-                  <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                    <m.icon className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-blue-50 leading-tight">{t(m.labelKey)}</span>
-                </div>
-              ))}
-            </div>
+          <div className="auth-portal-hero auth-portal-hero-book">
+            <LoginBrandBook
+              branding={isCaPortal ? null : branding}
+              headline={headline}
+              metaLine={metaLine}
+              mode={isCaPortal ? "ca" : "default"}
+            />
           </div>
 
-          {/* Trust footer */}
-          <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap gap-4 text-[11px] text-blue-300/80">
-            <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> {t("loginHub.gsebReady")}</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> {t("loginHub.digitalGujarat")}</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> {CERTIFICATE_SCHOOL.diseCode}</span>
+          <div className="auth-portal-brand-footer">
+            <span className="auth-brand-footer-pill">{t("loginHub.gsebReady")}</span>
+            <span className="auth-brand-footer-pill is-accent">{t("login.secureLogin")}</span>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* ── Login Panel ──────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-10">
-        <div className="w-full max-w-[440px]">
-          {/* Mobile brand */}
-          <div className="lg:hidden flex items-center justify-between gap-3 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg">
-                <GraduationCap className="h-6 w-6 text-white" />
+      <main className="auth-portal-main">
+        <div className="auth-portal-mobile-header">
+          <Link href="/" className="auth-portal-logo">
+            <div className="auth-portal-logo-mark">
+              <School className="h-4 w-4" strokeWidth={1.75} />
+            </div>
+            <div>
+              <div className="auth-portal-logo-eyebrow">
+                {isCaPortal ? t("login.caLoginBadge") : t("loginHub.badge")}
               </div>
-              <div>
-                <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">{t("loginHub.badge")}</p>
-                <h1 className="text-base font-bold text-slate-900">{t("erp.systemName")}</h1>
+              <div className="auth-portal-logo-title">
+                {isCaPortal ? t("caNav.title") : t("landing.productName")}
               </div>
             </div>
-            <LanguageSwitcher variant="login" className="shrink-0" />
-          </div>
+          </Link>
+          <LanguageSwitcher variant="login" />
+        </div>
 
-          <div className="login-hub-card rounded-3xl bg-white border border-slate-200/80 shadow-2xl shadow-slate-200/50 overflow-hidden">
-            {/* Card header gradient strip */}
-            <div className="h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600" />
+        <div className="auth-portal-main-scroll">
+          <div className="auth-portal-form-card">
+            <header className="auth-portal-form-header">
+              <h2>{isCaPortal ? t("login.formTitleCa") : t("login.formTitle")}</h2>
+              <p>{isCaPortal ? t("login.formSubtitleCa") : t("login.formSubtitleNew")}</p>
+            </header>
 
-            <div className="p-8 pt-7">
-              <div className="mb-6 flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">{t("login.formTitle")}</h2>
-                  <p className="text-sm text-slate-500 mt-1">{t("loginHub.selectRole")}</p>
-                </div>
-                <div className="hidden lg:block shrink-0">
-                  <LanguageSwitcher variant="login" />
-                </div>
+            {branding && !isCaPortal && (
+              <div className="auth-portal-school-chip" title={branding.name}>
+                <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                <span>
+                  {branding.name} · {branding.code}
+                </span>
               </div>
+            )}
 
-              {/* Portal selector */}
-              <div className="grid grid-cols-3 gap-2 mb-6">
-                {PORTALS.map((p) => {
-                  const active = selectedRole === p.roleKey;
-                  return (
-                    <button
-                      key={p.roleKey}
-                      type="button"
-                      onClick={() => selectPortal(p)}
-                      className={`flex flex-col items-center gap-1.5 rounded-xl border p-2.5 transition-all ${
-                        active
-                          ? `border-transparent bg-gradient-to-br ${p.gradient} text-white shadow-md ring-2 ${p.ring} ring-offset-2`
-                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white"
-                      }`}
-                    >
-                      <p.icon className={`h-5 w-5 ${active ? "text-white" : "text-slate-500"}`} />
-                      <span className="text-[10px] font-semibold leading-tight text-center">
-                        {t(`roles.${p.roleKey}` as "roles.school_admin")}
-                      </span>
-                    </button>
-                  );
-                })}
+            {isCaPortal && (
+              <div className="auth-portal-school-chip auth-portal-ca-chip">
+                <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                <span>{t("login.schoolCodeCaHint")}</span>
               </div>
+            )}
 
-              {activePortal && (
-                <div className={`mb-5 flex items-center gap-3 rounded-xl bg-gradient-to-r ${activePortal.gradient} p-3 text-white shadow-sm`}>
-                  <activePortal.icon className="h-5 w-5 shrink-0 opacity-90" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">{t(`roles.${activePortal.roleKey}` as "roles.school_admin")}</p>
-                    <p className="text-[11px] text-white/80">{t("loginHub.portalReady")}</p>
+            {isLocked && lockedUntil && (
+              <LoginLockBanner
+                lockedUntil={lockedUntil}
+                onExpired={() => {
+                  setLockedUntil(null);
+                  setError("");
+                  setCaptchaRefreshKey((k) => k + 1);
+                }}
+              />
+            )}
+
+            <form onSubmit={handleLogin} className="auth-portal-form">
+              {!isCaPortal && (
+                <div className="auth-portal-field">
+                  <label className="auth-portal-label" htmlFor="school-code">
+                    {t("login.schoolCodeOptional")}
+                  </label>
+                  <div className="auth-portal-input-wrap">
+                    <Building2 className="auth-portal-input-icon" strokeWidth={1.75} />
+                    <input
+                      id="school-code"
+                      type="text"
+                      value={schoolCode}
+                      onChange={(e) => setSchoolCode(e.target.value.toUpperCase())}
+                      placeholder="SONGADH001"
+                      className="auth-portal-input is-mono"
+                      autoComplete="organization"
+                      disabled={isLocked}
+                    />
+                    {brandingLoading && <Loader2 className="auth-portal-spinner" />}
                   </div>
                 </div>
               )}
 
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("common.email")}</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@school.local"
-                      className="login-hub-input w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
-                    />
-                  </div>
+              <div className="auth-portal-field">
+                <label className="auth-portal-label" htmlFor="email">
+                  {t("common.email")}
+                </label>
+                <div className="auth-portal-input-wrap">
+                  <Mail className="auth-portal-input-icon" strokeWidth={1.75} />
+                  <input
+                    id="email"
+                    type="email"
+                    required
+                    autoComplete="username"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@school.local"
+                    className="auth-portal-input"
+                    disabled={isLocked}
+                  />
                 </div>
+              </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("login.password")}</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="login-hub-input w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
-                    />
-                  </div>
+              <div className="auth-portal-field">
+                <label className="auth-portal-label" htmlFor="password">
+                  {t("login.password")}
+                </label>
+                <div className="auth-portal-input-wrap">
+                  <Lock className="auth-portal-input-icon" strokeWidth={1.75} />
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="auth-portal-input"
+                    style={{ paddingRight: "2.5rem" }}
+                    disabled={isLocked}
+                  />
+                  <button
+                    type="button"
+                    className="auth-portal-input-action"
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
                 </div>
+              </div>
 
-                {error && (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    <span className="shrink-0 mt-0.5">⚠</span>
-                    <span>{error}</span>
-                  </div>
+              <LoginCaptcha
+                answer={captchaAnswer}
+                onAnswerChange={setCaptchaAnswer}
+                onTokenChange={setCaptchaToken}
+                disabled={isLocked}
+                invalid={captchaInvalid}
+                refreshKey={captchaRefreshKey}
+              />
+
+            {error && <div className="auth-portal-error">{error}</div>}
+
+            {emailNotVerified && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                <p className="font-semibold">{t("login.emailNotVerifiedTitle")}</p>
+                <p className="mt-1 text-xs leading-relaxed opacity-90">{t("login.emailNotVerifiedHint")}</p>
+                <div className="mt-3">
+                  <label className="mb-2 block text-xs font-semibold text-amber-900">{t("login.otpLabel")}</label>
+                  <OtpInput
+                    value={verifyOtp}
+                    onChange={setVerifyOtp}
+                    disabled={isLocked || verifyLoading}
+                    boxClassName="border-amber-300 focus:border-amber-500 focus:ring-amber-200"
+                  />
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={submitOtpVerification}
+                    disabled={verifyLoading || isLocked || verifyOtp.length !== 6}
+                    className="rounded-lg bg-amber-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-900 disabled:opacity-50"
+                  >
+                    {verifyLoading ? t("login.otpVerifying") : t("login.verifyOtp")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resendVerification}
+                    disabled={resendLoading || isLocked}
+                    className="text-xs font-semibold text-amber-800 underline hover:no-underline disabled:opacity-50"
+                  >
+                    {resendLoading ? t("login.resending") : t("login.resendVerification")}
+                  </button>
+                </div>
+                {verifyMsg && <p className="mt-2 text-xs font-medium">{verifyMsg}</p>}
+                {resendMsg && <p className="mt-2 text-xs">{resendMsg}</p>}
+              </div>
+            )}
+
+            <button type="submit" className="auth-portal-submit" disabled={loading || isLocked}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("loginHub.signingIn")}
+                  </>
+                ) : (
+                  <>
+                    {t("login.loginBtn")}
+                    <ArrowRight className="h-4 w-4" strokeWidth={2} />
+                  </>
                 )}
+              </button>
+            </form>
 
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-12 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/25 border-0"
-                >
-                  {loading ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> {t("loginHub.signingIn")}</>
-                  ) : (
-                    <>{t("login.loginBtn")} <ChevronRight className="h-4 w-4" /></>
-                  )}
-                </Button>
-              </form>
+            <div className="auth-portal-footer">
+              <p className="auth-portal-managed">{t("landing.managedBy")}</p>
+              <Link href="/" className="auth-portal-back">
+                <ArrowLeft className="h-3.5 w-3.5" />
+                {t("landing.productName")}
+              </Link>
             </div>
           </div>
-
-          <p className="mt-5 text-center text-xs text-slate-400 leading-relaxed">
-            {t("loginHub.footerNote")}
-            <br />
-            <span className="text-slate-500">{CERTIFICATE_SCHOOL.address}</span>
-          </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

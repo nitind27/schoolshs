@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GUJARAT_DISTRICTS, SCHOOL_STANDARDS, FINANCIAL_YEARS, CLASS_STREAMS } from "@/lib/constants";
+import { SCHOOL_STANDARDS, SENIOR_STREAMS } from "@/lib/constants";
+import { buildClassName, nextAvailableSection } from "@/lib/class-structure";
 import { Save } from "lucide-react";
-import type { SchoolClass, Staff } from "@/generated/prisma/client";
+import type { SchoolClass } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 
 type ClassFormData = Partial<SchoolClass>;
@@ -15,122 +15,207 @@ type ClassFormData = Partial<SchoolClass>;
 interface ClassFormProps {
   initialData?: ClassFormData;
   onSubmit: (data: ClassFormData) => Promise<void>;
+  onCancel?: () => void;
   submitLabel?: string;
 }
 
-export function ClassForm({ initialData = {}, onSubmit, submitLabel }: ClassFormProps) {
+export function ClassForm({
+  initialData = {},
+  onSubmit,
+  onCancel,
+  submitLabel,
+}: ClassFormProps) {
   const t = useT();
+  const isEdit = Boolean(initialData?.id);
   const [loading, setLoading] = useState(false);
-  const [staff, setStaff] = useState<Staff[]>([]);
   const [existingClasses, setExistingClasses] = useState<SchoolClass[]>([]);
-  const [stream, setStream] = useState("");
+  const [sectionTouched, setSectionTouched] = useState(isEdit);
   const [form, setForm] = useState<ClassFormData>({
-    academicYear: "2025-26",
     section: "A",
+    stream: "",
     ...initialData,
   });
 
   const resolvedSubmitLabel = submitLabel ?? t("classes.saveClass");
+  const standard = String(form.standard || "");
+  const stream = String(form.stream || "");
+  const isSenior = ["11", "12"].includes(standard);
+  const sectionValue = String(form.section || "").trim().toUpperCase();
 
   useEffect(() => {
-    fetch("/api/staff?active=true")
-      .then((r) => r.json())
-      .then((d) => setStaff(d.staff || []));
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (form.academicYear) params.set("academicYear", String(form.academicYear));
-    fetch(`/api/classes?${params}`)
+    fetch("/api/classes")
       .then((r) => r.json())
       .then((d) => setExistingClasses(d.classes || []))
       .catch(() => setExistingClasses([]));
-  }, [form.academicYear]);
+  }, []);
 
+  const siblingSections = useMemo(() => {
+    if (!standard) return [] as string[];
+    const resolvedStream = isSenior ? stream : "";
+    return existingClasses
+      .filter(
+        (c) =>
+          c.standard === standard &&
+          (c.stream || "") === resolvedStream &&
+          c.id !== initialData.id
+      )
+      .map((c) => c.section);
+  }, [existingClasses, standard, stream, isSenior, initialData.id]);
+
+  const suggestedSection = useMemo(
+    () => nextAvailableSection(siblingSections),
+    [siblingSections]
+  );
+
+  // Auto-fill next free section when standard/stream changes (create mode only)
   useEffect(() => {
-    if (!form.standard || !form.section || initialData?.name) return;
-    const streamPart = ["11", "12"].includes(form.standard) && stream ? ` ${stream}` : "";
-    setForm((prev) => ({
-      ...prev,
-      name: `Class ${form.standard}${streamPart}-${form.section}`,
-    }));
-  }, [form.standard, form.section, stream, initialData?.name]);
+    if (isEdit || sectionTouched || !standard) return;
+    if (isSenior && !stream) return;
+    setForm((prev) => ({ ...prev, section: suggestedSection }));
+  }, [isEdit, sectionTouched, standard, stream, isSenior, suggestedSection]);
 
   const update = (field: string, value: unknown) => {
+    if (field === "standard" || field === "stream") {
+      setSectionTouched(false);
+    }
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSectionChange = (value: string) => {
+    setSectionTouched(true);
+    // Allow letters only; normalize to uppercase as user types
+    const cleaned = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2);
+    setForm((prev) => ({ ...prev, section: cleaned }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const section = sectionValue;
+    if (!standard || !section) return;
+    if (isSenior && !stream) return;
+
     setLoading(true);
     try {
-      await onSubmit(form);
+      const resolvedStream = isSenior ? stream : "";
+      await onSubmit({
+        standard,
+        section,
+        stream: resolvedStream,
+        name: buildClassName(standard, section, resolvedStream || undefined),
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const teacherOptions = [
-    { value: "", label: t("classes.noClassTeacher") },
-    ...staff
-      .filter((s) => s.designation === "Teacher" || s.designation === "Head Teacher" || s.designation === "Principal")
-      .map((s) => ({
-        value: s.id,
-        label: `${s.firstName} ${s.lastName} (${s.designation})`,
-      })),
-  ];
-
-  const sectionOptions = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
-  const classAlreadyExists = existingClasses.some(
-    (c) =>
-      c.standard === String(form.standard || "").trim() &&
-      c.section === String(form.section || "").trim().toUpperCase() &&
-      c.id !== initialData.id
+  const classAlreadyExists = Boolean(
+    standard &&
+      sectionValue &&
+      existingClasses.some(
+        (c) =>
+          c.standard === standard &&
+          c.section === sectionValue &&
+          (c.stream || "") === (isSenior ? stream : "") &&
+          c.id !== initialData.id
+      )
   );
 
+  const previewName = standard && sectionValue
+    ? buildClassName(
+        standard,
+        sectionValue,
+        isSenior ? stream || undefined : undefined
+      )
+    : null;
+
+  const requiredReady = Boolean(standard && sectionValue && (!isSenior || stream));
+
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>{t("classes.classSetup")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Select label={t("classes.standard")} required options={SCHOOL_STANDARDS} value={form.standard || ""} onChange={(e) => update("standard", e.target.value)} />
-          <Select label={t("classes.section")} required options={sectionOptions} value={form.section || "A"} onChange={(e) => update("section", e.target.value)} />
-          {["11", "12"].includes(String(form.standard || "")) && (
-            <Select
-              label="Stream"
-              emptyLabel="General"
-              options={CLASS_STREAMS}
-              value={stream}
-              onChange={(e) => setStream(e.target.value)}
-            />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Select
+          label={t("classes.standard")}
+          required
+          options={SCHOOL_STANDARDS}
+          value={form.standard || ""}
+          onChange={(e) => update("standard", e.target.value)}
+        />
+        {isSenior && (
+          <Select
+            label={t("classes.stream")}
+            required
+            options={[...SENIOR_STREAMS]}
+            value={stream}
+            onChange={(e) => update("stream", e.target.value)}
+          />
+        )}
+        <div className={isSenior ? "sm:col-span-2" : undefined}>
+          <Input
+            label={t("classes.section")}
+            required
+            value={form.section || ""}
+            onChange={(e) => handleSectionChange(e.target.value)}
+            placeholder={suggestedSection || "A"}
+            maxLength={2}
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
+      {standard && siblingSections.length > 0 && (
+        <p className="text-xs text-slate-500">
+          {t("classes.existingSections", {
+            sections: [...new Set(siblingSections.map((s) => s.toUpperCase()))]
+              .sort()
+              .join(", "),
+          })}
+          {!sectionTouched && (
+            <span className="text-blue-600">
+              {" "}
+              · {t("classes.nextSectionHint", { section: suggestedSection })}
+            </span>
           )}
-          <Select label={t("classes.academicYear")} required options={FINANCIAL_YEARS} value={form.academicYear || "2025-26"} onChange={(e) => update("academicYear", e.target.value)} />
-          <Input label={t("classes.className")} required value={form.name || ""} onChange={(e) => update("name", e.target.value)} />
-          {classAlreadyExists && (
-            <div className="md:col-span-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              Class {form.standard}-{form.section} already exists for {form.academicYear}. Please choose another section.
-            </div>
-          )}
-          <Input label={t("classes.institutionName")} value={form.institutionName || ""} onChange={(e) => update("institutionName", e.target.value)} />
-          <Select label={t("common.district")} options={GUJARAT_DISTRICTS} value={form.institutionDistrict || ""} onChange={(e) => update("institutionDistrict", e.target.value)} />
-          <div className="md:col-span-2">
-            <Select
-              label={t("classes.classTeacher")}
-              options={teacherOptions}
-              value={form.classTeacherId || ""}
-              onChange={(e) => update("classTeacherId", e.target.value || null)}
-            />
-          </div>
-          <div className="md:col-span-2 flex justify-end pt-4">
-            <Button type="submit" variant="success" disabled={loading || classAlreadyExists}>
-              <Save className="h-4 w-4" />
-              {loading ? t("common.saving") : resolvedSubmitLabel}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        </p>
+      )}
+
+      {classAlreadyExists && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+          {t("classes.duplicateClass")}
+          <button
+            type="button"
+            className="ml-2 font-semibold text-red-800 underline underline-offset-2"
+            onClick={() => {
+              setSectionTouched(false);
+              setForm((prev) => ({ ...prev, section: suggestedSection }));
+            }}
+          >
+            {t("classes.useNextSection", { section: suggestedSection })}
+          </button>
+        </div>
+      )}
+
+      {previewName && (
+        <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-600">
+          <span className="font-medium text-slate-900">{previewName}</span>
+          <span className="text-slate-400"> · {t("classes.teacherAssignLater")}</span>
+        </p>
+      )}
+
+      <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+            {t("common.cancel")}
+          </Button>
+        )}
+        <Button
+          type="submit"
+          disabled={loading || classAlreadyExists || !requiredReady}
+          className="w-full sm:w-auto min-w-[140px]"
+        >
+          <Save className="h-4 w-4" />
+          {loading ? t("common.saving") : resolvedSubmitLabel}
+        </Button>
+      </div>
+    </form>
   );
 }

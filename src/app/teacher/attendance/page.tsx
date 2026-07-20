@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -8,12 +8,22 @@ import {
   type TeacherClassOption,
 } from "@/components/attendance/teacher-attendance-filters";
 import { AttendanceEntryGrid } from "@/components/attendance/attendance-entry-grid";
+import { AttendanceViewToolbar } from "@/components/attendance/attendance-view-toolbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useT } from "@/i18n/locale-provider";
 import type { AttendanceRow } from "@/lib/attendance";
-import { countMonthPresent } from "@/lib/attendance";
+import { countMonthPresent, compareRollNumbers } from "@/lib/attendance";
+import {
+  EMPTY_ATTENDANCE_VIEW_FILTERS,
+  filterAttendanceRows,
+  mergeAttendanceRows,
+  parseDayRange,
+  resolveVisibleDayIndices,
+  type AttendanceViewFilters,
+} from "@/lib/attendance-view-filters";
 import { ClipboardList, Loader2, Printer, Save, CheckCircle2 } from "lucide-react";
+import { teacherTheme as tp } from "@/components/teacher/teacher-theme";
 
 function TeacherAttendanceContent() {
   const t = useT();
@@ -25,6 +35,7 @@ function TeacherAttendanceContent() {
     month: searchParams.get("month") || String(new Date().getMonth() + 1),
     year: searchParams.get("year") || String(new Date().getFullYear()),
   });
+  const [viewFilters, setViewFilters] = useState<AttendanceViewFilters>(EMPTY_ATTENDANCE_VIEW_FILTERS);
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [meta, setMeta] = useState({ standard: "", section: "", className: "" });
   const [loaded, setLoaded] = useState(false);
@@ -32,6 +43,25 @@ function TeacherAttendanceContent() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
+
+  const monthNum = parseInt(filters.month, 10) || new Date().getMonth() + 1;
+  const yearNum = parseInt(filters.year, 10) || new Date().getFullYear();
+
+  const dayIndices = useMemo(
+    () => resolveVisibleDayIndices(viewFilters, monthNum, yearNum),
+    [viewFilters, monthNum, yearNum]
+  );
+
+  const filteredRows = useMemo(
+    () => filterAttendanceRows(rows, viewFilters, monthNum, yearNum),
+    [rows, viewFilters, monthNum, yearNum]
+  );
+
+  const highlightDayIndex = useMemo(() => {
+    const { from, to, isCustom } = parseDayRange(viewFilters, monthNum, yearNum);
+    return isCustom && from === to ? from - 1 : null;
+  }, [viewFilters, monthNum, yearNum]);
 
   useEffect(() => {
     fetch("/api/teacher")
@@ -51,7 +81,7 @@ function TeacherAttendanceContent() {
       .finally(() => setClassesLoading(false));
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { resetViewFilters?: boolean }) => {
     if (!filters.classId) {
       setError(t("attendance.chooseClass"));
       return;
@@ -59,6 +89,9 @@ function TeacherAttendanceContent() {
     setLoading(true);
     setError("");
     setSaved(false);
+    if (opts?.resetViewFilters !== false) {
+      setViewFilters(EMPTY_ATTENDANCE_VIEW_FILTERS);
+    }
     const params = new URLSearchParams({
       month: filters.month,
       year: filters.year,
@@ -92,10 +125,11 @@ function TeacherAttendanceContent() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         classId: filters.classId,
-        month: parseInt(filters.month, 10),
-        year: parseInt(filters.year, 10),
+        month: monthNum,
+        year: yearNum,
         rows: rows.map((r) => ({
           studentId: r.studentId,
+          rollNumber: r.rollNumber,
           attendance: r.attendance,
           schoolFee: r.schoolFee,
           termFee: r.termFee,
@@ -113,12 +147,14 @@ function TeacherAttendanceContent() {
     }
     setSaved(true);
     setSaving(false);
-    await load();
+    await load({ resetViewFilters: false });
   };
 
   const markAllPresent = () => {
+    const ids = new Set(filteredRows.map((r) => r.studentId));
     setRows((prev) =>
       prev.map((row) => {
+        if (!ids.has(row.studentId)) return row;
         const attendance = row.attendance.map(() => "P" as const);
         const mt = countMonthPresent(attendance);
         const prevT = parseInt(row.prevTotal || "0", 10) || 0;
@@ -132,6 +168,63 @@ function TeacherAttendanceContent() {
     );
   };
 
+  const onGridChange = (nextFiltered: AttendanceRow[]) => {
+    setRows((prev) => mergeAttendanceRows(prev, nextFiltered));
+  };
+
+  const saveRoll = async (studentId: string, rollNumber: string) => {
+    if (!filters.classId) return;
+    const res = await fetch("/api/attendance/rolls", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        classId: filters.classId,
+        updates: [{ studentId, rollNumber }],
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || "Failed to update roll");
+      throw new Error(data.error || "Failed to update roll");
+    }
+    setRows((prev) => {
+      const next = prev.map((r) =>
+        r.studentId === studentId ? { ...r, rollNumber } : r
+      );
+      next.sort((a, b) => compareRollNumbers(a.rollNumber, b.rollNumber));
+      return next.map((r, i) => ({ ...r, serial: i + 1 }));
+    });
+  };
+
+  const downloadExport = async (format: "pdf" | "xlsx") => {
+    if (!filters.classId) return;
+    setExporting(format);
+    try {
+      const params = new URLSearchParams({
+        type: "attendance",
+        format,
+        classId: filters.classId,
+        month: filters.month,
+        year: filters.year,
+      });
+      const res = await fetch(`/api/teacher/export?${params}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Export failed");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `attendance_${meta.className || "class"}_${yearNum}-${String(monthNum).padStart(2, "0")}.${format === "pdf" ? "pdf" : "xlsx"}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const printRegisterUrl = () => {
     const p = new URLSearchParams({
       month: filters.month,
@@ -142,23 +235,25 @@ function TeacherAttendanceContent() {
     return `/certificates/class-register?${p}`;
   };
 
+  const classLabel = meta.className || `${meta.standard}-${meta.section}`;
+
   if (classesLoading) {
     return (
       <div className="flex h-48 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        <Loader2 className={`h-8 w-8 animate-spin ${tp.icon}`} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <ClipboardList className="h-7 w-7 text-emerald-600" />
+          <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900 md:text-xl">
+            <ClipboardList className={`h-5 w-5 ${tp.icon}`} />
             {t("attendance.teacherPageTitle")}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">{t("attendance.teacherPageSubtitle")}</p>
+          <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">{t("attendance.teacherPageSubtitle")}</p>
         </div>
         {loaded && rows.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -171,7 +266,7 @@ function TeacherAttendanceContent() {
                 {t("attendance.printRegister")}
               </Button>
             </Link>
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={save} disabled={saving}>
+            <Button size="sm" className={tp.btn} onClick={save} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {t("attendance.save")}
             </Button>
@@ -199,7 +294,7 @@ function TeacherAttendanceContent() {
       )}
 
       {saved && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div className="flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
           <CheckCircle2 className="h-4 w-4" />
           {t("attendance.savedOk")}
         </div>
@@ -207,7 +302,7 @@ function TeacherAttendanceContent() {
 
       {loading ? (
         <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+          <Loader2 className={`h-8 w-8 animate-spin ${tp.icon}`} />
         </div>
       ) : !loaded ? (
         <Card>
@@ -222,14 +317,38 @@ function TeacherAttendanceContent() {
         </Card>
       ) : (
         <>
+          <AttendanceViewToolbar
+            value={viewFilters}
+            onChange={setViewFilters}
+            month={monthNum}
+            year={yearNum}
+            filteredCount={filteredRows.length}
+            totalCount={rows.length}
+            onDownload={downloadExport}
+            downloading={exporting}
+          />
+
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-            <span className="font-semibold text-slate-900">
-              {meta.className || `${meta.standard}-${meta.section}`}
-            </span>
+            <span className="font-semibold text-slate-900">{classLabel}</span>
             <span>·</span>
-            <span>{t("attendance.studentCount", { count: rows.length })}</span>
+            <span>{t("attendance.studentCount", { count: filteredRows.length })}</span>
           </div>
-          <AttendanceEntryGrid rows={rows} onChange={setRows} />
+
+          {filteredRows.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-slate-500">
+                {t("attendance.reportNoSearchResults")}
+              </CardContent>
+            </Card>
+          ) : (
+            <AttendanceEntryGrid
+              rows={filteredRows}
+              onChange={onGridChange}
+              onRollSave={saveRoll}
+              visibleDayIndices={dayIndices}
+              highlightDayIndex={highlightDayIndex}
+            />
+          )}
         </>
       )}
     </div>
@@ -241,7 +360,7 @@ export default function TeacherAttendancePage() {
     <Suspense
       fallback={
         <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+          <Loader2 className={`h-8 w-8 animate-spin ${tp.icon}`} />
         </div>
       }
     >

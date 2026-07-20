@@ -92,6 +92,8 @@ export function StatCard({
 const METRIC_ACCENTS = {
   blue:    { bar: "bg-blue-600",    icon: "bg-blue-600 shadow-blue-600/25",    text: "text-blue-600"    },
   emerald: { bar: "bg-emerald-600", icon: "bg-emerald-600 shadow-emerald-600/25", text: "text-emerald-600" },
+  teal:    { bar: "bg-teal-600",    icon: "bg-teal-600 shadow-teal-600/25",    text: "text-teal-600"    },
+  cyan:    { bar: "bg-cyan-600",    icon: "bg-cyan-600 shadow-cyan-600/25",    text: "text-cyan-600"    },
   violet:  { bar: "bg-violet-600",  icon: "bg-violet-600 shadow-violet-600/25",  text: "text-violet-600"  },
   amber:   { bar: "bg-amber-500",   icon: "bg-amber-500 shadow-amber-500/25",   text: "text-amber-600"   },
   indigo:  { bar: "bg-indigo-600",  icon: "bg-indigo-600 shadow-indigo-600/25",  text: "text-indigo-600"  },

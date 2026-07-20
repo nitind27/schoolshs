@@ -8,6 +8,9 @@ import { Badge, CategoryBadge } from "@/components/ui/badge";
 import { Send, CheckCircle, AlertCircle, Square, CheckSquare } from "lucide-react";
 import type { Student } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
+import { useConfirm } from "@/hooks/use-confirm";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { PAGE_SIZE } from "@/lib/pagination";
 
 interface SubmitResult {
   total: number;
@@ -24,37 +27,37 @@ interface SubmitResult {
 
 function BulkSubmitContent() {
   const t = useT();
+  const { confirm, ConfirmDialog } = useConfirm();
   const searchParams = useSearchParams();
   const preSelectedIds = searchParams.get("ids")?.split(",") || [];
 
   const [students, setStudents] = useState<Student[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set(preSelectedIds));
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<SubmitResult | null>(null);
 
   useEffect(() => {
-    fetch("/api/students?limit=500&status=ready")
-      .then((r) => r.json())
-      .then((data) => {
-        setStudents(data.students);
-        if (preSelectedIds.length === 0) {
-          setSelected(new Set(data.students.map((s: Student) => s.id)));
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [preSelectedIds.length]);
-
-  useEffect(() => {
     if (preSelectedIds.length > 0) {
-      fetch("/api/students?limit=500")
+      fetch(`/api/students?limit=${PAGE_SIZE}&page=${page}&ids=${preSelectedIds.join(",")}`)
         .then((r) => r.json())
         .then((data) => {
-          const all = data.students as Student[];
-          setStudents(all.filter((s) => preSelectedIds.includes(s.id) || s.status === "ready"));
-        });
+          setStudents(data.students || []);
+          setTotal(data.total ?? data.students?.length ?? 0);
+        })
+        .finally(() => setLoading(false));
+      return;
     }
-  }, [preSelectedIds]);
+    fetch(`/api/students?limit=${PAGE_SIZE}&page=${page}&status=ready`)
+      .then((r) => r.json())
+      .then((data) => {
+        setStudents(data.students || []);
+        setTotal(data.total ?? 0);
+      })
+      .finally(() => setLoading(false));
+  }, [page, preSelectedIds]);
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -71,18 +74,24 @@ function BulkSubmitContent() {
       return;
     }
 
-    if (!confirm(t("bulkSubmitPage.confirmContinue", { count: selected.size }))) return;
+    await confirm({
+      title: t("common.confirm"),
+      message: t("bulkSubmitPage.confirmContinue", { count: selected.size }),
+      confirmLabel: t("common.submit"),
+      variant: "default",
+      onConfirm: async () => {
+        setSubmitting(true);
+        const res = await fetch("/api/students/bulk-submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentIds: Array.from(selected) }),
+        });
 
-    setSubmitting(true);
-    const res = await fetch("/api/students/bulk-submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentIds: Array.from(selected) }),
+        const data = await res.json();
+        setResult(data);
+        setSubmitting(false);
+      },
     });
-
-    const data = await res.json();
-    setResult(data);
-    setSubmitting(false);
   };
 
   if (loading) {
@@ -116,7 +125,7 @@ function BulkSubmitContent() {
       {!result && (
         <Card>
           <CardHeader>
-            <CardTitle>{t("bulkSubmitPage.readyStudents", { count: students.length })}</CardTitle>
+            <CardTitle>{t("bulkSubmitPage.readyStudents", { count: total })}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {students.length === 0 ? (
@@ -159,6 +168,7 @@ function BulkSubmitContent() {
                 </table>
               </div>
             )}
+            <TablePagination page={page} total={total} onPageChange={setPage} />
           </CardContent>
         </Card>
       )}
@@ -224,6 +234,7 @@ function BulkSubmitContent() {
           </CardContent>
         </Card>
       )}
+      <ConfirmDialog />
     </div>
   );
 }

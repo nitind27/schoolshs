@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/i18n/locale-provider";
+import { useConfirm } from "@/hooks/use-confirm";
 import type { SchoolClass } from "@/generated/prisma/client";
 import { Copy, ExternalLink, Link2, Loader2, Plus, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 
@@ -35,6 +36,7 @@ interface Props {
 
 export function IdCardShareLinkManager({ classId, standard, section, academicYear, classes }: Props) {
   const t = useT();
+  const { confirm, ConfirmDialog } = useConfirm();
   const [links, setLinks] = useState<ShareLink[]>([]);
   const [appUrl, setAppUrl] = useState("");
   const [loading, setLoading] = useState(true);
@@ -96,9 +98,17 @@ export function IdCardShareLinkManager({ classId, standard, section, academicYea
   };
 
   const deleteLink = async (id: string) => {
-    if (!confirm(t("idCardShare.deleteConfirm"))) return;
-    await fetch(`/api/id-cards/share-links/${id}`, { method: "DELETE" });
-    loadLinks();
+    await confirm({
+      title: t("common.delete"),
+      message: t("idCardShare.deleteConfirm"),
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
+      variant: "destructive",
+      onConfirm: async () => {
+        await fetch(`/api/id-cards/share-links/${id}`, { method: "DELETE" });
+        loadLinks();
+      },
+    });
   };
 
   const resolveUrl = (link: ShareLink) =>
@@ -122,6 +132,7 @@ export function IdCardShareLinkManager({ classId, standard, section, academicYea
   };
 
   return (
+    <>
     <Card className="print:hidden border-violet-200 bg-gradient-to-br from-violet-50/50 to-white">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
@@ -243,5 +254,7 @@ export function IdCardShareLinkManager({ classId, standard, section, academicYea
         )}
       </CardContent>
     </Card>
+    <ConfirmDialog />
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { validateStudent, normalizeStudentRow } from "@/lib/validation";
+import { fillStudentGuNames } from "@/lib/gujarati/transliterate-server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
     };
 
     for (let i = 0; i < rows.length; i++) {
-      const data = normalizeStudentRow(rows[i]);
+      const data = await fillStudentGuNames(normalizeStudentRow(rows[i]));
       const validationErrors = validateStudent(data);
 
       if (!data.aadhaarNumber) {

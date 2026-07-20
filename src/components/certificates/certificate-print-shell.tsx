@@ -13,6 +13,8 @@ export function CertificatePrintShell({
   onPreview,
   onExitPreview,
   canPrint = true,
+  hidePrint = false,
+  printMargin,
 }: {
   children: React.ReactNode;
   landscape?: boolean;
@@ -21,9 +23,14 @@ export function CertificatePrintShell({
   onPreview?: () => void;
   onExitPreview?: () => void;
   canPrint?: boolean;
+  /** Hide the header Print button when page has its own */
+  hidePrint?: boolean;
+  /** @page margin — default 8mm portrait / 4mm landscape */
+  printMargin?: string;
 }) {
   const t = useT();
   const router = useRouter();
+  const pageMargin = printMargin ?? (landscape ? "4mm" : "8mm");
 
   return (
     <div className="certificates-module space-y-5">
@@ -64,15 +71,17 @@ export function CertificatePrintShell({
                 {t("certificates.preview")}
               </Button>
             )}
-            <Button
-              size="sm"
-              onClick={() => window.print()}
-              disabled={!canPrint}
-              className="gap-1.5"
-            >
-              <Printer className="h-3.5 w-3.5" />
-              {t("certificates.print")}
-            </Button>
+            {!hidePrint && (
+              <Button
+                size="sm"
+                onClick={() => window.print()}
+                disabled={!canPrint}
+                className="gap-1.5"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                {t("certificates.print")}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -117,23 +126,51 @@ export function CertificatePrintShell({
       <style jsx global>{`
         /* ─ Print ─ */
         @media print {
-          body * { visibility: hidden; }
-          .print-area, .print-area * { visibility: visible; }
-          .print-area {
-            position: fixed;
-            inset: 0;
-            width: 100%;
-            height: 100%;
+          /* Beat dashboard.css body * { visibility: hidden !important } */
+          .print-area,
+          .print-area * {
+            visibility: visible !important;
           }
-          .no-print { display: none !important; }
+          .print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            inset: auto !important;
+            width: 100% !important;
+            height: auto !important;
+            background: #fff !important;
+            z-index: 99999 !important;
+            overflow: visible !important;
+          }
+          .print-area:has(.ora-print-wrap) {
+            width: 200mm !important;
+            height: 285mm !important;
+            max-height: 285mm !important;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+          }
+          .no-print { display: none !important; visibility: hidden !important; }
           aside, nav, header { display: none !important; }
           main { padding: 0 !important; margin: 0 !important; }
           .lg\\:pl-\\[260px\\] { padding-left: 0 !important; }
-          .cert-preview-frame { box-shadow: none !important; background: #fff !important; padding: 0 !important; }
+          .cert-preview-frame {
+            box-shadow: none !important;
+            background: #fff !important;
+            padding: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+          }
+          .cert-preview-frame .cert-page,
+          .cert-preview-frame .bonafide-cert-sheet,
+          .cert-preview-frame .cr-root {
+            box-shadow: none !important;
+            border: none !important;
+          }
         }
         @page {
           size: ${landscape ? "A4 landscape" : "A4 portrait"};
-          margin: 8mm;
+          margin: ${pageMargin};
         }
         @media print {
           * {
@@ -148,6 +185,11 @@ export function CertificatePrintShell({
           padding: 24px;
           border-radius: 16px;
           border: 1px solid #cbd5e1;
+          overflow-x: auto;
+          overflow-y: visible;
+        }
+        .cert-preview-frame .bonafide-cert-sheet {
+          max-width: 212mm;
         }
         .cert-preview-frame .cert-page {
           margin: 0 auto;
@@ -209,7 +251,7 @@ export function CertificatePrintShell({
         .print-landscape-wide { width: 100%; }
         @media print {
           .print-landscape-wide {
-            transform: scale(0.92);
+            transform: none;
             transform-origin: top left;
           }
         }

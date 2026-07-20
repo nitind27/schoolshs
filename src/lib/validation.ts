@@ -1,5 +1,6 @@
 import type { Student } from "@/generated/prisma/client";
 import { normalizeCategory } from "@/lib/category-inference";
+import { parseImportDate } from "@/lib/import/import-formats";
 
 export type StudentInput = Omit<Student, "id" | "createdAt" | "updatedAt" | "submissionDate" | "validationErrors">;
 
@@ -125,8 +126,12 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     firstName: String(row.firstName || "").trim(),
     middleName: String(row.middleName || "").trim() || null,
     surname: String(row.surname || "").trim(),
+    firstNameGu: String(row.firstNameGu || "").trim() || null,
+    middleNameGu: String(row.middleNameGu || "").trim() || null,
+    surnameGu: String(row.surnameGu || "").trim() || null,
     aadhaarName: String(row.aadhaarName || "").trim(),
-    dateOfBirth: String(row.dateOfBirth || "").trim(),
+    aadhaarNameGu: String(row.aadhaarNameGu || "").trim() || null,
+    dateOfBirth: parseImportDate(row.dateOfBirth),
     gender: String(row.gender || "").trim(),
     aadhaarNumber: String(row.aadhaarNumber || "").replace(/\s/g, "").trim(),
     rationCardNumber: String(row.rationCardNumber || "").trim() || null,
@@ -134,7 +139,10 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     email: String(row.email || "").trim() || null,
     motherName: String(row.motherName || "").trim(),
     fatherName: String(row.fatherName || "").trim(),
+    motherNameGu: String(row.motherNameGu || "").trim() || null,
+    fatherNameGu: String(row.fatherNameGu || "").trim() || null,
     guardianName: String(row.guardianName || "").trim() || null,
+    guardianNameGu: String(row.guardianNameGu || "").trim() || null,
     category: normalizeCategory(String(row.category || "").trim()) || String(row.category || "").trim(),
     caste: String(row.caste || "").trim() || null,
     religion: String(row.religion || "").trim(),
@@ -164,8 +172,8 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     institutionName: String(row.institutionName || "").trim(),
     currentYear: String(row.currentYear || "").trim(),
     admissionType: String(row.admissionType || "Regular").trim(),
-    startDate: String(row.startDate || "").trim() || null,
-    completionDate: String(row.completionDate || "").trim() || null,
+    startDate: parseImportDate(row.startDate) || null,
+    completionDate: parseImportDate(row.completionDate) || null,
     board10th: String(row.board10th || "").trim(),
     percentage10th: parseNumber(row.percentage10th),
     year10th: String(row.year10th || "").trim(),
@@ -185,7 +193,7 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     standard: String(row.standard || "").trim() || null,
     childUid: String(row.childUid || "").replace(/\s/g, "").trim() || null,
     bloodGroup: String(row.bloodGroup || "").trim() || null,
-    idCardValidUpto: String(row.idCardValidUpto || "").trim() || null,
+    idCardValidUpto: parseImportDate(row.idCardValidUpto) || null,
     status: "draft",
     notes: null,
   };

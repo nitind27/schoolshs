@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/locale-provider";
-import { ClipboardList, BarChart3 } from "lucide-react";
+import { ClipboardList, BarChart3, BookOpen } from "lucide-react";
 
 export default function AttendanceLayout({ children }: { children: React.ReactNode }) {
   const t = useT();
@@ -13,6 +13,7 @@ export default function AttendanceLayout({ children }: { children: React.ReactNo
   const tabs = [
     { href: "/attendance", label: t("attendance.tabEntry"), icon: ClipboardList },
     { href: "/attendance/reports", label: t("attendance.tabReports"), icon: BarChart3 },
+    { href: "/certificates/daily-attendance-book", label: t("attendance.tabDailyBook"), icon: BookOpen },
   ];
 
   return (

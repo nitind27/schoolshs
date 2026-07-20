@@ -55,6 +55,9 @@ export const SCHOOL_STANDARDS = [
 export const CLASS_SECTIONS = ["A", "B", "C", "D", "E", "F"] as const;
 export const CLASS_STREAMS = ["Arts", "Commerce", "Science"] as const;
 
+/** Class 11/12 streams used in this portal (Arts + Commerce only) */
+export const SENIOR_STREAMS = ["Arts", "Commerce"] as const;
+
 export function getRecommendedSectionsForStandard(standard: string): string[] {
   if (["6", "7", "8"].includes(standard)) return ["A", "B"];
   if (["9", "10"].includes(standard)) return ["A", "B", "C", "D"];

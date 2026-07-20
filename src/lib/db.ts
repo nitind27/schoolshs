@@ -1,5 +1,5 @@
 import { loadEnv } from "./load-env";
-import { PrismaClient } from "@/generated/prisma/client";
+import { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { createPrismaClient } from "./prisma-factory";
 
 loadEnv();
@@ -10,15 +10,27 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** Bump when schema changes — forces fresh client in dev HMR */
-const SCHEMA_VERSION = 14;
+const SCHEMA_VERSION = 24;
 
 function isClientFresh(client: PrismaClient): boolean {
+  const hasLoginSecurity =
+    "lockedUntil" in Prisma.UserScalarFieldEnum &&
+    "failedLoginCount" in Prisma.UserScalarFieldEnum;
+  const hasEmailVerification = "emailVerified" in Prisma.UserScalarFieldEnum;
+
   return (
     "user" in client &&
     "automationJob" in client &&
     "school" in client &&
     "voucher" in client &&
-    "studentAttendanceMonth" in client
+    "studentAttendanceMonth" in client &&
+    "chatRoom" in client &&
+    "classSubject" in client &&
+    "platformSettings" in client &&
+    "pendingAdminEmailVerification" in client &&
+    "dailyAttendanceBook" in client &&
+    hasLoginSecurity &&
+    hasEmailVerification
   );
 }
 
@@ -26,6 +38,9 @@ export function getPrisma(): PrismaClient {
   const cached = globalForPrisma.prisma;
   if (cached && isClientFresh(cached) && globalForPrisma.prismaSchemaVersion === SCHEMA_VERSION) {
     return cached;
+  }
+  if (cached) {
+    void cached.$disconnect().catch(() => undefined);
   }
   const client = createPrismaClient();
   globalForPrisma.prisma = client;

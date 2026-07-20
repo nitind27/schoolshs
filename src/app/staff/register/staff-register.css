@@ -1,0 +1,136 @@
+/* Staff service register — screen + print (A4 landscape) */
+
+.sr-header {
+  display: none;
+}
+
+.sr-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.sr-tbl th {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 6px 6px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #334155;
+  white-space: normal;
+  vertical-align: middle;
+}
+
+.sr-tbl td {
+  border: 1px solid #e2e8f0;
+  padding: 5px 6px;
+  vertical-align: middle;
+  color: #0f172a;
+}
+
+.sr-tbl tbody tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+.sr-tbl .sr-num {
+  width: 32px;
+  text-align: center;
+  color: #64748b;
+}
+
+.sr-tbl .sr-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sr-tbl .sr-mono {
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.sr-tbl .sr-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .staff-register-area,
+  .staff-register-area * {
+    visibility: visible !important;
+  }
+
+  .staff-register-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+  }
+
+  .sr-header {
+    display: block;
+    text-align: center;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #0f172a;
+  }
+
+  .sr-school {
+    font-size: 14pt;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .sr-title {
+    font-size: 10pt;
+    font-weight: 600;
+    margin: 2px 0 0;
+  }
+
+  .sr-tbl {
+    font-size: 7pt;
+    table-layout: fixed;
+  }
+
+  .sr-tbl th {
+    background: #e2e8f0 !important;
+    border: 1px solid #475569 !important;
+    padding: 2px 3px;
+    font-size: 6pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sr-tbl td {
+    border: 1px solid #64748b !important;
+    padding: 2px 3px;
+    font-size: 6.5pt;
+    word-break: break-word;
+  }
+
+  .sr-tbl .sr-mono,
+  .sr-tbl .sr-date,
+  .sr-tbl .sr-name {
+    white-space: normal;
+  }
+
+  .sr-tbl tbody tr {
+    break-inside: avoid;
+  }
+
+  .sr-note {
+    display: none;
+  }
+}

@@ -40,8 +40,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       email: body.email ? String(body.email).trim() : null,
       gender: body.gender ? String(body.gender).trim() : null,
       dateOfJoining: body.dateOfJoining ? String(body.dateOfJoining).trim() : null,
+      dateOfBirth: body.dateOfBirth ? String(body.dateOfBirth).trim() : null,
+      panNumber: body.panNumber ? String(body.panNumber).trim().toUpperCase() : null,
+      gpfCpfNo: body.gpfCpfNo ? String(body.gpfCpfNo).trim() : null,
+      aadhaarNumber: body.aadhaarNumber ? String(body.aadhaarNumber).replace(/\s/g, "") : null,
+      qualification: body.qualification ? String(body.qualification).trim() : null,
+      payLevel: body.payLevel ? String(body.payLevel).trim() : null,
       isActive: body.isActive !== false,
       photoPath: body.photoPath ? String(body.photoPath).trim() : null,
+      monthlySalary: body.monthlySalary != null && body.monthlySalary !== "" ? Number(body.monthlySalary) : null,
+      hra: body.hra != null && body.hra !== "" ? Number(body.hra) : 0,
+      conveyance: body.conveyance != null && body.conveyance !== "" ? Number(body.conveyance) : 0,
+      pfDeduction: body.pfDeduction != null && body.pfDeduction !== "" ? Number(body.pfDeduction) : 0,
+      bankName: body.bankName ? String(body.bankName).trim() : null,
+      bankAccount: body.bankAccount ? String(body.bankAccount).trim() : null,
+      ifscCode: body.ifscCode ? String(body.ifscCode).trim() : null,
     };
 
     const staff = await prisma.staff.update({ where: { id }, data });

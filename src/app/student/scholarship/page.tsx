@@ -41,8 +41,8 @@ export default function StudentScholarshipPage() {
       />
 
       <div className="student-section text-center py-8">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25">
-          <CheckCircle2 className="h-8 w-8" />
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-[var(--sp-ink,#0c1e2e)] text-white">
+          <CheckCircle2 className="h-7 w-7" />
         </div>
         <Badge status={student.status as string} />
         <h2 className="text-2xl font-bold text-slate-900 mt-4">

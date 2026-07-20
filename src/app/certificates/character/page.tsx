@@ -14,13 +14,20 @@ function CharacterContent() {
   const t = useT();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState({
-    classId: "", standard: "", section: "", academicYear: "2025-26",
-    studentId: "", month: "1", year: String(new Date().getFullYear()),
+    classId: "",
+    standard: "",
+    section: "",
+    academicYear: "2025-26",
+    studentId: "",
+    month: "1",
+    year: String(new Date().getFullYear()),
   });
-  const [students, setStudents] = useState<{ id: string; firstName: string; surname: string; grNumber?: string | null }[]>([]);
+  const [students, setStudents] = useState<
+    { id: string; firstName: string; surname: string; grNumber?: string | null }[]
+  >([]);
   const [source, setSource] = useState<"none" | "preview" | "live">("none");
   const [liveStudent, setLiveStudent] = useState<typeof SAMPLE_CHARACTER.student | null>(null);
-  const [examName, setExamName] = useState("GSEB S.S.C.");
+  const [examName, setExamName] = useState("GSEB S.S.C. March 2026");
   const [examResult, setExamResult] = useState("First Trial");
   const [issueDate, setIssueDate] = useState(formatToday());
 
@@ -59,7 +66,6 @@ function CharacterContent() {
 
   return (
     <CertificatePrintShell
-      landscape
       title={t("certificates.characterTitle")}
       isPreview={isPreview}
       onPreview={showPreview}
@@ -67,14 +73,25 @@ function CharacterContent() {
       canPrint={!!student}
     >
       <CertificateFilters value={filters} onChange={setFilters} onLoad={load} showStudent students={students} />
-      <div className="no-print grid gap-4 sm:grid-cols-3 mb-6">
-        <div><label className="text-sm font-medium">{t("certificates.examName")}</label>
-          <Input value={examName} onChange={(e) => setExamName(e.target.value)} /></div>
-        <div><label className="text-sm font-medium">{t("certificates.examResult")}</label>
-          <Input value={examResult} onChange={(e) => setExamResult(e.target.value)} /></div>
-        <div><label className="text-sm font-medium">{t("certificates.issueDate")}</label>
-          <Input value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></div>
+      <div className="no-print grid gap-4 sm:grid-cols-3 mb-4">
+        <div>
+          <label className="text-sm font-medium">{t("certificates.examName")}</label>
+          <Input value={examName} onChange={(e) => setExamName(e.target.value)} placeholder="e.g. March 2026" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">{t("certificates.examResult")}</label>
+          <Input value={examResult} onChange={(e) => setExamResult(e.target.value)} placeholder="e.g. First Trial" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">{t("certificates.issueDate")}</label>
+          <Input value={issueDate} onChange={(e) => setIssueDate(e.target.value)} placeholder="DD/MM/YYYY" />
+        </div>
       </div>
+      {student ? (
+        <p className="no-print text-xs text-slate-500 mb-3">
+          A4 Portrait · 2 certificates per page (top + bottom) · Scale 100% · Fit to page OFF
+        </p>
+      ) : null}
       {student ? (
         <CharacterCertificateView
           student={student}
@@ -92,5 +109,9 @@ function CharacterContent() {
 }
 
 export default function CharacterPage() {
-  return <Suspense><CharacterContent /></Suspense>;
+  return (
+    <Suspense>
+      <CharacterContent />
+    </Suspense>
+  );
 }

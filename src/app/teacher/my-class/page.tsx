@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/locale-provider";
+import { teacherTheme as tp } from "@/components/teacher/teacher-theme";
 import { ClipboardList } from "lucide-react";
 
 type TeacherClass = {
@@ -25,19 +26,19 @@ export default function TeacherMyClassPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t("teacherPortal.myClasses")}</h1>
-      <div className="grid gap-4">
+    <div className="space-y-3">
+      <h1 className="text-lg font-bold md:text-xl">{t("teacherPortal.myClasses")}</h1>
+      <div className="grid gap-2">
         {classes.map((cls) => (
-          <Card key={cls.id} className="hover:border-emerald-300">
-            <CardContent className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <Card key={cls.id} className={tp.cardHover}>
+            <CardContent className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
               <Link href={`/classes/${cls.id}`} className="flex-1">
-                <h3 className="font-semibold text-lg">{cls.name}</h3>
-                <p className="text-slate-500">{t("results.classLabel", { standard: cls.standard })}-{cls.section}</p>
-                <p className="text-sm text-slate-500 mt-1">{t("teacherPortal.studentsEnrolled", { count: cls.students?.length || 0 })}</p>
+                <h3 className="text-base font-semibold">{cls.name}</h3>
+                <p className="text-sm text-slate-500">{t("results.classLabel", { standard: cls.standard })}-{cls.section}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{t("teacherPortal.studentsEnrolled", { count: cls.students?.length || 0 })}</p>
               </Link>
               <Link href={`/teacher/attendance?classId=${cls.id}&month=${now.getMonth() + 1}&year=${now.getFullYear()}`}>
-                <Button className="bg-emerald-600 hover:bg-emerald-700">
+                <Button size="sm" className={tp.btn}>
                   <ClipboardList className="h-4 w-4" />
                   {t("teacherPortal.markAttendanceBtn")}
                 </Button>

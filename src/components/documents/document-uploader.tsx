@@ -20,15 +20,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { DocumentScanner } from "@/components/documents/document-scanner";
 
-export type DocType =
-  | "photo"
-  | "aadhaar"
-  | "income"
-  | "caste"
-  | "marksheet10"
-  | "marksheet12"
-  | "bankPassbook"
-  | "feeReceipt";
+import type { DocType } from "@/lib/student-documents";
+
+export type { DocType };
 
 export interface DocumentInfo {
   type: DocType;
@@ -54,6 +48,18 @@ interface DocumentUploaderProps {
 }
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+function translateDocError(t: Translator, err: unknown, fallbackKey: string): string {
+  if (err instanceof Error && err.message.startsWith("documents.")) {
+    return t(err.message);
+  }
+  return t(fallbackKey);
+}
+
+function apiErrorMessage(t: Translator, data: { errorKey?: string; error?: string }, fallbackKey = "documents.uploadFailed"): string {
+  if (data.errorKey) return t(data.errorKey);
+  return data.error || t(fallbackKey);
+}
 
 export function getDefaultDocuments(t: Translator): Omit<DocumentInfo, "previewUrl" | "fileName" | "mimeType" | "size" | "originalSize" | "dgReady" | "compressMessage">[] {
   return [
@@ -137,7 +143,7 @@ function DocumentCard({
           setLocalPreview(url);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : t("documents.compressionFailed"));
+        setError(translateDocError(t, err, "documents.compressionFailed"));
         setCompressing(false);
         return;
       }
@@ -158,7 +164,7 @@ function DocumentCard({
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.error || t("documents.uploadFailed"));
+          setError(apiErrorMessage(t, data));
           setLocalPreview(null);
           return;
         }

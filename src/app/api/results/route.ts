@@ -7,10 +7,16 @@ import {
   resultSessionName,
 } from "@/lib/results/config";
 import { assignRanks, computeResultStatus, computeStudentTotals } from "@/lib/results/calculations";
+import {
+  assertExamInSchool,
+  assertExamSubjectsInSchool,
+  assertStudentsInSchool,
+  SchoolScopeError,
+} from "@/lib/school-assertions";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth(["school_admin", "teacher"]);
+    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
     const { searchParams } = new URL(request.url);
     const standard = searchParams.get("standard");
     const examId = searchParams.get("examId");
@@ -85,7 +91,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth(["school_admin", "teacher"]);
+    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
     const body = await request.json();
 
     if (body.action === "create_session") {
@@ -227,6 +233,21 @@ export async function POST(request: NextRequest) {
 
     if (body.action === "save_marks") {
       const { examId, marks } = body;
+      if (!examId || !Array.isArray(marks) || !marks.length) {
+        return NextResponse.json({ error: "examId and marks required" }, { status: 400 });
+      }
+
+      await assertExamInSchool(session.schoolId, String(examId));
+      await assertStudentsInSchool(
+        session.schoolId,
+        marks.map((m: { studentId?: string }) => String(m.studentId || "")),
+      );
+      await assertExamSubjectsInSchool(
+        session.schoolId,
+        String(examId),
+        marks.map((m: { subjectId?: string }) => String(m.subjectId || "")),
+      );
+
       for (const m of marks) {
         const max = m.maxMarks || 100;
         const obtained = Number(m.marksObtained) || 0;

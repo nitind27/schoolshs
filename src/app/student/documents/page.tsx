@@ -19,6 +19,7 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
+import { uploadApiUrl } from "@/lib/student-documents";
 
 const DOC_CONFIG: { key: string; labelKey: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "photoPath", labelKey: "documents.photo", icon: Image },
@@ -74,7 +75,7 @@ export default function StudentDocumentsPage() {
                 </div>
               </div>
               <a
-                href={student[key] as string}
+                href={uploadApiUrl(student[key] as string) || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 transition-colors"

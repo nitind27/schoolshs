@@ -180,7 +180,7 @@ async function compressPdfToImage(file: File, docType: DocType): Promise<Compres
       message: `PDF ${formatKB(originalSize)} → JPG ${formatKB(compressedFile.size)} (DG ready)`,
     };
   } catch {
-    throw new Error("PDF compress nahi ho paya. Image (JPG/PNG) ke roop me upload karein.");
+    throw new Error("documents.pdfCompressFailed");
   }
 }
 
@@ -208,5 +208,5 @@ export async function compressForDigitalGujarat(
     return compressPdfToImage(file, docType);
   }
 
-  throw new Error("Sirf JPG, PNG, WEBP ya PDF allowed hai");
+  throw new Error("documents.invalidFileType");
 }

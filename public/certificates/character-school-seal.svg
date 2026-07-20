@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 200 220" fill="none">
+  <circle cx="100" cy="95" r="88" stroke="#1a1a55" stroke-width="3.5" fill="#fff"/>
+  <circle cx="100" cy="95" r="78" stroke="#1a1a55" stroke-width="1.5" fill="#fff"/>
+  <circle cx="100" cy="95" r="52" stroke="#1a1a55" stroke-width="1" stroke-dasharray="2 2" fill="none"/>
+  <path d="M100 42 C92 55 88 62 92 72 C86 68 84 78 90 82 C88 90 94 96 100 98 C106 96 112 90 110 82 C116 78 114 68 108 72 C112 62 108 55 100 42Z" fill="#1a1a55"/>
+  <rect x="95" y="96" width="10" height="28" rx="1.5" fill="#1a1a55"/>
+  <rect x="90" y="122" width="20" height="6" rx="1" fill="#1a1a55"/>
+  <path id="topArc" d="M 30,95 A 70,70 0 0 1 170,95" fill="none"/>
+  <text fill="#1a1a55" font-family="Georgia, Times New Roman, serif" font-size="9" font-weight="700" letter-spacing="0.5">
+    <textPath xlink:href="#topArc" href="#topArc" startOffset="50%" text-anchor="middle">SHRI SARVAJANIK HIGH SCHOOL</textPath>
+  </text>
+  <path id="botArc" d="M 170,95 A 70,70 0 0 1 30,95" fill="none"/>
+  <text fill="#1a1a55" font-family="Georgia, Times New Roman, serif" font-size="8" font-weight="600" letter-spacing="0.4">
+    <textPath xlink:href="#botArc" href="#botArc" startOffset="50%" text-anchor="middle">FORT-SONGADH · DIST. TAPI</textPath>
+  </text>
+  <path d="M35 175 L48 162 L152 162 L165 175 L152 188 L48 188 Z" fill="#1a1a55"/>
+  <path d="M35 175 L48 162 L48 188 Z" fill="#0d0d33"/>
+  <path d="M165 175 L152 162 L152 188 Z" fill="#0d0d33"/>
+  <text x="100" y="179" text-anchor="middle" fill="#fff" font-family="Georgia, Times New Roman, serif" font-size="10" font-weight="700">Dist. Tapi</text>
+</svg>

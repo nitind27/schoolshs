@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     let filterStudentId = studentId;
 
     try {
-      const session = await requireSchoolAuth(["school_admin", "teacher"]);
+      const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
       schoolId = session.schoolId;
     } catch {
       const session = await requireStudentAuth();

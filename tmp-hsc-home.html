@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+</head>
+<body>
+    <header b-z4jq4i4pza>
+    </header>
+    <div b-z4jq4i4pza >
+        <main b-z4jq4i4pza role="main" class="pb-3">
+            
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+	<meta name="HandheldFriendly" content="True" />
+	<meta name="MobileOptimized" content="320" />
+	<!-- Don't remove it -->
+	<meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+	<!-- Don't remove it -->
+
+	<link rel="icon" type="image/icno" href="/images/favicon.ico" />
+	<link href="/css/style.css" rel="stylesheet" type="text/css" media="all" />
+
+	<!-- Responsive and mobile friendly stuff -->
+
+	<link rel="stylesheet" href="/css/responsive.css" media="all" />
+	<link rel="stylesheet" href="/css/media-query.css" media="all" />
+
+	<style>
+		.background1 b {
+			font-weight: 600;
+		}
+
+		input[type=number]::-webkit-inner-spin-button,
+		input[type=number]::-webkit-outer-spin-button {
+			-webkit-appearance: none;
+		}
+
+		input[type=number] {
+			-moz-appearance: textfield;
+		}
+	</style>
+
+
+
+
+	<title>GS &amp; HSEB HSC Science Purak June - 2026 Exam Results powered by GIPL</title>
+    <script src="/js/jquery-3.7.1.min.js"></script>
+	<script language="javascript" type="text/javascript">
+
+
+		function isNumberKey(a) {
+			var b = a.which ? a.which : event.keyCode;
+			if (b > 31 && (b < 48 || b > 57)) {
+				return false
+			}
+			return true
+		}
+		function chkDigit() {
+			s = document.getElementById("studentnumber");
+			for (i = 0;
+				i < s.value.length;
+				i++) {
+				charCode = s.value.charAt(i).charCodeAt(0);
+				if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+					alert("Only digits are allowed...!");
+					s.focus();
+					return false
+				}
+			}
+			return true
+		}
+		function validate() {
+			if (!chkDigit()) {
+				return false
+			}
+			// if ($("#studentnumber").val().length != 6) {
+			//     alert("Student Number Has To be atleast 6 digits ");
+			//     return false;
+			// }
+			s = document.getElementById("studentnumber");
+			if (s.value.length != 6) {
+				alert("Student Number Has To Be Atleast 6 digits");
+				s.focus();
+				return false
+			}
+
+			return true
+		}
+
+	</script>
+
+
+
+</head>
+<body bgcolor="#f0f8ff">
+	<div id="wrap">
+		<div id="top">
+			<div class="top-main">
+				<div class="top-width">
+					<div class="float-right">
+						<a href="https://gcas.gujgov.edu.in" target="_blank" style="text-decoration:none;line-height: 1;color: white;text-align: center;">
+							<img src="/images/gcas.jpg" alt="GIPL" style="height: 60px;margin: auto;" border="0">  <small>Click here for GCAS</small>
+						</a>
+
+					</div>
+					<div class="logo-top">
+						<div class="float-left-logo">
+							<a href="http://website.gseb.org" target="_blank" style="text-decoration:none">
+								<img src="/images/50.png" height="50" width="50" alt="GSEB Website" border="0" />
+
+							</a>
+						</div>
+						<div class="float-left-txt pad-top">
+							<span class="f-16 ptitle">Gujarat Secondary and Higher Secondary Education Board, Gandhinagar</span> <span class="f-16 ptitle2">GSHSEB</span>
+							<div class="resultsem"><h3>HSC Science & HSC General June - 2026 Exam Result</h3></div>
+						</div>
+					</div>
+					<div class="clear">
+					</div>
+				</div>
+			</div>
+		</div>
+			<div id="booklet" align="center">
+				<br />&nbsp;&nbsp;&nbsp;<a href="http://website.gseb.org/" target="_blank" class="blue-link">Board Website</a>
+				||&nbsp;&nbsp;<a target="_self" class="red-link text-danger blink" href="/"><u>Click Here for SSC (Standard 10th) Purak 2026 Result</u></a>
+				||&nbsp;&nbsp;<a href="https://gsebweb2026.s3.ap-south-1.amazonaws.com/pdf/scipurakbooklet.pdf" target="_blank" class="blue-link">Sci Purak Booklet</a>
+				||&nbsp;&nbsp;<a href="https://gsebweb2026.s3.ap-south-1.amazonaws.com/pdf/genpurakbooklet.pdf" target="_blank" class="blue-link">Gen Purak Booklet</a>
+				
+
+
+			</div>
+
+		<div id="middle">
+
+			<div class="mid">
+				<div class="m-mid">
+					<form id="frmresult" action="/Result/ResultViewHSCPurak" method="post">
+						<div class="m-m-up">
+							<center>
+								<label>    Enter Seat No :</label>
+								<select id="drpInitChar" class="form-control" name="InitialCharacter">
+									
+									<option value="B" selected="selected">B</option>
+									<option value="E">E</option>
+									<option value="G">G</option>
+									<option value="P">P</option>
+									<option value="A">A</option>
+									<option value="C">C</option>
+									<option value="T">T</option>
+									<option value="H">H</option>
+									<option value="D">D</option>
+									<option value="S">S</option>
+								</select>
+
+								&nbsp;
+
+								<input type="number" class="form-control" placeholder="Seat No. 6 Digit" oninput="javascript: if (this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);" onkeypress="return isNumberKey(event)" maxlength="6" size="10" style="width:92px;" data-val="true" data-val-required="SeatNo is required" id="SeatNo" name="SeatNo" value=""><input name="__Invariant" type="hidden" value="SeatNo" />
+
+								<span class="captchSection">
+									<asp:Label ID="lblCaptcha" runat="server">Total of 0 &#x2B; 82 = </asp:Label>
+									<input type="text" class="form-control" placeholder="Captcha" maxlength="5" id="txtCaptcha" style="width:92px;" data-val="true" data-val-required="Captcha is required" name="Captcha" value="">
+									<input type="hidden" id="hdnCaptchaAns" value="d5h0WHYJ5zNk4r3cOezjYg==" data-val="true" data-val-required="Null value in Captcha" name="hdnCaptcha" />
+
+								</span>
+
+								<input type=Submit value="  Go  " name=go onclick="return validate()" />
+							</center>
+							<center>
+								<span class="text-danger field-validation-valid" data-valmsg-for="hdnCaptcha" data-valmsg-replace="true"></span>
+								<span class="text-danger field-validation-valid" data-valmsg-for="SeatNo" data-valmsg-replace="true"></span>
+								&nbsp;&nbsp;
+								<span class="text-danger field-validation-valid" data-valmsg-for="Captcha" data-valmsg-replace="true"></span>
+
+								&nbsp;&nbsp;
+								<asp:Label ID="lblCaptchaValidation" runat="server" class="text-danger"></asp:Label>
+							</center>
+							<center>
+								<span class="blue">Enter 6 digits Seat No.</span>
+							</center>
+							<center>
+								<span class="red">Please confirm the result with your actual printed marksheet issued by board</span>
+							</center>
+						</div>
+					<input name="__RequestVerificationToken" type="hidden" value="CfDJ8FLYfY86CQ5Gr1trt2qmhBVUD2PCEKDhz2fAQ4dP3ONYMumSDvD2DGg4FfwejFYnQSxUwXFjfNOJ2G1IjQUCOX5DbkpeF8qnzESO6J_vIcp52Z5olzcw3_ijlyWxZdw1EtfZUt8OPqvIHwWsYkb1kk8" /></form>
+					<div class="m-m-mid">
+
+						<div class="m-m-iframe" style=" background: url(images/bg.jpg) white; background-size: 30%; background-position: center; background-repeat: no-repeat;">
+							<div style="WIDTH: 100%; HEIGHT: 550px;" name="marksheet" align="center" frameborder="0" scrolling="yes">
+								
+							</div>
+
+						</div>
+						<div class="m-m-gipl">Powered By :- <a href="http://www.gipl.in" class="blue-link" target="_blank">Guj Info Petro Limited</a></div>
+					</div>
+					
+					<div style="text-align:center;">
+						<a href="http://www.gipl.in" target="_blank" style="text-decoration:none;text-align: center;">
+							<img src="/images/gipl.png" alt="GIPL" style="height: 60px;margin: auto;margin-top: 6px;" border="0">
+						</a>
+					</div>
+					
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+</body>
+
+</html>
+<script type="text/javascript">
+	$(document).ready(function () {
+		$("#marksheet").src = "";
+		$("#studentnumber").src = "";
+		$("#drpInitChar").val("B");
+
+
+	});
+
+	// $(document).ready(function () {
+
+
+	//     $('#btnSearch').click(function () {
+	//         debugger;
+	//         if ($("#studentnumber").val().length != 6) {
+	//             alert("Student Number Has To be atleast 6 digits ");
+	//             return false;
+	//         }
+	//         $('#frmresult').submit();
+
+	//     });
+	// });
+	// Disable right click
+	document.addEventListener("contextmenu", function (e) {
+		e.preventDefault();
+	});
+
+	// Disable key shortcuts
+	document.onkeydown = function (e) {
+		if (e.keyCode == 123) return false; // F12
+		if (e.ctrlKey && e.shiftKey && e.keyCode == 73) return false; // Ctrl+Shift+I
+		if (e.ctrlKey && e.shiftKey && e.keyCode == 74) return false; // Ctrl+Shift+J
+		if (e.ctrlKey && e.keyCode == 85) return false; // Ctrl+U
+	};
+</script>
+
+        </main>
+    </div>
+
+    <footer b-z4jq4i4pza class="border-top footer text-muted">
+    </footer>
+    
+</body>
+</html>

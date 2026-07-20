@@ -11,28 +11,37 @@ export async function GET(request: NextRequest) {
     const fyId = searchParams.get("financialYearId");
     const type = searchParams.get("type");
     const auditStatus = searchParams.get("auditStatus");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
 
     const fy = fyId
       ? await prisma.financialYear.findFirst({ where: { id: fyId, schoolId } })
       : await prisma.financialYear.findFirst({ where: { schoolId, isActive: true } });
 
-    if (!fy) return NextResponse.json({ vouchers: [], financialYear: null });
+    if (!fy) return NextResponse.json({ vouchers: [], financialYear: null, total: 0, page, limit });
 
-    const vouchers = await prisma.voucher.findMany({
-      where: {
-        schoolId,
-        financialYearId: fy.id,
-        ...(type ? { voucherType: type } : {}),
-        ...(auditStatus ? { auditStatus } : {}),
-      },
-      orderBy: { voucherDate: "desc" },
-      include: {
-        lines: { include: { account: true } },
-        createdBy: { select: { name: true } },
-      },
-    });
+    const where = {
+      schoolId,
+      financialYearId: fy.id,
+      ...(type ? { voucherType: type } : {}),
+      ...(auditStatus ? { auditStatus } : {}),
+    };
 
-    return NextResponse.json({ vouchers, financialYear: fy });
+    const [vouchers, total] = await Promise.all([
+      prisma.voucher.findMany({
+        where,
+        orderBy: { voucherDate: "desc" },
+        include: {
+          lines: { include: { account: true } },
+          createdBy: { select: { name: true } },
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.voucher.count({ where }),
+    ]);
+
+    return NextResponse.json({ vouchers, financialYear: fy, total, page, limit });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Failed" }, { status: 500 });

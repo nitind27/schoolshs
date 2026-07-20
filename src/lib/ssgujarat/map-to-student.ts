@@ -2,6 +2,7 @@ import type { Student } from "@/generated/prisma/client";
 import type { SsgujaratStudentRecord } from "./types";
 import { pasteDataToRecord, type SsgPasteData } from "./parse-ssg-paste";
 import { standardToCourseName, standardToCurrentYear } from "@/lib/constants";
+import { bilingualNamePair } from "@/lib/gujarati/transliterate-core";
 
 type StudentPartial = Partial<Student>;
 
@@ -163,6 +164,26 @@ export function mapSsgujaratToStudent(
   };
 
   applyScholarshipScheme(mapped, classNum);
+
+  const bilingualFields: (keyof StudentPartial)[] = [
+    "firstName",
+    "middleName",
+    "surname",
+    "aadhaarName",
+    "motherName",
+    "fatherName",
+    "guardianName",
+  ];
+  for (const enKey of bilingualFields) {
+    const enVal = mapped[enKey];
+    if (typeof enVal === "string" && enVal.trim()) {
+      const pair = bilingualNamePair(enVal);
+      const rec = mapped as Record<string, string | null | undefined>;
+      rec[enKey] = pair.en;
+      rec[`${enKey}Gu`] = pair.gu;
+    }
+  }
+
   return mapped;
 }
 

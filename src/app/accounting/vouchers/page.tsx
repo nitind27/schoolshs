@@ -8,17 +8,28 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, ArrowLeft } from "lucide-react";
 import { formatIndianCurrency } from "@/lib/accounting";
 import { useT } from "@/i18n/locale-provider";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { PAGE_SIZE } from "@/lib/pagination";
 
 export default function VouchersPage() {
   const t = useT();
   const [vouchers, setVouchers] = useState<Record<string, unknown>[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [fy, setFy] = useState<{ label: string } | null>(null);
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
-    const url = filter ? `/api/accounting/vouchers?type=${filter}` : "/api/accounting/vouchers";
-    fetch(url).then((r) => r.json()).then((d) => { setVouchers(d.vouchers || []); setFy(d.financialYear); });
-  }, [filter]);
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+    if (filter) params.set("type", filter);
+    fetch(`/api/accounting/vouchers?${params}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setVouchers(d.vouchers || []);
+        setTotal(d.total ?? 0);
+        setFy(d.financialYear);
+      });
+  }, [filter, page]);
 
   const voucherTypeLabel = (type: string) => {
     const map: Record<string, string> = {
@@ -47,7 +58,7 @@ export default function VouchersPage() {
 
       <div className="flex gap-2 flex-wrap">
         {filterTypes.map((type) => (
-          <button key={type} onClick={() => setFilter(type)} className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === type ? "bg-blue-600 text-white" : "bg-white border"}`}>
+          <button key={type} onClick={() => { setFilter(type); setPage(1); }} className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === type ? "bg-blue-600 text-white" : "bg-white border"}`}>
             {type ? voucherTypeLabel(type) : t("common.all")}
           </button>
         ))}
@@ -55,7 +66,8 @@ export default function VouchersPage() {
 
       <Card>
         <CardHeader><CardTitle>{t("accounting.allVouchers")}</CardTitle></CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-slate-500">
@@ -83,6 +95,8 @@ export default function VouchersPage() {
             </tbody>
           </table>
           {!vouchers.length && <p className="text-center py-8 text-slate-500">{t("accounting.noVouchersFound")}</p>}
+          </div>
+          <TablePagination page={page} total={total} onPageChange={setPage} />
         </CardContent>
       </Card>
     </div>

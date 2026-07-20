@@ -29,12 +29,10 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
       body: JSON.stringify(data),
     });
 
-    if (res.ok) {
-      router.push("/students");
-    } else {
-      const err = await res.json();
-      alert(err.error || t("students.updateFailed"));
-    }
+    if (res.ok) return id;
+    const err = await res.json();
+    alert(err.error || t("students.updateFailed"));
+    return undefined;
   };
 
   if (loading) {
@@ -64,7 +62,13 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
           <p className="text-slate-500 mt-1">{t("students.editSubtitle")}</p>
         </div>
       </div>
-      <StudentForm initialData={student} onSubmit={handleSubmit} submitLabel={t("students.updateStudent")} />
+      <StudentForm
+        initialData={student}
+        studentId={id}
+        onSubmit={handleSubmit}
+        onFinish={() => router.push(`/students/${id}`)}
+        submitLabel={t("students.updateStudent")}
+      />
     </div>
   );
 }

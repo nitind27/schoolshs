@@ -16,58 +16,53 @@ function BoardExamCard({
   percentage,
   year,
   marksheetPath,
-  accent,
 }: {
   title: string;
   board: string;
   percentage: number | string | null | undefined;
   year: string | null | undefined;
   marksheetPath?: string | null;
-  accent: "blue" | "violet";
 }) {
   const t = useT();
   const pct = Number(percentage) > 0 ? `${percentage}%` : "—";
-  const gradient = accent === "blue" ? "from-blue-500 to-indigo-600" : "from-violet-500 to-purple-600";
-  const lightBg = accent === "blue" ? "bg-blue-50 border-blue-100" : "bg-violet-50 border-violet-100";
-  const linkColor = accent === "blue" ? "text-blue-700 hover:bg-blue-100" : "text-violet-700 hover:bg-violet-100";
 
   return (
     <div className="student-board-card">
-      <div className={`flex items-center gap-3 border-b border-slate-100 px-5 py-4 ${lightBg}`}>
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} text-white shadow-md`}>
+      <div className="flex items-center gap-3 border-b border-slate-200 bg-[#f7f9fb] px-5 py-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--sp-ink,#0c1e2e)] text-white">
           <GraduationCap className="h-5 w-5" />
         </div>
         <h2 className="font-bold text-slate-900">{title}</h2>
       </div>
-      <div className="grid grid-cols-2 gap-4 p-5">
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t("boardRecords.board")}</p>
-          <p className="mt-1 font-semibold text-slate-900">{board || "—"}</p>
+      <div className="grid grid-cols-2 gap-3 p-5">
+        <div className="student-field">
+          <p className="student-field-label">{t("boardRecords.board")}</p>
+          <p className="student-field-value">{board || "—"}</p>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-1">
+        <div className="student-field">
+          <p className="student-field-label flex items-center gap-1">
             <Percent className="h-3 w-3" />
             {t("boardRecords.percentage")}
           </p>
-          <p className={`mt-1 text-2xl font-bold ${accent === "blue" ? "text-blue-700" : "text-violet-700"}`}>{pct}</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--sp-accent,#0d7377)]">{pct}</p>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t("boardRecords.year")}</p>
-          <p className="mt-1 font-semibold text-slate-900">{year || "—"}</p>
+        <div className="student-field">
+          <p className="student-field-label">{t("boardRecords.year")}</p>
+          <p className="student-field-value">{year || "—"}</p>
         </div>
         {marksheetPath ? (
           <a
             href={marksheetPath}
             target="_blank"
             rel="noopener noreferrer"
-            className={`rounded-xl border border-slate-100 p-4 flex items-center gap-2 font-medium transition-colors ${linkColor}`}
+            className="student-field flex items-center gap-2 font-semibold text-[var(--sp-accent,#0d7377)] transition-colors hover:bg-[#e6f4f4]"
           >
             <FileText className="h-5 w-5" />
             {t("boardRecords.viewMarksheet")}
-            <ExternalLink className="h-4 w-4 ml-auto" />
+            <ExternalLink className="ml-auto h-4 w-4" />
           </a>
         ) : (
-          <div className="rounded-xl border border-dashed border-slate-200 p-4 flex items-center justify-center text-sm text-slate-400">
+          <div className="flex items-center justify-center rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-400">
             {t("studentPortal.noMarksheet")}
           </div>
         )}
@@ -87,7 +82,7 @@ export default function StudentBoardPage() {
   const has12 = !!(student.board12th || student.percentage12th);
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="mx-auto max-w-3xl space-y-5">
       <StudentPageHeader
         icon={GraduationCap}
         title={t("studentPortal.boardRecordsGseb")}
@@ -101,7 +96,6 @@ export default function StudentBoardPage() {
           percentage={student.percentage10th as number}
           year={student.year10th as string}
           marksheetPath={student.marksheet10Path as string}
-          accent="blue"
         />
       ) : null}
 
@@ -112,7 +106,6 @@ export default function StudentBoardPage() {
           percentage={student.percentage12th as number}
           year={student.year12th as string}
           marksheetPath={student.marksheet12Path as string}
-          accent="violet"
         />
       ) : null}
 

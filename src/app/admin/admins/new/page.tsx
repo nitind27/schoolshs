@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,21 @@ import { ArrowLeft, Save } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 
 export default function NewAdminPage() {
+  return (
+    <Suspense>
+      <NewAdminForm />
+    </Suspense>
+  );
+}
+
+function NewAdminForm() {
   const t = useT();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedSchool = searchParams.get("schoolId") || "";
   const [schools, setSchools] = useState<{ id: string; name: string; code: string }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "", schoolId: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", schoolId: preselectedSchool });
 
   useEffect(() => {
     fetch("/api/admin/schools")

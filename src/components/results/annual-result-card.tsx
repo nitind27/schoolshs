@@ -1,6 +1,7 @@
 "use client";
 
 import { RESULT_SCHOOL, formatAcademicYearLabel, ANNUAL_RESULT_TOTAL_MARKS } from "@/lib/results/config";
+import { studentFullNameGu } from "@/lib/student-names";
 
 export type ResultCardData = {
   student: {
@@ -8,6 +9,9 @@ export type ResultCardData = {
     firstName: string;
     middleName?: string | null;
     surname: string;
+    firstNameGu?: string | null;
+    middleNameGu?: string | null;
+    surnameGu?: string | null;
     rollNumber?: string | null;
     grNumber?: string | null;
     standard?: string | null;
@@ -80,7 +84,7 @@ function ResultFront({ data }: { data: ResultCardData }) {
   const st = data.student;
   const rc = data.reportCard;
   const [yStart, yEnd] = formatAcademicYearLabel(data.exam.academicYear).split(" - ");
-  const fullName = [st.firstName, st.middleName, st.surname].filter(Boolean).join(" ");
+  const fullName = studentFullNameGu(st);
   const section = st.section || st.schoolClass?.name?.split("-").pop() || "";
   const resultText = rc?.result || "";
   const isPass = resultText.includes("પાસ") && !resultText.includes("નાપાસ");
@@ -172,7 +176,7 @@ function ResultBack({ data }: { data: ResultCardData }) {
   const city = st.permanentCity || st.currentCity || "";
   const district = st.permanentDistrict || st.currentDistrict || "";
   const pin = st.permanentPincode || st.currentPincode || "";
-  const fullName = [st.firstName, st.middleName, st.surname].filter(Boolean).join(" ");
+  const fullName = studentFullNameGu(st);
 
   return (
     <div className="rc-sheet rc-back">

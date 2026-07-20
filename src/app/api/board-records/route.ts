@@ -38,6 +38,12 @@ export async function GET() {
         marksheet12Path: true,
         childUid: true,
         aadhaarNumber: true,
+        sscSeatPrefix: true,
+        sscSeatNumber: true,
+        hscSeatPrefix: true,
+        hscSeatNumber: true,
+        gsebFetchedAt: true,
+        gsebResultJson: true,
       },
       orderBy: [{ standard: "asc" }, { section: "asc" }, { rollNumber: "asc" }],
     });

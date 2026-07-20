@@ -19,9 +19,11 @@ export const CERTIFICATE_SCHOOL = {
 export const CERTIFICATE_TYPES = [
   { id: "bonafide", labelEn: "Bonafide Certificate", labelGu: "બોનાફાઇડ પ્રમાણપત્ર", landscape: true },
   { id: "lc", labelEn: "School Leaving Certificate (LC)", labelGu: "શાળા છોડ્યાનું પ્રમાણપત્ર", landscape: false },
-  { id: "character", labelEn: "Character / Trial / Bonafide", labelGu: "ચારિત્ર્ય / ટ્રાયલ / બોનાફાઇડ", landscape: true },
+  { id: "character", labelEn: "Character / Trial / Bonafide", labelGu: "ચારિત્ર્ય / ટ્રાયલ / બોનાફાઇડ", landscape: false },
   { id: "monthly-attendance", labelEn: "Monthly Attendance Patrak", labelGu: "માસિક હાજરી પત્રક", landscape: false },
+  { id: "daily-attendance-book", labelEn: "Daily Attendance Book", labelGu: "દૈનિક હાજરી નોંધ", landscape: false },
   { id: "class-register", labelEn: "Class Register & Attendance", labelGu: "વર્ગ રજિસ્ટર અને હાજરી", landscape: true },
+  { id: "general-register", labelEn: "General Register (GR)", labelGu: "સામાન્ય રજિસ્ટર (વય પત્રક)", landscape: true },
   { id: "monthly-reports", labelEn: "Monthly Reports (Scholarship)", labelGu: "માસિક અહેવાલ (શિષ્યવૃત્તિ)", landscape: false },
 ] as const;
 

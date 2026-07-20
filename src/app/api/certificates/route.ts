@@ -4,7 +4,15 @@ import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { studentFullName } from "@/lib/certificates/date-to-words";
 import { buildAttendanceRows, toClassRegisterRows } from "@/lib/attendance";
 import { assertTeacherAttendanceAccess } from "@/lib/teacher-attendance";
-import type { MonthlyPatrakData, ScholarshipReportRow, AdmissionReportRow, LeaverReportRow } from "@/lib/certificates/types";
+import { mapStudentToGrRow } from "@/lib/certificates/general-register";
+import type {
+  MonthlyPatrakData,
+  PatrakRowKey,
+  ScholarshipReportRow,
+  AdmissionReportRow,
+  LeaverReportRow,
+} from "@/lib/certificates/types";
+import { emptyPatrakClassification, emptyPatrakMovementRow, PATRAK_TYPE_ROWS } from "@/lib/certificates/types";
 
 function countByGender(students: { gender: string }[]) {
   const boys = students.filter((s) => s.gender === "Male").length;
@@ -12,47 +20,88 @@ function countByGender(students: { gender: string }[]) {
   return { boys, girls };
 }
 
-function categoryToCasteKey(category: string, religion: string): keyof MonthlyPatrakData["caste"] | null {
+function categoryToPatrakRow(category: string): PatrakRowKey {
   const c = category.toUpperCase();
-  if (c === "SC") return "sc";
-  if (c === "ST") return "st";
-  if (c === "OBC" || c === "SEBC") return "obc";
-  if (religion === "Muslim") return "muslim";
-  if (religion === "Sikh") return "sikh";
-  if (religion === "Parsi") return "parsi";
-  if (religion === "Christian") return "christian";
-  if (religion === "Hindu") return "hindu";
-  return null;
+  if (c === "SC") return "govtSc";
+  if (c === "ST") return "govtSt";
+  return "fullFee";
 }
 
-function buildPatrak(students: { gender: string; category: string; religion: string }[], meta: { month: string; year: string; standard: string; section: string; classTeacher: string }): MonthlyPatrakData {
+function buildPatrak(
+  students: { gender: string; category: string; religion: string }[],
+  meta: { month: string; year: string; standard: string; section: string; classTeacher: string },
+): MonthlyPatrakData {
   const total = countByGender(students);
-  const caste: MonthlyPatrakData["caste"] = {
-    sc: { boys: 0, girls: 0 }, st: { boys: 0, girls: 0 }, vj: { boys: 0, girls: 0 },
-    obc: { boys: 0, girls: 0 }, hindu: { boys: 0, girls: 0 }, muslim: { boys: 0, girls: 0 },
-    sikh: { boys: 0, girls: 0 }, parsi: { boys: 0, girls: 0 }, christian: { boys: 0, girls: 0 },
-  };
+  const movement = Object.fromEntries(
+    PATRAK_TYPE_ROWS.map((r) => [r.key, emptyPatrakMovementRow()]),
+  ) as MonthlyPatrakData["movement"];
+
   for (const s of students) {
-    const key = categoryToCasteKey(s.category, s.religion);
-    if (key) {
-      if (s.gender === "Male") caste[key].boys++;
-      else caste[key].girls++;
+    const key = categoryToPatrakRow(s.category);
+    if (s.gender === "Male") {
+      movement[key].opening.boys++;
+      movement[key].closing.boys++;
+    } else {
+      movement[key].opening.girls++;
+      movement[key].closing.girls++;
     }
   }
-  const zero = { boys: 0, girls: 0 };
-  return {
-    ...meta,
-    opening: { fullFee: total, schoolWaiver: zero, govtSt: zero, govtSc: zero, govtPoor: zero, govtObc: zero, total },
-    admitted: { newPaid: zero, newUnpaid: zero, transferPaid: zero, transferUnpaid: zero },
-    left: { schoolPaid: zero, schoolUnpaid: zero, classPaid: zero, classUnpaid: zero },
-    change: zero,
-    closing: total,
-    caste,
-    avgAttendance: zero,
-    workingDays: { full: 26, half: 0, sundays: 4, holidays: 0, prevTotal: 0, monthTotal: 26, cumulative: 26 },
-    fees: { schoolCount: students.length, schoolRs: 0, schoolPs: 0, termCount: 0, termRs: 0, termPs: 0, otherCount: 0, otherRs: 0, otherPs: 0, arrearsSchool: 0, arrearsTerm: 0 },
-    date: `${new Date().getDate().toString().padStart(2, "0")}/${meta.month.padStart(2, "0")}/${meta.year}`,
-  };
+  movement.total.opening = { ...total };
+  movement.total.closing = { ...total };
+
+  const cls = emptyPatrakClassification();
+  for (const s of students) {
+    const c = s.category.toUpperCase();
+    if (c.includes("UJAN") || c === "NT" || c === "NOMADIC") cls.ujaniyat++;
+    else if (c.includes("MADHYAM")) cls.madhyam++;
+    else if (c === "OBC" || c === "SEBC" || c.includes("PACHHAT") || c.includes("BC")) cls.pachhat++;
+
+    const rel = s.religion;
+    if (rel === "Muslim") cls.other.muslim++;
+    else if (rel === "Sikh") cls.other.sikh++;
+    else if (rel === "Parsi") cls.other.parsi++;
+    else if (rel === "Christian") cls.other.christian++;
+    else if (rel === "Jain") cls.other.jain++;
+  }
+  cls.groupTotal = cls.ujaniyat + cls.madhyam + cls.pachhat;
+  cls.other.total = cls.other.jain + cls.other.parsi + cls.other.muslim + cls.other.sikh + cls.other.christian;
+  cls.grandTotal = students.length;
+
+  return { ...meta, movement, classification: cls };
+}
+
+function buildScholarshipRows(
+  students: { grNumber?: string | null; scholarshipScheme?: string | null; standard?: string | null; section?: string | null; firstName: string; middleName?: string | null; surname: string }[],
+): ScholarshipReportRow[] {
+  return students
+    .filter((s) => s.scholarshipScheme && s.scholarshipScheme !== "None")
+    .map((s) => ({
+      grNumber: s.grNumber || "",
+      name: studentFullName(s),
+      waiverType: s.scholarshipScheme!,
+      standard: `${s.standard || ""}-${s.section || ""}`,
+      conduct: "સારી",
+      presentDays: "",
+    }));
+}
+
+function buildAdmissionRows(
+  students: { grNumber?: string | null; admissionStatus?: string | null; verifiedAt?: Date | null; firstName: string; middleName?: string | null; surname: string }[],
+): AdmissionReportRow[] {
+  return students
+    .filter((s) => s.admissionStatus === "verified")
+    .slice(0, 8)
+    .map((s, i) => ({
+      serial: i + 1,
+      grNumber: s.grNumber || "",
+      name: studentFullName(s),
+      admissionDate: s.verifiedAt ? new Date(s.verifiedAt).toLocaleDateString("en-GB") : "",
+      note: "",
+    }));
+}
+
+function buildLeaverRows(): LeaverReportRow[] {
+  return [];
 }
 
 function buildClassRegisterFromAttendance(
@@ -60,6 +109,7 @@ function buildClassRegisterFromAttendance(
     id: string;
     grNumber?: string | null;
     caste?: string | null;
+    category?: string | null;
     dateOfBirth: string;
     firstName: string;
     middleName?: string | null;
@@ -113,7 +163,38 @@ export async function GET(request: NextRequest) {
     const sec = section || students[0]?.section || students[0]?.schoolClass?.section || "";
 
     if (type === "patrak") {
-      return NextResponse.json({ patrak: buildPatrak(students, { month, year, standard: std, section: sec, classTeacher: "" }) });
+      const monthNum = parseInt(month, 10);
+      const yearNum = parseInt(year, 10);
+      const studentIds = students.map((s) => s.id);
+      const records = studentIds.length
+        ? await prisma.studentAttendanceMonth.findMany({
+            where: { schoolId: session.schoolId, studentId: { in: studentIds }, month: monthNum, year: yearNum },
+          })
+        : [];
+      const saved = new Map(records.map((r) => [r.studentId, r]));
+      return NextResponse.json({
+        patrak: buildPatrak(students, { month, year, standard: std, section: sec, classTeacher: "" }),
+        registerRows: buildClassRegisterFromAttendance(students, saved),
+        scholarship: buildScholarshipRows(students),
+        admissions: buildAdmissionRows(students),
+        leavers: buildLeaverRows(),
+      });
+    }
+
+    if (type === "general-register") {
+      const school = await prisma.school.findUnique({
+        where: { id: session.schoolId },
+        select: { udiseCode: true },
+      });
+      const grRows = students.map((s, i) => mapStudentToGrRow(s, i + 1, school?.udiseCode));
+      const settings = await prisma.schoolSettings.findFirst({ where: { schoolId: session.schoolId } });
+      return NextResponse.json({
+        rows: grRows,
+        schoolName: settings?.schoolName || session.schoolName,
+        academicYear: searchParams.get("academicYear") || students[0]?.financialYear || "",
+        standard: std,
+        section: sec,
+      });
     }
 
     if (type === "class-register") {
@@ -136,31 +217,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (type === "monthly-reports") {
-      const scholarship: ScholarshipReportRow[] = students
-        .filter((s) => s.scholarshipScheme && s.scholarshipScheme !== "None")
-        .map((s) => ({
-          grNumber: s.grNumber || "",
-          name: studentFullName(s),
-          waiverType: s.scholarshipScheme,
-          standard: `${s.standard || ""}-${s.section || ""}`,
-          conduct: "સારી",
-          presentDays: "",
-        }));
-
-      const admissions: AdmissionReportRow[] = students
-        .filter((s) => s.admissionStatus === "verified")
-        .slice(0, 6)
-        .map((s, i) => ({
-          serial: i + 1,
-          grNumber: s.grNumber || "",
-          name: studentFullName(s),
-          admissionDate: s.verifiedAt ? new Date(s.verifiedAt).toLocaleDateString("en-GB") : "",
-          note: "",
-        }));
-
-      const leavers: LeaverReportRow[] = [];
-
-      return NextResponse.json({ scholarship, admissions, leavers, month, year });
+      return NextResponse.json({
+        scholarship: buildScholarshipRows(students),
+        admissions: buildAdmissionRows(students),
+        leavers: buildLeaverRows(),
+        month,
+        year,
+      });
     }
 
     const serialBase = `${year.slice(-2)}${month.padStart(2, "0")}`;

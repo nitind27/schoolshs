@@ -1,6 +1,8 @@
 "use client";
 
 import type { Student, SchoolSettings } from "@/generated/prisma/client";
+import { toGujaratiDigits } from "@/lib/certificates/gujarati-date";
+import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import { cn } from "@/lib/utils";
 
 interface StudentIdCardProps {
@@ -12,44 +14,26 @@ interface StudentIdCardProps {
   className?: string;
 }
 
-/*
- * Pixel-accurate replica of Gujarat school physical ID card:
- *
- *  ┌──────────────────────────────────────┐
- *  │ [●LOGO]  small tagline text          │  ← yellow bg, logo circle left
- *  │          LARGE SCHOOL NAME           │  ← white bold, blue clipped right
- *  ├──────────────────────────────────────┤
- *  │[માધ્ય]  ફોર્ટ સોનગઢ, જિ. તાપી      │  ← dark blue/teal bar
- *  ├──────────────────────────────────────┤
- *  │                                      │
- *  │      ┌──────────┐      ┌─(9-A)─┐   │  ← photo centered-left, badge right
- *  │      │  PHOTO   │      │ class  │   │
- *  │      └──────────┘      └───────┘   │
- *  │                                      │
- *  │          આરતી શાહ                   │  ← large red bold name
- *  │  પિતાનું નામ : વિનયભાઈ શાહ           │
- *  │  સરનામું     : બ્રહ્મણ ફળિયું-સોનગઢ  │
- *  │                તા. ફોર્ટ સોનગઢ...    │
- *  │  મો.નં       : ૯૯૨૫૩ ૭૦૮૭૦         │
- *  │  જન્મ તા.    : ૧૮/૦૫/૨૦૧૨          │
- *  │  જી.આર.નં.   : ૨૩૫૫૫  (red)        │
- *  ├──────────────────────────────────────┤
- *  │ 25-2026    620    [sign] આચાર્ચ…    │  ← gold/yellow strip
- *  └──────────────────────────────────────┘
+/**
+ * Physical Gujarat school ID card layout (portrait):
+ * yellow/navy header + logo · માધ્યમિક / location bar · photo + class badge ·
+ * red name · fields · yellow footer (year / roll / આચાર્યની સહી)
  */
-
 export function StudentIdCard({
   student,
   settings,
   photoUrl,
-  logoUrl,
+  logoUrl = SCHOOL_LOGO_URL,
   signatureUrl,
   className,
 }: StudentIdCardProps) {
-  const accent = settings.idCardAccentColor || "#1a3a6b";
+  const accent = "#0b2a5b";
+  const primary = "#1e5aa8";
+  const crest = logoUrl || SCHOOL_LOGO_URL;
 
   const fullName = [student.firstName, student.middleName, student.surname]
-    .filter(Boolean).join(" ");
+    .filter(Boolean)
+    .join(" ");
 
   const classLabel =
     student.standard && student.section
@@ -58,491 +42,498 @@ export function StudentIdCard({
         ? `${student.schoolClass.standard}-${student.schoolClass.section}`
         : student.standard || "";
 
-  const fyParts = (settings.academicYear || "2025-26").split("-");
-  const shortFy = `${fyParts[0].slice(2)}-${fyParts[0].slice(0, 2)}${fyParts[1] || "26"}`;
+  // Prefer full year like 2025-2026 for footer
+  const yearParts = (settings.academicYear || "2025-26").split("-");
+  const footerYear =
+    yearParts.length === 2 && yearParts[1].length === 2
+      ? `${yearParts[0]}-20${yearParts[1]}`
+      : settings.academicYear || "2025-2026";
 
   const addr1 = student.currentAddress || "";
   const addr2 = [
     student.currentCity ? `તા. ${student.currentCity}` : "",
     student.currentDistrict ? `જિ. ${student.currentDistrict}` : "",
-  ].filter(Boolean).join(", ");
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const locationLine = settings.schoolAddress
+    ? settings.schoolAddress.split(",").slice(-2).join(",").trim()
+    : "ફોર્ટ સોનગઢ, જિ. તાપી";
+
+  // ID card branding (Gujarati title like physical card)
+  const schoolTitle =
+    /[\u0A80-\u0AFF]/.test(settings.schoolName || "")
+      ? settings.schoolName!
+      : "સાર્વજનિક હાઈસ્કૂલ";
+  const tagline = settings.tagline || "સાર્વજનિક એજ્યુકેશન સંચાલિત";
+
+  const gu = (v?: string | null) => (v ? toGujaratiDigits(String(v)) : "");
+  const rawCenter = String(student.rollNumber || student.grNumber || "—");
+  const centerNo =
+    rawCenter.length > 10 && /^\d+$/.test(rawCenter)
+      ? rawCenter.slice(-6)
+      : rawCenter.length > 12
+        ? rawCenter.slice(0, 10)
+        : rawCenter;
 
   return (
     <div
       className={cn("id-card print:break-inside-avoid print:shadow-none", className)}
       style={{
-        width: "360px",
-        borderRadius: "12px",
+        width: "340px",
+        borderRadius: "14px",
         overflow: "hidden",
-        boxShadow: "0 6px 28px rgba(0,0,0,.32), 0 0 0 1.5px rgba(0,0,0,.1)",
-        fontFamily: "'Noto Sans Gujarati', 'Shruti', 'Lohit Gujarati', 'Arial Unicode MS', sans-serif",
-        background: "#ffffff",
+        boxShadow: "0 8px 28px rgba(0,0,0,.28), 0 0 0 1px rgba(0,0,0,.08)",
+        fontFamily:
+          "'Noto Sans Gujarati', 'Shruti', 'Lohit Gujarati', 'Arial Unicode MS', sans-serif",
+        background: "#fff",
         position: "relative",
       }}
     >
-
-      {/* ══════════════════════════════════════
-          ZONE 1 — HEADER
-          ══════════════════════════════════════ */}
-      <div style={{
-        position: "relative",
-        height: "88px",
-        background: "linear-gradient(180deg, #f5c518 0%, #f8d648 45%, #f5c518 100%)",
-        overflow: "hidden",
-      }}>
-        {/* Blue curved shape on right */}
-        <div style={{
-          position: "absolute",
-          top: 0,
-          right: 0,
-          width: "55%",
-          height: "100%",
-          background: accent,
-          clipPath: "polygon(15% 0%, 100% 0%, 100% 100%, 0% 100%)",
-          borderLeft: "2px solid rgba(255,255,255,0.2)",
-        }} />
-
-        {/* Decorative green corner shape */}
-        <div style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          width: "60px",
-          height: "60px",
-          background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
-          clipPath: "polygon(0 100%, 0 0, 100% 100%)",
-          opacity: 0.6,
-        }} />
-
-        {/* Green bottom strip */}
-        <div style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: "4px",
-          background: "linear-gradient(90deg, #22c55e 0%, #16a34a 50%, #15803d 100%)",
-          zIndex: 3,
-        }} />
-
-        {/* Content row */}
-        <div style={{
+      {/* ── Header ── */}
+      <div
+        style={{
           position: "relative",
-          zIndex: 2,
-          display: "flex",
-          alignItems: "center",
-          height: "84px",
-          padding: "0 12px 0 10px",
-          gap: "10px",
-        }}>
-          {/* Logo circle */}
-          <div style={{
-            width: "66px",
-            height: "66px",
-            borderRadius: "50%",
-            border: "3px solid #ffffff",
-            background: "#fff",
-            overflow: "hidden",
-            flexShrink: 0,
-            boxShadow: "0 2px 12px rgba(0,0,0,.25)",
+          height: "92px",
+          background: "linear-gradient(165deg, #f7c91a 0%, #f0b400 48%, #e8a800 100%)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Navy curved block (right) */}
+        <svg
+          viewBox="0 0 340 92"
+          preserveAspectRatio="none"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+          aria-hidden
+        >
+          <path
+            d="M118,0 C160,8 175,38 168,92 L340,92 L340,0 Z"
+            fill={accent}
+          />
+          <path
+            d="M0,70 C40,88 90,92 130,92 L0,92 Z"
+            fill="#1a9b4a"
+            opacity="0.85"
+          />
+        </svg>
+
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-          }}>
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="logo"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              <span style={{ fontSize: "32px", lineHeight: 1 }}>🏫</span>
-            )}
+            height: "100%",
+            padding: "8px 12px 10px 10px",
+            gap: "10px",
+          }}
+        >
+          {/* Logo */}
+          <div
+            style={{
+              width: "68px",
+              height: "68px",
+              borderRadius: "50%",
+              border: "3px solid #fff",
+              background: "#fff",
+              overflow: "hidden",
+              flexShrink: 0,
+              boxShadow: "0 2px 10px rgba(0,0,0,.28)",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={crest}
+              alt="School logo"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
           </div>
 
-          {/* Text block */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {/* Tagline — dark text on yellow */}
-            <p style={{
-              fontSize: "9px",
-              fontWeight: 700,
-              color: "#1a1a1a",
-              letterSpacing: "0.03em",
-              lineHeight: 1.3,
-              marginBottom: "2px",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              textShadow: "0 1px 2px rgba(255,255,255,0.5)",
-            }}>
-              {settings.tagline || "સાર્વજનિક એજ્યુકેશન સંચાલિત"}
+          <div style={{ flex: 1, minWidth: 0, paddingTop: "2px" }}>
+            <p
+              style={{
+                fontSize: "9.5px",
+                fontWeight: 700,
+                color: "#fff",
+                margin: 0,
+                lineHeight: 1.25,
+                letterSpacing: "0.02em",
+                textShadow: "0 1px 2px rgba(0,0,0,.35)",
+              }}
+            >
+              {tagline}
             </p>
-            {/* School name — WHITE, large, bold with text shadow */}
-            <p style={{
-              fontSize: "23px",
-              fontWeight: 900,
-              color: "#ffffff",
-              lineHeight: 1.05,
-              letterSpacing: "0.01em",
-              textShadow: "0 2px 6px rgba(0,0,0,.65), 0 1px 2px rgba(0,0,0,.4)",
-              wordBreak: "break-word",
-              whiteSpace: "normal",
-              WebkitTextStroke: "0.5px rgba(0,0,0,0.1)",
-            }}>
-              {settings.schoolName || "સ્કૂલ"}
+            <p
+              style={{
+                margin: "2px 0 0",
+                fontSize: "22px",
+                fontWeight: 900,
+                color: "#ffe566",
+                lineHeight: 1.05,
+                textShadow: "0 2px 4px rgba(0,0,0,.5)",
+                letterSpacing: "0.01em",
+              }}
+            >
+              {schoolTitle}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ══════════════════════════════════════
-          ZONE 2 — BLUE INFO BAR
-          ══════════════════════════════════════ */}
-      <div style={{
-        background: accent,
-        display: "flex",
-        alignItems: "center",
-        minHeight: "30px",
-        padding: "0 2px",
-        borderBottom: "1px solid rgba(255,255,255,0.1)",
-      }}>
-        {/* Left pill — school type */}
-        <div style={{
-          background: "#3b6fd4",
-          color: "#fff",
-          fontSize: "12px",
-          fontWeight: 700,
-          padding: "4px 16px",
-          display: "flex",
-          alignItems: "center",
-          borderRight: "2px solid rgba(255,255,255,.2)",
-          whiteSpace: "nowrap",
-          letterSpacing: "0.03em",
-          height: "100%",
-          borderRadius: "0 4px 4px 0",
-        }}>
+      {/* ── Sub-bar: માધ્યમિક | location ── */}
+      <div style={{ display: "flex", minHeight: "28px" }}>
+        <div
+          style={{
+            background: accent,
+            color: "#fff",
+            fontSize: "12px",
+            fontWeight: 800,
+            padding: "5px 14px",
+            display: "flex",
+            alignItems: "center",
+            whiteSpace: "nowrap",
+            letterSpacing: "0.04em",
+          }}
+        >
           માધ્યમિક
         </div>
-
-        {/* Right — location */}
-        <div style={{
-          flex: 1,
-          color: "#fff",
-          fontSize: "12px",
-          fontWeight: 500,
-          padding: "4px 12px",
-          display: "flex",
-          alignItems: "center",
-          letterSpacing: "0.02em",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}>
-          {settings.schoolAddress
-            ? settings.schoolAddress.split(",").slice(-2).join(",").trim()
-            : "ફોર્ટ સોનગઢ, જિ. તાપી"}
+        <div
+          style={{
+            flex: 1,
+            background: primary,
+            color: "#fff",
+            fontSize: "12px",
+            fontWeight: 600,
+            padding: "5px 12px",
+            display: "flex",
+            alignItems: "center",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {locationLine}
         </div>
       </div>
 
-      {/* ══════════════════════════════════════
-          ZONE 3 — WHITE BODY
-          ══════════════════════════════════════ */}
-      <div style={{
-        background: "#ffffff",
-        padding: "10px 14px 8px",
-        position: "relative",
-      }}>
-
-        {/* Photo row — centered photo + class badge top-right */}
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
+      {/* ── Body ── */}
+      <div
+        style={{
           position: "relative",
-          marginBottom: "8px",
-          paddingLeft: "10px",
-        }}>
+          padding: "12px 14px 10px",
+          background: "#fff",
+          minHeight: "280px",
+        }}
+      >
+        {/* Watermark crest */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={crest}
+          alt=""
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "42%",
+            transform: "translate(-50%, -50%)",
+            width: "200px",
+            height: "200px",
+            objectFit: "contain",
+            opacity: 0.07,
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
 
-          {/* Student photo — centered */}
-          <div style={{
-            width: "118px",
-            height: "146px",
-            border: `3px solid ${accent}`,
-            borderRadius: "6px",
-            overflow: "hidden",
-            background: "#e8edf5",
-            boxShadow: "0 2px 10px rgba(0,0,0,.2)",
-            flexShrink: 0,
-            position: "relative",
-          }}>
-            {/* Fingerprint background */}
-            <div style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              opacity: 0.06,
-              background: `radial-gradient(circle at 30% 40%, ${accent} 0%, transparent 70%)`,
-              pointerEvents: "none",
-            }} />
-            {photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoUrl} alt={fullName}
-                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
-            ) : (
-              <div style={{
-                width: "100%", height: "100%",
-                display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center",
-                color: "#9ca3af", fontSize: "10px", gap: "4px",
-                position: "relative",
-                zIndex: 1,
-              }}>
-                <span style={{ fontSize: "36px" }}>👤</span>
-                <span>Photo</span>
+        <div style={{ position: "relative", zIndex: 1 }}>
+          {/* Photo + class badge */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              position: "relative",
+              marginBottom: "10px",
+              paddingRight: classLabel ? "36px" : 0,
+            }}
+          >
+            <div
+              style={{
+                width: "112px",
+                height: "138px",
+                borderRadius: "8px",
+                border: "2.5px solid #111",
+                overflow: "hidden",
+                background: "#eef2f7",
+                boxShadow: "0 2px 8px rgba(0,0,0,.15)",
+              }}
+            >
+              {photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoUrl}
+                  alt={fullName}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    objectPosition: "top center",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#94a3b8",
+                    fontSize: "11px",
+                  }}
+                >
+                  Photo
+                </div>
+              )}
+            </div>
+
+            {classLabel && (
+              <div
+                className="id-card-class-badge"
+                style={{
+                  position: "absolute",
+                  top: "2px",
+                  right: "-2px",
+                  width: "76px",
+                  height: "76px",
+                  borderRadius: "50%",
+                  background: "#fff",
+                  boxShadow: "0 2px 8px rgba(15,23,42,.14), 0 0 0 1px rgba(15,23,42,.06)",
+                }}
+              >
+                {/*
+                  Class ring — matches physical card badge:
+                  red left arc, blue bottom-right arc, blue + orange dots (1 & 2 o'clock)
+                */}
+                <svg
+                  viewBox="0 0 80 80"
+                  width="76"
+                  height="76"
+                  style={{ position: "absolute", inset: 0, display: "block" }}
+                  aria-hidden
+                >
+                  {/* Red arc — left side ~10:30 → 7:30 */}
+                  <path
+                    d="M 18.1 18.1 A 31 31 0 0 0 18.1 61.9"
+                    fill="none"
+                    stroke="#e11d48"
+                    strokeWidth="5.5"
+                    strokeLinecap="round"
+                  />
+                  {/* Blue arc — bottom-right ~4 → 6 */}
+                  <path
+                    d="M 66.8 55.5 A 31 31 0 0 1 40 71"
+                    fill="none"
+                    stroke="#2563eb"
+                    strokeWidth="5.5"
+                    strokeLinecap="round"
+                  />
+                  {/* Blue dot — 1 o'clock */}
+                  <circle cx="55.5" cy="13.2" r="3.1" fill="#2563eb" />
+                  {/* Orange dot — 2 o'clock */}
+                  <circle cx="66.8" cy="24.5" r="4" fill="#f97316" />
+                </svg>
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "18px",
+                    fontWeight: 800,
+                    color: "#0f172a",
+                    letterSpacing: "-0.5px",
+                    fontFamily:
+                      "system-ui, -apple-system, 'Segoe UI', Arial, sans-serif",
+                    lineHeight: 1,
+                  }}
+                >
+                  {classLabel}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Class badge — SVG exactly like image */}
-          {classLabel && (
-            <div style={{
-              position: "absolute",
-              top: "-6px",
-              right: "-6px",
-              width: "76px",
-              height: "76px",
-            }}>
-              <svg viewBox="0 0 76 76" style={{
-                position: "absolute",
-                width: "76px",
-                height: "76px",
-                top: 0,
-                left: 0,
-                filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))",
-              }}>
-                {/* White fill circle with border */}
-                <circle cx="38" cy="38" r="35" fill="white" stroke="#e5e7eb" strokeWidth="1.5" />
+          {/* Name — red */}
+          <p
+            style={{
+              margin: "0 0 8px",
+              textAlign: "center",
+              fontSize: "22px",
+              fontWeight: 900,
+              color: "#d11a2a",
+              letterSpacing: "0.03em",
+              lineHeight: 1.15,
+            }}
+          >
+            {fullName || "—"}
+          </p>
 
-                {/* Blue arc - top-right */}
-                <circle cx="38" cy="38" r="31"
-                  fill="none"
-                  stroke="#3b82f6"
-                  strokeWidth="5"
-                  strokeDasharray="40 160"
-                  strokeDashoffset="-10"
-                  strokeLinecap="round" />
-
-                {/* Pink/Red arc - bottom */}
-                <circle cx="38" cy="38" r="31"
-                  fill="none"
-                  stroke="#e11d48"
-                  strokeWidth="5"
-                  strokeDasharray="32 168"
-                  strokeDashoffset="-85"
-                  strokeLinecap="round" />
-
-                {/* Orange dot - right side */}
-                <circle cx="60" cy="30" r="4.5" fill="#f97316" stroke="white" strokeWidth="1.5" />
-
-                {/* Blue dot - top right */}
-                <circle cx="54" cy="17" r="3.5" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
-              </svg>
-
-              {/* Class text inside */}
-              <div style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "18px",
-                fontWeight: 900,
-                color: accent,
-                letterSpacing: "-0.5px",
-                zIndex: 2,
-                fontFamily: "'Noto Sans Gujarati', 'Shruti', sans-serif",
-              }}>
-                {classLabel}
-              </div>
-            </div>
-          )}
+          {/* Fields */}
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <tbody>
+              <InfoRow label="પિતાનું નામ" value={student.fatherName || ""} />
+              {addr1 ? <InfoRow label="સરનામું" value={addr1} /> : null}
+              {addr2 ? <InfoRow label="" value={addr2} indent /> : null}
+              <InfoRow label="મો. નં" value={gu(student.mobileNumber)} />
+              <InfoRow label="જન્મ તા." value={gu(student.dateOfBirth)} />
+              {student.grNumber ? (
+                <InfoRow label="જી.આર. નં." value={gu(student.grNumber)} />
+              ) : null}
+            </tbody>
+          </table>
         </div>
-
-        {/* ── Student name — large red bold Gujarati ── */}
-        <p style={{
-          fontSize: "22px",
-          fontWeight: 900,
-          color: "#dc2626",
-          textAlign: "center",
-          letterSpacing: "0.04em",
-          lineHeight: 1.2,
-          marginBottom: "8px",
-          fontFamily: "'Noto Sans Gujarati', 'Shruti', sans-serif",
-          textShadow: "0 1px 2px rgba(220,38,38,0.1)",
-        }}>
-          {fullName}
-        </p>
-
-        {/* ── Info table — exact label alignment ── */}
-        <table style={{ width: "100%", borderCollapse: "collapse", lineHeight: 1.5 }}>
-          <tbody>
-            {/* Father */}
-            <InfoRow label="પિતાનું નામ" colon value={student.fatherName} />
-
-            {/* Address line 1 */}
-            {addr1 && <InfoRow label="સરનામું" colon value={addr1} />}
-
-            {/* Address line 2 — indented, no label */}
-            {addr2 && <InfoRow label="" colon={false} value={addr2} indent />}
-
-            {/* Mobile */}
-            <InfoRow label="મો.નં" colon value={student.mobileNumber} />
-
-            {/* DOB */}
-            <InfoRow label="જન્મ તા." colon value={student.dateOfBirth} />
-
-            {/* GR Number — RED value */}
-            {student.grNumber && (
-              <InfoRow label="જી.આર.નં." colon value={student.grNumber} red />
-            )}
-          </tbody>
-        </table>
       </div>
 
-      {/* ══════════════════════════════════════
-          ZONE 4 — GOLD FOOTER
-          ══════════════════════════════════════ */}
-      <div style={{
-        background: "linear-gradient(90deg, #f5c518 0%, #f8d648 35%, #f5c518 65%, #f8d648 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "6px 12px 6px 14px",
-        borderTop: "2px solid #d4a800",
-        minHeight: "42px",
-        gap: "8px",
-        boxShadow: "inset 0 1px 2px rgba(255,255,255,0.4)",
-      }}>
-        {/* Left — academic year */}
-        <span style={{
-          fontSize: "13px",
-          fontWeight: 800,
-          color: "#1e3a8a",
-          whiteSpace: "nowrap",
-          letterSpacing: "0.04em",
-          textShadow: "0 1px 2px rgba(255,255,255,0.3)",
-        }}>
-          {shortFy}
-        </span>
-
-        {/* Center — roll / card number */}
-        <span style={{
-          fontSize: "20px",
-          fontWeight: 900,
-          color: "#111",
-          letterSpacing: "0.06em",
-          textShadow: "0 1px 2px rgba(255,255,255,0.2)",
-        }}>
-          {student.rollNumber || student.grNumber || "—"}
-        </span>
-
-        {/* Right — signature + label */}
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          minWidth: "75px",
-        }}>
-          {signatureUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={signatureUrl} alt="sign"
-              style={{ height: "22px", objectFit: "contain", opacity: 0.85 }} />
-          ) : (
-            <svg width="65" height="22" viewBox="0 0 65 22">
-              <path d="M4,16 Q12,4 22,13 Q30,19 38,9 Q46,3 58,11"
-                fill="none" stroke="#333" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          )}
-          <span style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            color: "#1e3a8a",
-            letterSpacing: "0.03em",
-            marginTop: "1px",
-            whiteSpace: "nowrap",
-            textShadow: "0 1px 2px rgba(255,255,255,0.2)",
-          }}>
-            આચાર્યની સ
+      {/* ── Yellow wavy footer ── */}
+      <div style={{ position: "relative", marginTop: "-2px" }}>
+        <svg
+          viewBox="0 0 340 18"
+          preserveAspectRatio="none"
+          style={{ display: "block", width: "100%", height: "16px" }}
+          aria-hidden
+        >
+          <path
+            d="M0,18 L0,10 C40,2 80,16 120,10 C160,4 200,14 240,8 C280,2 310,12 340,6 L340,18 Z"
+            fill="#f5c518"
+          />
+        </svg>
+        <div
+          style={{
+            background: "linear-gradient(90deg, #f5c518 0%, #f8d84a 50%, #f5c518 100%)",
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
+            alignItems: "end",
+            padding: "2px 12px 8px",
+            minHeight: "48px",
+            gap: "6px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "12px",
+              fontWeight: 800,
+              color: "#0b2a5b",
+              whiteSpace: "nowrap",
+              justifySelf: "start",
+            }}
+          >
+            {footerYear}
           </span>
+
+          <span
+            style={{
+              fontSize: "18px",
+              fontWeight: 900,
+              color: "#111",
+              letterSpacing: "0.04em",
+              maxWidth: "110px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              textAlign: "center",
+            }}
+          >
+            {/^\d/.test(centerNo) || /[૦-૯]/.test(centerNo)
+              ? toGujaratiDigits(centerNo)
+              : centerNo}
+          </span>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifySelf: "end",
+              minWidth: "72px",
+            }}
+          >
+            {signatureUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={signatureUrl}
+                alt=""
+                style={{ height: "22px", objectFit: "contain" }}
+              />
+            ) : (
+              <svg width="70" height="22" viewBox="0 0 70 22" aria-hidden>
+                <path
+                  d="M3,15 Q14,4 24,12 Q34,18 44,8 Q54,2 66,12"
+                  fill="none"
+                  stroke="#222"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: 800,
+                color: "#1e3a8a",
+                marginTop: "1px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              આચાર્યની સહી
+            </span>
+          </div>
         </div>
       </div>
-
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────────────── */
 function InfoRow({
   label,
-  colon,
   value,
-  red,
   indent,
 }: {
   label: string;
-  colon: boolean;
   value: string;
-  red?: boolean;
   indent?: boolean;
 }) {
   if (!value && !indent) return null;
 
   return (
     <tr>
-      {/* Label cell */}
-      <td style={{
-        fontSize: "11.5px",
-        fontWeight: 700,
-        color: "#1a1a1a",
-        verticalAlign: "top",
-        paddingBottom: "3px",
-        paddingRight: "0px",
-        whiteSpace: "nowrap",
-        width: indent ? "0" : "88px",
-        paddingLeft: indent ? "88px" : "0",
-        fontFamily: "'Noto Sans Gujarati', 'Shruti', sans-serif",
-      }}>
-        {label}
-      </td>
-
-      {/* Colon cell */}
-      {colon && !indent ? (
-        <td style={{
-          fontSize: "11.5px",
-          fontWeight: 700,
-          color: "#1a1a1a",
+      <td
+        style={{
+          fontSize: "12px",
+          fontWeight: 800,
+          color: "#111",
           verticalAlign: "top",
-          paddingBottom: "3px",
-          paddingRight: "4px",
-          width: "10px",
-          textAlign: "center",
-        }}>
-          :
-        </td>
-      ) : (
-        !indent && <td style={{ width: "10px" }} />
-      )}
-
-      {/* Value cell */}
-      <td style={{
-        fontSize: "11.5px",
-        fontWeight: indent ? 400 : 500,
-        color: red ? "#dc2626" : "#111",
-        verticalAlign: "top",
-        paddingBottom: "3px",
-        lineHeight: 1.4,
-        fontFamily: "'Noto Sans Gujarati', 'Shruti', sans-serif",
-      }}
-        colSpan={indent ? 3 : 1}
+          paddingBottom: "4px",
+          whiteSpace: "nowrap",
+          width: indent ? 0 : "92px",
+          paddingLeft: indent ? "92px" : 0,
+        }}
+      >
+        {label}
+        {label ? " :" : ""}
+      </td>
+      <td
+        style={{
+          fontSize: "12px",
+          fontWeight: 500,
+          color: "#111",
+          verticalAlign: "top",
+          paddingBottom: "4px",
+          lineHeight: 1.35,
+          paddingLeft: label ? "4px" : 0,
+        }}
+        colSpan={indent ? 1 : 1}
       >
         {value}
       </td>

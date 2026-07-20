@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { normalizeClass } from "../route";
+import { assertStaffInSchool } from "@/lib/school-assertions";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -26,27 +28,81 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await requireSchoolAuth(["school_admin"]);
+    const session = await requireSchoolAuth(["school_admin", "clerk"]);
     const { id } = await params;
     const existing = await prisma.schoolClass.findFirst({ where: { id, schoolId: session.schoolId } });
     if (!existing) return NextResponse.json({ error: "Class not found" }, { status: 404 });
 
     const body = await request.json();
-    const data = {
-      name: String(body.name || "").trim(),
-      standard: String(body.standard || "").trim(),
-      section: String(body.section || "").trim().toUpperCase(),
-      academicYear: String(body.academicYear || "2025-26").trim(),
-      institutionName: body.institutionName ? String(body.institutionName).trim() : null,
-      institutionDistrict: body.institutionDistrict ? String(body.institutionDistrict).trim() : null,
-      classTeacherId: body.classTeacherId ? String(body.classTeacherId).trim() : null,
-    };
+    if (body.classTeacherId === undefined) {
+      return NextResponse.json({ error: "classTeacherId required" }, { status: 400 });
+    }
+
+    const classTeacherId = body.classTeacherId ? String(body.classTeacherId) : null;
+    if (classTeacherId) {
+      await assertStaffInSchool(session.schoolId, [classTeacherId]);
+    }
 
     const schoolClass = await prisma.schoolClass.update({
       where: { id },
-      data,
+      data: { classTeacherId },
+      include: {
+        classTeacher: { select: { id: true, firstName: true, lastName: true, designation: true } },
+        _count: { select: { students: true } },
+      },
+    });
+    return NextResponse.json(schoolClass);
+  } catch (error) {
+    if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
+    return NextResponse.json({ error: "Failed to update teacher" }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await requireSchoolAuth(["school_admin", "clerk"]);
+    const { id } = await params;
+    const existing = await prisma.schoolClass.findFirst({ where: { id, schoolId: session.schoolId } });
+    if (!existing) return NextResponse.json({ error: "Class not found" }, { status: 404 });
+
+    const body = await request.json();
+    const data = normalizeClass(body);
+
+    if (!data.standard || !data.section) {
+      return NextResponse.json({ error: "Standard and section are required" }, { status: 400 });
+    }
+
+    const duplicate = await prisma.schoolClass.findFirst({
+      where: {
+        schoolId: session.schoolId,
+        standard: data.standard,
+        section: data.section,
+        stream: data.stream,
+        academicYear: data.academicYear,
+        NOT: { id },
+      },
+    });
+    if (duplicate) {
+      const label = data.stream
+        ? `${data.standard} ${data.stream}-${data.section}`
+        : `${data.standard}-${data.section}`;
+      return NextResponse.json(
+        { error: `Class ${label} already exists` },
+        { status: 409 },
+      );
+    }
+
+    const schoolClass = await prisma.schoolClass.update({
+      where: { id },
+      data: {
+        name: data.name,
+        standard: data.standard,
+        section: data.section,
+        stream: data.stream,
+        academicYear: data.academicYear,
+      },
       include: {
         classTeacher: { select: { id: true, firstName: true, lastName: true } },
         _count: { select: { students: true } },
@@ -61,7 +117,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await requireSchoolAuth(["school_admin"]);
+    const session = await requireSchoolAuth(["school_admin", "clerk"]);
     const { id } = await params;
     const existing = await prisma.schoolClass.findFirst({ where: { id, schoolId: session.schoolId } });
     if (!existing) return NextResponse.json({ error: "Class not found" }, { status: 404 });

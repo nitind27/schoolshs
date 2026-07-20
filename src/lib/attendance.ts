@@ -122,11 +122,30 @@ export function prevCalendarMonth(month: number, year: number): { month: number;
   return { month: month - 1, year };
 }
 
+/** Numeric roll ascending: 1, 2, 10 (not 1, 10, 2). Empty rolls go last. */
+export function compareRollNumbers(a: string | null | undefined, b: string | null | undefined): number {
+  const ra = String(a || "").trim();
+  const rb = String(b || "").trim();
+  if (!ra && !rb) return 0;
+  if (!ra) return 1;
+  if (!rb) return -1;
+
+  const na = Number.parseInt(ra.replace(/\D/g, ""), 10);
+  const nb = Number.parseInt(rb.replace(/\D/g, ""), 10);
+  const aNum = Number.isFinite(na);
+  const bNum = Number.isFinite(nb);
+  if (aNum && bNum && na !== nb) return na - nb;
+  if (aNum && !bNum) return -1;
+  if (!aNum && bNum) return 1;
+  return ra.localeCompare(rb, undefined, { numeric: true, sensitivity: "base" });
+}
+
 export function buildAttendanceRows(
   students: {
     id: string;
     grNumber?: string | null;
     caste?: string | null;
+    category?: string | null;
     dateOfBirth: string;
     firstName: string;
     middleName?: string | null;
@@ -148,7 +167,17 @@ export function buildAttendanceRows(
     }
   >
 ): AttendanceRow[] {
-  return students.map((s, i) => {
+  const sorted = [...students].sort((a, b) => {
+    const rollCmp = compareRollNumbers(a.rollNumber, b.rollNumber);
+    if (rollCmp !== 0) return rollCmp;
+    const grCmp = String(a.grNumber || "").localeCompare(String(b.grNumber || ""), undefined, {
+      numeric: true,
+    });
+    if (grCmp !== 0) return grCmp;
+    return studentFullName(a).localeCompare(studentFullName(b));
+  });
+
+  return sorted.map((s, i) => {
     const rec = saved.get(s.id);
     const days = rec ? parseDaysJson(rec.daysJson) : emptyDays();
     const schoolFee = rec?.schoolFee || "";
@@ -167,6 +196,7 @@ export function buildAttendanceRows(
       rollNumber: s.rollNumber || "",
       grNumber: s.grNumber || "",
       caste: s.caste || "",
+      category: s.category || "",
       dob: s.dateOfBirth,
       schoolFee,
       termFee,

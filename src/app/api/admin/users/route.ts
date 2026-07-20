@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, hashPassword, AuthError } from "@/lib/auth";
+import {
+  getRequestOriginFromHeaders,
+  onboardSchoolAdminUser,
+} from "@/lib/email-verification";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +38,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ id: user.id, email: user.email, name: user.name, schoolId }, { status: 201 });
+    let verificationSent = false;
+    try {
+      const result = await onboardSchoolAdminUser(
+        user.id,
+        getRequestOriginFromHeaders(request.headers, request.nextUrl.origin),
+      );
+      verificationSent = result.sent;
+    } catch (emailErr) {
+      console.error("Verification email failed:", emailErr);
+    }
+
+    return NextResponse.json(
+      { id: user.id, email: user.email, name: user.name, schoolId, verificationSent },
+      { status: 201 },
+    );
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Failed to create admin" }, { status: 500 });

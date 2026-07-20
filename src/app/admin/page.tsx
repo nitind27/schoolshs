@@ -2,10 +2,26 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle, StatCard } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { School, Users, GraduationCap, Plus, Shield, BookOpen, Activity } from "lucide-react";
+import { formatINR, StatusBadge } from "@/components/admin/admin-ui";
+import {
+  School,
+  Users,
+  GraduationCap,
+  Plus,
+  Shield,
+  BookOpen,
+  Activity,
+  IndianRupee,
+  FileText,
+  CreditCard,
+  Building2,
+  ExternalLink,
+  TrendingUp,
+  CheckCircle2,
+  Ban,
+} from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
+import "@/components/admin/admin-portal.css";
 
 interface SchoolRow {
   id: string;
@@ -15,6 +31,13 @@ interface SchoolRow {
   isActive: boolean;
   _count: { students: number; users: number; classes: number; staff: number };
   users: { id: string; email: string; name: string; isActive: boolean }[];
+  subscription?: {
+    planName?: string;
+    paymentStatus?: string;
+    totalAmount?: string | null;
+    paidAmount?: string | null;
+  } | null;
+  settings?: { logoPath?: string | null } | null;
 }
 
 interface AdminRow {
@@ -26,158 +49,272 @@ interface AdminRow {
   school: { id: string; name: string; code: string };
 }
 
+interface PlatformStats {
+  schoolCount: number;
+  studentCount: number;
+  adminCount: number;
+  activeSchools: number;
+  inactiveSchools: number;
+  totalRevenue: number;
+  totalContractValue: number;
+  totalPaid: number;
+  pendingPayments: number;
+  planBreakdown: Record<string, number>;
+}
+
 export default function AdminDashboardPage() {
   const t = useT();
   const [schools, setSchools] = useState<SchoolRow[]>([]);
   const [admins, setAdmins] = useState<AdminRow[]>([]);
+  const [stats, setStats] = useState<PlatformStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/admin/schools").then((r) => r.json()),
       fetch("/api/admin/users").then((r) => r.json()),
+      fetch("/api/admin/stats").then((r) => r.json()),
     ])
-      .then(([schoolData, adminData]) => {
+      .then(([schoolData, adminData, statsData]) => {
         setSchools(schoolData.schools || []);
         setAdmins(adminData.users || []);
+        setStats(statsData);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const totals = schools.reduce(
-    (a, s) => ({ schools: a.schools + 1, students: a.students + s._count.students, admins: a.admins + s._count.users }),
-    { schools: 0, students: 0, admins: 0 }
-  );
-  const activeSchools = schools.filter((s) => s.isActive).length;
-  const activeAdmins = admins.filter((a) => a.isActive).length;
+  const recentSchools = schools.slice(0, 5);
+  const outstanding = (stats?.totalContractValue ?? 0) - (stats?.totalPaid ?? 0);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-
-      {/* Hero */}
-      <div
-        className="relative overflow-hidden rounded-2xl p-6 md:p-8"
-        style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #6d28d9 100%)" }}
-      >
-        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full opacity-10" style={{ background: "radial-gradient(circle, white 0%, transparent 70%)" }} />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.2)" }}>
-              <Shield className="h-7 w-7 text-white" />
+    <div className="ad-portal space-y-6">
+      <header className="ad-hero">
+        <div className="ad-hero-inner">
+          <div className="ad-hero-brand">
+            <div className="ad-hero-mark">
+              <Shield className="h-7 w-7" strokeWidth={1.75} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">{t("admin.title")}</h1>
-              <p className="text-sm text-violet-200 mt-0.5">{t("admin.subtitle")}</p>
+              <div className="ad-eyebrow">{t("roles.super_admin")}</div>
+              <h1>{t("admin.title")}</h1>
+              <p>{t("admin.subtitle")}</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Link href="/admin/schools/new">
-              <Button className="bg-white text-violet-900 hover:bg-violet-50 shadow-md font-semibold">
-                <Plus className="h-4 w-4" /> {t("admin.newSchool")}
-              </Button>
+          <div className="ad-hero-actions">
+            <Link href="/admin/schools/new" className="ad-btn is-primary">
+              <Plus className="h-4 w-4" />
+              {t("admin.newSchool")}
             </Link>
-            <Link href="/admin/admins/new">
-              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
-                <Users className="h-4 w-4" /> {t("admin.newAdmin")}
-              </Button>
+            <Link href="/admin/schools" className="ad-btn is-ghost">
+              <Building2 className="h-4 w-4" />
+              {t("admin.allSchools")}
             </Link>
           </div>
         </div>
+      </header>
+
+      <div className="ad-stat-grid is-six">
+        <div className="ad-stat">
+          <div className="ad-stat-icon">
+            <School className="h-5 w-5" />
+          </div>
+          <div className="ad-stat-label">{t("admin.totalSchools")}</div>
+          <div className="ad-stat-value">{(stats?.schoolCount ?? 0).toLocaleString("en-IN")}</div>
+        </div>
+        <div className="ad-stat is-ok">
+          <div className="ad-stat-icon">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+          <div className="ad-stat-label">Active Schools</div>
+          <div className="ad-stat-value">{(stats?.activeSchools ?? 0).toLocaleString("en-IN")}</div>
+        </div>
+        <div className="ad-stat is-slate">
+          <div className="ad-stat-icon">
+            <Ban className="h-5 w-5" />
+          </div>
+          <div className="ad-stat-label">Inactive</div>
+          <div className="ad-stat-value">{(stats?.inactiveSchools ?? 0).toLocaleString("en-IN")}</div>
+        </div>
+        <div className="ad-stat">
+          <div className="ad-stat-icon">
+            <GraduationCap className="h-5 w-5" />
+          </div>
+          <div className="ad-stat-label">{t("admin.totalStudents")}</div>
+          <div className="ad-stat-value">{(stats?.studentCount ?? 0).toLocaleString("en-IN")}</div>
+        </div>
+        <div className="ad-stat is-ok">
+          <div className="ad-stat-icon">
+            <IndianRupee className="h-5 w-5" />
+          </div>
+          <div className="ad-stat-label">Total Revenue</div>
+          <div className="ad-stat-value" style={{ fontSize: "1.25rem" }}>
+            {formatINR(stats?.totalRevenue)}
+          </div>
+        </div>
+        <div className="ad-stat is-warn">
+          <div className="ad-stat-icon">
+            <CreditCard className="h-5 w-5" />
+          </div>
+          <div className="ad-stat-label">Pending Payments</div>
+          <div className="ad-stat-value">{(stats?.pendingPayments ?? 0).toLocaleString("en-IN")}</div>
+        </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard
-          label={t("admin.totalSchools")}
-          value={totals.schools}
-          icon={<School className="h-5 w-5 text-white" />}
-          gradient="bg-gradient-to-br from-violet-600 to-purple-700"
-        />
-        <StatCard
-          label={t("admin.totalStudents")}
-          value={totals.students.toLocaleString("en-IN")}
-          icon={<GraduationCap className="h-5 w-5 text-white" />}
-          gradient="bg-gradient-to-br from-blue-600 to-blue-700"
-        />
-        <StatCard
-          label={t("admin.schoolAdmins")}
-          value={totals.admins}
-          icon={<Users className="h-5 w-5 text-white" />}
-          gradient="bg-gradient-to-br from-emerald-600 to-teal-700"
-        />
-        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
-          <p className="text-xs font-medium text-slate-500 mb-1">Active Schools</p>
-          <p className="text-3xl font-bold text-emerald-700">{activeSchools}</p>
-          <p className="text-xs text-slate-400 mt-1">Inactive: {totals.schools - activeSchools}</p>
-        </div>
-        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
-          <p className="text-xs font-medium text-slate-500 mb-1">Active Admins</p>
-          <p className="text-3xl font-bold text-blue-700">{activeAdmins}</p>
-          <p className="text-xs text-slate-400 mt-1">Inactive: {totals.admins - activeAdmins}</p>
-        </div>
-      </div>
-
-      {/* Schools table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
-                <BookOpen className="h-4 w-4 text-violet-600" />
+      <div className="ad-grid-main">
+        <section className="ad-panel">
+          <div className="ad-panel-head">
+            <div>
+              <h2>
+                <TrendingUp className="h-5 w-5 text-sky-700" />
+                Revenue Overview
+              </h2>
+              <p>Contract value, collections and outstanding balance</p>
+            </div>
+            <Link href="/admin/payments" className="ad-panel-link">
+              View all →
+            </Link>
+          </div>
+          <div className="ad-panel-body">
+            <div className="ad-revenue-grid">
+              <div className="ad-revenue-tile">
+                <span>Contract Value</span>
+                <strong>{formatINR(stats?.totalContractValue)}</strong>
               </div>
-              <CardTitle>{t("admin.allSchools")}</CardTitle>
+              <div className="ad-revenue-tile is-ok">
+                <span>Collected</span>
+                <strong>{formatINR(stats?.totalPaid)}</strong>
+              </div>
+              <div className="ad-revenue-tile is-warn">
+                <span>Outstanding</span>
+                <strong>{formatINR(outstanding)}</strong>
+              </div>
             </div>
-            <span className="text-xs text-slate-500 bg-slate-100 rounded-full px-2.5 py-1">{schools.length} schools</span>
+            {stats?.planBreakdown && Object.keys(stats.planBreakdown).length > 0 && (
+              <div className="ad-chips">
+                {Object.entries(stats.planBreakdown).map(([plan, count]) => (
+                  <span key={plan} className="ad-chip">
+                    {plan}: {count}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex justify-center h-32 items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-violet-200 border-t-violet-600" />
+        </section>
+
+        <section className="ad-panel">
+          <div className="ad-panel-head">
+            <div>
+              <h2>Quick Actions</h2>
+              <p>Common admin tasks</p>
             </div>
-          ) : schools.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-              <School className="h-10 w-10 mb-3 opacity-40" />
-              <p>{t("admin.noSchools")}</p>
-              <Link href="/admin/schools/new" className="mt-3">
-                <Button size="sm"><Plus className="h-3.5 w-3.5" /> Register School</Button>
+          </div>
+          <div className="ad-panel-body">
+            <div className="ad-actions">
+              <Link href="/admin/schools/new" className="ad-action">
+                <div className="ad-action-icon">
+                  <Plus className="h-4 w-4" />
+                </div>
+                <span>Register School</span>
+              </Link>
+              <Link href="/admin/admins/new" className="ad-action">
+                <div className="ad-action-icon is-slate">
+                  <Users className="h-4 w-4" />
+                </div>
+                <span>Create Admin</span>
+              </Link>
+              <Link href="/admin/contracts" className="ad-action">
+                <div className="ad-action-icon is-ok">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <span>View Contracts</span>
+              </Link>
+              <Link href="/admin/payments" className="ad-action">
+                <div className="ad-action-icon is-warn">
+                  <CreditCard className="h-4 w-4" />
+                </div>
+                <span>Record Payment</span>
               </Link>
             </div>
+          </div>
+        </section>
+      </div>
+
+      <section className="ad-panel">
+        <div className="ad-panel-head">
+          <div>
+            <h2>
+              <BookOpen className="h-5 w-5 text-sky-700" />
+              Recent Schools
+            </h2>
+          </div>
+          <Link href="/admin/schools" className="ad-panel-link">
+            {schools.length} total →
+          </Link>
+        </div>
+        <div className="ad-panel-body is-flush">
+          {loading ? (
+            <div className="ad-loading">
+              <div className="ad-spinner" />
+            </div>
+          ) : recentSchools.length === 0 ? (
+            <div className="ad-empty">
+              <School className="h-9 w-9 opacity-40" />
+              <p>{t("admin.noSchools")}</p>
+            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="ad-table-wrap">
+              <table className="ad-table">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50">
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("common.code")}</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("admin.schoolName")}</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("common.district")}</th>
-                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("admin.students")}</th>
-                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("nav.classes")}</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("admin.admins")}</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("common.status")}</th>
+                  <tr>
+                    <th>School</th>
+                    <th>District</th>
+                    <th style={{ textAlign: "center" }}>Students</th>
+                    <th>Plan</th>
+                    <th>Payment</th>
+                    <th>Status</th>
+                    <th />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {schools.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-5 py-3.5 font-mono text-xs font-bold text-violet-700 bg-violet-50/30">{s.code}</td>
-                      <td className="px-5 py-3.5 font-medium text-slate-800">{s.name}</td>
-                      <td className="px-5 py-3.5 text-slate-600">{s.district || "—"}</td>
-                      <td className="px-5 py-3.5 text-center">
-                        <span className="font-semibold text-slate-800">{s._count.students.toLocaleString("en-IN")}</span>
+                <tbody>
+                  {recentSchools.map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        <div className="ad-school-cell">
+                          {s.settings?.logoPath ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={`/api/uploads/${s.settings.logoPath}`}
+                              alt=""
+                              className="ad-school-logo"
+                            />
+                          ) : (
+                            <div className="ad-school-logo">
+                              <School className="h-4 w-4" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="ad-school-name">{s.name}</p>
+                            <p className="ad-mono">{s.code}</p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-5 py-3.5 text-center text-slate-600">{s._count.classes}</td>
-                      <td className="px-5 py-3.5">
-                        {s.users.slice(0, 2).map((u) => (
-                          <span key={u.id} className="block text-xs text-slate-500 font-mono truncate max-w-[160px]">{u.email}</span>
-                        ))}
-                        {s.users.length > 2 && <span className="text-xs text-slate-400">+{s.users.length - 2} more</span>}
+                      <td style={{ color: "var(--ad-muted)" }}>{s.district || "—"}</td>
+                      <td style={{ textAlign: "center", fontWeight: 700 }}>
+                        {s._count.students.toLocaleString("en-IN")}
                       </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${s.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${s.isActive ? "bg-emerald-500" : "bg-red-500"}`} />
-                          {s.isActive ? t("common.active") : t("common.inactive")}
-                        </span>
+                      <td style={{ textTransform: "capitalize", fontSize: "0.8rem" }}>
+                        {s.subscription?.planName || "—"}
+                      </td>
+                      <td>
+                        <StatusBadge status={s.subscription?.paymentStatus} />
+                      </td>
+                      <td>
+                        <StatusBadge active={s.isActive} />
+                      </td>
+                      <td>
+                        <Link href={`/admin/schools/${s.id}`} className="ad-btn is-outline is-sm">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
                       </td>
                     </tr>
                   ))}
@@ -185,70 +322,73 @@ export default function AdminDashboardPage() {
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      {/* Admins table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Activity className="h-4 w-4 text-blue-600" />
-              </div>
-              <CardTitle>{t("admin.allAdmins")}</CardTitle>
-            </div>
-            <span className="text-xs text-slate-500 bg-slate-100 rounded-full px-2.5 py-1">{admins.length} admins</span>
+      <section className="ad-panel">
+        <div className="ad-panel-head">
+          <div>
+            <h2>
+              <Activity className="h-5 w-5 text-sky-700" />
+              {t("admin.allAdmins")}
+            </h2>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
+          <Link href="/admin/admins" className="ad-panel-link">
+            {admins.length} admins →
+          </Link>
+        </div>
+        <div className="ad-panel-body is-flush">
           {loading ? (
-            <div className="flex justify-center h-24 items-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-200 border-t-blue-600" />
+            <div className="ad-loading">
+              <div className="ad-spinner" />
             </div>
           ) : admins.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-              <Users className="h-8 w-8 mb-2 opacity-40" />
+            <div className="ad-empty">
+              <Users className="h-8 w-8 opacity-40" />
               <p>{t("admin.noAdmins")}</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="ad-table-wrap">
+              <table className="ad-table">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50">
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("common.name")}</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("admin.emailLoginHeader")}</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("admin.selectSchool")}</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("admin.lastLogin")}</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("common.status")}</th>
+                  <tr>
+                    <th>{t("common.name")}</th>
+                    <th>{t("admin.emailLoginHeader")}</th>
+                    <th>{t("admin.selectSchool")}</th>
+                    <th>{t("admin.lastLogin")}</th>
+                    <th>{t("common.status")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {admins.map((a) => (
-                    <tr key={a.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center text-xs font-bold text-violet-700 uppercase">
-                            {a.name.charAt(0)}
-                          </div>
-                          <span className="font-medium text-slate-800">{a.name}</span>
+                <tbody>
+                  {admins.slice(0, 8).map((a) => (
+                    <tr key={a.id}>
+                      <td>
+                        <div className="ad-school-cell">
+                          <div className="ad-avatar">{a.name.charAt(0)}</div>
+                          <span className="ad-school-name">{a.name}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-xs text-slate-600">{a.email}</td>
-                      <td className="px-5 py-3.5">
-                        <div>
-                          <p className="font-medium text-slate-800 text-xs">{a.school.name}</p>
-                          <p className="font-mono text-[11px] text-violet-600">{a.school.code}</p>
-                        </div>
+                      <td className="ad-mono" style={{ margin: 0, fontSize: "0.75rem", color: "var(--ad-muted)" }}>
+                        {a.email}
                       </td>
-                      <td className="px-5 py-3.5 text-xs text-slate-500">
-                        {a.lastLoginAt ? new Date(a.lastLoginAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : <span className="text-slate-300">{t("common.never")}</span>}
+                      <td>
+                        <p className="ad-school-name" style={{ fontSize: "0.82rem" }}>
+                          {a.school.name}
+                        </p>
+                        <p className="ad-mono">{a.school.code}</p>
                       </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${a.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${a.isActive ? "bg-emerald-500" : "bg-red-500"}`} />
-                          {a.isActive ? t("common.active") : t("common.inactive")}
-                        </span>
+                      <td style={{ fontSize: "0.78rem", color: "var(--ad-muted)" }}>
+                        {a.lastLoginAt ? (
+                          new Date(a.lastLoginAt).toLocaleString("en-IN", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })
+                        ) : (
+                          <span style={{ opacity: 0.45 }}>{t("common.never")}</span>
+                        )}
+                      </td>
+                      <td>
+                        <StatusBadge active={a.isActive} />
                       </td>
                     </tr>
                   ))}
@@ -256,8 +396,8 @@ export default function AdminDashboardPage() {
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

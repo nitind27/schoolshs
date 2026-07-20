@@ -34,7 +34,7 @@ const CERT_META: Record<string, {
     gradient: "from-amber-50 to-yellow-50",
     border: "border-amber-200",
     iconBg: "bg-amber-100",
-    badge: "Landscape",
+    badge: "2 / A4 Portrait",
     badgeColor: "bg-amber-100 text-amber-700",
   },
   "monthly-attendance": {
@@ -45,6 +45,14 @@ const CERT_META: Record<string, {
     badge: "Portrait",
     badgeColor: "bg-emerald-100 text-emerald-700",
   },
+  "daily-attendance-book": {
+    icon: "📋",
+    gradient: "from-lime-50 to-green-50",
+    border: "border-lime-200",
+    iconBg: "bg-lime-100",
+    badge: "Portrait A4",
+    badgeColor: "bg-lime-100 text-lime-800",
+  },
   "class-register": {
     icon: "📒",
     gradient: "from-violet-50 to-purple-50",
@@ -52,6 +60,14 @@ const CERT_META: Record<string, {
     iconBg: "bg-violet-100",
     badge: "Landscape",
     badgeColor: "bg-violet-100 text-violet-700",
+  },
+  "general-register": {
+    icon: "📕",
+    gradient: "from-red-50 to-orange-50",
+    border: "border-red-200",
+    iconBg: "bg-red-100",
+    badge: "GR Book",
+    badgeColor: "bg-red-100 text-red-700",
   },
   "monthly-reports": {
     icon: "📑",

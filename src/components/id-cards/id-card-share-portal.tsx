@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreditCard, Loader2, Lock, LogOut, Printer, Shield } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
+import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import type { SchoolSettings, Student } from "@/generated/prisma/client";
 import "@/components/id-cards/id-card-print.css";
 
@@ -215,7 +216,7 @@ export function IdCardSharePortal() {
                   student={s as unknown as Student & { schoolClass?: ShareStudent["schoolClass"] }}
                   settings={cardSettings}
                   photoUrl={s.photoUrl}
-                  logoUrl={settings.logoUrl || undefined}
+                  logoUrl={settings.logoUrl || SCHOOL_LOGO_URL}
                   className="id-card-print-size"
                 />
                 <p className="id-card-print-label print:hidden text-xs text-slate-400 mt-2 text-center">

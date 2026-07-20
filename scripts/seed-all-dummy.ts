@@ -217,10 +217,11 @@ async function main() {
 
   const class7A = await prisma.schoolClass.upsert({
     where: {
-      schoolId_standard_section_academicYear: {
+      schoolId_standard_section_stream_academicYear: {
         schoolId: school1.id,
         standard: "7",
         section: "A",
+        stream: "",
         academicYear: "2025-26",
       },
     },
@@ -229,6 +230,7 @@ async function main() {
       name: "Class 7-A",
       standard: "7",
       section: "A",
+      stream: "",
       academicYear: "2025-26",
       institutionName: school1.name,
       institutionDistrict: "Tapi",
@@ -239,10 +241,11 @@ async function main() {
 
   const class8B = await prisma.schoolClass.upsert({
     where: {
-      schoolId_standard_section_academicYear: {
+      schoolId_standard_section_stream_academicYear: {
         schoolId: school1.id,
         standard: "8",
         section: "B",
+        stream: "",
         academicYear: "2025-26",
       },
     },
@@ -251,6 +254,7 @@ async function main() {
       name: "Class 8-B",
       standard: "8",
       section: "B",
+      stream: "",
       academicYear: "2025-26",
       institutionName: school1.name,
       institutionDistrict: "Tapi",
@@ -261,10 +265,11 @@ async function main() {
 
   const class6A = await prisma.schoolClass.upsert({
     where: {
-      schoolId_standard_section_academicYear: {
+      schoolId_standard_section_stream_academicYear: {
         schoolId: school2.id,
         standard: "6",
         section: "A",
+        stream: "",
         academicYear: "2025-26",
       },
     },
@@ -273,6 +278,7 @@ async function main() {
       name: "Class 6-A",
       standard: "6",
       section: "A",
+      stream: "",
       academicYear: "2025-26",
       institutionName: school2.name,
       institutionDistrict: "Tapi",
@@ -582,6 +588,16 @@ async function main() {
   console.log(`✓ Staff: 4 | Classes: 3 | Students: ${savedStudents.length}`);
   console.log("✓ Financial Year 2025-26 + Chart of Accounts");
   console.log("✓ SMS messages, BulkSubmission, AutomationJobs");
+
+  try {
+    const { seedDummyTimetables } = await import("../src/lib/seed-timetable");
+    console.log("\nSeeding timetables...");
+    const tt = await seedDummyTimetables(prisma);
+    console.log(`✓ Timetable: ${tt.entries} entries across ${tt.classes} classes`);
+  } catch (e) {
+    console.warn("⚠ Timetable seed skipped:", e instanceof Error ? e.message : e);
+  }
+
   console.log("\nDone — http://localhost:3000/login");
 }
 

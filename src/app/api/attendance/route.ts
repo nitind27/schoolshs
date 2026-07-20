@@ -10,6 +10,7 @@ import {
   toClassRegisterRows,
 } from "@/lib/attendance";
 import { assertTeacherAttendanceAccess } from "@/lib/teacher-attendance";
+import { assertStudentsInSchool } from "@/lib/school-assertions";
 
 async function fetchStudents(
   schoolId: string,
@@ -87,6 +88,7 @@ export async function PUT(request: NextRequest) {
     const entries = (body.rows || []) as {
       studentId: string;
       attendance: (string | null)[];
+      rollNumber?: string;
       schoolFee?: string;
       termFee?: string;
       admissionFee?: string;
@@ -100,8 +102,20 @@ export async function PUT(request: NextRequest) {
 
     await assertTeacherAttendanceAccess(session, classId);
 
-    const prev = prevCalendarMonth(month, year);
     const studentIds = entries.map((e) => e.studentId);
+    await assertStudentsInSchool(session.schoolId, studentIds);
+
+    // Persist roll numbers edited in the attendance grid
+    for (const entry of entries) {
+      if (entry.rollNumber === undefined) continue;
+      const rollNumber = String(entry.rollNumber ?? "").trim() || null;
+      await prisma.student.update({
+        where: { id: entry.studentId },
+        data: { rollNumber },
+      });
+    }
+
+    const prev = prevCalendarMonth(month, year);
 
     const prevRecords = await prisma.studentAttendanceMonth.findMany({
       where: { schoolId: session.schoolId, studentId: { in: studentIds }, month: prev.month, year: prev.year },

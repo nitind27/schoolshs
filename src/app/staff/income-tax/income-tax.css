@@ -1,0 +1,253 @@
+/* Income tax computation form — official single-table format (screen + A4 portrait print) */
+
+.it-form-title {
+  text-align: center;
+  border: 1px solid #94a3b8;
+  border-bottom: none;
+  background: #fff7ed;
+  padding: 6px 8px;
+}
+
+.it-form-title .it-t1 {
+  font-size: 15px;
+  font-weight: 800;
+  color: #9a3412;
+  margin: 0;
+}
+
+.it-form-title .it-t2 {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7c2d12;
+  margin: 2px 0 0;
+}
+
+/* Employee header grid */
+.it-head-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.it-head-tbl td {
+  border: 1px solid #94a3b8;
+  padding: 3px 8px;
+}
+
+.it-head-tbl .it-hl {
+  width: 17%;
+  font-weight: 700;
+  background: #f8fafc;
+  white-space: nowrap;
+}
+
+.it-head-tbl .it-hv {
+  width: 33%;
+}
+
+.it-head-tbl .it-strong {
+  font-weight: 700;
+}
+
+.it-head-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 12.5px;
+  outline: none;
+  padding: 0;
+}
+
+.it-head-input:focus {
+  background: #eff6ff;
+}
+
+/* Main table */
+.it-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.it-tbl th {
+  border: 1px solid #94a3b8;
+  background: #f1f5f9;
+  padding: 4px 8px;
+  font-weight: 800;
+  color: #0f172a;
+  text-align: center;
+}
+
+.it-tbl th.it-no,
+.it-tbl td.it-no {
+  width: 42px;
+  text-align: center;
+  font-weight: 700;
+  color: #334155;
+}
+
+.it-tbl th.it-amt-h {
+  width: 120px;
+}
+
+.it-tbl td {
+  border: 1px solid #94a3b8;
+  padding: 3px 8px;
+  color: #0f172a;
+}
+
+.it-tbl td.it-amt {
+  width: 120px;
+  text-align: right;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.it-tbl td.it-amt.it-rate {
+  padding: 3px 8px;
+  font-weight: 700;
+  text-align: center;
+  background: #f8fafc;
+}
+
+.it-tbl tr.it-sub td {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.it-tbl tr.it-sum td {
+  background: #f1f5f9;
+  font-weight: 700;
+}
+
+.it-tbl tr.it-sum td.it-amt,
+.it-tbl tr.it-grand td.it-amt,
+.it-tbl tr.it-refund td.it-amt,
+.it-tbl tr.it-due td.it-amt,
+.it-tbl tr.it-cap td.it-amt {
+  padding: 3px 8px;
+}
+
+.it-tbl tr.it-cap td {
+  background: #ffedd5;
+  font-weight: 800;
+  color: #9a3412;
+}
+
+.it-tbl tr.it-grand td {
+  background: #dbeafe;
+  font-weight: 800;
+  color: #1e40af;
+}
+
+.it-tbl tr.it-refund td {
+  background: #dcfce7;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.it-tbl tr.it-due td {
+  background: #fee2e2;
+  font-weight: 800;
+  color: #b91c1c;
+}
+
+.it-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 3px 8px;
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.it-input:focus {
+  background: #eff6ff;
+  box-shadow: inset 0 0 0 2px #3b82f6;
+}
+
+.it-sign {
+  display: flex;
+  justify-content: space-between;
+  border: 1px solid #94a3b8;
+  border-top: none;
+  padding: 18px 12px 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .income-tax-area,
+  .income-tax-area * {
+    visibility: visible !important;
+  }
+
+  .income-tax-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .it-form-title .it-t1 {
+    font-size: 12pt;
+  }
+
+  .it-form-title .it-t2 {
+    font-size: 9pt;
+  }
+
+  .it-head-tbl {
+    font-size: 8pt;
+  }
+
+  .it-head-tbl td {
+    border: 1px solid #334155 !important;
+    padding: 2px 5px;
+  }
+
+  .it-tbl {
+    font-size: 8pt;
+  }
+
+  .it-tbl th,
+  .it-tbl td {
+    border: 1px solid #334155 !important;
+    padding: 1.5px 5px;
+  }
+
+  .it-input,
+  .it-head-input {
+    font-size: 8pt;
+    padding: 1.5px 5px;
+  }
+
+  .it-form-title,
+  .it-tbl tr.it-sub td,
+  .it-tbl tr.it-sum td,
+  .it-tbl tr.it-cap td,
+  .it-tbl tr.it-grand td,
+  .it-tbl tr.it-refund td,
+  .it-tbl tr.it-due td,
+  .it-tbl td.it-amt.it-rate {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .it-sign {
+    border: none;
+    padding-top: 28px;
+  }
+}
