@@ -137,6 +137,16 @@ model PendingAdminEmailVerification {
   @@map("pendingadminemailverification")
 }
 
+/** Super-admin school register wizard — draft keyed by unique school code */
+model SchoolRegistrationDraft {
+  code      String   @id
+  step      Int      @default(0)
+  payload   Json
+  updatedAt DateTime @updatedAt
+
+  @@map("schoolregistrationdraft")
+}
+
 model User {
   id           String    @id @default(cuid())
   createdAt    DateTime  @default(now())
