@@ -13,9 +13,21 @@ export type SchoolRegistrationDraft = {
   form: Record<string, unknown>;
 };
 
+export type SchoolRegistrationDraftSummary = {
+  code: string;
+  schoolName: string;
+  savedAt: string;
+  step: number;
+  fieldCount: number;
+};
+
 function draftStorageKey(code: string) {
   const normalized = code.trim().toUpperCase().replace(/\s/g, "");
   return `${DRAFT_PREFIX}${normalized || PENDING_CODE}`;
+}
+
+function normalizeCode(code: string) {
+  return code.trim().toUpperCase().replace(/\s/g, "");
 }
 
 function readIndex(): string[] {
@@ -35,6 +47,39 @@ function writeIndex(codes: string[]) {
   localStorage.setItem(SCHOOL_REG_DRAFT_INDEX_KEY, JSON.stringify(unique));
 }
 
+/** Keep stored values when incoming save has empty strings (prevents wipe while typing code) */
+export function mergeRegistrationDraftForms(
+  existing: Record<string, unknown>,
+  incoming: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...existing };
+  for (const [key, val] of Object.entries(incoming)) {
+    if (val === undefined || val === null) continue;
+    if (key === "enabledFeatures") {
+      if (Array.isArray(val) && val.length > 0) out[key] = val;
+      continue;
+    }
+    if (typeof val === "string") {
+      const prev = existing[key];
+      if (val.trim() === "" && typeof prev === "string" && prev.trim() !== "") continue;
+      out[key] = val;
+      continue;
+    }
+    out[key] = val;
+  }
+  return out;
+}
+
+function countFilledFields(form: Record<string, unknown>): number {
+  let n = 0;
+  for (const [k, v] of Object.entries(form)) {
+    if (k === "code" || k === "enabledFeatures") continue;
+    if (typeof v === "string" && v.trim()) n += 1;
+  }
+  if (Array.isArray(form.enabledFeatures) && form.enabledFeatures.length > 0) n += 1;
+  return n;
+}
+
 export function loadSchoolRegistrationDraft(code: string): SchoolRegistrationDraft | null {
   if (typeof window === "undefined") return null;
   try {
@@ -48,22 +93,48 @@ export function loadSchoolRegistrationDraft(code: string): SchoolRegistrationDra
   }
 }
 
-export function loadLatestSchoolRegistrationDraft(): {
-  code: string;
-  draft: SchoolRegistrationDraft;
-} | null {
-  if (typeof window === "undefined") return null;
-  const index = readIndex().filter((c) => c !== PENDING_CODE);
-  for (const code of index) {
-    const draft = loadSchoolRegistrationDraft(code);
-    if (draft) return { code, draft };
-  }
-  return null;
+export function getSchoolRegistrationDraftSummary(code: string): SchoolRegistrationDraftSummary | null {
+  const normalized = normalizeCode(code);
+  if (!normalized) return null;
+  const draft = loadSchoolRegistrationDraft(normalized);
+  if (!draft) return null;
+  const name = String(draft.form.name || "").trim();
+  return {
+    code: normalized,
+    schoolName: name || "Unnamed school",
+    savedAt: draft.savedAt,
+    step: draft.step,
+    fieldCount: countFilledFields(draft.form),
+  };
 }
 
-/** Codes that have a saved draft in this browser (for hints) */
+export function listSchoolRegistrationDraftSummaries(): SchoolRegistrationDraftSummary[] {
+  const codes = readIndex().filter((c) => c !== PENDING_CODE);
+  const out: SchoolRegistrationDraftSummary[] = [];
+  for (const code of codes) {
+    const summary = getSchoolRegistrationDraftSummary(code);
+    if (summary) out.push(summary);
+  }
+  return out.sort((a, b) => (a.savedAt < b.savedAt ? 1 : -1));
+}
+
+/** @deprecated use listSchoolRegistrationDraftSummaries */
 export function listSchoolRegistrationDraftCodes(): string[] {
-  return readIndex().filter((c) => c !== PENDING_CODE && loadSchoolRegistrationDraft(c));
+  return listSchoolRegistrationDraftSummaries().map((s) => s.code);
+}
+
+function prunePartialCodeDrafts(keepCode: string) {
+  const keep = normalizeCode(keepCode);
+  if (!keep) return;
+  const next = readIndex().filter((c) => {
+    if (c === keep) return true;
+    if (keep.startsWith(c) && c.length < keep.length) {
+      localStorage.removeItem(draftStorageKey(c));
+      return false;
+    }
+    return true;
+  });
+  writeIndex(next);
 }
 
 export function saveSchoolRegistrationDraft(params: {
@@ -72,21 +143,31 @@ export function saveSchoolRegistrationDraft(params: {
   step: number;
   codeManuallyEdited: boolean;
   form: Record<string, unknown>;
+  replace?: boolean;
 }): string | null {
   if (typeof window === "undefined") return null;
 
-  const normalized = params.code.trim().toUpperCase().replace(/\s/g, "");
+  const normalized = normalizeCode(params.code);
   if (!normalized || normalized.length < 3) return null;
 
   const storageCode = normalized;
-  const prev = (params.previousCode || "").trim().toUpperCase().replace(/\s/g, "") || "";
+  const prev = normalizeCode(params.previousCode || "");
+
+  const existing = loadSchoolRegistrationDraft(storageCode);
+  const mergedForm = params.replace
+    ? params.form
+    : existing
+      ? mergeRegistrationDraftForms(existing.form, params.form)
+      : params.form;
+
+  mergedForm.code = storageCode;
 
   const payload: SchoolRegistrationDraft = {
     version: 1,
     savedAt: new Date().toISOString(),
-    step: params.step,
+    step: Math.max(params.step, existing?.step ?? 0),
     codeManuallyEdited: params.codeManuallyEdited,
-    form: params.form,
+    form: mergedForm,
   };
 
   localStorage.setItem(draftStorageKey(storageCode), JSON.stringify(payload));
@@ -96,7 +177,9 @@ export function saveSchoolRegistrationDraft(params: {
   if (!index.includes(storageCode)) index.unshift(storageCode);
   writeIndex(index);
 
-  if (prev && prev !== storageCode && prev !== PENDING_CODE) {
+  prunePartialCodeDrafts(storageCode);
+
+  if (prev && prev !== storageCode) {
     localStorage.removeItem(draftStorageKey(prev));
     writeIndex(readIndex().filter((c) => c !== prev));
   }
@@ -106,7 +189,7 @@ export function saveSchoolRegistrationDraft(params: {
 
 export function clearSchoolRegistrationDraft(code: string) {
   if (typeof window === "undefined") return;
-  const normalized = code.trim().toUpperCase().replace(/\s/g, "") || PENDING_CODE;
+  const normalized = normalizeCode(code) || PENDING_CODE;
   localStorage.removeItem(draftStorageKey(normalized));
   writeIndex(readIndex().filter((c) => c !== normalized));
   const current = localStorage.getItem(SCHOOL_REG_CURRENT_CODE_KEY);
@@ -115,7 +198,6 @@ export function clearSchoolRegistrationDraft(code: string) {
 
 const PENDING_FORM_KEY = "shs-school-reg-pending-form";
 
-/** Fields filled before a school code exists — merged when code is set */
 export function saveRegistrationPendingSnapshot(payload: {
   form: Record<string, unknown>;
   step: number;
