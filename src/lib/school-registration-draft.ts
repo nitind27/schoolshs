@@ -112,3 +112,48 @@ export function clearSchoolRegistrationDraft(code: string) {
   const current = localStorage.getItem(SCHOOL_REG_CURRENT_CODE_KEY);
   if (current === normalized) localStorage.removeItem(SCHOOL_REG_CURRENT_CODE_KEY);
 }
+
+const PENDING_FORM_KEY = "shs-school-reg-pending-form";
+
+/** Fields filled before a school code exists — merged when code is set */
+export function saveRegistrationPendingSnapshot(payload: {
+  form: Record<string, unknown>;
+  step: number;
+  codeManuallyEdited: boolean;
+}) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(
+    PENDING_FORM_KEY,
+    JSON.stringify({ version: 1, savedAt: new Date().toISOString(), ...payload }),
+  );
+}
+
+export function loadRegistrationPendingSnapshot(): {
+  form: Record<string, unknown>;
+  step: number;
+  codeManuallyEdited: boolean;
+} | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(PENDING_FORM_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      form?: Record<string, unknown>;
+      step?: number;
+      codeManuallyEdited?: boolean;
+    };
+    if (!parsed.form) return null;
+    return {
+      form: parsed.form,
+      step: typeof parsed.step === "number" ? parsed.step : 0,
+      codeManuallyEdited: Boolean(parsed.codeManuallyEdited),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function clearRegistrationPendingSnapshot() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(PENDING_FORM_KEY);
+}

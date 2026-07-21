@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +18,12 @@ import { ArrowLeft, ArrowRight, Save, School, User, FileText, LayoutGrid, Loader
 import { InfoModal } from "@/components/ui/info-modal";
 import { OtpInput } from "@/components/ui/otp-input";
 import {
+  clearRegistrationPendingSnapshot,
   clearSchoolRegistrationDraft,
   listSchoolRegistrationDraftCodes,
+  loadRegistrationPendingSnapshot,
   loadSchoolRegistrationDraft,
+  saveRegistrationPendingSnapshot,
   saveSchoolRegistrationDraft,
 } from "@/lib/school-registration-draft";
 
@@ -35,6 +38,24 @@ const INITIAL_FORM = {
   initialPaymentRef: "", nextDueDate: "",
   enabledFeatures: defaultFeaturesForPlan("standard") as SchoolFeatureKey[],
 };
+
+function normalizeRegistrationForm(raw: Record<string, unknown>): typeof INITIAL_FORM {
+  const base = { ...INITIAL_FORM };
+  for (const key of Object.keys(base) as (keyof typeof INITIAL_FORM)[]) {
+    const v = raw[key];
+    if (v === undefined || v === null) continue;
+    if (key === "enabledFeatures") {
+      base.enabledFeatures = Array.isArray(v)
+        ? (v as SchoolFeatureKey[])
+        : base.enabledFeatures;
+      continue;
+    }
+    if (typeof base[key] === "string" && typeof v === "string") {
+      (base as Record<string, unknown>)[key] = v;
+    }
+  }
+  return base;
+}
 
 const STEPS = [
   { id: "school", label: "School Details", description: "Name, logo, location" },
@@ -70,10 +91,71 @@ export default function NewSchoolPage() {
   const skipDraftLoadRef = useRef(false);
   const prevAdminEmailRef = useRef("");
   const skipCodeSuggestRef = useRef(false);
+  const pendingMergedForCodeRef = useRef("");
 
   const [form, setForm] = useState({ ...INITIAL_FORM });
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const persistDraftNow = useCallback(
+    (snapshot?: { form: typeof INITIAL_FORM; step: number; codeManuallyEdited: boolean }) => {
+      const f = snapshot?.form ?? form;
+      const st = snapshot?.step ?? step;
+      const manual = snapshot?.codeManuallyEdited ?? codeManuallyEdited;
+      const code = f.code.trim().toUpperCase();
+      if (code.length < 3) return null;
+      return saveSchoolRegistrationDraft({
+        code: f.code,
+        previousCode: draftCodeRef.current,
+        step: st,
+        codeManuallyEdited: manual,
+        form: { ...f },
+      });
+    },
+    [form, step, codeManuallyEdited],
+  );
+
+  const applyDraftForCode = useCallback(
+    (code: string, draft: NonNullable<ReturnType<typeof loadSchoolRegistrationDraft>>) => {
+      skipCodeSuggestRef.current = true;
+      skipDraftLoadRef.current = true;
+      const normalized = code.trim().toUpperCase().replace(/\s/g, "");
+      const merged = normalizeRegistrationForm(draft.form as Record<string, unknown>);
+      merged.code = normalized;
+      setForm(merged);
+      setStep(Math.min(Math.max(0, draft.step), STEPS.length - 1));
+      setCodeManuallyEdited(draft.codeManuallyEdited);
+      draftCodeRef.current = normalized;
+      loadedDraftForCodeRef.current = normalized;
+      pendingMergedForCodeRef.current = normalized;
+      setDraftRestored(true);
+      setDraftSavedAt(draft.savedAt);
+      setLogoFile(null);
+      setContractFile(null);
+      setLogoPreview(undefined);
+      clearRegistrationPendingSnapshot();
+    },
+    [],
+  );
+
+  const tryLoadDraftForCode = useCallback(
+    (code: string, opts?: { force?: boolean }) => {
+      const normalized = code.trim().toUpperCase().replace(/\s/g, "");
+      if (normalized.length < 3) return false;
+      if (!opts?.force && loadedDraftForCodeRef.current === normalized) return false;
+
+      const draft = loadSchoolRegistrationDraft(normalized);
+      if (draft) {
+        applyDraftForCode(normalized, draft);
+        return true;
+      }
+
+      draftCodeRef.current = normalized;
+      loadedDraftForCodeRef.current = "";
+      return false;
+    },
+    [applyDraftForCode],
+  );
 
   const refreshDraftCodeList = () => setSavedDraftCodes(listSchoolRegistrationDraftCodes());
 
@@ -81,55 +163,53 @@ export default function NewSchoolPage() {
     refreshDraftCodeList();
   }, []);
 
-  const applyDraftForCode = (code: string, draft: NonNullable<ReturnType<typeof loadSchoolRegistrationDraft>>) => {
-    skipCodeSuggestRef.current = true;
-    skipDraftLoadRef.current = true;
-    const normalized = code.trim().toUpperCase().replace(/\s/g, "");
-    setForm({
-      ...INITIAL_FORM,
-      ...(draft.form as typeof INITIAL_FORM),
-      code: normalized,
-    });
-    setStep(Math.min(Math.max(0, draft.step), STEPS.length - 1));
-    setCodeManuallyEdited(draft.codeManuallyEdited);
-    draftCodeRef.current = normalized;
-    loadedDraftForCodeRef.current = normalized;
-    setDraftRestored(true);
-    setDraftSavedAt(draft.savedAt);
-    setLogoFile(null);
-    setContractFile(null);
-    setLogoPreview(undefined);
-  };
-
   const draftSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
     const code = form.code.trim().toUpperCase();
-    if (code.length < 3) return;
-
-    draftSaveTimer.current = setTimeout(() => {
-      const previousCode = draftCodeRef.current;
-      const saved = saveSchoolRegistrationDraft({
-        code: form.code,
-        previousCode: previousCode,
+    if (code.length < 3) {
+      saveRegistrationPendingSnapshot({
+        form: { ...form },
         step,
         codeManuallyEdited,
-        form: { ...form },
       });
+      return;
+    }
+
+    if (pendingMergedForCodeRef.current !== code) {
+      const pending = loadRegistrationPendingSnapshot();
+      if (pending) {
+        skipDraftLoadRef.current = true;
+        const merged = normalizeRegistrationForm(pending.form);
+        setForm((f) => ({
+          ...merged,
+          ...f,
+          code: f.code || merged.code,
+          enabledFeatures: f.enabledFeatures.length ? f.enabledFeatures : merged.enabledFeatures,
+        }));
+        if (pending.step > 0) setStep((s) => Math.max(s, pending.step));
+        clearRegistrationPendingSnapshot();
+      }
+      pendingMergedForCodeRef.current = code;
+    }
+
+    if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
+    draftSaveTimer.current = setTimeout(() => {
+      const saved = persistDraftNow();
       if (saved) {
         draftCodeRef.current = saved;
         setDraftSavedAt(new Date().toISOString());
         setDraftRestored(false);
         refreshDraftCodeList();
       }
-    }, 400);
+    }, 350);
     return () => {
       if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
     };
-  }, [form, step, codeManuallyEdited]);
+  }, [form, step, codeManuallyEdited, persistDraftNow]);
 
   const draftLoadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    if (!codeManuallyEdited) return;
     if (skipDraftLoadRef.current) {
       skipDraftLoadRef.current = false;
       return;
@@ -142,38 +222,12 @@ export default function NewSchoolPage() {
     }
     if (draftLoadTimer.current) clearTimeout(draftLoadTimer.current);
     draftLoadTimer.current = setTimeout(() => {
-      if (loadedDraftForCodeRef.current === code) return;
-
-      const draft = loadSchoolRegistrationDraft(code);
-      if (draft) {
-        applyDraftForCode(code, draft);
-        return;
-      }
-
-      if (
-        codeManuallyEdited &&
-        loadedDraftForCodeRef.current &&
-        loadedDraftForCodeRef.current !== code
-      ) {
-        skipCodeSuggestRef.current = true;
-        setForm({ ...INITIAL_FORM, code });
-        setStep(0);
-        draftCodeRef.current = code;
-        loadedDraftForCodeRef.current = "";
-        setDraftRestored(false);
-        setDraftSavedAt(null);
-        setLogoFile(null);
-        setContractFile(null);
-        setLogoPreview(undefined);
-      } else if (loadedDraftForCodeRef.current && loadedDraftForCodeRef.current !== code) {
-        loadedDraftForCodeRef.current = "";
-        setDraftRestored(false);
-      }
-    }, 550);
+      tryLoadDraftForCode(code);
+    }, 450);
     return () => {
       if (draftLoadTimer.current) clearTimeout(draftLoadTimer.current);
     };
-  }, [form.code, codeManuallyEdited]);
+  }, [form.code, codeManuallyEdited, tryLoadDraftForCode]);
 
   const suggestCode = async (name: string, city: string, taluka: string, district: string) => {
     if (!name.trim() || name.trim().length < 2) return;
@@ -186,7 +240,9 @@ export default function NewSchoolPage() {
       const res = await fetch(`/api/admin/schools/suggest-code?${params}`);
       const data = await res.json();
       if (res.ok && data.code) {
+        skipDraftLoadRef.current = true;
         setForm((f) => ({ ...f, code: data.code }));
+        draftCodeRef.current = String(data.code).trim().toUpperCase();
       }
     } finally {
       setCodeSuggesting(false);
@@ -358,6 +414,7 @@ export default function NewSchoolPage() {
 
       router.push(`/admin/schools/${schoolId}`);
       clearSchoolRegistrationDraft(form.code.trim() || draftCodeRef.current);
+      clearRegistrationPendingSnapshot();
       refreshDraftCodeList();
     } finally {
       setLoading(false);
@@ -388,8 +445,10 @@ export default function NewSchoolPage() {
         return;
       }
     }
-    if (step < STEPS.length - 1) setStep(step + 1);
-    else submit();
+    if (step < STEPS.length - 1) {
+      persistDraftNow();
+      setStep(step + 1);
+    } else submit();
   };
 
   return (
@@ -400,7 +459,8 @@ export default function NewSchoolPage() {
           <h1 className="text-2xl font-bold text-slate-900">Register New School</h1>
           <p className="text-sm text-slate-500">Complete onboarding — school, admin, contract & panels</p>
           <p className="text-xs text-slate-500 mt-1">
-            New visit starts empty. Enter a <span className="font-semibold">school code</span> to load a saved draft for that code.
+            Page starts empty. Enter <span className="font-semibold">School Code</span> to load all saved fields
+            (name, admin, contract, panels). Every step auto-saves under that code.
           </p>
           {draftRestored && form.code && (
             <p className="text-xs text-emerald-700 mt-1">
@@ -433,25 +493,44 @@ export default function NewSchoolPage() {
             <CardTitle className="flex items-center gap-2"><School className="h-5 w-5 text-violet-600" /> School Information</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input label="School Name" required value={form.name} onChange={(e) => set("name", e.target.value)} />
-            <div>
+            <div className="md:col-span-2">
               <Input
                 label="School Code (unique)"
                 required
-                placeholder="Auto-generated e.g. SONGADH001"
+                placeholder="Enter code first — e.g. SONGADH001"
                 value={form.code}
                 onChange={(e) => {
                   setCodeManuallyEdited(true);
                   loadedDraftForCodeRef.current = "";
+                  pendingMergedForCodeRef.current = "";
                   setDraftRestored(false);
                   set("code", e.target.value.toUpperCase().replace(/\s/g, ""));
                 }}
+                onBlur={() => {
+                  if (form.code.trim().length >= 3) tryLoadDraftForCode(form.code, { force: true });
+                }}
               />
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={form.code.trim().length < 3}
+                  onClick={() => tryLoadDraftForCode(form.code, { force: true })}
+                >
+                  Load saved data for this code
+                </Button>
+                {form.code.trim().length >= 3 && (
+                  <span className="text-[11px] text-slate-500">
+                    All wizard steps save under this code automatically.
+                  </span>
+                )}
+              </div>
               <p className="mt-1.5 text-xs text-slate-500 flex flex-wrap items-center gap-2">
                 {codeSuggesting ? (
                   <span className="text-violet-600">Generating code from school name…</span>
                 ) : codeManuallyEdited ? (
-                  <span>Type or paste school code — saved draft loads automatically</span>
+                  <span>Type school code → full draft loads if it exists</span>
                 ) : form.code ? (
                   <span>
                     Auto-generated from name
@@ -459,9 +538,9 @@ export default function NewSchoolPage() {
                     <span className="font-mono font-semibold text-violet-700">{form.code}</span>
                   </span>
                 ) : (
-                  <span>Type school name to auto-generate code</span>
+                  <span>Enter school code first, or type name to auto-generate</span>
                 )}
-                {codeManuallyEdited && form.name.trim().length >= 2 && (
+                {!codeManuallyEdited && form.name.trim().length >= 2 && (
                   <button
                     type="button"
                     className="text-violet-600 hover:underline font-medium"
@@ -470,13 +549,13 @@ export default function NewSchoolPage() {
                       suggestCode(form.name, form.city, form.taluka, form.district);
                     }}
                   >
-                    Regenerate
+                    Regenerate code
                   </button>
                 )}
               </p>
               {savedDraftCodes.length > 0 && (
                 <p className="mt-1 text-[11px] text-slate-400">
-                  Saved drafts in this browser:{" "}
+                  Saved drafts:{" "}
                   {savedDraftCodes.slice(0, 8).map((c) => (
                     <button
                       key={c}
@@ -486,6 +565,7 @@ export default function NewSchoolPage() {
                         setCodeManuallyEdited(true);
                         loadedDraftForCodeRef.current = "";
                         setForm((f) => ({ ...f, code: c }));
+                        tryLoadDraftForCode(c, { force: true });
                       }}
                     >
                       {c}
@@ -494,6 +574,9 @@ export default function NewSchoolPage() {
                 </p>
               )}
             </div>
+
+            <Input label="School Name" required value={form.name} onChange={(e) => set("name", e.target.value)} />
+            <div className="hidden md:block" aria-hidden />
 
             <SchoolLocationFields
               values={{
