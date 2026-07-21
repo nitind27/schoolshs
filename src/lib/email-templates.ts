@@ -97,10 +97,16 @@ export function buildOtpVerificationEmail(params: {
   schoolName?: string | null;
   otp: string;
   expiresMinutes: number;
+  /** When true, copy is for super-admin school registration (admin not created yet). */
+  pendingSchoolRegistration?: boolean;
 }) {
   const schoolLine = params.schoolName
     ? `<p style="margin:0 0 20px;">School: <strong>${params.schoolName}</strong></p>`
     : "";
+
+  const bodyIntro = params.pendingSchoolRegistration
+    ? `<p style="margin:0 0 20px;color:#334155;">You are registering as school admin on the SHS Education Portal. Use the verification code below to confirm this email before the school is created.</p>`
+    : `<p style="margin:0 0 20px;color:#334155;">Your school admin account has been created on the SHS Education Portal. Use the verification code below to activate your account and sign in.</p>`;
 
   const otpBlock = buildOtpDisplayHtml(params.otp);
 
@@ -109,10 +115,10 @@ export function buildOtpVerificationEmail(params: {
     preheader: `Your verification code is ${params.otp}`,
     bodyHtml: `
       <p style="margin:0 0 16px;color:#334155;">Hello <strong>${params.name}</strong>,</p>
-      <p style="margin:0 0 20px;color:#334155;">Your school admin account has been created on the SHS Education Portal. Use the verification code below to activate your account and sign in.</p>
+      ${bodyIntro}
       ${schoolLine}
       ${otpBlock}
-      <p style="margin:16px 0 8px;text-align:center;color:#64748b;font-size:13px;">Enter this code on the login page to verify your email.</p>
+      <p style="margin:16px 0 8px;text-align:center;color:#64748b;font-size:13px;">Enter this code on the school registration page to verify your email.</p>
       <p style="margin:0;text-align:center;color:#94a3b8;font-size:12px;">This code expires in <strong>${params.expiresMinutes} minutes</strong>. Do not share it with anyone.</p>
     `,
     footerNote:

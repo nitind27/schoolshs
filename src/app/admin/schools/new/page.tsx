@@ -17,6 +17,23 @@ import { StepWizard } from "@/components/admin/admin-ui";
 import { ArrowLeft, ArrowRight, Save, School, User, FileText, LayoutGrid, Loader2, ShieldCheck, Mail } from "lucide-react";
 import { InfoModal } from "@/components/ui/info-modal";
 import { OtpInput } from "@/components/ui/otp-input";
+import {
+  clearSchoolRegistrationDraft,
+  loadLatestSchoolRegistrationDraft,
+  saveSchoolRegistrationDraft,
+} from "@/lib/school-registration-draft";
+
+const INITIAL_FORM = {
+  name: "", code: "", district: "", taluka: "", city: "", pincode: "",
+  address: "", phone: "", alternatePhone: "", email: "", website: "",
+  principalName: "", schoolType: "", boardAffiliation: "", udiseCode: "",
+  adminName: "", adminEmail: "", adminPassword: "",
+  planName: "standard",
+  contractNumber: "", contractValue: "", contractStartDate: "", contractEndDate: "",
+  contractNotes: "", totalAmount: "", initialPayment: "", initialPaymentMethod: "bank_transfer",
+  initialPaymentRef: "", nextDueDate: "",
+  enabledFeatures: defaultFeaturesForPlan("standard") as SchoolFeatureKey[],
+};
 
 const STEPS = [
   { id: "school", label: "School Details", description: "Name, logo, location" },
@@ -43,20 +60,55 @@ export default function NewSchoolPage() {
   const [otpError, setOtpError] = useState("");
   const [stepError, setStepError] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
 
-  const [form, setForm] = useState({
-    name: "", code: "", district: "", taluka: "", city: "", pincode: "",
-    address: "", phone: "", alternatePhone: "", email: "", website: "",
-    principalName: "", schoolType: "", boardAffiliation: "", udiseCode: "",
-    adminName: "", adminEmail: "", adminPassword: "",
-    planName: "standard",
-    contractNumber: "", contractValue: "", contractStartDate: "", contractEndDate: "",
-    contractNotes: "", totalAmount: "", initialPayment: "", initialPaymentMethod: "bank_transfer",
-    initialPaymentRef: "", nextDueDate: "",
-    enabledFeatures: defaultFeaturesForPlan("standard") as SchoolFeatureKey[],
-  });
+  const draftCodeRef = useRef("");
+  const prevAdminEmailRef = useRef("");
+  const draftHydratedRef = useRef(false);
+  const skipCodeSuggestRef = useRef(false);
+
+  const [form, setForm] = useState({ ...INITIAL_FORM });
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    const latest = loadLatestSchoolRegistrationDraft();
+    if (!latest) {
+      draftHydratedRef.current = true;
+      return;
+    }
+    const { draft } = latest;
+    skipCodeSuggestRef.current = true;
+    setForm((f) => ({ ...f, ...(draft.form as typeof INITIAL_FORM) }));
+    setStep(Math.min(Math.max(0, draft.step), STEPS.length - 1));
+    setCodeManuallyEdited(draft.codeManuallyEdited);
+    draftCodeRef.current = latest.code === "__PENDING__" ? "" : latest.code;
+    setDraftRestored(true);
+    setDraftSavedAt(draft.savedAt);
+    draftHydratedRef.current = true;
+  }, []);
+
+  const draftSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!draftHydratedRef.current) return;
+    if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
+    draftSaveTimer.current = setTimeout(() => {
+      const previousCode = draftCodeRef.current;
+      const nextCode = saveSchoolRegistrationDraft({
+        code: form.code,
+        previousCode: previousCode,
+        step,
+        codeManuallyEdited,
+        form: { ...form },
+      });
+      draftCodeRef.current = nextCode === "__PENDING__" ? "" : nextCode;
+      setDraftSavedAt(new Date().toISOString());
+    }, 400);
+    return () => {
+      if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
+    };
+  }, [form, step, codeManuallyEdited]);
 
   const suggestCode = async (name: string, city: string, taluka: string, district: string) => {
     if (!name.trim() || name.trim().length < 2) return;
@@ -78,6 +130,10 @@ export default function NewSchoolPage() {
 
   const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    if (skipCodeSuggestRef.current) {
+      skipCodeSuggestRef.current = false;
+      return;
+    }
     if (codeManuallyEdited) return;
     if (!form.name.trim() || form.name.trim().length < 2) {
       setForm((f) => (f.code ? { ...f, code: "" } : f));
@@ -100,13 +156,27 @@ export default function NewSchoolPage() {
   }, []);
 
   useEffect(() => {
-    setAdminOtpVerified(false);
-    setAdminOtp("");
-    setOtpMsg("");
-    setOtpError("");
-    if (!form.adminEmail.trim() || !emailVerificationRequired) return;
-
     const email = form.adminEmail.trim().toLowerCase();
+    const emailChanged = email !== prevAdminEmailRef.current;
+    prevAdminEmailRef.current = email;
+
+    if (!email || !emailVerificationRequired) {
+      if (emailChanged) {
+        setAdminOtpVerified(false);
+        setAdminOtp("");
+        setOtpMsg("");
+        setOtpError("");
+      }
+      return;
+    }
+
+    if (emailChanged) {
+      setAdminOtpVerified(false);
+      setAdminOtp("");
+      setOtpMsg("");
+      setOtpError("");
+    }
+
     fetch(`/api/admin/schools/admin-email-otp?email=${encodeURIComponent(email)}`)
       .then((r) => r.json())
       .then((d) => {
@@ -222,6 +292,7 @@ export default function NewSchoolPage() {
       }
 
       router.push(`/admin/schools/${schoolId}`);
+      clearSchoolRegistrationDraft(form.code || draftCodeRef.current);
     } finally {
       setLoading(false);
     }
@@ -262,6 +333,19 @@ export default function NewSchoolPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Register New School</h1>
           <p className="text-sm text-slate-500">Complete onboarding — school, admin, contract & panels</p>
+          {(draftRestored || draftSavedAt) && (
+            <p className="text-xs text-emerald-700 mt-1">
+              {draftRestored ? "Draft restored — " : "Auto-saved "}
+              {form.code ? (
+                <>for code <span className="font-mono font-semibold">{form.code}</span></>
+              ) : (
+                "— assign school code to pin draft"
+              )}
+              {draftSavedAt
+                ? ` · ${new Date(draftSavedAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}`
+                : null}
+            </p>
+          )}
         </div>
       </div>
 
@@ -414,7 +498,7 @@ export default function NewSchoolPage() {
                     <Button
                       type="button"
                       size="sm"
-                      disabled={otpVerifying || adminOtp.length !== 6}
+                      disabled={otpVerifying || adminOtp.replace(/\D/g, "").length !== 6}
                       onClick={verifyAdminOtp}
                       className="bg-violet-600 hover:bg-violet-700"
                     >

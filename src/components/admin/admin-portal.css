@@ -168,6 +168,44 @@
   font-size: 0.78rem;
 }
 
+.ad-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--ad-radius);
+  border: 1px solid var(--ad-line);
+  background: var(--ad-paper);
+}
+
+.ad-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ad-muted);
+}
+
+.ad-filter-select {
+  min-width: min(100%, 280px);
+  flex: 1;
+  max-width: 420px;
+  height: 2.35rem;
+  padding: 0 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--ad-line);
+  background: #fff;
+  font-size: 0.85rem;
+  color: var(--ad-ink);
+}
+
+.ad-filter-hint {
+  font-size: 0.78rem;
+  color: var(--ad-muted);
+}
+
 .ad-stat-grid {
   display: grid;
   gap: 0.85rem;

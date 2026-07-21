@@ -58,6 +58,10 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("Admin email OTP error:", e);
-    return NextResponse.json({ error: "Failed to process OTP" }, { status: 500 });
+    const message =
+      e instanceof Error && e.message
+        ? e.message
+        : "Failed to process OTP";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

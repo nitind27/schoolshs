@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatINR, StatusBadge } from "@/components/admin/admin-ui";
 import {
@@ -50,6 +50,7 @@ interface AdminRow {
 }
 
 interface PlatformStats {
+  schoolId?: string;
   schoolCount: number;
   studentCount: number;
   adminCount: number;
@@ -68,22 +69,52 @@ export default function AdminDashboardPage() {
   const [admins, setAdmins] = useState<AdminRow[]>([]);
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [schoolFilter, setSchoolFilter] = useState<string>("all");
+
+  const loadStats = useCallback((schoolId: string) => {
+    setStatsLoading(true);
+    const q = schoolId && schoolId !== "all" ? `?schoolId=${encodeURIComponent(schoolId)}` : "";
+    return fetch(`/api/admin/stats${q}`)
+      .then((r) => r.json())
+      .then((statsData) => {
+        if (!statsData.error) setStats(statsData);
+      })
+      .finally(() => setStatsLoading(false));
+  }, []);
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
       fetch("/api/admin/schools").then((r) => r.json()),
       fetch("/api/admin/users").then((r) => r.json()),
-      fetch("/api/admin/stats").then((r) => r.json()),
     ])
-      .then(([schoolData, adminData, statsData]) => {
+      .then(([schoolData, adminData]) => {
         setSchools(schoolData.schools || []);
         setAdmins(adminData.users || []);
-        setStats(statsData);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const recentSchools = schools.slice(0, 5);
+  useEffect(() => {
+    if (!loading) loadStats(schoolFilter);
+  }, [schoolFilter, loadStats, loading]);
+
+  const filteredAdmins = useMemo(() => {
+    if (schoolFilter === "all") return admins;
+    return admins.filter((a) => a.school.id === schoolFilter);
+  }, [admins, schoolFilter]);
+
+  const recentSchools = useMemo(() => {
+    if (schoolFilter === "all") return schools.slice(0, 5);
+    const one = schools.find((s) => s.id === schoolFilter);
+    return one ? [one] : [];
+  }, [schools, schoolFilter]);
+
+  const filterLabel =
+    schoolFilter === "all"
+      ? "All schools"
+      : schools.find((s) => s.id === schoolFilter)?.name || "Selected school";
   const outstanding = (stats?.totalContractValue ?? 0) - (stats?.totalPaid ?? 0);
 
   return (
@@ -112,6 +143,29 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </header>
+
+      <div className="ad-filter-bar">
+        <label className="ad-filter-label" htmlFor="admin-school-filter">
+          <Building2 className="h-4 w-4" aria-hidden />
+          Dashboard filter
+        </label>
+        <select
+          id="admin-school-filter"
+          className="ad-filter-select"
+          value={schoolFilter}
+          onChange={(e) => setSchoolFilter(e.target.value)}
+        >
+          <option value="all">All schools (platform totals)</option>
+          {schools.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name} ({s.code})
+            </option>
+          ))}
+        </select>
+        <span className="ad-filter-hint">
+          {statsLoading ? "Updating counts…" : `Showing: ${filterLabel}`}
+        </span>
+      </div>
 
       <div className="ad-stat-grid is-six">
         <div className="ad-stat">
@@ -244,7 +298,7 @@ export default function AdminDashboardPage() {
           <div>
             <h2>
               <BookOpen className="h-5 w-5 text-sky-700" />
-              Recent Schools
+              {schoolFilter === "all" ? "Recent Schools" : "Selected School"}
             </h2>
           </div>
           <Link href="/admin/schools" className="ad-panel-link">
@@ -334,7 +388,7 @@ export default function AdminDashboardPage() {
             </h2>
           </div>
           <Link href="/admin/admins" className="ad-panel-link">
-            {admins.length} admins →
+            {filteredAdmins.length} admins →
           </Link>
         </div>
         <div className="ad-panel-body is-flush">
@@ -342,7 +396,7 @@ export default function AdminDashboardPage() {
             <div className="ad-loading">
               <div className="ad-spinner" />
             </div>
-          ) : admins.length === 0 ? (
+          ) : filteredAdmins.length === 0 ? (
             <div className="ad-empty">
               <Users className="h-8 w-8 opacity-40" />
               <p>{t("admin.noAdmins")}</p>
@@ -360,7 +414,7 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {admins.slice(0, 8).map((a) => (
+                  {filteredAdmins.slice(0, 8).map((a) => (
                     <tr key={a.id}>
                       <td>
                         <div className="ad-school-cell">

@@ -66,14 +66,21 @@ export async function sendPendingAdminEmailOtp(params: {
     schoolName,
     otp,
     expiresMinutes: 10,
+    pendingSchoolRegistration: true,
   });
 
-  await sendMail({
-    to: email,
-    subject: template.subject,
-    html: template.html,
-    text: template.text,
-  });
+  try {
+    await sendMail({
+      to: email,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to send email";
+    console.error("sendPendingAdminEmailOtp:", message);
+    return { ok: false, error: message };
+  }
 
   return { ok: true, sent: true };
 }
