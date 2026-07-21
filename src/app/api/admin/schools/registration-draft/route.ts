@@ -12,9 +12,35 @@ type DraftPayload = {
   codeManuallyEdited?: boolean;
 };
 
+/** Keep filled values — empty incoming fields must not wipe saved data */
+function mergeForms(
+  existing: Record<string, unknown>,
+  incoming: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...existing };
+  for (const [key, val] of Object.entries(incoming)) {
+    if (val === undefined || val === null) continue;
+    if (key === "enabledFeatures") {
+      if (Array.isArray(val) && val.length > 0) out[key] = val;
+      continue;
+    }
+    if (typeof val === "string") {
+      const prev = existing[key];
+      if (val.trim() === "" && typeof prev === "string" && prev.trim() !== "") continue;
+      out[key] = val;
+      continue;
+    }
+    out[key] = val;
+  }
+  return out;
+}
+
 function summaryFromRow(row: { code: string; step: number; payload: unknown; updatedAt: Date }) {
-  const payload = row.payload as DraftPayload;
-  const form = payload?.form && typeof payload.form === "object" ? payload.form : {};
+  const payload = (row.payload || {}) as DraftPayload;
+  const form =
+    payload.form && typeof payload.form === "object"
+      ? payload.form
+      : (row.payload as Record<string, unknown>) || {};
   const name = String(form.name || "").trim();
   let fieldCount = 0;
   for (const [k, v] of Object.entries(form)) {
@@ -30,6 +56,15 @@ function summaryFromRow(row: { code: string; step: number; payload: unknown; upd
     step: row.step,
     fieldCount,
   };
+}
+
+function extractForm(payload: unknown): Record<string, unknown> {
+  if (!payload || typeof payload !== "object") return {};
+  const p = payload as DraftPayload & Record<string, unknown>;
+  if (p.form && typeof p.form === "object") return p.form as Record<string, unknown>;
+  // legacy: whole payload was the form
+  const { codeManuallyEdited: _c, step: _s, ...rest } = p;
+  return rest;
 }
 
 export async function GET(request: NextRequest) {
@@ -52,12 +87,15 @@ export async function GET(request: NextRequest) {
     const row = await prisma.schoolRegistrationDraft.findUnique({ where: { code } });
     if (!row) return NextResponse.json({ draft: null });
 
-    const payload = row.payload as DraftPayload;
+    const payload = (row.payload || {}) as DraftPayload;
+    const form = extractForm(row.payload);
+    form.code = row.code;
+
     return NextResponse.json({
       draft: {
         code: row.code,
         step: row.step,
-        form: payload?.form ?? {},
+        form,
         codeManuallyEdited: Boolean(payload?.codeManuallyEdited),
         savedAt: row.updatedAt.toISOString(),
       },
@@ -65,7 +103,10 @@ export async function GET(request: NextRequest) {
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("registration-draft GET", e);
-    return NextResponse.json({ error: "Failed to load draft" }, { status: 500 });
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed to load draft" },
+      { status: 500 },
+    );
   }
 }
 
@@ -79,13 +120,19 @@ export async function PUT(request: NextRequest) {
     }
 
     const previousCode = normalizeCode(String(body.previousCode || ""));
-    const form =
+    const incoming =
       body.form && typeof body.form === "object" ? (body.form as Record<string, unknown>) : {};
-    form.code = code;
+
+    const existing = await prisma.schoolRegistrationDraft.findUnique({ where: { code } });
+    const existingForm = existing ? extractForm(existing.payload) : {};
+    const replace = body.replace === true;
+    const mergedForm = replace ? { ...incoming } : mergeForms(existingForm, incoming);
+    mergedForm.code = code;
 
     const step = Math.max(0, Number(body.step) || 0);
+
     const payload = {
-      form,
+      form: mergedForm,
       codeManuallyEdited: Boolean(body.codeManuallyEdited),
     } as Prisma.InputJsonValue;
 
@@ -104,14 +151,17 @@ export async function PUT(request: NextRequest) {
       draft: {
         code: row.code,
         step: row.step,
+        form: mergedForm,
         savedAt: row.updatedAt.toISOString(),
       },
     });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("registration-draft PUT", e);
-    const message = e instanceof Error ? e.message : "Failed to save draft";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed to save draft" },
+      { status: 500 },
+    );
   }
 }
 
@@ -124,6 +174,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed" },
+      { status: 500 },
+    );
   }
 }
