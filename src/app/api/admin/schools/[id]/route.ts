@@ -126,3 +126,34 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Failed to update school" }, { status: 500 });
   }
 }
+
+export async function DELETE(_req: NextRequest, { params }: Params) {
+  try {
+    await requireAuth(["super_admin"]);
+    const { id } = await params;
+
+    const existing = await prisma.school.findUnique({
+      where: { id },
+      include: { _count: { select: { students: true, users: true } } },
+    });
+    if (!existing) return NextResponse.json({ error: "School not found" }, { status: 404 });
+
+    await prisma.school.delete({ where: { id } });
+
+    return NextResponse.json({
+      ok: true,
+      deleted: {
+        id: existing.id,
+        name: existing.name,
+        code: existing.code,
+        students: existing._count.students,
+        users: existing._count.users,
+      },
+    });
+  } catch (e) {
+    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    console.error("Delete school error:", e);
+    const message = e instanceof Error ? e.message : "Failed to delete school";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

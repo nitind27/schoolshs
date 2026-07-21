@@ -125,7 +125,15 @@ export function formatSchoolCode(base: string, sequence: number): string {
   return `${safeBase}${String(n).padStart(3, "0")}`;
 }
 
-type SchoolCodeLookup = Pick<PrismaClient, "school">;
+type SchoolCodeLookup = Pick<PrismaClient, "school" | "schoolRegistrationDraft">;
+
+async function codeIsTaken(prisma: SchoolCodeLookup, code: string): Promise<boolean> {
+  const [school, draft] = await Promise.all([
+    prisma.school.findUnique({ where: { code }, select: { id: true } }),
+    prisma.schoolRegistrationDraft.findUnique({ where: { code }, select: { code: true } }),
+  ]);
+  return Boolean(school || draft);
+}
 
 /** Next unused code: SONGADH001, SONGADH002, … */
 export async function generateUniqueSchoolCode(
@@ -136,8 +144,7 @@ export async function generateUniqueSchoolCode(
   const base = deriveSchoolCodeBase(name, opts);
   for (let n = 1; n <= 999; n++) {
     const code = formatSchoolCode(base, n);
-    const exists = await prisma.school.findUnique({ where: { code } });
-    if (!exists) return code;
+    if (!(await codeIsTaken(prisma, code))) return code;
   }
   return formatSchoolCode(base, Date.now() % 1000);
 }
@@ -151,8 +158,7 @@ export async function suggestSchoolCode(
   let sequence = 1;
   for (let n = 1; n <= 999; n++) {
     const code = formatSchoolCode(base, n);
-    const exists = await prisma.school.findUnique({ where: { code } });
-    if (!exists) {
+    if (!(await codeIsTaken(prisma, code))) {
       sequence = n;
       return { code, base, sequence };
     }

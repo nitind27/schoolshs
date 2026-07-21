@@ -17,16 +17,6 @@ import { StepWizard } from "@/components/admin/admin-ui";
 import { ArrowLeft, ArrowRight, Save, School, User, FileText, LayoutGrid, Loader2, ShieldCheck, Mail } from "lucide-react";
 import { InfoModal } from "@/components/ui/info-modal";
 import { OtpInput } from "@/components/ui/otp-input";
-import {
-  clearRegistrationPendingSnapshot,
-  clearSchoolRegistrationDraft,
-  listSchoolRegistrationDraftSummaries,
-  loadRegistrationPendingSnapshot,
-  loadSchoolRegistrationDraft,
-  saveRegistrationPendingSnapshot,
-  saveSchoolRegistrationDraft,
-  type SchoolRegistrationDraftSummary,
-} from "@/lib/school-registration-draft";
 
 const INITIAL_FORM = {
   name: "", code: "", district: "", taluka: "", city: "", pincode: "",
@@ -40,25 +30,33 @@ const INITIAL_FORM = {
   enabledFeatures: defaultFeaturesForPlan("standard") as SchoolFeatureKey[],
 };
 
-function normalizeRegistrationForm(raw: Record<string, unknown>): typeof INITIAL_FORM {
+type FormState = typeof INITIAL_FORM;
+
+type DraftSummary = {
+  code: string;
+  schoolName: string;
+  savedAt: string;
+  step: number;
+  fieldCount: number;
+};
+
+function normalizeForm(raw: Record<string, unknown>): FormState {
   const out = { ...INITIAL_FORM };
-  for (const key of Object.keys(INITIAL_FORM) as (keyof typeof INITIAL_FORM)[]) {
+  for (const key of Object.keys(INITIAL_FORM) as (keyof FormState)[]) {
     const v = raw[key];
     if (v === undefined || v === null) continue;
     if (key === "enabledFeatures") {
       out.enabledFeatures = Array.isArray(v) ? (v as SchoolFeatureKey[]) : out.enabledFeatures;
       continue;
     }
-    out[key] = String(v) as (typeof out)[typeof key];
+    out[key] = String(v);
   }
   return out;
 }
 
-type LoadedDraft = {
-  form: Record<string, unknown>;
-  step: number;
-  savedAt: string;
-};
+function normalizeCode(raw: string) {
+  return raw.trim().toUpperCase().replace(/\s/g, "");
+}
 
 const STEPS = [
   { id: "school", label: "School Details", description: "Name, logo, location" },
@@ -87,36 +85,36 @@ export default function NewSchoolPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
-  const [draftSummaries, setDraftSummaries] = useState<SchoolRegistrationDraftSummary[]>([]);
+  const [draftSummaries, setDraftSummaries] = useState<DraftSummary[]>([]);
   const [draftLoadHint, setDraftLoadHint] = useState<string | null>(null);
   const [draftLoading, setDraftLoading] = useState(false);
+  const [dbSaving, setDbSaving] = useState(false);
 
   const draftCodeRef = useRef("");
   const skipCodeSuggestRef = useRef(false);
   const isApplyingDraftRef = useRef(false);
-  const pendingMergedRef = useRef(false);
+  const skipDraftLoadRef = useRef(false);
   const prevAdminEmailRef = useRef("");
+  const formRef = useRef<FormState>({ ...INITIAL_FORM });
+  const stepRef = useRef(0);
+  const codeManualRef = useRef(false);
 
-  const [form, setForm] = useState({ ...INITIAL_FORM });
+  const [form, setForm] = useState<FormState>({ ...INITIAL_FORM });
 
-  const patchForm = useCallback((patch: Partial<typeof INITIAL_FORM>) => {
-    setForm((f) => ({ ...f, ...patch }));
-  }, []);
+  formRef.current = form;
+  stepRef.current = step;
+  codeManualRef.current = codeManuallyEdited;
 
-  const set = (k: string, v: string) => patchForm({ [k]: v } as Partial<typeof INITIAL_FORM>);
+  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const refreshDraftSummaries = useCallback(async () => {
-    setDraftSummaries(listSchoolRegistrationDraftSummaries());
     try {
       const res = await fetch("/api/admin/schools/registration-draft");
-      if (res.ok) {
-        const data = (await res.json()) as { drafts?: SchoolRegistrationDraftSummary[] };
-        if (Array.isArray(data.drafts) && data.drafts.length > 0) {
-          setDraftSummaries(data.drafts);
-        }
-      }
+      if (!res.ok) return;
+      const data = (await res.json()) as { drafts?: DraftSummary[] };
+      setDraftSummaries(Array.isArray(data.drafts) ? data.drafts : []);
     } catch {
-      /* local list remains */
+      /* ignore */
     }
   }, []);
 
@@ -124,123 +122,109 @@ export default function NewSchoolPage() {
     void refreshDraftSummaries();
   }, [refreshDraftSummaries]);
 
-  const persistAll = useCallback(
-    async (f: typeof INITIAL_FORM, st: number, manual: boolean) => {
-      const code = f.code.trim().toUpperCase();
-      if (code.length < 3) {
-        saveRegistrationPendingSnapshot({ form: { ...f }, step: st, codeManuallyEdited: manual });
+  /** Database-only auto-save — no localStorage */
+  const persistToDb = useCallback(async () => {
+    const f = formRef.current;
+    const code = normalizeCode(f.code);
+    if (code.length < 3) return;
+
+    setDbSaving(true);
+    try {
+      const res = await fetch("/api/admin/schools/registration-draft", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          previousCode: draftCodeRef.current || undefined,
+          step: stepRef.current,
+          form: f,
+          codeManuallyEdited: codeManualRef.current,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDraftLoadHint(data.error || "Could not save draft to database.");
         return;
       }
-
-      const saved = saveSchoolRegistrationDraft({
-        code: f.code,
-        previousCode: draftCodeRef.current,
-        step: st,
-        codeManuallyEdited: manual,
-        form: { ...f },
-      });
-      if (saved) draftCodeRef.current = saved;
-
-      try {
-        await fetch("/api/admin/schools/registration-draft", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code: f.code,
-            step: st,
-            form: f,
-            codeManuallyEdited: manual,
-          }),
-        });
-      } catch {
-        /* browser draft still saved */
-      }
-
-      setDraftSavedAt(new Date().toISOString());
+      draftCodeRef.current = code;
+      setDraftSavedAt(data.draft?.savedAt || new Date().toISOString());
       if (!isApplyingDraftRef.current) {
-        setDraftLoadHint(`Auto-saved under ${code} (all steps).`);
+        setDraftLoadHint(`Saved to database under code ${code}`);
+        setDraftRestored(false);
       }
       void refreshDraftSummaries();
-    },
-    [refreshDraftSummaries],
-  );
+    } catch {
+      setDraftLoadHint("Network error while saving draft to database.");
+    } finally {
+      setDbSaving(false);
+    }
+  }, [refreshDraftSummaries]);
 
-  const applyLoadedDraft = useCallback((code: string, draft: LoadedDraft) => {
+  const applyLoadedDraft = useCallback((code: string, draft: {
+    form: Record<string, unknown>;
+    step: number;
+    savedAt: string;
+    codeManuallyEdited?: boolean;
+  }) => {
     isApplyingDraftRef.current = true;
     skipCodeSuggestRef.current = true;
-    const normalized = code.trim().toUpperCase().replace(/\s/g, "");
-    const merged = normalizeRegistrationForm(draft.form);
+    skipDraftLoadRef.current = true;
+    const normalized = normalizeCode(code);
+    const merged = normalizeForm(draft.form);
     merged.code = normalized;
     setForm(merged);
     setStep(Math.min(Math.max(0, draft.step), STEPS.length - 1));
-    setCodeManuallyEdited(true);
+    setCodeManuallyEdited(Boolean(draft.codeManuallyEdited));
     draftCodeRef.current = normalized;
     setDraftRestored(true);
     setDraftSavedAt(draft.savedAt);
     setDraftLoadHint(
-      `Loaded ${normalized} — ${merged.name.trim() || "add school name"} (step ${draft.step + 1}/${STEPS.length})`,
+      `Loaded from database: ${normalized}${merged.name.trim() ? ` — ${merged.name}` : ""}`,
     );
     setLogoFile(null);
     setContractFile(null);
     setLogoPreview(undefined);
-    clearRegistrationPendingSnapshot();
     window.setTimeout(() => {
       isApplyingDraftRef.current = false;
-    }, 300);
+    }, 400);
   }, []);
 
   const loadDraftByCode = useCallback(
     async (rawCode: string, opts?: { quiet?: boolean }) => {
-      const normalized = rawCode.trim().toUpperCase().replace(/\s/g, "");
+      const normalized = normalizeCode(rawCode);
       if (normalized.length < 3) {
-        if (!opts?.quiet) setDraftLoadHint("Enter at least 3 characters of the school code.");
+        if (!opts?.quiet) setDraftLoadHint("School code needs at least 3 characters.");
         return false;
       }
       setDraftLoading(true);
       try {
-        try {
-          const res = await fetch(
-            `/api/admin/schools/registration-draft?code=${encodeURIComponent(normalized)}`,
-          );
-          if (res.ok) {
-            const data = (await res.json()) as {
-              draft?: { form: Record<string, unknown>; step: number; savedAt: string } | null;
-            };
-            if (data.draft?.form) {
-              applyLoadedDraft(normalized, {
-                form: data.draft.form,
-                step: data.draft.step,
-                savedAt: data.draft.savedAt,
-              });
-              saveSchoolRegistrationDraft({
-                code: normalized,
-                step: data.draft.step,
-                codeManuallyEdited: true,
-                form: data.draft.form,
-                replace: true,
-              });
-              return true;
-            }
-          }
-        } catch {
-          /* fallback local */
+        const res = await fetch(
+          `/api/admin/schools/registration-draft?code=${encodeURIComponent(normalized)}`,
+        );
+        if (!res.ok) {
+          if (!opts?.quiet) setDraftLoadHint("Failed to load draft from database.");
+          return false;
         }
-
-        const local = loadSchoolRegistrationDraft(normalized);
-        if (local) {
-          applyLoadedDraft(normalized, {
-            form: local.form as Record<string, unknown>,
-            step: local.step,
-            savedAt: local.savedAt,
-          });
+        const data = (await res.json()) as {
+          draft?: {
+            form: Record<string, unknown>;
+            step: number;
+            savedAt: string;
+            codeManuallyEdited?: boolean;
+          } | null;
+        };
+        if (data.draft?.form) {
+          applyLoadedDraft(normalized, data.draft);
           return true;
         }
-
-        setDraftRestored(false);
         draftCodeRef.current = normalized;
+        setDraftRestored(false);
         if (!opts?.quiet) {
-          setDraftLoadHint(`No draft for ${normalized}. Fill the form — each field auto-saves on change.`);
+          setDraftLoadHint(`No database draft for ${normalized}. Fill form — it auto-saves to DB.`);
         }
+        return false;
+      } catch {
+        if (!opts?.quiet) setDraftLoadHint("Network error loading draft.");
         return false;
       } finally {
         setDraftLoading(false);
@@ -249,49 +233,37 @@ export default function NewSchoolPage() {
     [applyLoadedDraft],
   );
 
-  /** Merge fields typed before code existed into form once code is set */
-  useEffect(() => {
-    const code = form.code.trim().toUpperCase();
-    if (code.length < 3 || pendingMergedRef.current) return;
-    const pending = loadRegistrationPendingSnapshot();
-    if (!pending) return;
-    pendingMergedRef.current = true;
-    const fromPending = normalizeRegistrationForm(pending.form);
-    setForm((f) => ({
-      ...fromPending,
-      ...f,
-      code: f.code,
-      name: f.name.trim() ? f.name : fromPending.name,
-      enabledFeatures: f.enabledFeatures.length ? f.enabledFeatures : fromPending.enabledFeatures,
-    }));
-    if (pending.step > 0) setStep((s) => Math.max(s, pending.step));
-    clearRegistrationPendingSnapshot();
-  }, [form.code]);
-
-  /** Auto-save on every field / step change (onChange flow) */
+  /** Auto-save every form change → database */
   useEffect(() => {
     if (isApplyingDraftRef.current) return;
+    const code = normalizeCode(form.code);
+    if (code.length < 3) return;
     const t = window.setTimeout(() => {
-      void persistAll(form, step, codeManuallyEdited);
-    }, 120);
+      void persistToDb();
+    }, 250);
     return () => window.clearTimeout(t);
-  }, [form, step, codeManuallyEdited, persistAll]);
+  }, [form, step, codeManuallyEdited, persistToDb]);
 
+  /** Load draft only when user typed/pasted a code (not auto-generated) */
   const codeLoadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!codeManuallyEdited) return;
-    const code = form.code.trim().toUpperCase().replace(/\s/g, "");
+    if (skipDraftLoadRef.current) {
+      skipDraftLoadRef.current = false;
+      return;
+    }
+    const code = normalizeCode(form.code);
     if (code.length < 3) return;
     if (codeLoadTimer.current) clearTimeout(codeLoadTimer.current);
     codeLoadTimer.current = setTimeout(() => {
       void loadDraftByCode(code, { quiet: true });
-    }, 500);
+    }, 600);
     return () => {
       if (codeLoadTimer.current) clearTimeout(codeLoadTimer.current);
     };
   }, [form.code, codeManuallyEdited, loadDraftByCode]);
 
-  const suggestCode = async (name: string, city: string, taluka: string, district: string) => {
+  const suggestCode = useCallback(async (name: string, city: string, taluka: string, district: string) => {
     if (!name.trim() || name.trim().length < 2) return;
     setCodeSuggesting(true);
     try {
@@ -303,13 +275,14 @@ export default function NewSchoolPage() {
       const data = await res.json();
       if (res.ok && data.code) {
         skipCodeSuggestRef.current = true;
-        setForm((f) => ({ ...f, code: data.code }));
-        draftCodeRef.current = String(data.code).trim().toUpperCase();
+        skipDraftLoadRef.current = true;
+        setForm((f) => ({ ...f, code: String(data.code) }));
+        draftCodeRef.current = normalizeCode(String(data.code));
       }
     } finally {
       setCodeSuggesting(false);
     }
-  };
+  }, []);
 
   const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -321,12 +294,12 @@ export default function NewSchoolPage() {
     if (!form.name.trim() || form.name.trim().length < 2) return;
     if (suggestTimer.current) clearTimeout(suggestTimer.current);
     suggestTimer.current = setTimeout(() => {
-      suggestCode(form.name, form.city, form.taluka, form.district);
+      void suggestCode(form.name, form.city, form.taluka, form.district);
     }, 400);
     return () => {
       if (suggestTimer.current) clearTimeout(suggestTimer.current);
     };
-  }, [form.name, form.city, form.taluka, form.district, codeManuallyEdited]);
+  }, [form.name, form.city, form.taluka, form.district, codeManuallyEdited, suggestCode]);
 
   useEffect(() => {
     fetch("/api/admin/schools/admin-email-otp")
@@ -448,6 +421,7 @@ export default function NewSchoolPage() {
   const submit = async () => {
     setLoading(true);
     try {
+      await persistToDb();
       const res = await fetch("/api/admin/schools", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -471,18 +445,13 @@ export default function NewSchoolPage() {
         await fetch(`/api/admin/schools/${schoolId}/contract`, { method: "POST", body: fd });
       }
 
-      router.push(`/admin/schools/${schoolId}`);
-      clearSchoolRegistrationDraft(form.code.trim() || draftCodeRef.current);
-      clearRegistrationPendingSnapshot();
-      try {
-        await fetch(
-          `/api/admin/schools/registration-draft?code=${encodeURIComponent(form.code.trim() || draftCodeRef.current)}`,
-          { method: "DELETE" },
-        );
-      } catch {
-        /* ignore */
+      const code = normalizeCode(form.code) || draftCodeRef.current;
+      if (code) {
+        await fetch(`/api/admin/schools/registration-draft?code=${encodeURIComponent(code)}`, {
+          method: "DELETE",
+        }).catch(() => undefined);
       }
-      void refreshDraftSummaries();
+      router.push(`/admin/schools/${schoolId}`);
     } finally {
       setLoading(false);
     }
@@ -513,9 +482,9 @@ export default function NewSchoolPage() {
       }
     }
     if (step < STEPS.length - 1) {
-      void persistAll(form, step + 1, codeManuallyEdited);
       setStep(step + 1);
-    } else submit();
+      void persistToDb();
+    } else void submit();
   };
 
   return (
@@ -526,16 +495,20 @@ export default function NewSchoolPage() {
           <h1 className="text-2xl font-bold text-slate-900">Register New School</h1>
           <p className="text-sm text-slate-500">Complete onboarding — school, admin, contract & panels</p>
           <p className="text-xs text-slate-500 mt-1">
-            Page starts empty. Enter <span className="font-semibold">School Code</span> to load all saved fields
-            (name, admin, contract, panels). Every step auto-saves under that code.
+            School code auto-generates from name. Every field saves to the <span className="font-semibold">database</span> under that code.
           </p>
-          {draftLoadHint && (
+          {(draftLoadHint || dbSaving) && (
             <p
               className={`text-xs mt-2 rounded-lg px-3 py-2 ${
-                draftRestored ? "bg-emerald-50 text-emerald-800 border border-emerald-100" : "bg-slate-50 text-slate-700 border border-slate-200"
+                draftRestored
+                  ? "bg-emerald-50 text-emerald-800 border border-emerald-100"
+                  : "bg-slate-50 text-slate-700 border border-slate-200"
               }`}
             >
-              {draftLoadHint}
+              {dbSaving ? "Saving to database…" : draftLoadHint}
+              {!dbSaving && draftSavedAt
+                ? ` · ${new Date(draftSavedAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}`
+                : null}
             </p>
           )}
         </div>
@@ -544,9 +517,9 @@ export default function NewSchoolPage() {
       {draftSummaries.length > 0 && (
         <Card className="border-violet-200 bg-violet-50/40">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-violet-900">Saved registrations (this browser)</CardTitle>
+            <CardTitle className="text-base text-violet-900">Saved drafts (database)</CardTitle>
             <p className="text-xs text-violet-800/80 font-normal">
-              Click a row to load school name, admin, contract & panels for that code.
+              Click a row to load all saved fields for that school code.
             </p>
           </CardHeader>
           <CardContent className="pt-0 space-y-2">
@@ -556,6 +529,7 @@ export default function NewSchoolPage() {
                 type="button"
                 onClick={() => {
                   setCodeManuallyEdited(true);
+                  skipDraftLoadRef.current = true;
                   setForm((f) => ({ ...f, code: d.code }));
                   void loadDraftByCode(d.code);
                 }}
@@ -591,23 +565,59 @@ export default function NewSchoolPage() {
             <CardTitle className="flex items-center gap-2"><School className="h-5 w-5 text-violet-600" /> School Information</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2 rounded-xl border border-violet-100 bg-violet-50/30 p-4 space-y-3">
+            <Input
+              label="School Name"
+              required
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
+            />
+
+            <div>
               <Input
                 label="School Code (unique)"
                 required
-                placeholder="Type code — e.g. SONGADH001"
+                placeholder="Auto e.g. SONGADH001"
                 value={form.code}
                 onChange={(e) => {
                   setCodeManuallyEdited(true);
                   setDraftRestored(false);
-                  setDraftLoadHint(null);
                   set("code", e.target.value.toUpperCase().replace(/\s/g, ""));
                 }}
                 onBlur={() => {
-                  if (form.code.trim().length >= 3) void loadDraftByCode(form.code);
+                  if (codeManuallyEdited && form.code.trim().length >= 3) {
+                    void loadDraftByCode(form.code);
+                  }
                 }}
               />
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                {codeSuggesting ? (
+                  <span className="text-violet-600 inline-flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Auto-generating unique code…
+                  </span>
+                ) : codeManuallyEdited ? (
+                  <span>Custom code — you can edit anytime</span>
+                ) : form.code ? (
+                  <span>
+                    Auto-generated:{" "}
+                    <span className="font-mono font-semibold text-violet-700">{form.code}</span>
+                  </span>
+                ) : (
+                  <span>Type school name to auto-generate code</span>
+                )}
+                {codeManuallyEdited && form.name.trim().length >= 2 && (
+                  <button
+                    type="button"
+                    className="text-violet-600 hover:underline font-medium"
+                    onClick={() => {
+                      setCodeManuallyEdited(false);
+                      void suggestCode(form.name, form.city, form.taluka, form.district);
+                    }}
+                  >
+                    Regenerate
+                  </button>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -620,22 +630,11 @@ export default function NewSchoolPage() {
                       <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
                     </>
                   ) : (
-                    "Load saved data for this code"
+                    "Load from database"
                   )}
                 </Button>
-                <span className="text-[11px] text-slate-600">
-                  All steps auto-save under this code (name, admin, contract, panels).
-                </span>
               </div>
-              <p className="text-xs text-slate-500">
-                {codeSuggesting
-                  ? "Generating code from school name…"
-                  : "Stop typing for a moment — matching draft loads automatically when code exists."}
-              </p>
             </div>
-
-            <Input label="School Name" required value={form.name} onChange={(e) => set("name", e.target.value)} />
-            <div className="hidden md:block" aria-hidden />
 
             <SchoolLocationFields
               values={{

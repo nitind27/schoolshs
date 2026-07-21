@@ -78,6 +78,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "School code required (min 3 chars)" }, { status: 400 });
     }
 
+    const previousCode = normalizeCode(String(body.previousCode || ""));
     const form =
       body.form && typeof body.form === "object" ? (body.form as Record<string, unknown>) : {};
     form.code = code;
@@ -94,6 +95,10 @@ export async function PUT(request: NextRequest) {
       update: { step, payload },
     });
 
+    if (previousCode && previousCode !== code) {
+      await prisma.schoolRegistrationDraft.deleteMany({ where: { code: previousCode } });
+    }
+
     return NextResponse.json({
       ok: true,
       draft: {
@@ -105,7 +110,8 @@ export async function PUT(request: NextRequest) {
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("registration-draft PUT", e);
-    return NextResponse.json({ error: "Failed to save draft" }, { status: 500 });
+    const message = e instanceof Error ? e.message : "Failed to save draft";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
