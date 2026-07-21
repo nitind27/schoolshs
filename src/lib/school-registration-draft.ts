@@ -53,17 +53,17 @@ export function loadLatestSchoolRegistrationDraft(): {
   draft: SchoolRegistrationDraft;
 } | null {
   if (typeof window === "undefined") return null;
-  const current = localStorage.getItem(SCHOOL_REG_CURRENT_CODE_KEY)?.trim().toUpperCase();
-  if (current) {
-    const draft = loadSchoolRegistrationDraft(current);
-    if (draft) return { code: current, draft };
-  }
-  const index = readIndex();
+  const index = readIndex().filter((c) => c !== PENDING_CODE);
   for (const code of index) {
     const draft = loadSchoolRegistrationDraft(code);
     if (draft) return { code, draft };
   }
   return null;
+}
+
+/** Codes that have a saved draft in this browser (for hints) */
+export function listSchoolRegistrationDraftCodes(): string[] {
+  return readIndex().filter((c) => c !== PENDING_CODE && loadSchoolRegistrationDraft(c));
 }
 
 export function saveSchoolRegistrationDraft(params: {
@@ -72,12 +72,14 @@ export function saveSchoolRegistrationDraft(params: {
   step: number;
   codeManuallyEdited: boolean;
   form: Record<string, unknown>;
-}): string {
-  if (typeof window === "undefined") return params.code;
+}): string | null {
+  if (typeof window === "undefined") return null;
 
   const normalized = params.code.trim().toUpperCase().replace(/\s/g, "");
-  const storageCode = normalized || PENDING_CODE;
-  const prev = (params.previousCode || "").trim().toUpperCase().replace(/\s/g, "") || PENDING_CODE;
+  if (!normalized || normalized.length < 3) return null;
+
+  const storageCode = normalized;
+  const prev = (params.previousCode || "").trim().toUpperCase().replace(/\s/g, "") || "";
 
   const payload: SchoolRegistrationDraft = {
     version: 1,
@@ -90,11 +92,11 @@ export function saveSchoolRegistrationDraft(params: {
   localStorage.setItem(draftStorageKey(storageCode), JSON.stringify(payload));
   localStorage.setItem(SCHOOL_REG_CURRENT_CODE_KEY, storageCode);
 
-  const index = readIndex().filter((c) => c !== prev || prev === storageCode);
+  const index = readIndex().filter((c) => c !== PENDING_CODE && c !== prev);
   if (!index.includes(storageCode)) index.unshift(storageCode);
   writeIndex(index);
 
-  if (prev !== storageCode) {
+  if (prev && prev !== storageCode && prev !== PENDING_CODE) {
     localStorage.removeItem(draftStorageKey(prev));
     writeIndex(readIndex().filter((c) => c !== prev));
   }

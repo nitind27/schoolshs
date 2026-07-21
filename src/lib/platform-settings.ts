@@ -44,8 +44,25 @@ export async function getPlatformSettings() {
 }
 
 export async function isEmailEnabled(): Promise<boolean> {
+  return (await getSmtpConfig()) !== null;
+}
+
+/** Why SMTP is not ready — for admin UI / OTP errors */
+export async function getSmtpConfigIssue(): Promise<string | null> {
   const row = await getPlatformSettings();
-  return Boolean(row.emailEnabled && row.smtpHost && row.smtpFromEmail && row.smtpPasswordEnc);
+  if (!row.emailEnabled) {
+    return "Email is disabled. Enable it in Admin → Email Settings.";
+  }
+  if (!row.smtpHost?.trim()) return "SMTP host is missing.";
+  if (!row.smtpFromEmail?.trim()) return "From email is missing.";
+  if (!row.smtpPasswordEnc?.trim()) {
+    return "SMTP app password is not saved. Enter it and click Save.";
+  }
+  const password = decryptSecret(row.smtpPasswordEnc);
+  if (!password) {
+    return "SMTP password could not be decrypted. Re-enter the app password and Save (do not change AUTH_SECRET after saving).";
+  }
+  return null;
 }
 
 export async function getSmtpConfig(): Promise<SmtpConfig | null> {

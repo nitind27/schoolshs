@@ -7,7 +7,7 @@ import {
 } from "@/lib/email-verification";
 import { buildOtpVerificationEmail } from "@/lib/email-templates";
 import { sendMail } from "@/lib/mail";
-import { isEmailEnabled } from "@/lib/platform-settings";
+import { isEmailEnabled, getSmtpConfigIssue } from "@/lib/platform-settings";
 
 const OTP_LENGTH = 6;
 
@@ -36,7 +36,11 @@ export async function sendPendingAdminEmailOtp(params: {
 
   const enabled = await isEmailEnabled();
   if (!enabled) {
-    return { ok: false, error: "Email service is not configured. Enable SMTP in Admin → Email Settings." };
+    const issue = await getSmtpConfigIssue();
+    return {
+      ok: false,
+      error: issue || "Email service is not configured. Enable SMTP in Admin → Email Settings.",
+    };
   }
 
   const otp = createVerificationOtp();
