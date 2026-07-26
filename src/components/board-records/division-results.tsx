@@ -23,8 +23,13 @@ function StudentRow({ s, standard, onFetched }: { s: StudentWithMeta; standard: 
   const t = useT();
   const [fetching, setFetching] = useState(false);
   const marksheet = standard === "10" ? s.marksheet10Path : s.marksheet12Path;
+  const hasSeat = !!s.boardSeatNo && s.boardSeatNo !== "—";
 
   const fetchGseb = async () => {
+    if (!hasSeat) {
+      alert(t("boardRecords.gsebBulkNoSeats"));
+      return;
+    }
     setFetching(true);
     const res = await fetch("/api/board-records/fetch-gseb", {
       method: "POST",
@@ -36,6 +41,7 @@ function StudentRow({ s, standard, onFetched }: { s: StudentWithMeta; standard: 
     if (res.ok) {
       onFetched?.();
     } else {
+      if (data.cleared) onFetched?.();
       alert(data.error || "GSEB fetch failed");
     }
   };
@@ -55,8 +61,12 @@ function StudentRow({ s, standard, onFetched }: { s: StudentWithMeta; standard: 
       <td className="px-3 py-2.5">
         <p className="font-semibold text-slate-800 text-sm leading-tight">{s.firstName} {s.surname}</p>
       </td>
-      <td className="px-3 py-2.5 font-mono text-xs text-blue-700 font-semibold" title={s.boardSeatNo}>
-        {formatBoardNo(s.boardSeatNo)}
+      <td className="px-3 py-2.5 font-mono text-xs font-semibold" title={s.boardSeatNo}>
+        {hasSeat ? (
+          <span className="text-blue-700">{formatBoardNo(s.boardSeatNo)}</span>
+        ) : (
+          <span className="text-amber-600">No seat</span>
+        )}
       </td>
       <td className="px-3 py-2.5 text-center">
         {s.displayPct != null ? (
@@ -64,11 +74,21 @@ function StudentRow({ s, standard, onFetched }: { s: StudentWithMeta; standard: 
             <span className={`text-base font-black ${s.gradeColor}`}>{s.displayPct}%</span>
             <span className={`block text-[10px] font-bold ${s.gradeColor}`}>{s.grade}</span>
           </div>
-        ) : <span className="text-slate-300">—</span>}
+        ) : (
+          <span className="text-slate-300">—</span>
+        )}
       </td>
-      <td className="px-3 py-2.5"><ResultBadge status={s.resultStatus} /></td>
       <td className="px-3 py-2.5">
-        <button type="button" onClick={fetchGseb} disabled={fetching} className="text-[10px] font-bold text-violet-700 hover:underline disabled:opacity-50">
+        <ResultBadge status={s.resultStatus} />
+      </td>
+      <td className="px-3 py-2.5">
+        <button
+          type="button"
+          onClick={fetchGseb}
+          disabled={fetching || !hasSeat}
+          title={hasSeat ? "Fetch from GSEB" : "Add seat number first"}
+          className="text-[10px] font-bold text-violet-700 hover:underline disabled:opacity-40 disabled:no-underline"
+        >
           {fetching ? "..." : "GSEB ↻"}
         </button>
         {marksheet ? (

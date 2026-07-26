@@ -1,7 +1,8 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
-import { Building2, ChevronDown, Loader2 } from "lucide-react";
+import { Building2, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/locale-provider";
@@ -70,7 +71,7 @@ export function CaSchoolSwitcher({ className }: { className?: string }) {
   if (loading) {
     return (
       <div className={cn("rounded-xl border border-amber-900/40 bg-amber-950/40 px-3 py-2.5", className)}>
-        <Loader2 className="h-4 w-4 animate-spin text-amber-200" />
+        <Spinner size="sm" />
       </div>
     );
   }
@@ -101,7 +102,7 @@ export function CaSchoolSwitcher({ className }: { className?: string }) {
             <p className="text-[11px] text-amber-200/80">{activeSchool?.code}</p>
           </div>
           {switching ? (
-            <Loader2 className="mt-1 h-4 w-4 shrink-0 animate-spin text-amber-200" />
+            <Spinner size="sm" className="mt-1 shrink-0" />
           ) : (
             <ChevronDown className={cn("mt-1 h-4 w-4 shrink-0 text-amber-200 transition-transform", open && "rotate-180")} />
           )}

@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { AuthError, hashPassword, requireSchoolAuth } from "@/lib/auth";
+import { fillStaffGuNames } from "@/lib/gujarati/transliterate-server";
+import {
+  generateStaffNumericPassword,
+  pickStaffPortalRole,
+  shouldCreatePortalLogin,
+} from "@/lib/staff-portal";
+import { buildStaffCredentialsEmail } from "@/lib/email-templates";
+import { sendMail } from "@/lib/mail";
 
 function salaryFields(body: Record<string, unknown>) {
   return {
@@ -18,11 +26,13 @@ function normalizeStaff(body: Record<string, unknown>) {
   return {
     employeeId: String(body.employeeId || "").trim() || null,
     firstName: String(body.firstName || "").trim(),
+    firstNameGu: String(body.firstNameGu || "").trim() || null,
     lastName: String(body.lastName || "").trim(),
+    lastNameGu: String(body.lastNameGu || "").trim() || null,
     designation: String(body.designation || "").trim(),
     department: String(body.department || "").trim() || null,
     mobileNumber: String(body.mobileNumber || "").replace(/\s/g, "").trim(),
-    email: String(body.email || "").trim() || null,
+    email: String(body.email || "").trim().toLowerCase() || null,
     gender: String(body.gender || "").trim() || null,
     dateOfJoining: String(body.dateOfJoining || "").trim() || null,
     dateOfBirth: String(body.dateOfBirth || "").trim() || null,
@@ -66,6 +76,12 @@ async function generateEmployeeId(schoolId: string): Promise<string> {
   return candidate;
 }
 
+function roleLabel(role: string) {
+  if (role === "clerk") return "Clerk";
+  if (role === "teacher") return "Teacher";
+  return role;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth();
@@ -85,6 +101,7 @@ export async function GET(request: NextRequest) {
         { lastName: { contains: search } },
         { mobileNumber: { contains: search } },
         { employeeId: { contains: search } },
+        { email: { contains: search } },
       ];
     }
 
@@ -110,10 +127,17 @@ export async function POST(request: NextRequest) {
   try {
     const session = await requireSchoolAuth();
     const body = await request.json();
-    const data = normalizeStaff(body);
+    const data = await fillStaffGuNames(normalizeStaff(body));
 
     if (!data.firstName || !data.lastName || !data.designation || !data.mobileNumber) {
       return NextResponse.json({ error: "Name, designation and mobile are required" }, { status: 400 });
+    }
+
+    if (!data.email || !data.email.includes("@")) {
+      return NextResponse.json(
+        { error: "Email is required — it is used as the portal login username" },
+        { status: 400 },
+      );
     }
 
     if (!data.employeeId) {
@@ -127,10 +151,109 @@ export async function POST(request: NextRequest) {
       if (existing) return NextResponse.json({ error: "Employee ID already exists" }, { status: 409 });
     }
 
-    const staff = await prisma.staff.create({ data: { ...data, schoolId: session.schoolId } });
-    return NextResponse.json(staff, { status: 201 });
+    const createPortal = shouldCreatePortalLogin(data.designation);
+    let generatedPassword: string | null = null;
+    let portalRole: string | null = null;
+    let emailSent = false;
+    let emailError: string | null = null;
+
+    if (createPortal) {
+      const emailTaken = await prisma.user.findFirst({
+        where: { email: data.email },
+        select: { id: true },
+      });
+      if (emailTaken) {
+        return NextResponse.json(
+          { error: "This email is already used by another portal account" },
+          { status: 409 },
+        );
+      }
+      generatedPassword = generateStaffNumericPassword(8);
+      portalRole = pickStaffPortalRole(data.designation);
+    }
+
+    const staff = await prisma.$transaction(async (tx) => {
+      const created = await tx.staff.create({
+        data: { ...data, schoolId: session.schoolId },
+      });
+
+      if (createPortal && generatedPassword && portalRole && data.email) {
+        await tx.user.create({
+          data: {
+            email: data.email,
+            passwordHash: hashPassword(generatedPassword),
+            name: `${created.firstName} ${created.lastName}`.trim(),
+            role: portalRole,
+            schoolId: session.schoolId,
+            staffId: created.id,
+            isActive: true,
+            emailVerified: true,
+            emailVerifiedAt: new Date(),
+          },
+        });
+      }
+
+      return created;
+    });
+
+    if (createPortal && generatedPassword && portalRole && data.email) {
+      try {
+        const school = await prisma.school.findUnique({
+          where: { id: session.schoolId! },
+          select: {
+            code: true,
+            name: true,
+            settings: { select: { schoolName: true } },
+          },
+        });
+        const schoolName = school?.settings?.schoolName || school?.name || "Your School";
+        const origin = new URL(request.url).origin;
+        const mail = buildStaffCredentialsEmail({
+          staffName: `${staff.firstName} ${staff.lastName}`.trim(),
+          schoolName,
+          schoolCode: school?.code,
+          loginEmail: data.email,
+          password: generatedPassword,
+          roleLabel: roleLabel(portalRole),
+          designation: staff.designation,
+          employeeId: staff.employeeId,
+          loginUrl: `${origin}/login`,
+        });
+        await sendMail({
+          to: data.email,
+          subject: mail.subject,
+          html: mail.html,
+          text: mail.text,
+        });
+        emailSent = true;
+      } catch (e) {
+        emailError = e instanceof Error ? e.message : "Failed to send email";
+        console.error("[staff POST] welcome email failed:", e);
+      }
+    }
+
+    return NextResponse.json(
+      {
+        ...staff,
+        portal: createPortal
+          ? {
+              created: true,
+              username: data.email,
+              password: generatedPassword,
+              role: portalRole,
+              emailSent,
+              emailError,
+            }
+          : {
+              created: false,
+              reason: "Designation does not need portal login",
+            },
+      },
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
+    console.error("[staff POST]", error);
     return NextResponse.json({ error: "Failed to create staff" }, { status: 500 });
   }
 }

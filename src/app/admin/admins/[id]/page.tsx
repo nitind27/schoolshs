@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -128,9 +129,7 @@ export default function EditAdminPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-violet-200 border-t-violet-600" />
-      </div>
+      <PageLoader />
     );
   }
 

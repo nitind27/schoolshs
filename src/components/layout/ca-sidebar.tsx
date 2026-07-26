@@ -41,7 +41,7 @@ export function CaLayout({ children }: { children: React.ReactNode }) {
         roleIcon={Briefcase}
         footerExtra={<CaSchoolSwitcher />}
       />
-      <main className="lg:pl-[260px] min-h-screen">
+      <main className="shell-main min-h-screen">
         <div className="mx-auto max-w-[1600px] px-4 pb-8 pt-[4.75rem] lg:px-7 lg:pb-10">{children}</div>
       </main>
     </PortalLayout>

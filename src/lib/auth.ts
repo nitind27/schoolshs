@@ -20,6 +20,10 @@ export { parseSessionToken };
 
 const SESSION_COOKIE = "shs_session";
 
+/** Default browser session (7 days). Remember me extends to 30 days. */
+export const SESSION_MAX_AGE_DEFAULT = 7 * 24 * 60 * 60;
+export const SESSION_MAX_AGE_REMEMBER = 30 * 24 * 60 * 60;
+
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
   const hash = scryptSync(password, salt, 64).toString("hex");
@@ -43,21 +47,37 @@ export async function getSession(): Promise<SessionUser | null> {
 
   const token = bearer || cookieToken;
   if (!token) return null;
-  return await parseSessionToken(token);
+  const session = await parseSessionToken(token);
+  if (!session) return null;
+
+  // Revoked / missing DB session → treat as logged out
+  if (session.sid) {
+    const { isSessionActive, touchSession } = await import("@/lib/user-sessions");
+    const active = await isSessionActive(session.sid);
+    if (!active) return null;
+    void touchSession(session.sid);
+  }
+
+  return session;
 }
 
 export async function createAuthToken(user: SessionUser): Promise<string> {
   return createSessionToken(user);
 }
 
-export async function setSessionCookie(response: NextResponse, user: SessionUser) {
-  const token = await createSessionToken(user);
+export async function setSessionCookie(
+  response: NextResponse,
+  user: SessionUser,
+  options?: { rememberMe?: boolean },
+) {
+  const maxAge = options?.rememberMe ? SESSION_MAX_AGE_REMEMBER : SESSION_MAX_AGE_DEFAULT;
+  const token = await createSessionToken(user, { maxAgeSec: maxAge });
   response.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 7 * 24 * 60 * 60,
+    maxAge,
   });
 }
 

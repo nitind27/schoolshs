@@ -23,10 +23,12 @@ async function englishToGujaratiName(en: string): Promise<string> {
   return bilingualNamePair(en).gu;
 }
 
-/** Fill empty *Gu fields from English (API save / backfill — server only). */
-export async function fillStudentGuNames<T extends NameRecord>(row: T): Promise<T> {
+async function fillGuNamePairs<T extends NameRecord>(
+  row: T,
+  pairs: readonly (readonly [string, string])[],
+): Promise<T> {
   const out: NameRecord = { ...row };
-  for (const [enKey, guKey] of GU_NAME_FIELDS) {
+  for (const [enKey, guKey] of pairs) {
     const en = String(out[enKey] ?? "").trim();
     const gu = String(out[guKey] ?? "").trim();
     if (en && !gu) {
@@ -34,4 +36,19 @@ export async function fillStudentGuNames<T extends NameRecord>(row: T): Promise<
     }
   }
   return out as T;
+}
+
+/** Fill empty *Gu fields from English (API save / backfill — server only). */
+export async function fillStudentGuNames<T extends NameRecord>(row: T): Promise<T> {
+  return fillGuNamePairs(row, GU_NAME_FIELDS);
+}
+
+const STAFF_GU_NAME_FIELDS = [
+  ["firstName", "firstNameGu"],
+  ["lastName", "lastNameGu"],
+] as const;
+
+/** Fill empty staff Gujarati name fields from English (create / update). */
+export async function fillStaffGuNames<T extends NameRecord>(row: T): Promise<T> {
+  return fillGuNamePairs(row, STAFF_GU_NAME_FIELDS);
 }

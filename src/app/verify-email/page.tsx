@@ -1,9 +1,10 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Loader2, Mail, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Mail, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OtpInput } from "@/components/ui/otp-input";
@@ -137,7 +138,7 @@ function VerifyEmailOtpForm() {
           <Button type="submit" className="w-full" disabled={loading || otp.length !== 6}>
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Verifying…
+                <Spinner size="sm" /> Verifying…
               </>
             ) : (
               "Verify OTP"
@@ -172,7 +173,7 @@ export default function VerifyEmailPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center" style={{ background: "#eef2f7" }}>
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Spinner size="lg" />
         </div>
       }
     >

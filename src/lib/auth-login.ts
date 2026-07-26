@@ -11,6 +11,16 @@ import {
 } from "@/lib/login-security";
 import { EmailNotVerifiedError } from "@/lib/email-verification";
 import { isEmailEnabled } from "@/lib/platform-settings";
+import type { LoginContext } from "@/lib/login-geo";
+import {
+  createUserSession,
+  isMultiDeviceWebRole,
+  listActiveWebSessions,
+  newSessionKey,
+  revokeOtherWebSessions,
+  type ActiveSessionInfo,
+  type SessionAction,
+} from "@/lib/user-sessions";
 
 type UserWithSchool = NonNullable<
   Awaited<ReturnType<typeof prisma.user.findUnique>> & {
@@ -22,6 +32,22 @@ type UserWithSchool = NonNullable<
     } | null;
   }
 >;
+
+export type AuthenticateOk = {
+  kind: "ok";
+  session: SessionUser;
+  revokedOthers: boolean;
+};
+
+export type AuthenticateDeviceChoice = {
+  kind: "device_choice";
+  sessions: ActiveSessionInfo[];
+  name: string;
+  email: string;
+  role: string;
+};
+
+export type AuthenticateResult = AuthenticateOk | AuthenticateDeviceChoice;
 
 async function assertUserCanLogin(user: UserWithSchool): Promise<void> {
   if (!user.isActive) {
@@ -59,7 +85,10 @@ async function assertUserCanLogin(user: UserWithSchool): Promise<void> {
   }
 }
 
-export async function buildSessionUser(user: UserWithSchool): Promise<SessionUser> {
+export async function buildSessionUser(
+  user: UserWithSchool,
+  sid?: string | null,
+): Promise<SessionUser> {
   let activeSchoolId = user.schoolId;
   let activeSchool = user.school;
 
@@ -85,29 +114,79 @@ export async function buildSessionUser(user: UserWithSchool): Promise<SessionUse
     activeSchoolName: activeSchool?.name ?? null,
     staffId: user.staffId,
     studentId: user.studentId,
+    sid: sid ?? null,
   };
 }
 
-/** Finalize a successful login. */
+/** Finalize a successful login: IP/geo audit + device session row. */
 export async function completeSuccessfulLogin(
   user: UserWithSchool,
-  ip: string,
-): Promise<SessionUser> {
+  ctx: LoginContext,
+  options?: { sessionAction?: SessionAction | null },
+): Promise<{ session: SessionUser; revokedOthers: boolean }> {
   await assertUserCanLogin(user);
-  await clearLoginFailures(user.email, ip);
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLoginAt: new Date(), failedLoginCount: 0, lockedUntil: null },
+  await clearLoginFailures(user.email, ctx.ip);
+
+  const sessionKey = newSessionKey();
+  let revokedOthers = false;
+
+  if (ctx.source === "web" && options?.sessionAction === "logout_others") {
+    await revokeOtherWebSessions(user.id);
+    revokedOthers = true;
+  }
+
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginAt: now,
+        failedLoginCount: 0,
+        lockedUntil: null,
+        lastLoginIp: ctx.ip,
+        lastLoginLat: ctx.latitude,
+        lastLoginLon: ctx.longitude,
+        lastLoginAccuracyM: ctx.accuracyM,
+        lastLoginUserAgent: ctx.userAgent,
+        lastLoginCity: ctx.city,
+        lastLoginRegion: ctx.region,
+        lastLoginCountry: ctx.country,
+        lastLoginGeoSource: ctx.geoSource,
+      },
+    }),
+    prisma.loginEvent.create({
+      data: {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        schoolId: user.schoolId,
+        ip: ctx.ip,
+        latitude: ctx.latitude,
+        longitude: ctx.longitude,
+        accuracyM: ctx.accuracyM,
+        userAgent: ctx.userAgent,
+        source: ctx.source,
+        geoSource: ctx.geoSource,
+        city: ctx.city,
+        region: ctx.region,
+        country: ctx.country,
+      },
+    }),
+  ]);
+
+  await createUserSession({
+    userId: user.id,
+    sessionKey,
+    channel: ctx.source === "mobile" ? "mobile" : "web",
+    ctx,
   });
-  return buildSessionUser(user);
+
+  const session = await buildSessionUser(user, sessionKey);
+  return { session, revokedOthers };
 }
 
-export async function authenticateCredentials(
-  email: string,
-  password: string,
-  ip: string,
-): Promise<SessionUser> {
-  if (!email || !password) {
+async function loadUserForLogin(email: string, ip: string): Promise<UserWithSchool> {
+  if (!email) {
     throw new AuthError("Email aur password required", 400);
   }
 
@@ -138,8 +217,24 @@ export async function authenticateCredentials(
     );
   }
 
+  return user as UserWithSchool;
+}
+
+export async function authenticateCredentials(
+  email: string,
+  password: string,
+  ctx: LoginContext,
+  options?: { sessionAction?: SessionAction | null },
+): Promise<AuthenticateResult> {
+  if (!password) {
+    throw new AuthError("Email aur password required", 400);
+  }
+
+  const user = await loadUserForLogin(email, ctx.ip);
+  const normalized = user.email;
+
   if (!verifyPassword(password, user.passwordHash)) {
-    const result = await recordLoginFailure(normalized, ip);
+    const result = await recordLoginFailure(normalized, ctx.ip);
     if (result.lockedUntil) {
       const retryAfterSeconds = Math.ceil((result.lockedUntil.getTime() - Date.now()) / 1000);
       throw new AccountLockedError(
@@ -157,5 +252,27 @@ export async function authenticateCredentials(
     );
   }
 
-  return completeSuccessfulLogin(user as UserWithSchool, ip);
+  // Multi-device gate for web admin/clerk roles
+  if (
+    ctx.source === "web" &&
+    isMultiDeviceWebRole(user.role) &&
+    options?.sessionAction !== "keep_all" &&
+    options?.sessionAction !== "logout_others"
+  ) {
+    const sessions = await listActiveWebSessions(user.id);
+    if (sessions.length > 0) {
+      return {
+        kind: "device_choice",
+        sessions,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      };
+    }
+  }
+
+  const { session, revokedOthers } = await completeSuccessfulLogin(user, ctx, {
+    sessionAction: options?.sessionAction ?? null,
+  });
+  return { kind: "ok", session, revokedOthers };
 }

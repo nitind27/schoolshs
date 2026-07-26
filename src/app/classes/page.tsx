@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,19 +10,7 @@ import { InfoModal } from "@/components/ui/info-modal";
 import { ClassForm } from "@/components/forms/class-form";
 import { classGroupKey, classGroupLabel } from "@/lib/class-structure";
 import { canManageClasses } from "@/lib/roles";
-import {
-  Plus,
-  Users,
-  BookOpen,
-  ChevronRight,
-  UserCog,
-  Pencil,
-  Trash2,
-  Search,
-  School,
-  UserCheck,
-  UserX,
-} from "lucide-react";
+import { Plus, Users, BookOpen, ChevronRight, UserCog, Pencil, Trash2, Search, School, UserCheck, UserX } from "lucide-react";
 import type { SchoolClass, Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 import { PageShell } from "@/components/layout/page-shell";
@@ -361,9 +350,7 @@ export default function ClassesPage() {
       </Card>
 
       {loading ? (
-        <div className="flex justify-center h-48 items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-        </div>
+        <PageLoader />
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center text-slate-500">

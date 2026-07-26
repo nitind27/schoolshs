@@ -1,6 +1,14 @@
 import type { Student } from "@/generated/prisma/client";
 import { normalizeCategory } from "@/lib/category-inference";
 import { parseImportDate } from "@/lib/import/import-formats";
+import {
+  isScholarshipRequired,
+  isValidAccountNumber,
+  isValidRationCard,
+  requires10thBoard,
+  requires12thBoard,
+} from "@/lib/student-academic-rules";
+import { calcAgeYears } from "@/lib/student-age";
 
 export type StudentInput = Omit<Student, "id" | "createdAt" | "updatedAt" | "submissionDate" | "validationErrors">;
 
@@ -9,7 +17,7 @@ export interface ValidationError {
   message: string;
 }
 
-const REQUIRED_FIELDS: { field: keyof StudentInput; label: string }[] = [
+const ALWAYS_REQUIRED: { field: keyof StudentInput; label: string }[] = [
   { field: "firstName", label: "First Name" },
   { field: "surname", label: "Surname" },
   { field: "aadhaarName", label: "Aadhaar Name" },
@@ -31,16 +39,11 @@ const REQUIRED_FIELDS: { field: keyof StudentInput; label: string }[] = [
   { field: "permanentDistrict", label: "Permanent District" },
   { field: "permanentCity", label: "Permanent City" },
   { field: "permanentPincode", label: "Permanent Pincode" },
-  { field: "scholarshipScheme", label: "Scholarship Scheme" },
   { field: "financialYear", label: "Financial Year" },
   { field: "courseType", label: "Course Type" },
-  { field: "courseName", label: "Course Name" },
+  { field: "courseName", label: "Course / Class Name" },
   { field: "institutionDistrict", label: "Institution District" },
   { field: "institutionName", label: "Institution Name" },
-  { field: "currentYear", label: "Current Year" },
-  { field: "board10th", label: "10th Board" },
-  { field: "percentage10th", label: "10th Percentage" },
-  { field: "year10th", label: "10th Year" },
   { field: "bankName", label: "Bank Name" },
   { field: "branchName", label: "Branch Name" },
   { field: "accountNumber", label: "Account Number" },
@@ -58,10 +61,26 @@ function isEmpty(value: unknown): boolean {
 export function validateStudent(data: Partial<StudentInput>): ValidationError[] {
   const errors: ValidationError[] = [];
 
-  for (const { field, label } of REQUIRED_FIELDS) {
+  for (const { field, label } of ALWAYS_REQUIRED) {
     if (isEmpty(data[field])) {
       errors.push({ field, message: `${label} is required` });
     }
+  }
+
+  if (isScholarshipRequired(data.category) && isEmpty(data.scholarshipScheme)) {
+    errors.push({ field: "scholarshipScheme", message: "Scholarship Scheme is required for this category" });
+  }
+
+  if (requires10thBoard(data.standard)) {
+    if (isEmpty(data.board10th)) errors.push({ field: "board10th", message: "10th Board is required" });
+    if (isEmpty(data.percentage10th)) errors.push({ field: "percentage10th", message: "10th Percentage is required" });
+    if (isEmpty(data.year10th)) errors.push({ field: "year10th", message: "10th Year is required" });
+  }
+
+  if (requires12thBoard(data.standard)) {
+    if (isEmpty(data.board12th)) errors.push({ field: "board12th", message: "12th Board is required" });
+    if (isEmpty(data.percentage12th)) errors.push({ field: "percentage12th", message: "12th Percentage is required" });
+    if (isEmpty(data.year12th)) errors.push({ field: "year12th", message: "12th Year is required" });
   }
 
   if (data.aadhaarNumber && !/^\d{12}$/.test(data.aadhaarNumber.replace(/\s/g, ""))) {
@@ -84,7 +103,21 @@ export function validateStudent(data: Partial<StudentInput>): ValidationError[] 
     errors.push({ field: "ifscCode", message: "Invalid IFSC code format" });
   }
 
-  if (data.percentage10th !== undefined && (data.percentage10th < 0 || data.percentage10th > 100)) {
+  if (data.accountNumber && !isValidAccountNumber(data.accountNumber)) {
+    errors.push({
+      field: "accountNumber",
+      message: "Account number must be 9–18 digits",
+    });
+  }
+
+  if (data.rationCardNumber && !isValidRationCard(data.rationCardNumber)) {
+    errors.push({
+      field: "rationCardNumber",
+      message: "Ration card number must be 8–15 letters/digits",
+    });
+  }
+
+  if (data.percentage10th !== undefined && data.percentage10th !== null && (data.percentage10th < 0 || data.percentage10th > 100)) {
     errors.push({ field: "percentage10th", message: "10th percentage must be between 0-100" });
   }
 
@@ -98,6 +131,11 @@ export function validateStudent(data: Partial<StudentInput>): ValidationError[] 
 
   if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
     errors.push({ field: "email", message: "Invalid email format" });
+  }
+
+  // Age vs class: warn in UI only — late admissions / repeaters are common
+  if (data.dateOfBirth && calcAgeYears(data.dateOfBirth) == null) {
+    errors.push({ field: "dateOfBirth", message: "Invalid date of birth" });
   }
 
   return errors;
@@ -159,7 +197,7 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     permanentCity: String(row.permanentCity || "").trim(),
     permanentPincode: String(row.permanentPincode || "").trim(),
     habitationType: String(row.habitationType || "Own").trim(),
-    familySize: parseInt(String(row.familySize || "4")) || 4,
+    familySize: parseInt(String(row.familySize ?? "0"), 10) || 0,
     residentType: String(row.residentType || "Rural").trim(),
     isHosteler: parseBoolean(row.isHosteler),
     hostelType: String(row.hostelType || "").trim() || null,
@@ -200,7 +238,9 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
 }
 
 export function getCompletionPercentage(data: Partial<StudentInput>): number {
-  const total = REQUIRED_FIELDS.length;
-  const filled = REQUIRED_FIELDS.filter(({ field }) => !isEmpty(data[field])).length;
-  return Math.round((filled / total) * 100);
+  const errors = validateStudent(data);
+  // Approximate: count unique required-ish checks via validate
+  const base = 35;
+  const filled = Math.max(0, base - errors.length);
+  return Math.min(100, Math.round((filled / base) * 100));
 }

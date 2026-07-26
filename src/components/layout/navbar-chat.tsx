@@ -47,22 +47,14 @@ export function NavbarChatButton({ role }: { role?: string | null }) {
   return (
     <Link
       href="/chat"
-      className={cn(
-        "relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white",
-        "text-slate-600 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700",
-        isActive && "border-sky-300 bg-sky-50 text-sky-700"
-      )}
+      className={cn("tn-btn relative", isActive && "tn-btn--active")}
       aria-label={t("nav.chat")}
       title={t("nav.chat")}
       aria-current={isActive ? "page" : undefined}
       onClick={() => setUnread(0)}
     >
-      <MessageCircle className="h-4 w-4" />
-      {badge && (
-        <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-600 px-1 text-[10px] font-bold text-white shadow-sm">
-          {badge}
-        </span>
-      )}
+      <MessageCircle className="h-[1.05rem] w-[1.05rem]" />
+      {badge && <span className="tn-badge">{badge}</span>}
     </Link>
   );
 }

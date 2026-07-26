@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,9 +97,7 @@ function BulkSubmitContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
+      <PageLoader />
     );
   }
 
@@ -242,9 +241,7 @@ function BulkSubmitContent() {
 export default function BulkSubmitPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
+      <PageLoader />
     }>
       <BulkSubmitContent />
     </Suspense>

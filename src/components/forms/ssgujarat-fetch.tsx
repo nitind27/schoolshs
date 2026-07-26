@@ -1,17 +1,29 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ClipboardPaste, Download, Loader2, X } from "lucide-react";
+import { ClipboardPaste, Download, X } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import type { Student } from "@/generated/prisma/client";
 import type { SsgujaratStudentRecord } from "@/lib/ssgujarat/types";
 import { detectSsgujaratSearchType } from "@/lib/ssgujarat/id-utils";
 import { mergeStudentPartials } from "@/lib/ssgujarat/map-to-student";
+import { isSsgMessageCode, SSG_MSG_I18N } from "@/lib/ssgujarat/message-codes";
 
 type StudentPartial = Partial<Student>;
+
+function resolveSsgText(
+  raw: string | undefined,
+  t: (key: string, params?: Record<string, string | number>) => string,
+  params?: Record<string, string | number>,
+): string {
+  if (!raw) return "";
+  if (isSsgMessageCode(raw)) return t(SSG_MSG_I18N[raw], params);
+  return raw;
+}
 
 interface SsgujaratFetchProps {
   aadhaarNumber?: string;
@@ -93,7 +105,7 @@ export function SsgujaratFetch({ aadhaarNumber = "", childUid = "", onApply }: S
       body: JSON.stringify({ searchId: childUid }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || t("ssg.profileFetchFailed"));
+    if (!res.ok) throw new Error(resolveSsgText(data.error, t) || t("ssg.profileFetchFailed"));
     const mappedStudent = data.mappedStudents?.[0] as StudentPartial | undefined;
     if (!mappedStudent) throw new Error(t("ssg.profileNotFound"));
     if (aadhaar && /^\d{12}$/.test(aadhaar)) mappedStudent.aadhaarNumber = aadhaar;
@@ -111,7 +123,7 @@ export function SsgujaratFetch({ aadhaarNumber = "", childUid = "", onApply }: S
       body: JSON.stringify({ text: pasteText }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || t("ssg.parseFailed"));
+    if (!res.ok) throw new Error(resolveSsgText(data.error, t) || t("ssg.parseFailed"));
     setPasteMapped(data.mapped);
     return data.mapped as StudentPartial;
   };
@@ -136,16 +148,22 @@ export function SsgujaratFetch({ aadhaarNumber = "", childUid = "", onApply }: S
         body: JSON.stringify({ searchId: clean }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t("ssg.fetchFailed"));
+      if (!res.ok) throw new Error(resolveSsgText(data.error, t) || t("ssg.fetchFailed"));
       if (!data.records?.length) {
-        setError(data.message || t("ssg.noStudentFound"));
+        setError(resolveSsgText(data.message, t) || t("ssg.noStudentFound"));
         return;
       }
       setRecords(data.records);
       setMapped(data.mappedStudents || []);
-      setMessage(data.message || "");
+      setMessage(
+        resolveSsgText(data.message, t, { count: data.matchCount || data.records.length }) || "",
+      );
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("ssg.fetchFailed"));
+      setError(
+        e instanceof Error
+          ? resolveSsgText(e.message, t) || e.message
+          : t("ssg.fetchFailed"),
+      );
     } finally {
       setLoading(false);
     }
@@ -227,7 +245,7 @@ export function SsgujaratFetch({ aadhaarNumber = "", childUid = "", onApply }: S
             )}
           </div>
           <Button type="button" variant="success" onClick={fetchFromSsg} disabled={loading || !searchType}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {loading ? <Spinner size="sm" /> : <Download className="h-4 w-4" />}
             {t("ssg.fetchOnline")}
           </Button>
         </div>

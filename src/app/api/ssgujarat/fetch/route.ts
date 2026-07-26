@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSsgujaratById, detectSsgujaratSearchType } from "@/lib/ssgujarat/fetch";
 import { mapSsgujaratToStudent, compactStudentPartial } from "@/lib/ssgujarat/map-to-student";
+import { SSG_MSG } from "@/lib/ssgujarat/message-codes";
 
 export const maxDuration = 60;
 
@@ -10,10 +11,7 @@ export async function POST(request: NextRequest) {
     const searchId = String(body.searchId || body.aadhaarNumber || body.childUid || "").replace(/\s/g, "");
 
     if (!detectSsgujaratSearchType(searchId)) {
-      return NextResponse.json(
-        { error: "12-digit Aadhaar ya 18-digit Child UID enter karein" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: SSG_MSG.INVALID_SEARCH_ID }, { status: 400 });
     }
 
     const result = await fetchSsgujaratById(searchId);
@@ -22,7 +20,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ...result,
       mappedStudents: result.records.map((r) =>
-        compactStudentPartial(mapSsgujaratToStudent(r, aadhaarForMap))
+        compactStudentPartial(mapSsgujaratToStudent(r, aadhaarForMap)),
       ),
     });
   } catch (error) {

@@ -1,20 +1,10 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Lock,
-  Mail,
-  Loader2,
-  Building2,
-  ArrowRight,
-  ArrowLeft,
-  Eye,
-  EyeOff,
-  Check,
-  School,
-} from "lucide-react";
+import { Lock, Mail, Building2, ArrowRight, ArrowLeft, Eye, EyeOff, Check, School } from "lucide-react";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { LoginBrandBook } from "@/components/auth/login-brand-book";
 import { LoginCaptcha } from "@/components/auth/login-captcha";
@@ -23,6 +13,9 @@ import { OtpInput } from "@/components/ui/otp-input";
 import { toast } from "@/components/ui/toast";
 import { useT } from "@/i18n/locale-provider";
 import { isUserRole } from "@/lib/roles";
+import { notifyAuthChanged } from "@/lib/auth-client";
+import { getBrowserLoginGeo } from "@/lib/browser-login-geo";
+import { DeviceSessionModal, type DeviceSessionRow } from "@/components/auth/device-session-modal";
 import "./login-portal.css";
 
 type SchoolBranding = {
@@ -35,12 +28,15 @@ type SchoolBranding = {
 };
 
 const SCHOOL_CODE_KEY = "shs_school_code";
+const REMEMBER_KEY = "shs_remember_me";
+const REMEMBER_EMAIL_KEY = "shs_remember_email";
 
 export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useT();
   const isCaPortal = searchParams.get("portal") === "ca";
+  const sessionRevoked = searchParams.get("reason") === "session_revoked";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,6 +57,20 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
   const [verifyMsg, setVerifyMsg] = useState("");
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMsg, setResendMsg] = useState("");
+  const [deviceSessions, setDeviceSessions] = useState<DeviceSessionRow[] | null>(null);
+  const [deviceUserName, setDeviceUserName] = useState("");
+  const [deviceBusy, setDeviceBusy] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const remember = localStorage.getItem(REMEMBER_KEY) === "1";
+    setRememberMe(remember);
+    if (remember) {
+      const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
+      if (savedEmail) setEmail(savedEmail);
+    }
+  }, []);
 
   useEffect(() => {
     if (isCaPortal) {
@@ -103,6 +113,62 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
     return () => clearTimeout(timer);
   }, [schoolCode, isCaPortal]);
 
+  const finishSuccessfulLogin = (data: {
+    redirect?: string;
+    user?: { name?: string; role?: string; id?: string };
+    revokedOthers?: boolean;
+  }) => {
+    if (rememberMe) {
+      localStorage.setItem(REMEMBER_KEY, "1");
+      localStorage.setItem(REMEMBER_EMAIL_KEY, email.trim().toLowerCase());
+      if (!isCaPortal && schoolCode.trim()) {
+        localStorage.setItem(SCHOOL_CODE_KEY, schoolCode.trim().toUpperCase());
+      }
+    } else {
+      localStorage.removeItem(REMEMBER_KEY);
+      localStorage.removeItem(REMEMBER_EMAIL_KEY);
+      // Keep school code convenience only when remember is on
+    }
+
+    const redirectTo = data.redirect || next;
+    const userName = String(data.user?.name || email.split("@")[0] || "User");
+    const userRole = String(data.user?.role || "");
+    const roleLabel = isUserRole(userRole) ? t(`roles.${userRole}`) : userRole;
+
+    toast.success(
+      t("login.successTitle"),
+      data.revokedOthers
+        ? t("login.deviceRevokedToast")
+        : t("login.successToastDesc", { name: userName, role: roleLabel || "portal" }),
+    );
+
+    notifyAuthChanged({ role: userRole || null, userId: data.user?.id ?? null });
+    setDeviceSessions(null);
+    router.push(redirectTo);
+    router.refresh();
+  };
+
+  const postLogin = async (sessionAction?: "keep_all" | "logout_others") => {
+    const geo = await getBrowserLoginGeo();
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password,
+        captchaToken,
+        captchaAnswer,
+        rememberMe,
+        latitude: geo.latitude ?? null,
+        longitude: geo.longitude ?? null,
+        accuracyM: geo.accuracyM ?? null,
+        sessionAction: sessionAction || undefined,
+      }),
+    });
+    const data = await res.json();
+    return { res, data };
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (lockedUntil && new Date(lockedUntil) > new Date()) return;
@@ -115,17 +181,13 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
     setVerifyMsg("");
     setResendMsg("");
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password,
-          captchaToken,
-          captchaAnswer,
-        }),
-      });
-      const data = await res.json();
+      const { res, data } = await postLogin();
+      if (res.status === 409 && data.requiresDeviceChoice) {
+        setDeviceSessions(data.sessions || []);
+        setDeviceUserName(String(data.user?.name || email.split("@")[0] || "User"));
+        setLoading(false);
+        return;
+      }
       if (!res.ok) {
         const errMsg = data.error || t("common.loginFailed");
         if (data.emailNotVerified) {
@@ -149,24 +211,32 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
         setLoading(false);
         return;
       }
-      if (!isCaPortal && schoolCode.trim()) {
-        localStorage.setItem(SCHOOL_CODE_KEY, schoolCode.trim().toUpperCase());
-      }
-      const redirectTo = data.redirect || next;
-      const userName = String(data.user?.name || email.split("@")[0] || "User");
-      const userRole = String(data.user?.role || "");
-      const roleLabel = isUserRole(userRole) ? t(`roles.${userRole}`) : userRole;
-
-      toast.success(
-        t("login.successTitle"),
-        t("login.successToastDesc", { name: userName, role: roleLabel || "portal" })
-      );
-
-      router.push(redirectTo);
-      router.refresh();
+      finishSuccessfulLogin(data);
     } catch {
       setError(t("common.networkError"));
       toast.error(t("common.networkError"));
+      setLoading(false);
+    }
+  };
+
+  const resolveDeviceChoice = async (action: "keep_all" | "logout_others") => {
+    setDeviceBusy(true);
+    try {
+      const { res, data } = await postLogin(action);
+      if (!res.ok) {
+        toast.error(data.error || t("common.loginFailed"));
+        setCaptchaRefreshKey((k) => k + 1);
+        setDeviceSessions(null);
+        return;
+      }
+      if (action === "keep_all") {
+        toast.success(t("login.successTitle"), t("login.deviceKeepToast"));
+      }
+      finishSuccessfulLogin(data);
+    } catch {
+      toast.error(t("common.networkError"));
+    } finally {
+      setDeviceBusy(false);
       setLoading(false);
     }
   };
@@ -241,11 +311,24 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
     : branding
       ? [branding.district, branding.udiseCode ? `UDISE ${branding.udiseCode}` : null]
           .filter(Boolean)
-          .join(" · ")
+          .join(" | ")
       : t("login.subtitle");
 
   return (
     <div className={`auth-portal ${isCaPortal ? "is-ca-portal" : ""}`}>
+      {deviceSessions && (
+        <DeviceSessionModal
+          sessions={deviceSessions}
+          userName={deviceUserName}
+          busy={deviceBusy}
+          onKeepAll={() => void resolveDeviceChoice("keep_all")}
+          onLogoutOthers={() => void resolveDeviceChoice("logout_others")}
+          onCancel={() => {
+            setDeviceSessions(null);
+            setLoading(false);
+          }}
+        />
+      )}
       <aside className="auth-portal-brand">
         <div className="auth-brand-decor" aria-hidden>
           <div className="auth-brand-orb auth-brand-orb-1" />
@@ -314,11 +397,17 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
               <p>{isCaPortal ? t("login.formSubtitleCa") : t("login.formSubtitleNew")}</p>
             </header>
 
+            {sessionRevoked && (
+              <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-950">
+                {t("login.sessionRevokedBanner")}
+              </div>
+            )}
+
             {branding && !isCaPortal && (
               <div className="auth-portal-school-chip" title={branding.name}>
                 <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
                 <span>
-                  {branding.name} · {branding.code}
+                  {branding.name} - {branding.code}
                 </span>
               </div>
             )}
@@ -354,12 +443,12 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                       type="text"
                       value={schoolCode}
                       onChange={(e) => setSchoolCode(e.target.value.toUpperCase())}
-                      placeholder="SONGADH001"
+                      placeholder={t("login.schoolCodePlaceholder")}
                       className="auth-portal-input is-mono"
                       autoComplete="organization"
                       disabled={isLocked}
                     />
-                    {brandingLoading && <Loader2 className="auth-portal-spinner" />}
+                    {brandingLoading && <Spinner size="sm" className="auth-portal-spinner" />}
                   </div>
                 </div>
               )}
@@ -377,7 +466,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                     autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@school.local"
+                    placeholder={t("login.emailPlaceholder")}
                     className="auth-portal-input"
                     disabled={isLocked}
                   />
@@ -397,7 +486,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                     autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder={t("login.passwordPlaceholder")}
                     className="auth-portal-input"
                     style={{ paddingRight: "2.5rem" }}
                     disabled={isLocked}
@@ -413,6 +502,22 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                   </button>
                 </div>
               </div>
+
+              <label className={`auth-remember${isLocked ? " is-disabled" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={isLocked}
+                />
+                <span className="auth-remember-box" aria-hidden>
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
+                <span className="auth-remember-copy">
+                  <span className="auth-remember-title">{t("login.rememberMe")}</span>
+                  <span className="auth-remember-hint">{t("login.rememberMeHint")}</span>
+                </span>
+              </label>
 
               <LoginCaptcha
                 answer={captchaAnswer}
@@ -464,7 +569,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
             <button type="submit" className="auth-portal-submit" disabled={loading || isLocked}>
                 {loading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Spinner size="sm" />
                     {t("loginHub.signingIn")}
                   </>
                 ) : (

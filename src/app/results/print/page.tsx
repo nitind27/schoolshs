@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -171,7 +172,7 @@ function PrintInner() {
 
 export default function ResultsPrintPage() {
   return (
-    <Suspense fallback={<div className="p-8">Loading...</div>}>
+    <Suspense fallback={<PageLoader />}>
       <PrintInner />
     </Suspense>
   );

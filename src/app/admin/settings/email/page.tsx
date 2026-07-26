@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -159,9 +160,7 @@ export default function AdminEmailSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-violet-200 border-t-violet-600" />
-      </div>
+      <PageLoader />
     );
   }
 

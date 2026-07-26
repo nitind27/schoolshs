@@ -99,6 +99,23 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
         { href: "/id-cards", label: t("nav.idCards"), icon: CreditCard },
       ],
     },
+    {
+      type: "submenu",
+      id: "reports-certs",
+      label: t("megaMenu.trigger"),
+      icon: FileText,
+      children: [
+        { href: "/certificates", label: t("megaMenu.allCertificates"), icon: FileText },
+        { href: "/certificates/bonafide", label: t("megaMenu.bonafide"), icon: FileText },
+        { href: "/certificates/lc", label: t("megaMenu.lc"), icon: FileText },
+        { href: "/certificates/general-register", label: t("megaMenu.generalRegister"), icon: BookOpen },
+        { href: "/export", label: t("megaMenu.reportsHub"), icon: Download },
+        { href: "/staff/payroll", label: t("megaMenu.payroll"), icon: IndianRupee },
+        { href: "/staff/salary-statement", label: t("megaMenu.salaryStatement"), icon: Calculator },
+        { href: "/attendance/reports", label: t("megaMenu.attendanceReports"), icon: CalendarDays },
+        { href: "/id-cards", label: t("megaMenu.idCards"), icon: CreditCard },
+      ],
+    },
   ];
 
   return (
@@ -111,8 +128,8 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
         homeHref="/clerk"
         roleIcon={UserCheck}
       />
-      <main className="lg:pl-[260px]">
-        <div className="mx-auto max-w-[1600px] px-4 pb-5 pt-[4.75rem] lg:px-6 lg:pb-7">{children}</div>
+      <main className="shell-main">
+        <div className="mx-auto max-w-[1600px] px-4 pb-5 pt-[4.5rem] lg:px-6 lg:pb-7">{children}</div>
       </main>
     </PortalLayout>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader, Spinner } from "@/components/ui/loader";
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -138,9 +139,7 @@ export default function ClerkScholarshipPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-48 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-100 border-t-cyan-600" />
-        </div>
+        <PageLoader />
       }
     >
       <ClerkScholarshipContent />

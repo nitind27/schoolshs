@@ -63,6 +63,20 @@ export function studentUpdateFromGseb(
   return data;
 }
 
+/** Wipe fake/stale GSEB marks when official portal rejects the seat. */
+export function clearGsebStoredResult(standard: "10" | "12"): Record<string, unknown> {
+  const data: Record<string, unknown> = {
+    gsebResultJson: null,
+    gsebFetchedAt: null,
+  };
+  if (standard === "10") {
+    data.percentage10th = 0;
+  } else {
+    data.percentage12th = null;
+  }
+  return data;
+}
+
 export function resolveGsebStandard(
   student: {
     standard?: string | null;
@@ -91,15 +105,22 @@ export function seatFieldsForStandard(
 ): { prefix: string; number: string } {
   const prefix =
     standard === "12"
-      ? student.hscSeatPrefix || "B"
-      : student.sscSeatPrefix || "A";
-  let number =
+      ? (student.hscSeatPrefix || "").trim().toUpperCase()
+      : (student.sscSeatPrefix || "").trim().toUpperCase();
+  const number =
     standard === "12" ? student.hscSeatNumber || "" : student.sscSeatNumber || "";
 
-  if (!number && student.grNumber) {
+  const digits = number.replace(/\D/g, "");
+  const need = standard === "12" ? 6 : 7;
+  if (digits.length === need) {
+    return { prefix: prefix || (standard === "12" ? "B" : "A"), number: digits };
+  }
+
+  // Only accept GR if it is literally a GSEB seat pattern — never use loose GR as seat
+  if (student.grNumber) {
     const parsed = parseSeatForStandard(student.grNumber, standard);
     if (parsed) return parsed;
   }
 
-  return { prefix, number };
+  return { prefix: prefix || (standard === "12" ? "B" : "A"), number: digits };
 }

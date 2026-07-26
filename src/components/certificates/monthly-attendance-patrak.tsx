@@ -620,55 +620,57 @@ export function MonthlyAttendancePatrakView({
           </tbody>
         </table>
 
-        <div className="patrak-cls-title">માસના છેલ્લા દિવસે રહેલ વિદ્યાર્થીઓની સંખ્યાનું વર્ગીકરણ</div>
-        <table className="patrak-tbl patrak-cls">
-          <thead>
-            <tr>
-              <th rowSpan={2}>ઉજળિયાત</th>
-              <th rowSpan={2}>મધ્યમ</th>
-              <th rowSpan={2}>પછાત</th>
-              <th rowSpan={2}>કુલ</th>
-              <th colSpan={6}>બીજા</th>
-              <th rowSpan={2}>એકંદરે કુલ</th>
-              <th rowSpan={2} className="patrak-vhdr patrak-w-avg"><span>આ માસની સરાસરી હાજરી</span></th>
-            </tr>
-            <tr>
-              <th>જૈન</th>
-              <th>પારસી</th>
-              <th>મુસલમાન</th>
-              <th>શીખ</th>
-              <th>ખ્રિસ્તી</th>
-              <th>કુલ</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              {[
-                cls.ujaniyat,
-                cls.madhyam,
-                cls.pachhat,
-                cls.groupTotal,
-                cls.other.jain,
-                cls.other.parsi,
-                cls.other.muslim,
-                cls.other.sikh,
-                cls.other.christian,
-                cls.other.total,
-                cls.grandTotal,
-                cls.avgAttendance,
-              ].map((v, i) => (
-                <td key={i} className="patrak-c">
-                  {v ? g(v) : "\u00a0"}
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
+        <div className="patrak-keep-footer">
+          <div className="patrak-cls-title">માસના છેલ્લા દિવસે રહેલ વિદ્યાર્થીઓની સંખ્યાનું વર્ગીકરણ</div>
+          <table className="patrak-tbl patrak-cls">
+            <thead>
+              <tr>
+                <th rowSpan={2}>ઉજળિયાત</th>
+                <th rowSpan={2}>મધ્યમ</th>
+                <th rowSpan={2}>પછાત</th>
+                <th rowSpan={2}>કુલ</th>
+                <th colSpan={6}>બીજા</th>
+                <th rowSpan={2}>એકંદરે કુલ</th>
+                <th rowSpan={2} className="patrak-vhdr patrak-w-avg"><span>આ માસની સરાસરી હાજરી</span></th>
+              </tr>
+              <tr>
+                <th>જૈન</th>
+                <th>પારસી</th>
+                <th>મુસલમાન</th>
+                <th>શીખ</th>
+                <th>ખ્રિસ્તી</th>
+                <th>કુલ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {[
+                  cls.ujaniyat,
+                  cls.madhyam,
+                  cls.pachhat,
+                  cls.groupTotal,
+                  cls.other.jain,
+                  cls.other.parsi,
+                  cls.other.muslim,
+                  cls.other.sikh,
+                  cls.other.christian,
+                  cls.other.total,
+                  cls.grandTotal,
+                  cls.avgAttendance,
+                ].map((v, i) => (
+                  <td key={i} className="patrak-c">
+                    {v ? g(v) : "\u00a0"}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
 
-        <div className="patrak-sigs">
-          <span>વર્ગ શિક્ષક</span>
-          <span>હિસાબનીશ</span>
-          <span>આચાર્ય / આચાર્યા</span>
+          <div className="patrak-sigs">
+            <span>વર્ગ શિક્ષક</span>
+            <span>હિસાબનીશ</span>
+            <span>આચાર્ય / આચાર્યા</span>
+          </div>
         </div>
       </div>
 
@@ -757,8 +759,8 @@ export function MonthlyAttendancePatrakView({
           background: #fff;
           page-break-after: always;
           break-after: page;
-          page-break-inside: avoid;
-          break-inside: avoid;
+          page-break-inside: auto;
+          break-inside: auto;
           margin: 0 auto 28px;
           box-shadow: 0 6px 24px rgba(0,0,0,.12);
           overflow: visible;
@@ -767,7 +769,7 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-portrait {
           page: patrak-portrait;
           width: 210mm;
-          min-height: 297mm;
+          min-height: 0;
           height: auto;
           padding: 6mm 5mm;
           display: flex;
@@ -778,7 +780,7 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-landscape {
           page: patrak-landscape;
           width: 297mm;
-          min-height: 210mm;
+          min-height: 0;
           height: auto;
           padding: 4mm 5mm;
           display: flex;
@@ -889,6 +891,10 @@ export function MonthlyAttendancePatrakView({
           font-weight: 600;
           margin: 3.5mm 0 2mm;
         }
+        .patrak-root .patrak-keep-footer {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
         .patrak-root .patrak-cls { font-size: 8.5pt; margin-bottom: 2mm; }
         .patrak-root .patrak-cls td { height: 9mm; }
         .patrak-root .patrak-w-avg { width: 14mm; }
@@ -896,8 +902,12 @@ export function MonthlyAttendancePatrakView({
           display: flex;
           justify-content: space-between;
           font-size: 10pt;
-          margin-top: auto;
-          padding-top: 12mm;
+          margin-top: 8mm;
+          padding-top: 10mm;
+          page-break-before: avoid;
+          break-before: avoid;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
         .patrak-root .patrak-sigs span { flex: 1; text-align: center; }
         .patrak-root .patrak-sigs-rpt { margin-top: 6mm; padding-top: 6mm; }
@@ -918,7 +928,7 @@ export function MonthlyAttendancePatrakView({
           flex-direction: column;
           width: 297mm;
           max-width: 297mm;
-          min-height: 210mm;
+          min-height: 0;
           box-sizing: border-box;
         }
         .patrak-root .patrak-spread-markers {
@@ -1417,8 +1427,8 @@ export function MonthlyAttendancePatrakView({
             border: none !important;
             page-break-after: always !important;
             break-after: page !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
             overflow: visible !important;
           }
           .patrak-root .patrak-sheet-last {
@@ -1430,19 +1440,19 @@ export function MonthlyAttendancePatrakView({
           .patrak-root .patrak-portrait {
             page: patrak-portrait !important;
             width: ${A4P.w} !important;
-            min-height: ${A4P.h} !important;
+            min-height: 0 !important;
             max-height: none !important;
             height: auto !important;
-            padding: 0 !important;
+            padding: 2mm 1mm !important;
             overflow: visible !important;
           }
           .patrak-root .patrak-landscape {
             page: patrak-landscape !important;
             width: ${A4L.w} !important;
-            min-height: ${A4L.h} !important;
+            min-height: 0 !important;
             max-height: none !important;
             height: auto !important;
-            padding: 0 !important;
+            padding: 1mm 2mm !important;
             overflow: visible !important;
           }
 
@@ -1455,25 +1465,27 @@ export function MonthlyAttendancePatrakView({
           .patrak-root .patrak-spread {
             width: ${A4L.w} !important;
             max-width: ${A4L.w} !important;
-            min-height: ${A4L.h} !important;
+            min-height: 0 !important;
           }
 
-          .patrak-root .patrak-title { font-size: 14pt; margin-bottom: 3mm; }
-          .patrak-root .patrak-meta { font-size: 9.5pt; margin-bottom: 2.5mm; gap: 2mm 5mm; }
-          .patrak-root .patrak-move { font-size: 6pt; margin-bottom: 2.5mm; }
+          .patrak-root .patrak-title { font-size: 13pt; margin-bottom: 2.5mm; }
+          .patrak-root .patrak-meta { font-size: 9pt; margin-bottom: 2mm; gap: 1.5mm 4mm; }
+          .patrak-root .patrak-move { font-size: 5.6pt; margin-bottom: 2mm; }
           .patrak-root .patrak-move td,
-          .patrak-root .patrak-move th { padding: 1px 1px; height: auto; min-height: 5mm; }
-          .patrak-root .patrak-cls-title { font-size: 9pt; margin: 2.5mm 0 1.5mm; }
-          .patrak-root .patrak-cls { font-size: 8pt; margin-bottom: 2mm; }
-          .patrak-root .patrak-cls td { height: 8mm; }
+          .patrak-root .patrak-move th { padding: 0.5px 1px; height: auto; min-height: 4.2mm; }
+          .patrak-root .patrak-cls-title { font-size: 8.5pt; margin: 2mm 0 1.2mm; }
+          .patrak-root .patrak-cls { font-size: 7.5pt; margin-bottom: 1.5mm; }
+          .patrak-root .patrak-cls td { height: 7mm; }
           .patrak-root .patrak-sigs {
-            margin-top: auto;
-            padding-top: 10mm;
+            margin-top: 6mm !important;
+            padding-top: 8mm !important;
             font-size: 10pt;
+            page-break-before: avoid !important;
+            break-before: avoid !important;
           }
           .patrak-root .patrak-sigs-rpt {
-            margin-top: 5mm;
-            padding-top: 5mm;
+            margin-top: 4mm !important;
+            padding-top: 4mm !important;
           }
 
           .patrak-root .patrak-sec-title { font-size: 10pt; margin: 3mm 0 2mm; }

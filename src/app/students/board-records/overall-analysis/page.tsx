@@ -1,20 +1,27 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useState } from "react";
 import { CertificatePrintShell } from "@/components/certificates/certificate-print-shell";
 import { OverallResultAnalysisForm } from "@/components/board-records/overall-result-analysis-form";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { Select } from "@/components/ui/select";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import type { OverallResultAnalysisPayload } from "@/lib/board-records/overall-result-analysis";
 import { useT } from "@/i18n/locale-provider";
-import { Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useEffect } from "react";
 import type { SchoolClass } from "@/generated/prisma/client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function OverallResultAnalysisPage() {
   const t = useT();
+  const pathname = usePathname();
+  const boardBackHref = pathname.startsWith("/teacher")
+    ? "/teacher/board-records"
+    : "/students/board-records";
   const [academicYear, setAcademicYear] = useState("2025-26");
   const [classId, setClassId] = useState("");
   const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -64,10 +71,23 @@ export default function OverallResultAnalysisPage() {
       printMargin="5mm"
     >
       <div className="no-print mb-4 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-semibold text-slate-700">
             {t("boardRecords.overallAnalysisHint")}
           </p>
+          <Link
+            href={boardBackHref}
+            onClick={(e) => {
+              if (typeof window !== "undefined" && window.history.length > 1) {
+                e.preventDefault();
+                window.history.back();
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-800 hover:underline"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t("common.back")}
+          </Link>
         </div>
         <div className="p-4 flex flex-wrap items-end gap-3">
           <Select
@@ -88,14 +108,14 @@ export default function OverallResultAnalysisPage() {
             value={classId}
             onChange={(e) => setClassId(e.target.value)}
           />
-          <Input
+          <DateField
             label={t("boardRecords.boardResultDate")}
             value={boardResultDate}
-            onChange={(e) => setBoardResultDate(e.target.value)}
-            placeholder="DD/MM/YYYY"
+            onChange={setBoardResultDate}
+            outputFormat="dmy-slash"
           />
           <Button onClick={load} disabled={loading} className="gap-1.5">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            {loading ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
             {t("certificates.loadData")}
           </Button>
         </div>

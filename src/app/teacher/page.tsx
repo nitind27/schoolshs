@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -10,22 +11,7 @@ import { Button } from "@/components/ui/button";
 import { TeacherHero } from "@/components/teacher/teacher-hero";
 import { teacherTheme as tp } from "@/components/teacher/teacher-theme";
 import { useT } from "@/i18n/locale-provider";
-import {
-  Users,
-  BookOpen,
-  Award,
-  FileText,
-  ArrowRight,
-  ClipboardList,
-  CalendarClock,
-  Download,
-  RefreshCw,
-  UserRound,
-  Percent,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-} from "lucide-react";
+import { Users, BookOpen, Award, FileText, ArrowRight, ClipboardList, CalendarClock, Download, RefreshCw, UserRound, Percent, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 
 type ClassCard = {
   id: string;
@@ -144,9 +130,7 @@ export default function TeacherDashboard() {
 
   if (loading && !data) {
     return (
-      <div className="flex justify-center h-64 items-center">
-        <div className={`animate-spin rounded-full h-8 w-8 ${tp.spinner}`} />
-      </div>
+      <PageLoader />
     );
   }
 

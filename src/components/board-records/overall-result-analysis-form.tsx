@@ -13,6 +13,7 @@ import {
   type OverallResultAnalysisPayload,
   type SubjectGradeRow,
 } from "@/lib/board-records/overall-result-analysis";
+import { DateField } from "@/components/ui/date-field";
 
 const FONT = '"Noto Sans Gujarati", "Noto Sans", Arial, sans-serif';
 
@@ -252,12 +253,16 @@ export function OverallResultAnalysisForm({
                 <span className="ora-board-date">
                   બોર્ડના પરિણામની તારીખ :{" "}
                   {onBoardResultDateChange ? (
-                    <input
-                      className="ora-date-inp"
-                      value={boardResultDate ?? meta.boardResultDate}
-                      onChange={(e) => onBoardResultDateChange(e.target.value)}
-                      placeholder="DD/MM/YYYY"
-                    />
+                    <span className="ora-date-field">
+                      <DateField
+                        className="ora-dp"
+                        value={boardResultDate ?? meta.boardResultDate}
+                        onChange={onBoardResultDateChange}
+                        outputFormat="dmy-slash"
+                        showHint={false}
+                        placeholder="DD/MM/YYYY"
+                      />
+                    </span>
                   ) : (
                     <u>
                       {boardResultDate ||
@@ -383,6 +388,42 @@ export function OverallResultAnalysisForm({
           font-size: 8.5pt;
           font-weight: 700;
           background: #fffbeb;
+        }
+        .ora-date-field {
+          display: inline-flex;
+          vertical-align: middle;
+        }
+        .ora-dp {
+          width: auto;
+          min-width: 7.5rem;
+        }
+        .ora-dp .shs-dp__control {
+          height: 1.6rem;
+          border: none;
+          border-bottom: 1px solid #000;
+          border-radius: 0;
+          background: #fffbeb;
+          box-shadow: none;
+        }
+        .ora-dp .shs-dp__control:focus-within,
+        .ora-dp .shs-dp__control[data-open="true"] {
+          box-shadow: none;
+          border-color: #000;
+        }
+        .ora-dp .shs-dp__input {
+          padding-left: 0.2rem;
+          font-size: 8.5pt;
+          font-weight: 700;
+          width: 5.5rem;
+        }
+        .ora-dp .shs-dp__icon-btn {
+          width: 1.5rem;
+          border-left: none;
+          color: #0f172a;
+        }
+        .ora-dp .shs-dp__panel {
+          z-index: 40;
+          min-width: 17rem;
         }
         .ora-section {
           display: flex;
@@ -562,6 +603,13 @@ export function OverallResultAnalysisForm({
           }
           .ora-date-inp {
             background: transparent !important;
+          }
+          .ora-dp .shs-dp__control {
+            background: transparent !important;
+            border-bottom: 1px solid #000 !important;
+          }
+          .ora-dp .shs-dp__icon-btn {
+            display: none !important;
           }
           .ora-th,
           .ora-sub,

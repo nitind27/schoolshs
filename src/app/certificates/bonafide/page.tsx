@@ -8,6 +8,7 @@ import { BonafideCertificateView } from "@/components/certificates/bonafide-cert
 import { formatToday } from "@/lib/certificates/date-to-words";
 import { SAMPLE_BONAFIDE } from "@/lib/certificates/sample-data";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
 
 function BonafideContent() {
@@ -71,8 +72,12 @@ function BonafideContent() {
           <Input value={serialNo} onChange={(e) => setSerialNo(e.target.value)} />
         </div>
         <div>
-          <label className="text-sm font-medium">{t("certificates.issueDate")}</label>
-          <Input value={issueDate} onChange={(e) => setIssueDate(e.target.value)} placeholder="DD/MM/YYYY" />
+          <DateField
+            label={t("certificates.issueDate")}
+            value={issueDate}
+            onChange={setIssueDate}
+            outputFormat="dmy-slash"
+          />
         </div>
       </div>
       {student ? (

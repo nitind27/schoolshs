@@ -19,6 +19,13 @@ import {
 import { useT } from "@/i18n/locale-provider";
 import { isFeatureEnabled, type SchoolFeatureKey } from "@/lib/school-features";
 import { TopNavbar } from "@/components/layout/top-navbar";
+import {
+  SIDEBAR_EXPANDED_W,
+  SidebarCollapseHeaderBtn,
+  SidebarCollapseToggle,
+  useSidebarCollapse,
+} from "@/components/layout/sidebar-collapse";
+import "@/components/layout/sidebar-shell.css";
 
 const useNavGroups = (t: (k: string) => string): { group: string; items: NavEntry[] }[] => [
   {
@@ -80,8 +87,23 @@ const useNavGroups = (t: (k: string) => string): { group: string; items: NavEntr
     items: [
       { type: "link", href: "/accounting", label: t("navExt.accounting"), icon: Calculator, featureKey: "accounting" },
       { type: "link", href: "/students/board-records", label: t("navExt.boardRecords"), icon: FileSearch, featureKey: "board_records" },
-      { type: "link", href: "/certificates", label: t("navExt.certificates"), icon: FileText, featureKey: "certificates" },
-      { type: "link", href: "/certificates/general-register", label: t("navExt.generalRegister"), icon: BookOpen, featureKey: "certificates" },
+      {
+        type: "submenu",
+        id: "reports-certs",
+        label: t("megaMenu.trigger"),
+        icon: FileText,
+        featureKey: "certificates",
+        children: [
+          { href: "/certificates", label: t("megaMenu.allCertificates"), icon: FileText, featureKey: "certificates" },
+          { href: "/certificates/bonafide", label: t("megaMenu.bonafide"), icon: FileText, featureKey: "certificates" },
+          { href: "/certificates/lc", label: t("megaMenu.lc"), icon: FileText, featureKey: "certificates" },
+          { href: "/certificates/general-register", label: t("megaMenu.generalRegister"), icon: BookOpen, featureKey: "certificates" },
+          { href: "/export", label: t("megaMenu.reportsHub"), icon: Download, featureKey: "scholarship_export" },
+          { href: "/staff/payroll", label: t("megaMenu.payroll"), icon: IndianRupee, featureKey: "staff" },
+          { href: "/staff/salary-statement", label: t("megaMenu.salaryStatement"), icon: Calculator, featureKey: "staff" },
+          { href: "/id-cards", label: t("megaMenu.idCards"), icon: CreditCard, featureKey: "id_cards" },
+        ],
+      },
       { type: "link", href: "/id-cards", label: t("nav.idCards"), icon: CreditCard, featureKey: "id_cards" },
     ],
   },
@@ -90,6 +112,8 @@ const useNavGroups = (t: (k: string) => string): { group: string; items: NavEntr
 export function Sidebar() {
   const pathname = usePathname();
   const t = useT();
+  const { collapsed, widthFor } = useSidebarCollapse();
+  const width = widthFor(SIDEBAR_EXPANDED_W);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; schoolName?: string | null; role: string } | null>(null);
   const [enabledFeatures, setEnabledFeatures] = useState<SchoolFeatureKey[] | null>(null);
@@ -105,6 +129,10 @@ export function Sidebar() {
     });
   }, []);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty("--shell-sidebar-w", `${width}px`);
+  }, [width]);
+
   const filteredGroups = navGroups
     .map((g) => ({
       ...g,
@@ -117,9 +145,10 @@ export function Sidebar() {
   return (
     <>
       <button
+        type="button"
         onClick={() => setMobileOpen(true)}
         aria-label="Open menu"
-        className="fixed top-2.5 left-3 z-50 lg:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-md text-slate-700"
+        className="fixed top-2.5 left-3 z-50 lg:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-md text-slate-700 cursor-pointer"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -132,58 +161,88 @@ export function Sidebar() {
       )}
 
       <aside
+        data-collapsed={collapsed && !mobileOpen ? "true" : "false"}
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen w-[260px] flex-col overflow-hidden",
+          "shell-aside fixed inset-y-0 left-0 z-50 flex h-screen flex-col overflow-hidden",
           "bg-gradient-to-b from-slate-900 via-blue-950 to-indigo-950 text-white",
           "transform transition-transform duration-300 ease-in-out lg:translate-x-0",
-          mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+          mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
         )}
-        style={{ borderRight: "1px solid rgba(255,255,255,.06)" }}
+        style={{
+          width: mobileOpen ? SIDEBAR_EXPANDED_W : width,
+          borderRight: "1px solid rgba(255,255,255,.06)",
+        }}
       >
-        <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,.08)" }}>
-          <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
-            <div className="shrink-0 rounded-xl p-2.5 flex items-center justify-center" style={{ background: "rgba(59,130,246,.25)", border: "1px solid rgba(59,130,246,.4)" }}>
+        <div
+          className="shell-brand flex shrink-0 items-center justify-between gap-2 px-3 py-3.5"
+          style={{ borderBottom: "1px solid rgba(255,255,255,.08)" }}
+        >
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-3" title={user?.schoolName || t("common.scholarship")}>
+            <div
+              className="shrink-0 rounded-xl p-2.5 flex items-center justify-center"
+              style={{ background: "rgba(59,130,246,.25)", border: "1px solid rgba(59,130,246,.4)" }}
+            >
               <GraduationCap className="h-5 w-5 text-white" />
             </div>
-            <div className="min-w-0">
+            <div className="shell-brand-text min-w-0">
               <h1 className="truncate text-sm font-bold text-white leading-tight">
                 {user?.schoolName || t("common.scholarship")}
               </h1>
               <p className="truncate text-xs text-blue-300 leading-tight mt-0.5">{t("common.digitalGujaratPortal")}</p>
             </div>
           </Link>
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white lg:hidden"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <SidebarCollapseHeaderBtn />
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white lg:hidden cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-4">
+        <nav className="shell-nav min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3 space-y-4">
           {filteredGroups.map(({ group, items }) => (
             <div key={group}>
-              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-blue-400/60">
+              <p className="shell-group-label px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-blue-400/60">
                 {group}
               </p>
               <div className="space-y-0.5">
-                <SidebarNavEntries items={items} pathname={pathname} onNavigate={closeMobile} />
+                <SidebarNavEntries
+                  items={items}
+                  pathname={pathname}
+                  onNavigate={closeMobile}
+                  collapsed={collapsed && !mobileOpen}
+                />
               </div>
             </div>
           ))}
         </nav>
+
+        <div className="shell-footer shrink-0 px-2.5 py-2" style={{ borderTop: "1px solid rgba(255,255,255,.08)" }}>
+          <SidebarCollapseToggle />
+        </div>
       </aside>
     </>
   );
 }
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
+  const { widthFor } = useSidebarCollapse();
+  const width = widthFor(SIDEBAR_EXPANDED_W);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--shell-sidebar-w", `${width}px`);
+  }, [width]);
+
   return (
     <div className="min-h-screen bg-slate-100">
-      <TopNavbar profileHref="/profile" showProfile sidebarWidth={260} />
+      <TopNavbar profileHref="/profile" showProfile sidebarWidth={width} />
       <Sidebar />
-      <main className="lg:pl-[260px]">
-        <div className="max-w-[1600px] px-4 pb-4 pt-[4.75rem] lg:px-6 lg:pb-6">{children}</div>
+      <main className="shell-main">
+        <div className="max-w-[1600px] px-4 pb-4 pt-[4.5rem] lg:px-6 lg:pb-6">{children}</div>
       </main>
     </div>
   );

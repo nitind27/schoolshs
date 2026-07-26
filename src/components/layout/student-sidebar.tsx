@@ -26,7 +26,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
         homeHref="/student"
         roleIcon={GraduationCap}
       />
-      <main className="lg:pl-[260px]">
+      <main className="shell-main">
         <div className="student-portal-pages mx-auto max-w-[1100px] px-4 pb-6 pt-[4.75rem] lg:px-6">
           {children}
         </div>

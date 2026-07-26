@@ -8,6 +8,7 @@ import { CharacterCertificateView } from "@/components/certificates/character-ce
 import { formatToday } from "@/lib/certificates/date-to-words";
 import { SAMPLE_CHARACTER } from "@/lib/certificates/sample-data";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
 
 function CharacterContent() {
@@ -83,8 +84,12 @@ function CharacterContent() {
           <Input value={examResult} onChange={(e) => setExamResult(e.target.value)} placeholder="e.g. First Trial" />
         </div>
         <div>
-          <label className="text-sm font-medium">{t("certificates.issueDate")}</label>
-          <Input value={issueDate} onChange={(e) => setIssueDate(e.target.value)} placeholder="DD/MM/YYYY" />
+          <DateField
+            label={t("certificates.issueDate")}
+            value={issueDate}
+            onChange={setIssueDate}
+            outputFormat="dmy-slash"
+          />
         </div>
       </div>
       {student ? (

@@ -35,7 +35,7 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
         homeHref="/teacher"
         roleIcon={BookMarked}
       />
-      <main className="lg:pl-[260px]">
+      <main className="shell-main">
         <div className="max-w-[1600px] px-4 pb-4 pt-[4.75rem] lg:px-6 lg:pb-6">{children}</div>
       </main>
     </PortalLayout>

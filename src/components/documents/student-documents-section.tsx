@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useState } from "react";
 import {
   DocumentUploader,
@@ -8,7 +9,7 @@ import {
   type DocType,
 } from "@/components/documents/document-uploader";
 import { useT } from "@/i18n/locale-provider";
-import { Loader2 } from "lucide-react";
+
 
 interface Props {
   studentId: string;
@@ -85,7 +86,7 @@ export function StudentDocumentsSection({ studentId }: Props) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Spinner size="lg" />
         <p className="text-sm">{t("documents.loading")}</p>
       </div>
     );

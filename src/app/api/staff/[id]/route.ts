@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { fillStaffGuNames } from "@/lib/gujarati/transliterate-server";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -30,10 +31,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!existing) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
 
     const body = await request.json();
-    const data = {
+    const data = await fillStaffGuNames({
       employeeId: body.employeeId ? String(body.employeeId).trim() : null,
       firstName: String(body.firstName || "").trim(),
+      firstNameGu: String(body.firstNameGu || "").trim() || null,
       lastName: String(body.lastName || "").trim(),
+      lastNameGu: String(body.lastNameGu || "").trim() || null,
       designation: String(body.designation || "").trim(),
       department: body.department ? String(body.department).trim() : null,
       mobileNumber: String(body.mobileNumber || "").replace(/\s/g, "").trim(),
@@ -55,7 +58,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       bankName: body.bankName ? String(body.bankName).trim() : null,
       bankAccount: body.bankAccount ? String(body.bankAccount).trim() : null,
       ifscCode: body.ifscCode ? String(body.ifscCode).trim() : null,
-    };
+    });
 
     const staff = await prisma.staff.update({ where: { id }, data });
     return NextResponse.json(staff);

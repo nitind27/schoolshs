@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { studentShortNameGu } from "@/lib/student-names";
 
 import { useEffect, useState, useCallback, Suspense } from "react";
@@ -9,21 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Badge, CategoryBadge } from "@/components/ui/badge";
 import { CATEGORIES, STUDENT_STATUSES, GENDERS } from "@/lib/constants";
-import {
-  Search,
-  Plus,
-  Trash2,
-  Edit,
-  Eye,
-  Download,
-  CheckSquare,
-  Square,
-  Play,
-  CreditCard,
-  Filter,
-  X,
-  Users,
-} from "lucide-react";
+import { Search, Plus, Trash2, Edit, Eye, Download, CheckSquare, Square, Play, CreditCard, Filter, X, Users } from "lucide-react";
 import Link from "next/link";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -43,7 +30,7 @@ export default function StudentsPage() {
     <Suspense
       fallback={
         <div className="flex h-32 items-center justify-center">
-          <div className="h-7 w-7 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+          <Spinner size="md" />
         </div>
       }
     >
@@ -334,7 +321,7 @@ function StudentsContent() {
           {/* Table body */}
           {loading ? (
             <div className="flex h-36 items-center justify-center">
-              <div className="h-7 w-7 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+              <Spinner size="md" />
             </div>
           ) : students.length === 0 ? (
             <div className="px-4 py-10 text-center">

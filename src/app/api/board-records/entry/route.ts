@@ -105,26 +105,38 @@ export async function PATCH(request: NextRequest) {
       const studentId = String(row.studentId || "");
       if (!studentId) continue;
 
-      const seatPrefix = String(row.seatPrefix || "A").trim().toUpperCase();
-      const seatNumber = String(row.seatNumber || "").replace(/\D/g, "").slice(0, 7);
-      const pct = row.percentage === "" || row.percentage == null ? null : Number(row.percentage);
+      const needDigits = standard === "12" ? 6 : 7;
+      const seatPrefix = String(row.seatPrefix || (standard === "12" ? "B" : "A")).trim().toUpperCase();
+      const seatNumber = String(row.seatNumber || "").replace(/\D/g, "").slice(0, needDigits);
+      const hasValidSeat = seatNumber.length === needDigits;
+      const pctRaw = row.percentage === "" || row.percentage == null ? null : Number(row.percentage);
+      // Percentage only allowed with a valid GSEB seat
+      const pct = hasValidSeat && pctRaw != null && Number.isFinite(pctRaw) ? pctRaw : null;
       const examYear = row.examYear ? String(row.examYear) : undefined;
 
       const data: Record<string, unknown> = {};
       if (standard === "10") {
-        if (seatPrefix) data.sscSeatPrefix = seatPrefix;
-        if (seatNumber) data.sscSeatNumber = seatNumber;
-        if (pct != null && Number.isFinite(pct)) data.percentage10th = pct;
+        data.sscSeatPrefix = hasValidSeat ? seatPrefix : null;
+        data.sscSeatNumber = hasValidSeat ? seatNumber : null;
+        data.percentage10th = pct != null ? pct : 0;
         if (examYear) data.year10th = examYear;
         data.board10th = "GSEB";
         data.standard = "10";
+        if (!hasValidSeat) {
+          data.gsebResultJson = null;
+          data.gsebFetchedAt = null;
+        }
       } else {
-        if (seatPrefix) data.hscSeatPrefix = seatPrefix;
-        if (seatNumber) data.hscSeatNumber = seatNumber;
-        if (pct != null && Number.isFinite(pct)) data.percentage12th = pct;
+        data.hscSeatPrefix = hasValidSeat ? seatPrefix : null;
+        data.hscSeatNumber = hasValidSeat ? seatNumber : null;
+        data.percentage12th = pct;
         if (examYear) data.year12th = examYear;
         data.board12th = "GSEB";
         data.standard = "12";
+        if (!hasValidSeat) {
+          data.gsebResultJson = null;
+          data.gsebFetchedAt = null;
+        }
       }
 
       const result = await prisma.student.updateMany({

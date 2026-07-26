@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, hashPassword, requireSchoolAuth } from "@/lib/auth";
-import type { UserRole } from "@/lib/roles";
+import { resolveStaffPortalRole } from "@/lib/staff-portal";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-const STAFF_PORTAL_ROLES: UserRole[] = ["teacher", "clerk"];
-
-function pickPortalRole(role: unknown, designation?: string | null): UserRole {
-  const r = String(role || "").trim();
-  if (STAFF_PORTAL_ROLES.includes(r as UserRole)) return r as UserRole;
-  const d = (designation || "").toLowerCase();
-  if (d.includes("clerk")) return "clerk";
-  return "teacher";
+function pickPortalRole(role: unknown, designation?: string | null) {
+  return resolveStaffPortalRole(role, designation);
 }
 
 /** Get portal login account linked to a staff member */

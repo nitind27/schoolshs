@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader, Spinner } from "@/components/ui/loader";
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { IdCardShareLinkManager } from "@/components/id-cards/id-card-share-link
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import { useT } from "@/i18n/locale-provider";
-import { CreditCard, Printer, Settings, Loader2, Sparkles } from "lucide-react";
+import { CreditCard, Printer, Settings, Sparkles } from "lucide-react";
 import type { Student, SchoolSettings, SchoolClass } from "@/generated/prisma/client";
 
 type StudentWithClass = Student & {
@@ -124,7 +125,7 @@ function IdCardsContent() {
             <Settings className="h-4 w-4" /> {t("idCards.schoolSettings")}
           </Button>
           <Button variant="outline" onClick={processAllPhotos} disabled={processing}>
-            {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {processing ? <Spinner size="sm" /> : <Sparkles className="h-4 w-4" />}
             {t("idCards.processPhotos")}
           </Button>
           <Button onClick={() => window.print()}>
@@ -215,9 +216,7 @@ function IdCardsContent() {
       />
 
       {loading ? (
-        <div className="flex justify-center h-48 items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600" />
-        </div>
+        <PageLoader />
       ) : students.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center text-slate-500 print:hidden">
@@ -269,7 +268,7 @@ function IdCardsContent() {
 
 export default function IdCardsPage() {
   return (
-    <Suspense fallback={<div className="flex justify-center h-48 items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600" /></div>}>
+    <Suspense fallback={<PageLoader />}>
       <IdCardsContent />
     </Suspense>
   );

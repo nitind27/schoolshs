@@ -1,12 +1,13 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { STAFF_DESIGNATIONS, getStaffRoleWork } from "@/lib/constants";
-import { Plus, Edit, Search, Users, ClipboardList, IndianRupee } from "lucide-react";
+import { Plus, Edit, Search, Users, ClipboardList, IndianRupee, KeyRound } from "lucide-react";
 import type { Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 import { PageShell } from "@/components/layout/page-shell";
@@ -22,6 +23,7 @@ export default function StaffPage() {
   const [search, setSearch] = useState("");
   const [designation, setDesignation] = useState("");
   const [dashHref, setDashHref] = useState("/dashboard");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [hrSummary, setHrSummary] = useState<{
     totalStaff: number; withSalary: number; attendanceMarked: number;
     payrollPending: number; totalNet: number;
@@ -32,6 +34,7 @@ export default function StaffPage() {
       .then((r) => r.json())
       .then((d) => {
         if (d?.user?.role === "clerk") setDashHref("/clerk");
+        setIsAdmin(d?.user?.role === "school_admin");
       })
       .catch(() => {});
   }, []);
@@ -144,9 +147,7 @@ export default function StaffPage() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center h-48 items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            </div>
+            <PageLoader />
           ) : staff.length === 0 ? (
             <div className="text-center py-16 text-slate-500">
               <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
@@ -186,9 +187,21 @@ export default function StaffPage() {
                           </span>
                         </td>
                         <td className="p-3">
-                          <Link href={`/staff/${s.id}/edit`}>
-                            <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                          </Link>
+                          <div className="flex items-center gap-0.5">
+                            {isAdmin && (
+                              <Link
+                                href={`/staff/${s.id}/account`}
+                                title={t("accountSettings.loginPasswordAction")}
+                              >
+                                <Button variant="ghost" size="icon" className="text-teal-700 hover:bg-teal-50 hover:text-teal-800">
+                                  <KeyRound className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                            )}
+                            <Link href={`/staff/${s.id}/edit`} title={t("common.edit")}>
+                              <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );

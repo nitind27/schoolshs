@@ -1,19 +1,12 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import {
-  BookOpen,
-  ChevronRight,
-  Users,
-  Award,
-  ClipboardCheck,
-  FileSpreadsheet,
-  Printer,
-} from "lucide-react";
+import { BookOpen, ChevronRight, Users, Award, ClipboardCheck, FileSpreadsheet, Printer } from "lucide-react";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import { useT } from "@/i18n/locale-provider";
 
@@ -111,9 +104,7 @@ export default function ResultsPage() {
       <div>
         <h2 className="text-base font-semibold text-slate-800 mb-3">{t("results.hubClassesTitle")}</h2>
         {loading ? (
-          <div className="flex justify-center h-48 items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-          </div>
+          <PageLoader />
         ) : classes.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center text-slate-500">

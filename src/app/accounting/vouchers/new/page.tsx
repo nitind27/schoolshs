@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
@@ -107,10 +108,13 @@ export default function NewVoucherPage() {
               emptyLabel=""
             />
           </div>
-          <div>
-            <label className="text-sm font-medium">{t("accounting.date")}</label>
-            <Input type="date" value={form.voucherDate} onChange={(e) => setForm({ ...form, voucherDate: e.target.value })} />
-          </div>
+          <DateField
+            label={t("accounting.date")}
+            value={form.voucherDate}
+            onChange={(v) => setForm({ ...form, voucherDate: v })}
+            outputFormat="iso"
+            showHint={false}
+          />
           <div>
             <label className="text-sm font-medium">{t("accounting.partyName")}</label>
             <Input value={form.partyName} onChange={(e) => setForm({ ...form, partyName: e.target.value })} placeholder={t("accounting.partyPlaceholder")} />
@@ -128,10 +132,13 @@ export default function NewVoucherPage() {
             <label className="text-sm font-medium">{t("accounting.billNo")}</label>
             <Input value={form.billNo} onChange={(e) => setForm({ ...form, billNo: e.target.value })} />
           </div>
-          <div>
-            <label className="text-sm font-medium">{t("accounting.billDate")}</label>
-            <Input type="date" value={form.billDate} onChange={(e) => setForm({ ...form, billDate: e.target.value })} />
-          </div>
+          <DateField
+            label={t("accounting.billDate")}
+            value={form.billDate}
+            onChange={(v) => setForm({ ...form, billDate: v })}
+            outputFormat="iso"
+            showHint={false}
+          />
           <div>
             <label className="text-sm font-medium">{t("accounting.chequeRefNo")}</label>
             <Input value={form.chequeNo || form.referenceNo} onChange={(e) => setForm({ ...form, chequeNo: e.target.value, referenceNo: e.target.value })} />

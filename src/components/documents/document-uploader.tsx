@@ -1,22 +1,12 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useRef, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { compressForDigitalGujarat } from "@/lib/compress-document.client";
 import { DG_DOC_LIMITS, formatKB, isDGReady } from "@/lib/dg-document-limits";
 import { useT } from "@/i18n/locale-provider";
-import {
-  Upload,
-  X,
-  FileText,
-  ImageIcon,
-  CheckCircle2,
-  Loader2,
-  AlertCircle,
-  Sparkles,
-  ShieldCheck,
-  ScanLine,
-} from "lucide-react";
+import { Upload, X, FileText, ImageIcon, CheckCircle2, AlertCircle, Sparkles, ShieldCheck, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DocumentScanner } from "@/components/documents/document-scanner";
 
@@ -241,7 +231,7 @@ function DocumentCard({
               </>
             ) : (
               <>
-                <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+                <Spinner size="lg" />
                 <span className="text-sm text-slate-600">{t("documents.uploading")}</span>
               </>
             )}

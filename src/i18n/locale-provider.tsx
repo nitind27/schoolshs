@@ -3,7 +3,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { messages } from "./messages";
 import { createTranslator } from "./translate";
-import { LOCALE_STORAGE_KEY, type Locale } from "./types";
+import {
+  DEFAULT_LOCALE,
+  LEGACY_LOCALE_KEYS,
+  LOCALE_EXPLICIT_KEY,
+  LOCALE_STORAGE_KEY,
+  type Locale,
+} from "./types";
 
 interface LocaleContextValue {
   locale: Locale;
@@ -13,30 +19,61 @@ interface LocaleContextValue {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
+function clearLegacyLocaleKeys() {
+  for (const key of LEGACY_LOCALE_KEYS) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 function readStoredLocale(): Locale {
-  if (typeof window === "undefined") return "en";
+  if (typeof window === "undefined") return DEFAULT_LOCALE;
+  clearLegacyLocaleKeys();
+
+  const explicit = localStorage.getItem(LOCALE_EXPLICIT_KEY) === "1";
   const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
-  return stored === "gu" ? "gu" : "en";
+
+  // Only keep English/Gujarati if the user explicitly chose it in the language switcher
+  if (explicit && (stored === "en" || stored === "gu")) return stored;
+
+  // Force Gujarati for everyone else (including old silent English defaults)
+  localStorage.setItem(LOCALE_STORAGE_KEY, DEFAULT_LOCALE);
+  return DEFAULT_LOCALE;
+}
+
+function applyDocumentLocale(locale: Locale) {
+  document.documentElement.lang = locale === "gu" ? "gu" : "en";
+  document.documentElement.classList.toggle("locale-gu", locale === "gu");
+  document.documentElement.classList.toggle("locale-en", locale !== "gu");
 }
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en");
+  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setLocaleState(readStoredLocale());
+    const next = readStoredLocale();
+    setLocaleState(next);
+    applyDocumentLocale(next);
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
-    document.documentElement.lang = locale === "gu" ? "gu" : "en";
-    document.documentElement.classList.toggle("locale-gu", locale === "gu");
-    document.documentElement.classList.toggle("locale-en", locale !== "gu");
+    applyDocumentLocale(locale);
     localStorage.setItem(LOCALE_STORAGE_KEY, locale);
   }, [locale, mounted]);
 
   const setLocale = useCallback((next: Locale) => {
+    try {
+      localStorage.setItem(LOCALE_EXPLICIT_KEY, "1");
+      localStorage.setItem(LOCALE_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
     setLocaleState(next);
   }, []);
 

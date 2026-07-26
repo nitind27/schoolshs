@@ -43,6 +43,29 @@
   --font-gujarati: var(--font-noto-gujarati);
 }
 
+/* Native date picker — calendar icon on the far right (not centered) */
+input[type="date"].shs-date-input,
+input.shs-date-input[type="date"] {
+  display: block;
+  position: relative;
+  min-width: 0;
+}
+input[type="date"].shs-date-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  opacity: 0.65;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  margin: 0;
+}
+input[type="date"].shs-date-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 /* ── Base Reset ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -51,18 +74,56 @@ html { height: 100%; scroll-behavior: smooth; }
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-html.locale-gu body {
-  font-family: var(--font-gujarati), var(--font-sans), system-ui, sans-serif;
+/* Gujarati locale — Noto Sans Gujarati everywhere (Tailwind font-sans too) */
+html.locale-gu {
+  --font-sans: var(--font-noto-gujarati), var(--font-geist-sans), system-ui, sans-serif;
+  --font-gujarati: var(--font-noto-gujarati), var(--font-geist-sans), system-ui, sans-serif;
+}
+
+html.locale-gu body,
+html.locale-gu button,
+html.locale-gu input,
+html.locale-gu select,
+html.locale-gu textarea,
+html.locale-gu optgroup,
+html.locale-gu label,
+html.locale-gu .font-sans {
+  font-family: var(--font-noto-gujarati), var(--font-geist-sans), system-ui, sans-serif;
+}
+
+html.locale-gu h1,
+html.locale-gu h2,
+html.locale-gu h3,
+html.locale-gu h4,
+html.locale-gu h5,
+html.locale-gu h6,
+html.locale-gu strong,
+html.locale-gu b,
+html.locale-gu th,
+html.locale-gu .font-bold,
+html.locale-gu .font-semibold,
+html.locale-gu .font-extrabold,
+html.locale-gu .font-black {
+  font-family: var(--font-noto-gujarati), var(--font-geist-sans), system-ui, sans-serif;
+  letter-spacing: 0;
 }
 
 .font-gujarati {
-  font-family: var(--font-gujarati), var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-noto-gujarati), var(--font-geist-sans), system-ui, sans-serif;
+}
+
+html.locale-en body {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+html.locale-en {
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────── */

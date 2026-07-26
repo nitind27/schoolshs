@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,21 +10,7 @@ import { InfoModal } from "@/components/ui/info-modal";
 import { AccountingHelpContent } from "@/components/accounting/accounting-help-content";
 import { AddLedgerAccount } from "@/components/accounting/add-ledger-account";
 import { PageShell } from "@/components/layout/page-shell";
-import {
-  Calculator,
-  BookOpen,
-  FileText,
-  TrendingUp,
-  Shield,
-  Plus,
-  ArrowRight,
-  IndianRupee,
-  HelpCircle,
-  CheckCircle2,
-  Circle,
-  AlertCircle,
-  Send,
-} from "lucide-react";
+import { Calculator, BookOpen, FileText, TrendingUp, Shield, Plus, ArrowRight, IndianRupee, HelpCircle, CheckCircle2, Circle, AlertCircle, Send } from "lucide-react";
 import { formatIndianCurrency } from "@/lib/accounting";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import { useT } from "@/i18n/locale-provider";
@@ -122,9 +109,7 @@ export default function AccountingPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center h-64 items-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
+      <PageLoader />
     );
   }
 

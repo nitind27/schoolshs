@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader, Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -22,7 +23,7 @@ import {
   resolveVisibleDayIndices,
   type AttendanceViewFilters,
 } from "@/lib/attendance-view-filters";
-import { ClipboardList, Loader2, Printer, Save, CheckCircle2 } from "lucide-react";
+import { ClipboardList, Printer, Save, CheckCircle2 } from "lucide-react";
 import { teacherTheme as tp } from "@/components/teacher/teacher-theme";
 
 function TeacherAttendanceContent() {
@@ -239,9 +240,7 @@ function TeacherAttendanceContent() {
 
   if (classesLoading) {
     return (
-      <div className="flex h-48 items-center justify-center">
-        <Loader2 className={`h-8 w-8 animate-spin ${tp.icon}`} />
-      </div>
+      <PageLoader />
     );
   }
 
@@ -267,7 +266,7 @@ function TeacherAttendanceContent() {
               </Button>
             </Link>
             <Button size="sm" className={tp.btn} onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
               {t("attendance.save")}
             </Button>
           </div>
@@ -301,9 +300,7 @@ function TeacherAttendanceContent() {
       )}
 
       {loading ? (
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className={`h-8 w-8 animate-spin ${tp.icon}`} />
-        </div>
+        <PageLoader />
       ) : !loaded ? (
         <Card>
           <CardContent className="py-16 text-center text-slate-500">
@@ -359,9 +356,7 @@ export default function TeacherAttendancePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className={`h-8 w-8 animate-spin ${tp.icon}`} />
-        </div>
+        <PageLoader />
       }
     >
       <TeacherAttendanceContent />

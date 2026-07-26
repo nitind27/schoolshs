@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { Select } from "@/components/ui/select";
 import { ArrowLeft, Save, Send, Printer, Trophy } from "lucide-react";
 import { SCHOOL_STANDARDS, FINANCIAL_YEARS } from "@/lib/constants";
@@ -154,7 +155,13 @@ function ResultsEntryInner() {
               emptyLabel=""
             />
             <Input placeholder={t("results.section")} value={form.section} onChange={(e) => setForm({ ...form, section: e.target.value })} />
-            <Input type="date" label={t("results.reopeningDate")} value={form.reopeningDate} onChange={(e) => setForm({ ...form, reopeningDate: e.target.value })} />
+            <DateField
+              label={t("results.reopeningDate")}
+              value={form.reopeningDate}
+              onChange={(v) => setForm({ ...form, reopeningDate: v })}
+              outputFormat="iso"
+              showHint={false}
+            />
             <div className="rounded-lg border bg-slate-50 p-3 text-sm">
               <p className="font-medium mb-2">{t("results.fixedSubjects")}</p>
               <ul className="grid grid-cols-2 gap-1 text-slate-600">
@@ -183,7 +190,14 @@ function ResultsEntryInner() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Input className="w-40" type="date" value={form.reopeningDate} onChange={(e) => setForm({ ...form, reopeningDate: e.target.value })} placeholder={t("results.reopeningDate")} />
+          <DateField
+            className="w-40"
+            value={form.reopeningDate}
+            onChange={(v) => setForm({ ...form, reopeningDate: v })}
+            outputFormat="iso"
+            showHint={false}
+            placeholder={t("results.reopeningDate")}
+          />
           <Button variant="outline" onClick={saveAll}><Save className="h-4 w-4" /> {t("results.save")}</Button>
           <Button onClick={publish}><Send className="h-4 w-4" /> {t("results.publish")}</Button>
           {Boolean(exam?.isPublished) && (

@@ -1,38 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-function clean(s: unknown, max = 200) {
-  return String(s ?? "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .slice(0, max);
-}
+import { validateContactForm } from "@/lib/contact-support";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const name = clean(body.name, 120);
-    const email = clean(body.email, 180).toLowerCase();
-    const phone = clean(body.phone, 30) || null;
-    const schoolCode = clean(body.schoolCode, 40).toUpperCase() || null;
-    const subject = clean(body.subject, 160);
-    const message = clean(body.message, 4000);
+    const result = validateContactForm({
+      name: body.name,
+      email: body.email,
+      phone: body.phone,
+      schoolCode: body.schoolCode,
+      subject: body.subject,
+      message: body.message,
+    });
 
-    if (!name || name.length < 2) {
-      return NextResponse.json({ error: "Please enter your name" }, { status: 400 });
+    if (!result.ok) {
+      const firstField = (Object.keys(result.errors)[0] || "message") as keyof typeof result.errors;
+      return NextResponse.json(
+        {
+          error: result.errors[firstField],
+          field: firstField,
+          code: result.codes[firstField],
+          errors: result.errors,
+          codes: result.codes,
+        },
+        { status: 400 }
+      );
     }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: "Please enter a valid email" }, { status: 400 });
-    }
-    if (!subject || subject.length < 3) {
-      return NextResponse.json({ error: "Please enter a subject" }, { status: 400 });
-    }
-    if (!message || message.length < 10) {
-      return NextResponse.json({ error: "Please enter a message (at least 10 characters)" }, { status: 400 });
-    }
+
+    const { name, email, phone, schoolCode, subject, message } = result.data;
 
     const row = await prisma.contactSupportMessage.create({
-      data: { name, email, phone, schoolCode, subject, message, status: "new" },
+      data: {
+        name,
+        email,
+        phone: phone || null,
+        schoolCode: schoolCode || null,
+        subject,
+        message,
+        status: "new",
+      },
     });
 
     return NextResponse.json({ ok: true, id: row.id });

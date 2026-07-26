@@ -27,7 +27,8 @@ export async function POST(request: NextRequest, { params }: Params) {
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error(e);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    const msg = e instanceof Error ? e.message : "Upload failed";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 

@@ -1,12 +1,13 @@
 "use client";
 
+import { PageLoader, Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { InfoModal } from "@/components/ui/info-modal";
 import { formatINR, StatusBadge } from "@/components/admin/admin-ui";
-import { FileText, School, ExternalLink, Trash2, Loader2, Search } from "lucide-react";
+import { FileText, School, ExternalLink, Trash2, Search } from "lucide-react";
 import { hasContractData } from "@/lib/contract-utils";
 import { useConfirm } from "@/hooks/use-confirm";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -109,7 +110,7 @@ export default function ContractsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-2 border-violet-200 border-t-violet-600" /></div>
+        <PageLoader />
       ) : withContract.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center text-sm text-slate-500">No contracts yet.</CardContent>
@@ -191,7 +192,7 @@ export default function ContractsPage() {
                               title="Delete contract"
                               className="text-red-600 border-red-200 hover:bg-red-50"
                             >
-                              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                              {busy ? <Spinner size="sm" /> : <Trash2 className="h-3.5 w-3.5" />}
                             </Button>
                           </div>
                         </td>

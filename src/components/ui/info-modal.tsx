@@ -13,12 +13,15 @@ interface InfoModalProps {
   children: React.ReactNode;
   /** Wider panel for forms with many fields */
   wide?: boolean;
+  /** Extra-wide panel for data tables */
+  size?: "default" | "wide" | "xl";
 }
 
-export function InfoModal({ isOpen, onClose, title, children, wide }: InfoModalProps) {
+export function InfoModal({ isOpen, onClose, title, children, wide, size }: InfoModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const { locale } = useLocale();
+  const resolvedSize = size || (wide ? "wide" : "default");
 
   useEffect(() => {
     setMounted(true);
@@ -45,12 +48,11 @@ export function InfoModal({ isOpen, onClose, title, children, wide }: InfoModalP
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-5"
       role="dialog"
       aria-modal="true"
       aria-labelledby="info-modal-title"
     >
-      {/* Backdrop */}
       <button
         type="button"
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
@@ -58,15 +60,16 @@ export function InfoModal({ isOpen, onClose, title, children, wide }: InfoModalP
         aria-label="Close dialog"
       />
 
-      {/* Panel — centered in viewport, not page scroll position */}
       <div
         ref={modalRef}
         className={cn(
           "relative z-10 flex w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-fade-in",
-          wide ? "max-w-3xl" : "max-w-lg sm:max-w-2xl",
+          resolvedSize === "xl" && "max-w-6xl",
+          resolvedSize === "wide" && "max-w-3xl",
+          resolvedSize === "default" && "max-w-lg sm:max-w-2xl",
           locale === "gu" && "font-gujarati"
         )}
-        style={{ maxHeight: "min(90dvh, 720px)" }}
+        style={{ maxHeight: resolvedSize === "xl" ? "min(92dvh, 860px)" : "min(90dvh, 720px)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
@@ -83,7 +86,7 @@ export function InfoModal({ isOpen, onClose, title, children, wide }: InfoModalP
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
           {children}
         </div>
       </div>

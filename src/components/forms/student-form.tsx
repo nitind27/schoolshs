@@ -1,19 +1,17 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   GUJARAT_DISTRICTS,
   CATEGORIES,
   GENDERS,
   RELIGIONS,
   FINANCIAL_YEARS,
-  COURSE_TYPES,
   CURRENT_YEARS,
   BOARDS,
   BLOOD_GROUPS,
@@ -21,7 +19,7 @@ import {
   standardToCurrentYear,
 } from "@/lib/constants";
 import { PRE_MATRIC_SCHEMES, POST_MATRIC_SCHEMES } from "@/lib/dg-portal";
-import { ChevronLeft, ChevronRight, Save, CheckCircle, Sparkles, Cloud, CloudOff, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, CheckCircle, Sparkles, Cloud, CloudOff } from "lucide-react";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
 import { getDgPortalConfig } from "@/lib/dg-portal";
 import { SsgujaratFetch } from "@/components/forms/ssgujarat-fetch";
@@ -33,8 +31,26 @@ import { CategoryBadge } from "@/components/ui/badge";
 import { useT } from "@/i18n/locale-provider";
 import { StudentDocumentsSection } from "@/components/documents/student-documents-section";
 import { GrSetupPanel } from "@/components/forms/gr-setup-panel";
-import { hasDraftContent } from "@/lib/student-draft";
+import { hasDraftContent, isDraftDobPlaceholder } from "@/lib/student-draft";
 import { getCompletionPercentage } from "@/lib/validation";
+import { DateField } from "@/components/ui/date-field";
+import {
+  calcAgeYears,
+  formatDobDisplay,
+  todayDobDisplay,
+} from "@/lib/student-age";
+import {
+  ACCOUNT_NUMBER_MAX,
+  ACCOUNT_NUMBER_MIN,
+  RATION_CARD_MAX,
+  courseTypesForStandard,
+  defaultCourseTypeForStandard,
+  isScholarshipRequired,
+  isValidRationCard,
+  previousEducationMode,
+  scholarshipSchemesForCategory,
+} from "@/lib/student-academic-rules";
+import "./student-form.css";
 
 type FormData = Partial<Student>;
 
@@ -90,7 +106,6 @@ export function StudentForm({
   submitLabel,
 }: StudentFormProps) {
   const t = useT();
-  const router = useRouter();
   const isEditMode = Boolean(studentIdProp || initialData.id);
   const defaultSubmitLabel = submitLabel ?? t("studentForm.saveStudent");
 
@@ -134,7 +149,6 @@ export function StudentForm({
   const [form, setForm] = useState<FormData>({
     maritalStatus: "Unmarried",
     habitationType: "Own",
-    familySize: 4,
     residentType: "Rural",
     isHosteler: false,
     isOrphan: false,
@@ -142,6 +156,15 @@ export function StudentForm({
     financialYear: "2025-26",
     classId: initialClassId || initialData.classId || undefined,
     ...initialData,
+    familySize:
+      initialData.familySize !== undefined && initialData.familySize !== null
+        ? Number(initialData.familySize)
+        : 0,
+    dateOfBirth: (() => {
+      const raw = initialData.dateOfBirth?.trim() || "";
+      if (raw && !isDraftDobPlaceholder(raw)) return formatDobDisplay(raw);
+      return todayDobDisplay();
+    })(),
   });
   const [guTouched, setGuTouched] = useState<Partial<Record<GuTouchKey, boolean>>>(() =>
     guTouchedFromData({ ...initialData }),
@@ -151,6 +174,15 @@ export function StudentForm({
   const skipAutoSave = useRef(true);
   const [grReady, setGrReady] = useState(isEditMode && Boolean(initialData.grNumber || studentIdProp));
   const [grLocked, setGrLocked] = useState(isEditMode && Boolean(initialData.grNumber));
+  const [pincodeStatus, setPincodeStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [permPincodeStatus, setPermPincodeStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [ifscStatus, setIfscStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const pincodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const permPincodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ifscTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPincode = useRef("");
+  const lastPermPincode = useRef("");
+  const lastIfsc = useRef("");
 
   const markGuTouched = (key: GuTouchKey) => {
     setGuTouched((prev) => ({ ...prev, [key]: true }));
@@ -162,10 +194,12 @@ export function StudentForm({
   }, [studentIdProp, initialData.id]);
 
   useEffect(() => {
-    fetch("/api/classes?academicYear=2025-26")
+    const year = form.financialYear || "2025-26";
+    fetch(`/api/classes?academicYear=${encodeURIComponent(year)}`)
       .then((r) => r.json())
-      .then((d) => setClasses(d.classes || []));
-  }, []);
+      .then((d) => setClasses(d.classes || []))
+      .catch(() => setClasses([]));
+  }, [form.financialYear]);
 
   useEffect(() => {
     if (!form.classId) return;
@@ -177,15 +211,146 @@ export function StudentForm({
       section: cls.section,
       courseName: standardToCourseName(cls.standard),
       currentYear: standardToCurrentYear(cls.standard),
+      courseType: defaultCourseTypeForStandard(cls.standard) || prev.courseType,
       institutionName: cls.institutionName || prev.institutionName,
       institutionDistrict: cls.institutionDistrict || prev.institutionDistrict,
       financialYear: cls.academicYear || prev.financialYear,
     }));
   }, [form.classId, classes]);
 
+  const currentAge = calcAgeYears(form.dateOfBirth);
+  const scholarshipRequired = isScholarshipRequired(form.category);
+  const categorySchemes = scholarshipSchemesForCategory(form.category);
+  const scholarshipOptions =
+    categorySchemes.length > 0
+      ? categorySchemes.map((s) => {
+          const pre = (PRE_MATRIC_SCHEMES as readonly string[]).includes(s);
+          return {
+            value: s,
+            label: `${pre ? t("studentForm.preMatric") : t("studentForm.postMatric")} ${s}`,
+          };
+        })
+      : SCHOLARSHIP_SCHEME_OPTIONS;
+  const courseTypeOptions = courseTypesForStandard(form.standard);
+  const prevEduMode = previousEducationMode(form.standard);
+
   const update = (field: string, value: unknown) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  useEffect(() => {
+    if (!scholarshipRequired) return;
+    if (!form.scholarshipScheme || categorySchemes.length === 0) return;
+    if (!categorySchemes.includes(form.scholarshipScheme)) {
+      setForm((prev) => ({ ...prev, scholarshipScheme: "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.category]);
+
+  const lookupPincode = async (
+    pin: string,
+    which: "current" | "permanent",
+  ) => {
+    if (which === "current") {
+      if (pin === lastPincode.current) return;
+      lastPincode.current = pin;
+      setPincodeStatus("loading");
+    } else {
+      if (pin === lastPermPincode.current) return;
+      lastPermPincode.current = pin;
+      setPermPincodeStatus("loading");
+    }
+    try {
+      const res = await fetch(`/api/pincode/${pin}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "fail");
+      if (which === "current") {
+        setForm((prev) => ({
+          ...prev,
+          currentPincode: pin,
+          currentDistrict: data.district || prev.currentDistrict,
+          currentCity: data.city || data.taluka || prev.currentCity,
+        }));
+        setPincodeStatus("ok");
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          permanentPincode: pin,
+          permanentDistrict: data.district || prev.permanentDistrict,
+          permanentCity: data.city || data.taluka || prev.permanentCity,
+        }));
+        setPermPincodeStatus("ok");
+      }
+    } catch {
+      if (which === "current") setPincodeStatus("error");
+      else setPermPincodeStatus("error");
+    }
+  };
+
+  const lookupIfsc = async (code: string) => {
+    if (code === lastIfsc.current) return;
+    lastIfsc.current = code;
+    setIfscStatus("loading");
+    try {
+      const res = await fetch(`/api/ifsc/${code}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "fail");
+      setForm((prev) => ({
+        ...prev,
+        ifscCode: code,
+        bankName: data.bankName || prev.bankName,
+        branchName: data.branchName || prev.branchName,
+      }));
+      setIfscStatus("ok");
+    } catch {
+      setIfscStatus("error");
+    }
+  };
+
+  useEffect(() => {
+    const pin = String(form.currentPincode || "").replace(/\D/g, "").slice(0, 6);
+    if (pin.length !== 6) {
+      setPincodeStatus("idle");
+      return;
+    }
+    if (pincodeTimer.current) clearTimeout(pincodeTimer.current);
+    pincodeTimer.current = setTimeout(() => lookupPincode(pin, "current"), 400);
+    return () => {
+      if (pincodeTimer.current) clearTimeout(pincodeTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.currentPincode]);
+
+  useEffect(() => {
+    const pin = String(form.permanentPincode || "").replace(/\D/g, "").slice(0, 6);
+    if (pin.length !== 6) {
+      setPermPincodeStatus("idle");
+      return;
+    }
+    if (permPincodeTimer.current) clearTimeout(permPincodeTimer.current);
+    permPincodeTimer.current = setTimeout(() => lookupPincode(pin, "permanent"), 400);
+    return () => {
+      if (permPincodeTimer.current) clearTimeout(permPincodeTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.permanentPincode]);
+
+  useEffect(() => {
+    const code = String(form.ifscCode || "")
+      .trim()
+      .toUpperCase()
+      .replace(/\s/g, "");
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(code)) {
+      setIfscStatus("idle");
+      return;
+    }
+    if (ifscTimer.current) clearTimeout(ifscTimer.current);
+    ifscTimer.current = setTimeout(() => lookupIfsc(code), 400);
+    return () => {
+      if (ifscTimer.current) clearTimeout(ifscTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.ifscCode]);
 
   const completionPct = getCompletionPercentage(form);
 
@@ -199,12 +364,23 @@ export function StudentForm({
     isNew: boolean;
   }) => {
     skipAutoSave.current = true;
-    setForm((prev) => ({ ...prev, ...suggested }));
+    setForm((prev) => {
+      const next = { ...prev, ...suggested };
+      // For brand-new GR draft (no existing student data), keep identity fields empty in UI.
+      if (isNew) {
+        next.aadhaarNumber = "";
+        next.mobileNumber = "";
+      }
+      // Draft / empty DOB must not keep the old 01/01/2000 placeholder
+      if (isDraftDobPlaceholder(String(next.dateOfBirth || ""))) {
+        next.dateOfBirth = todayDobDisplay();
+      } else if (next.dateOfBirth) {
+        next.dateOfBirth = formatDobDisplay(String(next.dateOfBirth));
+      }
+      return next;
+    });
     if (studentId) {
       setSavedStudentId(studentId);
-      if (!isEditMode && isNew) {
-        router.replace(`/students/${studentId}/edit`, { scroll: false });
-      }
     }
     setGrReady(true);
     setGrLocked(true);
@@ -376,55 +552,50 @@ export function StudentForm({
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
+    <div className="sf-wrap">
       <GrSetupPanel
         classes={classes}
+        academicYear={form.financialYear || "2025-26"}
         classId={form.classId || ""}
         grNumber={form.grNumber || ""}
         locked={grLocked}
         studentId={savedStudentId}
+        onAcademicYearChange={(year) => {
+          setForm((prev) => ({
+            ...prev,
+            financialYear: year,
+            classId: null,
+            grNumber: "",
+          }));
+        }}
         onClassChange={(id) => update("classId", id || null)}
         onGrNumberChange={(v) => update("grNumber", v)}
+        onUnlockEdit={() => setGrLocked(false)}
         onReady={handleGrReady}
       />
 
       {!grReady && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {t("studentForm.grSetupRequired")}
-        </div>
+        <div className="sf-alert">{t("studentForm.grSetupRequired")}</div>
       )}
 
       {grReady && (
         <>
-      {/* Portal-style header */}
-      <div className="relative overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-6 py-5 text-white shadow-lg">
-        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute -bottom-6 left-1/3 h-24 w-24 rounded-full bg-indigo-400/20 blur-xl" />
-        <div className="relative flex flex-wrap items-center justify-between gap-4">
+      <div className="sf-hero">
+        <div className="sf-hero__glow sf-hero__glow--a" />
+        <div className="sf-hero__glow sf-hero__glow--b" />
+        <div className="sf-hero__row">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-blue-100">
-              {t("studentForm.portalBadge")}
-            </p>
-            <h2 className="text-xl font-bold mt-0.5">{t("studentForm.portalTitle")}</h2>
-            <p className="text-sm text-blue-100 mt-1 max-w-xl">{t("studentForm.portalSubtitle")}</p>
+            <p className="sf-hero__kicker">{t("studentForm.portalBadge")}</p>
+            <h2 className="sf-hero__title">{t("studentForm.portalTitle")}</h2>
+            <p className="sf-hero__sub">{t("studentForm.portalSubtitle")}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-xl bg-white/15 backdrop-blur px-4 py-2 text-center min-w-[72px]">
-              <p className="text-2xl font-bold leading-none">{completionPct}%</p>
-              <p className="text-[10px] uppercase tracking-wide text-blue-100 mt-1">{t("studentForm.complete")}</p>
+          <div className="sf-hero__meta">
+            <div className="sf-hero__pct">
+              <p className="sf-hero__pct-num">{completionPct}%</p>
+              <p className="sf-hero__pct-label">{t("studentForm.complete")}</p>
             </div>
-            <div
-              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium backdrop-blur ${
-                autoSaveStatus === "saved"
-                  ? "bg-emerald-500/25 text-emerald-50"
-                  : autoSaveStatus === "saving"
-                    ? "bg-white/15 text-blue-50"
-                    : autoSaveStatus === "error"
-                      ? "bg-red-500/25 text-red-50"
-                      : "bg-white/10 text-blue-100"
-              }`}
-            >
-              {autoSaveStatus === "saving" && <Loader2 className="h-4 w-4 animate-spin" />}
+            <div className="sf-hero__save" data-state={autoSaveStatus}>
+              {autoSaveStatus === "saving" && <Spinner size="sm" />}
               {autoSaveStatus === "saved" && <Cloud className="h-4 w-4" />}
               {autoSaveStatus === "error" && <CloudOff className="h-4 w-4" />}
               {autoSaveStatus === "idle" && <Cloud className="h-4 w-4 opacity-70" />}
@@ -440,19 +611,15 @@ export function StudentForm({
             </div>
           </div>
         </div>
-        <div className="relative mt-4 h-1.5 rounded-full bg-white/20 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-300 to-cyan-300 transition-all duration-500"
-            style={{ width: `${completionPct}%` }}
-          />
+        <div className="sf-hero__bar">
+          <div className="sf-hero__bar-fill" style={{ width: `${completionPct}%` }} />
         </div>
       </div>
 
-      {/* Step Indicator */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between overflow-x-auto pb-1">
+      <div className="sf-steps">
+        <div className="sf-steps__track">
           {STEPS.map((s, i) => (
-            <div key={s.id} className="flex items-center flex-1 min-w-[80px]">
+            <div key={s.id} className="sf-steps__item">
               <button
                 type="button"
                 onClick={() => {
@@ -460,45 +627,41 @@ export function StudentForm({
                   setStep(s.id);
                 }}
                 disabled={s.id === 6 && !savedStudentId}
-                className={`flex items-center gap-2 ${step >= s.id ? "text-blue-600" : "text-slate-400"} ${s.id === 6 && !savedStudentId ? "opacity-50 cursor-not-allowed" : ""}`}
+                className="sf-steps__btn"
+                data-active={step === s.id ? "true" : "false"}
+                data-done={step > s.id ? "true" : "false"}
               >
-                <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 shrink-0 transition-colors ${
-                    step === s.id
-                      ? "bg-blue-600 text-white border-blue-600 ring-4 ring-blue-100"
-                      : step > s.id
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "border-slate-300 text-slate-400 bg-white"
-                  }`}
-                >
+                <div className="sf-steps__num">
                   {step > s.id ? <CheckCircle className="h-4 w-4" /> : s.id}
                 </div>
-                <div className="hidden lg:block text-left">
-                  <p className="text-sm font-medium leading-tight">{s.title}</p>
-                  <p className="text-[11px] text-slate-400">{s.desc}</p>
+                <div className="sf-steps__text">
+                  <p className="sf-steps__title">{s.title}</p>
+                  <p className="sf-steps__desc">{s.desc}</p>
                 </div>
               </button>
               {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-2 min-w-[12px] ${step > s.id ? "bg-blue-500" : "bg-slate-200"}`} />
+                <div className="sf-steps__line" data-done={step > s.id ? "true" : "false"} />
               )}
             </div>
           ))}
         </div>
       </div>
 
-      <Card className="border-slate-200 shadow-md rounded-2xl overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">{STEPS[step - 1].title}</CardTitle>
-            <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+      <div className="sf-card">
+        <div className="sf-card__head">
+          <div className="sf-card__head-row">
+            <h3 className="sf-card__title">{STEPS[step - 1].title}</h3>
+            <span className="sf-card__badge">
               {t("studentForm.stepOf", { current: step, total: STEPS.length })}
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-1">{STEPS[step - 1].desc}</p>
-        </CardHeader>
-        <CardContent>
+          <p className="sf-card__desc">{STEPS[step - 1].desc}</p>
+        </div>
+        <div className="sf-card__body">
           {step === 1 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="sf-stack">
+              <div className="sf-block sf-block--plain">
+                <div className="sf-grid">
               <BilingualNameField
                 label={t("fields.firstName")}
                 required
@@ -529,18 +692,18 @@ export function StudentForm({
                 onGuTouched={() => markGuTouched("surnameGu")}
               />
               {categoryHint && categoryHint.source !== "stored" && (
-                <div className="md:col-span-2 flex flex-wrap items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm">
+                <div className="sf-suggest sf-span-full">
                   <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
-                  <span className="text-amber-900">
+                  <span>
                     {t("studentForm.categorySuggest")} <CategoryBadge category={categoryHint.category} />
-                    <span className="text-xs text-amber-700 ml-1">({categoryHint.source}, {categoryHint.confidence})</span>
+                    <span className="text-xs ml-1">({categoryHint.source}, {categoryHint.confidence})</span>
                   </span>
                   {form.category !== categoryHint.category && (
                     <Button type="button" size="sm" variant="outline" onClick={applySuggestedCategory}>
                       {t("studentForm.applyCategory", { category: categoryHint.category })}
                     </Button>
                   )}
-                  <span className="text-xs text-amber-600">{t("studentForm.verifyCaste")}</span>
+                  <span className="text-xs opacity-80">{t("studentForm.verifyCaste")}</span>
                 </div>
               )}
               <BilingualNameField
@@ -553,25 +716,64 @@ export function StudentForm({
                 guTouched={!!guTouched.aadhaarNameGu}
                 onGuTouched={() => markGuTouched("aadhaarNameGu")}
               />
-              <Input label={t("fields.dateOfBirth")} required placeholder="01/01/2005" value={form.dateOfBirth || ""} onChange={(e) => update("dateOfBirth", e.target.value)} />
+              <div>
+                <DateField
+                  label={t("fields.dateOfBirth")}
+                  required
+                  value={form.dateOfBirth || ""}
+                  onChange={(v) => update("dateOfBirth", v)}
+                  outputFormat="dmy-slash"
+                />
+              </div>
+              <div>
+                <Input
+                  label={t("studentForm.ageLabel")}
+                  value={currentAge != null ? t("studentForm.ageYears", { age: currentAge }) : ""}
+                  disabled
+                  placeholder="—"
+                />
+                <p className="sf-hint">{t("studentForm.ageHint")}</p>
+              </div>
               <Select label={t("fields.gender")} required options={genderOptions} value={form.gender || ""} onChange={(e) => update("gender", e.target.value)} />
               <Input label={t("fields.aadhaarNumber")} required placeholder="123456789012" maxLength={12} value={form.aadhaarNumber || ""} onChange={(e) => update("aadhaarNumber", e.target.value)} />
-              <SsgujaratFetch
-                aadhaarNumber={form.aadhaarNumber || ""}
-                childUid={form.childUid || ""}
-                onApply={applySsgujaratData}
-              />
-              <Input label={t("fields.rationCardNumber")} value={form.rationCardNumber || ""} onChange={(e) => update("rationCardNumber", e.target.value)} />
+              <div className="sf-span-full">
+                <SsgujaratFetch
+                  aadhaarNumber={form.aadhaarNumber || ""}
+                  childUid={form.childUid || ""}
+                  onApply={applySsgujaratData}
+                />
+              </div>
+              <div>
+                <Input
+                  label={t("fields.rationCardNumber")}
+                  maxLength={RATION_CARD_MAX}
+                  value={form.rationCardNumber || ""}
+                  onChange={(e) =>
+                    update(
+                      "rationCardNumber",
+                      e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, RATION_CARD_MAX),
+                    )
+                  }
+                />
+                <p className="sf-hint">{t("studentForm.rationCardHint")}</p>
+                {form.rationCardNumber && !isValidRationCard(form.rationCardNumber) && (
+                  <p className="sf-hint sf-hint--error">{t("studentForm.rationCardHint")}</p>
+                )}
+              </div>
               <Input label={t("fields.mobileNumber")} required placeholder="9876543210" maxLength={10} value={form.mobileNumber || ""} onChange={(e) => update("mobileNumber", e.target.value)} />
               <Input label={t("fields.email")} type="email" value={form.email || ""} onChange={(e) => update("email", e.target.value)} />
               <Select label={t("fields.category")} required options={CATEGORIES} value={form.category || ""} onChange={(e) => update("category", e.target.value)} />
               <Input label={t("fields.caste")} value={form.caste || ""} onChange={(e) => update("caste", e.target.value)} />
               <Select label={t("fields.religion")} required options={RELIGIONS} value={form.religion || ""} onChange={(e) => update("religion", e.target.value)} />
               <Select label={t("fields.maritalStatus")} options={maritalOptions} value={form.maritalStatus || "Unmarried"} onChange={(e) => update("maritalStatus", e.target.value)} />
+                </div>
+              </div>
 
-              <div className="md:col-span-2 mt-2 pt-4 border-t border-slate-200">
-                <h4 className="font-medium text-slate-900 mb-3">{t("studentForm.schoolEnrollment")}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="sf-block sf-block--school">
+                <div className="sf-block__head">
+                  <h4 className="sf-block__title">{t("studentForm.schoolEnrollment")}</h4>
+                </div>
+                <div className="sf-grid">
                   <Input label={t("fields.standard")} value={form.standard || ""} disabled />
                   <Input label={t("fields.section")} value={form.section || ""} disabled />
                   <Input label={t("fields.rollNumber")} value={form.rollNumber || ""} onChange={(e) => update("rollNumber", e.target.value)} />
@@ -585,10 +787,10 @@ export function StudentForm({
                   <Select label={t("fields.bloodGroup")} options={["", ...BLOOD_GROUPS]} value={form.bloodGroup || ""} onChange={(e) => update("bloodGroup", e.target.value || null)} />
                 </div>
                 {grLocked && (
-                  <p className="mt-2 text-xs text-slate-500">{t("studentForm.grClassLockedHint")}</p>
+                  <p className="sf-hint">{t("studentForm.grClassLockedHint")}</p>
                 )}
                 {classes.length === 0 && (
-                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  <div className="sf-note sf-note--warn" style={{ marginTop: "0.75rem" }}>
                     No classes configured. Admin must create classes/divisions first in Classes module.
                   </div>
                 )}
@@ -597,10 +799,12 @@ export function StudentForm({
           )}
 
           {step === 2 && (
-            <div className="space-y-6">
-              <div>
-                <h4 className="font-medium text-slate-900 mb-3">{t("studentForm.familyDetails")}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="sf-stack">
+              <div className="sf-block sf-block--family">
+                <div className="sf-block__head">
+                  <h4 className="sf-block__title">{t("studentForm.familyDetails")}</h4>
+                </div>
+                <div className="sf-grid">
                   <BilingualNameField
                     label={t("fields.motherName")}
                     required
@@ -632,54 +836,103 @@ export function StudentForm({
                   />
                   <Input label={t("fields.parentOccupation")} required value={form.parentOccupation || ""} onChange={(e) => update("parentOccupation", e.target.value)} />
                   <Input label={t("fields.annualFamilyIncome")} required type="number" value={form.annualFamilyIncome || ""} onChange={(e) => update("annualFamilyIncome", parseFloat(e.target.value))} />
-                  <Input label={t("fields.familySize")} type="number" value={form.familySize || 4} onChange={(e) => update("familySize", parseInt(e.target.value))} />
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={form.isOrphan || false} onChange={(e) => update("isOrphan", e.target.checked)} className="rounded" />
-                      {t("fields.isOrphan")}
-                    </label>
-                  </div>
+                  <Input
+                    label={t("fields.familySize")}
+                    type="number"
+                    min={0}
+                    max={30}
+                    value={form.familySize ?? 0}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === "") {
+                        update("familySize", 0);
+                        return;
+                      }
+                      const n = parseInt(raw, 10);
+                      update("familySize", Number.isFinite(n) ? Math.max(0, n) : 0);
+                    }}
+                  />
+                  <label className="sf-check">
+                    <input type="checkbox" checked={form.isOrphan || false} onChange={(e) => update("isOrphan", e.target.checked)} />
+                    {t("fields.isOrphan")}
+                  </label>
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-slate-900">{t("studentForm.currentAddress")}</h4>
+              <div className="sf-block sf-block--address">
+                <div className="sf-block__head">
+                  <h4 className="sf-block__title">{t("studentForm.currentAddress")}</h4>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
+                <div className="sf-grid">
+                  <div className="sf-span-full">
                     <Textarea label={t("fields.currentAddress")} required value={form.currentAddress || ""} onChange={(e) => update("currentAddress", e.target.value)} />
+                  </div>
+                  <div>
+                    <Input
+                      label={t("fields.currentPincode")}
+                      required
+                      maxLength={6}
+                      value={form.currentPincode || ""}
+                      onChange={(e) => update("currentPincode", e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    />
+                    <p className="sf-hint">
+                      {pincodeStatus === "loading"
+                        ? t("studentForm.pincodeLookup")
+                        : pincodeStatus === "ok"
+                          ? t("studentForm.pincodeFilled")
+                          : pincodeStatus === "error"
+                            ? t("studentForm.pincodeFailed")
+                            : "Enter 6-digit pincode"}
+                    </p>
                   </div>
                   <Select label={t("fields.currentDistrict")} required options={GUJARAT_DISTRICTS} value={form.currentDistrict || ""} onChange={(e) => update("currentDistrict", e.target.value)} />
                   <Input label={t("fields.currentCity")} required value={form.currentCity || ""} onChange={(e) => update("currentCity", e.target.value)} />
-                  <Input label={t("fields.currentPincode")} required maxLength={6} value={form.currentPincode || ""} onChange={(e) => update("currentPincode", e.target.value)} />
                   <Select label={t("fields.residentType")} options={residentOptions} value={form.residentType || "Rural"} onChange={(e) => update("residentType", e.target.value)} />
                   <Select label={t("fields.habitationType")} options={habitationOptions} value={form.habitationType || "Own"} onChange={(e) => update("habitationType", e.target.value)} />
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-slate-900">{t("studentForm.permanentAddress")}</h4>
+              <div className="sf-block sf-block--address">
+                <div className="sf-block__head">
+                  <h4 className="sf-block__title">{t("studentForm.permanentAddress")}</h4>
                   <Button type="button" variant="outline" size="sm" onClick={copyCurrentToPermanent}>
                     {t("studentForm.sameAsCurrent")}
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
+                <div className="sf-grid">
+                  <div className="sf-span-full">
                     <Textarea label={t("fields.permanentAddress")} required value={form.permanentAddress || ""} onChange={(e) => update("permanentAddress", e.target.value)} />
+                  </div>
+                  <div>
+                    <Input
+                      label={t("fields.permanentPincode")}
+                      required
+                      maxLength={6}
+                      value={form.permanentPincode || ""}
+                      onChange={(e) => update("permanentPincode", e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    />
+                    <p className="sf-hint">
+                      {permPincodeStatus === "loading"
+                        ? t("studentForm.pincodeLookup")
+                        : permPincodeStatus === "ok"
+                          ? t("studentForm.pincodeFilled")
+                          : permPincodeStatus === "error"
+                            ? t("studentForm.pincodeFailed")
+                            : "Enter 6-digit pincode"}
+                    </p>
                   </div>
                   <Select label={t("fields.permanentDistrict")} required options={GUJARAT_DISTRICTS} value={form.permanentDistrict || ""} onChange={(e) => update("permanentDistrict", e.target.value)} />
                   <Input label={t("fields.permanentCity")} required value={form.permanentCity || ""} onChange={(e) => update("permanentCity", e.target.value)} />
-                  <Input label={t("fields.permanentPincode")} required maxLength={6} value={form.permanentPincode || ""} onChange={(e) => update("permanentPincode", e.target.value)} />
                 </div>
               </div>
 
-              <div>
-                <h4 className="font-medium text-slate-900 mb-3">{t("studentForm.hostelDetails")}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={form.isHosteler || false} onChange={(e) => update("isHosteler", e.target.checked)} className="rounded" />
+              <div className="sf-block sf-block--hostel">
+                <div className="sf-block__head">
+                  <h4 className="sf-block__title">{t("studentForm.hostelDetails")}</h4>
+                </div>
+                <div className="sf-grid">
+                  <label className="sf-check">
+                    <input type="checkbox" checked={form.isHosteler || false} onChange={(e) => update("isHosteler", e.target.checked)} />
                     {t("fields.isHosteler")}
                   </label>
                   {form.isHosteler && (
@@ -694,75 +947,184 @@ export function StudentForm({
           )}
 
           {step === 3 && (
-            <div className="space-y-6">
-              <div>
-                <h4 className="font-medium text-slate-900 mb-3">{t("studentForm.scholarshipCourse")}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Select label={t("fields.scholarshipScheme")} required options={SCHOLARSHIP_SCHEME_OPTIONS} value={form.scholarshipScheme || ""} onChange={(e) => update("scholarshipScheme", e.target.value)} />
+            <div className="sf-stack">
+              <div className="sf-block sf-block--scholarship">
+                <div className="sf-block__head">
+                  <h4 className="sf-block__title">{t("studentForm.scholarshipCourse")}</h4>
+                </div>
+                <div className="sf-grid">
+                  {!scholarshipRequired ? (
+                    <div className="sf-note sf-span-full">{t("studentForm.scholarshipOptionalOpen")}</div>
+                  ) : (
+                    <p className="sf-hint sf-span-full">{t("studentForm.scholarshipByCategory")}</p>
+                  )}
+                  <Select
+                    label={t("fields.scholarshipScheme")}
+                    required={scholarshipRequired}
+                    options={scholarshipOptions}
+                    value={form.scholarshipScheme || ""}
+                    onChange={(e) => update("scholarshipScheme", e.target.value || null)}
+                  />
                   {form.scholarshipScheme && (
-                    <div className="md:col-span-2 text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-600">
+                    <div className="sf-note sf-note--info sf-span-full">
                       {t("studentForm.loginPortal")} <strong>{getDgPortalConfig(form.scholarshipScheme).labelHi}</strong>
                       {" — "}
-                      <span className="font-mono text-slate-500">
+                      <span className="font-mono">
                         {getDgPortalConfig(form.scholarshipScheme).loginUrl.split("/").pop()}
                       </span>
                     </div>
                   )}
                   <Select label={t("fields.financialYear")} required options={FINANCIAL_YEARS} value={form.financialYear || "2025-26"} onChange={(e) => update("financialYear", e.target.value)} />
-                  <Select label={t("fields.courseType")} required options={COURSE_TYPES} value={form.courseType || ""} onChange={(e) => update("courseType", e.target.value)} />
-                  <Input label={t("fields.courseName")} required placeholder="B.Tech Computer Engineering" value={form.courseName || ""} onChange={(e) => update("courseName", e.target.value)} />
+                  <Select
+                    label={t("fields.courseType")}
+                    required
+                    options={courseTypeOptions}
+                    value={form.courseType || ""}
+                    onChange={(e) => update("courseType", e.target.value)}
+                  />
+                  <div>
+                    <Input
+                      label={t("fields.courseName")}
+                      required
+                      value={form.courseName || ""}
+                      onChange={(e) => update("courseName", e.target.value)}
+                    />
+                    <p className="sf-hint">{t("studentForm.courseAutoFromClass")}</p>
+                  </div>
                   <Select label={t("fields.institutionDistrict")} required options={GUJARAT_DISTRICTS} value={form.institutionDistrict || ""} onChange={(e) => update("institutionDistrict", e.target.value)} />
                   <Input label={t("fields.institutionName")} required value={form.institutionName || ""} onChange={(e) => update("institutionName", e.target.value)} />
-                  <Select label={t("fields.currentYear")} required options={CURRENT_YEARS} value={form.currentYear || ""} onChange={(e) => update("currentYear", e.target.value)} />
+                  <div>
+                    <Select
+                      label={t("fields.currentYear")}
+                      options={CURRENT_YEARS}
+                      value={form.currentYear || ""}
+                      onChange={(e) => update("currentYear", e.target.value)}
+                    />
+                    <p className="sf-hint">{t("studentForm.currentYearAuto")}</p>
+                  </div>
                   <Select label={t("fields.admissionType")} options={admissionOptions} value={form.admissionType || "Regular"} onChange={(e) => update("admissionType", e.target.value)} />
-                  <Input label={t("fields.startDate")} placeholder="01/07/2024" value={form.startDate || ""} onChange={(e) => update("startDate", e.target.value)} />
-                  <Input label={t("fields.completionDate")} placeholder="30/06/2028" value={form.completionDate || ""} onChange={(e) => update("completionDate", e.target.value)} />
                 </div>
               </div>
 
-              <div>
-                <h4 className="font-medium text-slate-900 mb-3">{t("studentForm.previousEducation")}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Select label={t("fields.board10th")} required options={BOARDS} value={form.board10th || ""} onChange={(e) => update("board10th", e.target.value)} />
-                  <Input label={t("fields.percentage10th")} required type="number" step="0.01" value={form.percentage10th || ""} onChange={(e) => update("percentage10th", parseFloat(e.target.value))} />
-                  <Input label={t("fields.year10th")} required placeholder="2025" value={form.year10th || ""} onChange={(e) => update("year10th", e.target.value)} />
-                  <Select label="GSEB Seat Prefix" options={["A", "B", "C", "S", "P"]} value={form.sscSeatPrefix || "A"} onChange={(e) => update("sscSeatPrefix", e.target.value)} />
-                  <Input label="GSEB Seat No (7 digit)" placeholder="1234567" maxLength={7} value={form.sscSeatNumber || ""} onChange={(e) => update("sscSeatNumber", e.target.value.replace(/\D/g, "").slice(0, 7))} />
-                  <p className="md:col-span-3 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                    GSEB result check mate: Seat = Prefix (A/B/C/S/P) + 7 digit number. Example: A1234567. Board Records page par thi fetch thai shake.
-                  </p>
-                  <Select label={t("fields.board12th")} options={BOARDS} value={form.board12th || ""} onChange={(e) => update("board12th", e.target.value)} />
-                  <Input label={t("fields.percentage12th")} type="number" step="0.01" value={form.percentage12th || ""} onChange={(e) => update("percentage12th", parseFloat(e.target.value))} />
-                  <Input label={t("fields.year12th")} placeholder="2024" value={form.year12th || ""} onChange={(e) => update("year12th", e.target.value)} />
+              <div className="sf-block sf-block--edu">
+                <div className="sf-block__head">
+                  <h4 className="sf-block__title">{t("studentForm.previousEducation")}</h4>
                 </div>
+                {prevEduMode === "none" && (
+                  <p className="sf-note">{t("studentForm.prevEduNotNeeded", { standard: form.standard || "—" })}</p>
+                )}
+                {prevEduMode === "class10_current" && (
+                  <p className="sf-note sf-note--info">{t("studentForm.prevEduClass10Hint")}</p>
+                )}
+                {(prevEduMode === "need10" || prevEduMode === "need10_opt12" || prevEduMode === "need10_12") && (
+                  <div className="sf-grid-3">
+                    <Select label={t("fields.board10th")} required options={BOARDS} value={form.board10th || ""} onChange={(e) => update("board10th", e.target.value)} />
+                    <Input label={t("fields.percentage10th")} required type="number" step="0.01" value={form.percentage10th || ""} onChange={(e) => update("percentage10th", parseFloat(e.target.value))} />
+                    <Input label={t("fields.year10th")} required placeholder="2025" value={form.year10th || ""} onChange={(e) => update("year10th", e.target.value)} />
+                    <Select label="GSEB Seat Prefix" options={["A", "B", "C", "S", "P"]} value={form.sscSeatPrefix || "A"} onChange={(e) => update("sscSeatPrefix", e.target.value)} />
+                    <Input label="GSEB Seat No (7 digit)" placeholder="1234567" maxLength={7} value={form.sscSeatNumber || ""} onChange={(e) => update("sscSeatNumber", e.target.value.replace(/\D/g, "").slice(0, 7))} />
+                    <p className="sf-note sf-note--info sf-span-full">
+                      GSEB result: Seat = Prefix (A/B/C/S/P) + 7 digit number. Example: A1234567.
+                    </p>
+                    {(prevEduMode === "need10_opt12" || prevEduMode === "need10_12") && (
+                      <>
+                        <Select
+                          label={t("fields.board12th")}
+                          required={prevEduMode === "need10_12"}
+                          options={BOARDS}
+                          value={form.board12th || ""}
+                          onChange={(e) => update("board12th", e.target.value)}
+                        />
+                        <Input
+                          label={t("fields.percentage12th")}
+                          type="number"
+                          step="0.01"
+                          value={form.percentage12th || ""}
+                          onChange={(e) => update("percentage12th", parseFloat(e.target.value))}
+                        />
+                        <Input label={t("fields.year12th")} placeholder="2024" value={form.year12th || ""} onChange={(e) => update("year12th", e.target.value)} />
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {step === 4 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label={t("fields.bankName")} required placeholder="State Bank of India" value={form.bankName || ""} onChange={(e) => update("bankName", e.target.value)} />
-              <Input label={t("fields.branchName")} required value={form.branchName || ""} onChange={(e) => update("branchName", e.target.value)} />
-              <Input label={t("fields.accountNumber")} required value={form.accountNumber || ""} onChange={(e) => update("accountNumber", e.target.value)} />
-              <Input label={t("fields.ifscCode")} required placeholder="SBIN0001234" value={form.ifscCode || ""} onChange={(e) => update("ifscCode", e.target.value.toUpperCase())} />
-              <div className="md:col-span-2">
+            <div className="sf-block sf-block--bank">
+              <div className="sf-block__head">
+                <h4 className="sf-block__title">{t("studentForm.bankSection")}</h4>
+              </div>
+              <div className="sf-grid">
+              <div className="sf-span-full">
+                <Input
+                  label={t("fields.ifscCode")}
+                  required
+                  placeholder="SBIN0001234"
+                  maxLength={11}
+                  value={form.ifscCode || ""}
+                  onChange={(e) => update("ifscCode", e.target.value.toUpperCase().replace(/\s/g, "").slice(0, 11))}
+                />
+                <p className="sf-hint">
+                  {ifscStatus === "loading"
+                    ? t("studentForm.ifscLookup")
+                    : ifscStatus === "ok"
+                      ? t("studentForm.ifscFilled")
+                      : ifscStatus === "error"
+                        ? t("studentForm.ifscFailed")
+                        : t("studentForm.ifscHint")}
+                </p>
+              </div>
+              <Input
+                label={`${t("fields.bankName")} (${t("studentForm.bankFromIfsc")})`}
+                required
+                placeholder="State Bank of India"
+                value={form.bankName || ""}
+                onChange={(e) => update("bankName", e.target.value)}
+              />
+              <Input
+                label={`${t("fields.branchName")} (${t("studentForm.bankFromIfsc")})`}
+                required
+                value={form.branchName || ""}
+                onChange={(e) => update("branchName", e.target.value)}
+              />
+              <div>
+                <Input
+                  label={t("fields.accountNumber")}
+                  required
+                  maxLength={ACCOUNT_NUMBER_MAX}
+                  value={form.accountNumber || ""}
+                  onChange={(e) =>
+                    update("accountNumber", e.target.value.replace(/\D/g, "").slice(0, ACCOUNT_NUMBER_MAX))
+                  }
+                />
+                <p className="sf-hint">
+                  {t("studentForm.accountNumberHint")}
+                  {form.accountNumber
+                    ? ` · ${String(form.accountNumber).length}/${ACCOUNT_NUMBER_MIN}–${ACCOUNT_NUMBER_MAX}`
+                    : ""}
+                </p>
+              </div>
+              <div className="sf-span-full">
                 <Input label={t("fields.accountHolderName")} required value={form.accountHolderName || ""} onChange={(e) => update("accountHolderName", e.target.value)} />
               </div>
-              <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+              <div className="sf-note sf-note--info sf-span-full">
                 <strong>{t("common.note")}:</strong> {t("studentForm.bankNote")}
+              </div>
               </div>
             </div>
           )}
 
           {step === 5 && (
-            <div className="space-y-4">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                <h4 className="font-medium text-emerald-800 mb-2">{t("studentForm.reviewTitle")}</h4>
-                <p className="text-sm text-emerald-700">{t("studentForm.reviewDesc")}</p>
+            <div className="sf-stack">
+              <div className="sf-note sf-note--ok">
+                <h4 className="sf-block__title" style={{ color: "#065f46", marginBottom: "0.35rem" }}>{t("studentForm.reviewTitle")}</h4>
+                <p style={{ margin: 0 }}>{t("studentForm.reviewDesc")}</p>
               </div>
 
               {[
-                { title: t("studentForm.personal"), fields: [
+                { title: t("studentForm.personal"), tone: "personal", fields: [
                   [t("common.name"), studentFullNameGu(form as Parameters<typeof studentFullNameGu>[0])],
                   [t("fields.aadhaar"), form.aadhaarNumber],
                   [t("fields.aadhaarName"), studentDisplayAadhaarName(form as Parameters<typeof studentDisplayAadhaarName>[0])],
@@ -775,27 +1137,27 @@ export function StudentForm({
                   [t("fields.roll"), form.rollNumber],
                   [t("fields.childUid"), form.childUid],
                 ]},
-                { title: t("studentForm.academic"), fields: [
+                { title: t("studentForm.academic"), tone: "academic", fields: [
                   [t("fields.scheme"), form.scholarshipScheme],
                   [t("fields.course"), form.courseName],
                   [t("fields.institution"), form.institutionName],
                   [t("fields.year"), form.currentYear],
                   ["10th %", form.percentage10th],
                 ]},
-                { title: t("studentForm.bankSection"), fields: [
+                { title: t("studentForm.bankSection"), tone: "bank", fields: [
                   [t("fields.bank"), form.bankName],
                   [t("fields.account"), form.accountNumber],
                   [t("fields.ifscCode"), form.ifscCode],
                   [t("fields.holder"), form.accountHolderName],
                 ]},
               ].map((section) => (
-                <div key={section.title} className="border border-slate-200 rounded-lg p-4">
-                  <h5 className="font-medium text-slate-900 mb-2">{section.title}</h5>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                <div key={section.title} className={`sf-review sf-review--${section.tone}`}>
+                  <h5 className="sf-review__title">{section.title}</h5>
+                  <div className="sf-review__grid">
                     {section.fields.map(([label, value]) => (
                       <div key={label}>
-                        <span className="text-slate-500">{label}:</span>{" "}
-                        <span className="font-medium">{value || "-"}</span>
+                        <span className="sf-review__label">{label}: </span>
+                        <span className="sf-review__value">{value || "-"}</span>
                       </div>
                     ))}
                   </div>
@@ -807,21 +1169,20 @@ export function StudentForm({
           )}
 
           {step === 6 && savedStudentId && (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                <p className="font-semibold">{t("studentForm.documentsTitle")}</p>
-                <p className="mt-1 text-blue-700">{t("studentForm.documentsDesc")}</p>
+            <div className="sf-stack">
+              <div className="sf-note sf-note--info">
+                <p className="sf-block__title" style={{ color: "#0f766e" }}>{t("studentForm.documentsTitle")}</p>
+                <p style={{ margin: "0.35rem 0 0" }}>{t("studentForm.documentsDesc")}</p>
               </div>
               <StudentDocumentsSection studentId={savedStudentId} />
             </div>
           )}
 
           {step === 6 && !savedStudentId && (
-            <p className="text-sm text-amber-700">{t("studentForm.documentsSaveFirst")}</p>
+            <p className="sf-note sf-note--warn">{t("studentForm.documentsSaveFirst")}</p>
           )}
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-200">
+          <div className="sf-nav">
             <Button
               variant="outline"
               type="button"
@@ -847,8 +1208,8 @@ export function StudentForm({
               </Button>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
         </>
       )}
     </div>

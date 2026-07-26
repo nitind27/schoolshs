@@ -156,3 +156,108 @@ export function buildTestEmail(params: { toName: string }) {
     text: "SMTP test successful. Your email settings are working.",
   };
 }
+
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Welcome email after school admin creates a staff portal login */
+export function buildStaffCredentialsEmail(params: {
+  staffName: string;
+  schoolName: string;
+  schoolCode?: string | null;
+  loginEmail: string;
+  password: string;
+  roleLabel: string;
+  designation: string;
+  employeeId?: string | null;
+  loginUrl: string;
+}) {
+  const name = escapeHtml(params.staffName);
+  const school = escapeHtml(params.schoolName);
+  const email = escapeHtml(params.loginEmail);
+  const password = escapeHtml(params.password);
+  const role = escapeHtml(params.roleLabel);
+  const designation = escapeHtml(params.designation);
+  const emp = params.employeeId ? escapeHtml(params.employeeId) : "";
+  const code = params.schoolCode ? escapeHtml(params.schoolCode) : "";
+
+  const credBox = `
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 20px;border-collapse:collapse;">
+  <tr>
+    <td style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:16px 18px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#0f766e;margin-bottom:10px;">Your login details</div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;color:#334155;">
+        <tr>
+          <td style="padding:6px 0;width:120px;color:#64748b;">Username</td>
+          <td style="padding:6px 0;font-weight:700;color:#0f172a;">${email}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#64748b;">Password</td>
+          <td style="padding:6px 0;font-weight:800;font-size:20px;letter-spacing:3px;font-family:'Courier New',Courier,monospace;color:#0f766e;">${password}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#64748b;">Role</td>
+          <td style="padding:6px 0;font-weight:600;color:#0f172a;">${role}</td>
+        </tr>
+        ${
+          code
+            ? `<tr>
+          <td style="padding:6px 0;color:#64748b;">School code</td>
+          <td style="padding:6px 0;font-weight:600;color:#0f172a;">${code}</td>
+        </tr>`
+            : ""
+        }
+      </table>
+    </td>
+  </tr>
+</table>`;
+
+  const html = buildEmailHtml({
+    title: "Your school portal login",
+    preheader: `Login created for ${params.schoolName} — username ${params.loginEmail}`,
+    bodyHtml: `
+      <div style="padding:0 16px;">
+        <p style="margin:0 0 14px;color:#334155;">Hello <strong>${name}</strong>,</p>
+        <p style="margin:0 0 14px;color:#334155;">
+          Your staff account has been created for <strong>${school}</strong>
+          ${emp ? ` (Employee ID: <strong>${emp}</strong>)` : ""}.
+          Designation: <strong>${designation}</strong>.
+        </p>
+        <p style="margin:0 0 8px;color:#334155;">Use the details below to sign in to the SHS Education Portal:</p>
+        ${credBox}
+        <p style="margin:0 0 12px;color:#64748b;font-size:13px;">
+          Keep this email private. Contact your school admin if you need help signing in.
+        </p>
+      </div>
+    `,
+    ctaLabel: "Open Portal Login",
+    ctaUrl: params.loginUrl,
+    footerNote:
+      "Keep this email private. Do not share your password. If you need help, contact your school admin.",
+  });
+
+  const text = `Hello ${params.staffName},
+
+Your staff account has been created for ${params.schoolName}.
+Designation: ${params.designation}
+${params.employeeId ? `Employee ID: ${params.employeeId}\n` : ""}
+Login (username): ${params.loginEmail}
+Password: ${params.password}
+Role: ${params.roleLabel}
+${params.schoolCode ? `School code: ${params.schoolCode}\n` : ""}
+Sign in: ${params.loginUrl}
+
+Keep this email private. Do not share your password.`;
+
+  return {
+    subject: `${params.schoolName} — Your portal login credentials`,
+    html,
+    text,
+  };
+}
+

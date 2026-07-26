@@ -20,16 +20,13 @@ export function NavbarLetterheadButton({ role }: { role?: string | null }) {
   return (
     <Link
       href="/letterhead"
-      className={cn(
-        "relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white",
-        "text-slate-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-800",
-        isActive && "border-rose-300 bg-rose-50 text-rose-800",
-      )}
+      className={cn("tn-btn", isActive && "tn-btn--active")}
+      data-active={isActive ? "true" : "false"}
       aria-label={t("navExt.letterhead")}
       title={t("navExt.letterhead")}
       aria-current={isActive ? "page" : undefined}
     >
-      <FileSignature className="h-4 w-4" />
+      <FileSignature className="h-[1.05rem] w-[1.05rem]" />
     </Link>
   );
 }

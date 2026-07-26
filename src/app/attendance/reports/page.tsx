@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader, Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { CertificateFilters } from "@/components/certificates/certificate-filters";
@@ -13,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/locale-provider";
 import type { AttendanceStudentReport } from "@/lib/attendance";
 import { ENGLISH_MONTHS } from "@/lib/certificates/types";
-import { BarChart3, Loader2, X } from "lucide-react";
+import { BarChart3, X } from "lucide-react";
 
 interface ReportSummary {
   totalStudents: number;
@@ -142,9 +143,7 @@ function ReportsContent() {
       )}
 
       {loading ? (
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
+        <PageLoader />
       ) : !loaded ? (
         <Card>
           <CardContent className="py-16 text-center text-slate-500">
@@ -196,7 +195,7 @@ function ReportsContent() {
 
                     {detailLoading ? (
                       <div className="flex h-40 items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                        <Spinner size="md" />
                       </div>
                     ) : (
                       <div className="space-y-4 p-4">
@@ -276,9 +275,7 @@ export default function AttendanceReportsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
+        <PageLoader />
       }
     >
       <ReportsContent />

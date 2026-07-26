@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader, Spinner } from "@/components/ui/loader";
 import { useCallback, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -19,7 +20,7 @@ import {
   resolveVisibleDayIndices,
   type AttendanceViewFilters,
 } from "@/lib/attendance-view-filters";
-import { ClipboardList, Loader2, Printer, Save, CheckCircle2 } from "lucide-react";
+import { ClipboardList, Printer, Save, CheckCircle2 } from "lucide-react";
 
 function AttendanceContent() {
   const t = useT();
@@ -228,7 +229,7 @@ function AttendanceContent() {
               </Button>
             </Link>
             <Button size="sm" onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
               {t("attendance.save")}
             </Button>
           </div>
@@ -249,9 +250,7 @@ function AttendanceContent() {
       )}
 
       {loading ? (
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
+        <PageLoader />
       ) : !loaded ? (
         <Card>
           <CardContent className="py-16 text-center text-slate-500">
@@ -309,9 +308,7 @@ export default function AttendancePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
+        <PageLoader />
       }
     >
       <AttendanceContent />

@@ -130,20 +130,12 @@ export function NotificationBell() {
           setOpen((v) => !v);
           if (!open) load();
         }}
-        className={cn(
-          "relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white",
-          "text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors",
-          open && "border-blue-300 bg-blue-50 text-blue-700"
-        )}
+        className={cn("tn-btn relative", open && "tn-btn--active")}
         aria-label={t("notifications.title")}
         aria-expanded={open}
       >
-        <Bell className="h-4 w-4" />
-        {badge && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
-            {badge}
-          </span>
-        )}
+        <Bell className="h-[1.05rem] w-[1.05rem]" />
+        {badge && <span className="tn-badge">{badge}</span>}
       </button>
 
       {open && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,22 +21,7 @@ import {
   type ParsedImportFile,
   type RowValidation,
 } from "@/lib/import/student-import";
-import {
-  Upload,
-  Download,
-  FileSpreadsheet,
-  CheckCircle,
-  AlertCircle,
-  Info,
-  Loader2,
-  Columns3,
-  ShieldCheck,
-  ArrowRight,
-  RefreshCw,
-  FileWarning,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { Upload, Download, FileSpreadsheet, CheckCircle, AlertCircle, Info, Columns3, ShieldCheck, ArrowRight, RefreshCw, FileWarning, ChevronDown, ChevronUp } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 
@@ -491,7 +477,7 @@ export function StudentImportHub() {
             {step === "importing" ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Spinner size="sm" />
                   {t("importPage.importing")} {importProgress}%
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">

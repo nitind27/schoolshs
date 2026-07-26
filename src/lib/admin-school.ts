@@ -5,13 +5,17 @@ import sharp from "sharp";
 
 const UPLOAD_ROOT = path.join(process.cwd(), "uploads");
 
+const LOGO_MIME = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"]);
+const CONTRACT_EXT = new Set([".pdf", ".png", ".jpg", ".jpeg", ".webp"]);
+
 export async function saveAdminSchoolFile(
   schoolId: string,
   file: File,
-  kind: "logo" | "contract"
+  kind: "logo" | "contract",
 ): Promise<string> {
   const bytes = Buffer.from(await file.arrayBuffer());
-  const ext = kind === "logo" ? "webp" : path.extname(file.name || "").toLowerCase() || ".pdf";
+  if (!bytes.length) throw new Error("Empty file");
+
   const dir = path.join(UPLOAD_ROOT, "schools", schoolId);
   await mkdir(dir, { recursive: true });
 
@@ -19,15 +23,29 @@ export async function saveAdminSchoolFile(
   let buffer: Buffer;
 
   if (kind === "logo") {
-    filename = `logo-${randomBytes(4).toString("hex")}.webp`;
-    buffer = await sharp(bytes)
-      .resize(512, 512, { fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 85 })
-      .toBuffer();
+    const mime = (file.type || "").toLowerCase();
+    if (mime && !LOGO_MIME.has(mime)) {
+      throw new Error("Logo must be PNG, JPG, or WEBP");
+    }
+    try {
+      filename = `logo-${randomBytes(4).toString("hex")}.webp`;
+      buffer = await sharp(bytes)
+        .rotate()
+        .resize(512, 512, { fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 85 })
+        .toBuffer();
+    } catch {
+      throw new Error("Could not process logo image. Use a clear PNG or JPG.");
+    }
   } else {
-    const safeExt = [".pdf", ".png", ".jpg", ".jpeg", ".webp"].includes(ext) ? ext : ".pdf";
-    filename = `contract-${randomBytes(4).toString("hex")}${safeExt}`;
-    buffer = bytes;
+    const ext = path.extname(file.name || "").toLowerCase() || ".pdf";
+    const safeExt = CONTRACT_EXT.has(ext) ? ext : ".pdf";
+    if (file.type === "application/pdf" || safeExt === ".pdf" || CONTRACT_EXT.has(ext)) {
+      filename = `contract-${randomBytes(4).toString("hex")}${safeExt}`;
+      buffer = bytes;
+    } else {
+      throw new Error("Contract must be PDF or image (PNG/JPG)");
+    }
   }
 
   const rel = `schools/${schoolId}/${filename}`;

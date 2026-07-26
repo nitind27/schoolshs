@@ -100,22 +100,69 @@ export function resultStatus(pct: number | null | undefined): "pass" | "fail" | 
   return pct >= GSEB_PASS_PCT ? "pass" : "fail";
 }
 
-/** GSEB board seat — prefix + 7 digit seat number, else parse grNumber/childUid */
+/** True only when saved JSON looks like a real GSEB marksheet (not invented %). */
+export function parseVerifiedGsebPercentage(gsebResultJson: string | null | undefined): number | null {
+  if (!gsebResultJson) return null;
+  try {
+    const j = JSON.parse(gsebResultJson) as {
+      percentage?: number | null;
+      rankScore?: number | null;
+      studentName?: string | null;
+      result?: string | null;
+      subjects?: Record<string, number | null>;
+    };
+    const pct = j.percentage ?? j.rankScore ?? null;
+    if (pct == null || !Number.isFinite(pct) || pct <= 0 || pct > 100) return null;
+
+    const name = String(j.studentName || "").replace(/\s+/g, "");
+    const subHits = Object.values(j.subjects || {}).filter((v) => v != null).length;
+    const hasResult = !!(j.result && /pass|fail|પાસ|નાપાસ|atkt/i.test(String(j.result)));
+
+    // Old buggy saves often had only a percentage with no name/subjects
+    if (name.length < 3 && subHits < 3) return null;
+    if (name.length < 3 && !hasResult && subHits < 3) return null;
+
+    return Math.round(pct * 100) / 100;
+  } catch {
+    return null;
+  }
+}
+
+/** Official GSEB seat only — never fall back to GR / UID / roll (those caused false fetches). */
 export function boardSeatNo(s: BoardStudent, standard: "10" | "12" = "10"): string {
   const prefix = standard === "12" ? s.hscSeatPrefix : s.sscSeatPrefix;
   const number = standard === "12" ? s.hscSeatNumber : s.sscSeatNumber;
-  if (prefix && number) return `${prefix}${number}`;
-  if (number) return number;
-  if (s.grNumber?.trim()) {
-    const parsed = s.grNumber.trim();
-    if (/^[ABSCP]?\d{7}$/i.test(parsed.replace(/\s/g, ""))) return parsed.toUpperCase();
-    return parsed;
+  const digits = (number || "").replace(/\D/g, "");
+  const need = standard === "12" ? 6 : 7;
+  if (digits.length === need) {
+    const p = (prefix || (standard === "12" ? "B" : "A")).trim().toUpperCase() || (standard === "12" ? "B" : "A");
+    return `${p}${digits}`;
   }
-  if (s.childUid?.trim()) return s.childUid.trim();
+  return "—";
+}
+
+/** Display helper — prefers GSEB seat, then GR for identification only (not for GSEB fetch). */
+export function boardSeatNoOrGr(s: BoardStudent, standard: "10" | "12" = "10"): string {
+  const seat = boardSeatNo(s, standard);
+  if (seat !== "—") return seat;
+  if (s.grNumber?.trim()) return s.grNumber.trim();
   return s.rollNumber?.trim() || "—";
 }
 
 function getPct(s: BoardStudent, standard: "10" | "12"): number | null {
+  // No official GSEB seat → never show Pass / % in board results
+  const seat = boardSeatNo(s, standard);
+  if (!seat || seat === "—") return null;
+
+  // Prefer verified GSEB JSON. If a GSEB fetch was recorded but JSON is junk → pending.
+  if (s.gsebFetchedAt || s.gsebResultJson) {
+    const verified = parseVerifiedGsebPercentage(s.gsebResultJson);
+    if (verified != null) return verified;
+    // Stale/fake GSEB save — do not fall back to percentage10th
+    if (s.gsebFetchedAt) return null;
+  }
+
+  // Manual % only when seat exists and no failed/stale GSEB fetch
   if (standard === "10") return s.percentage10th > 0 ? s.percentage10th : null;
   return s.percentage12th && s.percentage12th > 0 ? s.percentage12th : null;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, use, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,17 +13,7 @@ import {
   type DocumentInfo,
 } from "@/components/documents/document-uploader";
 import { useT } from "@/i18n/locale-provider";
-import {
-  ArrowLeft,
-  Play,
-  Save,
-  Monitor,
-  AlertTriangle,
-  CheckCircle,
-  LogIn,
-  FileUp,
-  ExternalLink,
-} from "lucide-react";
+import { ArrowLeft, Play, Save, Monitor, AlertTriangle, CheckCircle, LogIn, FileUp, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { Student } from "@/generated/prisma/client";
 import { getDgPortalConfig, getSchemeGroup } from "@/lib/dg-portal";
@@ -168,9 +159,7 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
+      <PageLoader />
     );
   }
 

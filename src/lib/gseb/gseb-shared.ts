@@ -36,16 +36,46 @@ export function extractToken(html: string): string | null {
   return m?.[1] ?? null;
 }
 
+/** Still on the search form (captcha page) — not a result sheet */
+export function isGsebSearchForm(html: string): boolean {
+  return (
+    /name=["']InitialCharacter["']/i.test(html) ||
+    /name=["']SeatNo["']/i.test(html) ||
+    /id=["']SeatNo["']/i.test(html)
+  ) && /name=["']Captcha["']|lblCaptcha|hdnCaptcha/i.test(html);
+}
+
 export function isGsebErrorPage(html: string): boolean {
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ");
+
   return (
     /An error occurred while processing your request/i.test(html) ||
     /<h1[^>]*>\s*Error\.?\s*<\/h1>/i.test(html) ||
-    /Invalid\s+Seat/i.test(html) ||
-    /invalid\s+seat/i.test(html) ||
-    /Invalid\s+Captcha/i.test(html) ||
-    /No Record Found/i.test(html) ||
-    /Seat\s*No\.?\s*is\s*not\s*valid/i.test(html)
+    /Invalid\s+Seat/i.test(text) ||
+    /invalid\s+seat/i.test(text) ||
+    /Seat\s*No\.?\s*(is\s*)?not\s*valid/i.test(text) ||
+    /Invalid\s+Captcha/i.test(text) ||
+    /No Record Found/i.test(text) ||
+    /Record\s+not\s+found/i.test(text) ||
+    /પરિણામ\s*મળ્યું\s*નથી/i.test(text) ||
+    /સીટ\s*નંબર\s*(ખોટો|અમાન્ય|મળ્યો\s*નથી)/i.test(text) ||
+    /અમાન્ય\s*સીટ/i.test(text) ||
+    /Seat\s*number\s*(is\s*)?(invalid|incorrect|not\s*found)/i.test(text)
   );
+}
+
+export function looksLikeGsebResultPage(html: string): boolean {
+  if (isGsebErrorPage(html) || isGsebSearchForm(html)) return false;
+  // Real result pages usually show percentage / result / subject mark table
+  const hasPctLabel = /Percentage|PERCENTAGE|ટકાવારી/i.test(html);
+  const hasResultLabel = /\bResult\b|પરિણામ|પાસ|નાપાસ|PASS|FAIL/i.test(html);
+  const hasNameLabel = /Student\s*Name|Candidate\s*Name|વિદ્યાર્થી/i.test(html);
+  const hasSubjectTable = /gujarati|english|mathematics|science|ગુજરાતી|અંગ્રેજી|ગણિત/i.test(html);
+  return (hasPctLabel || hasResultLabel) && (hasNameLabel || hasSubjectTable);
 }
 
 export function hasValidGsebResult(parsed: {
@@ -53,11 +83,22 @@ export function hasValidGsebResult(parsed: {
   studentName?: string | null;
   result?: string | null;
   subjects?: Record<string, number | null>;
+  schoolName?: string | null;
 }): boolean {
-  if (parsed.percentage != null && Number.isFinite(parsed.percentage)) return true;
   const subVals = Object.values(parsed.subjects || {}).filter((v) => v != null);
-  if (subVals.length >= 3) return true;
-  if (parsed.studentName && parsed.studentName.length > 2 && parsed.result) return true;
+  const hasSubjects = subVals.length >= 3;
+  const hasName = !!(parsed.studentName && parsed.studentName.replace(/\s+/g, "").length >= 3);
+  const hasExplicitResult = !!(parsed.result && /pass|fail|પાસ|નાપાસ|atkt|a\.?t\.?k\.?t/i.test(parsed.result));
+  const pctOk =
+    parsed.percentage != null &&
+    Number.isFinite(parsed.percentage) &&
+    parsed.percentage >= 0 &&
+    parsed.percentage <= 100;
+
+  // Never accept percentage alone — that caused fake PASS on error/form pages
+  if (hasSubjects && (pctOk || hasName || hasExplicitResult)) return true;
+  if (hasName && (pctOk || hasExplicitResult)) return true;
+  if (hasName && hasSubjects) return true;
   return false;
 }
 
@@ -110,38 +151,76 @@ export function parseSubjectMarksFromHtml(html: string): Record<string, number |
   return subjects;
 }
 
+function extractLabeledValue(html: string, labels: RegExp): string | null {
+  const re = new RegExp(
+    `(?:${labels.source})\\s*[:\\-]?\\s*(?:<[^>]*>\\s*)*([^<\\n]{1,80})`,
+    "i",
+  );
+  const m = html.match(re);
+  if (!m?.[1]) return null;
+  const v = m[1].replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim();
+  if (!v || /^(n\/?a|-|—)$/i.test(v)) return null;
+  return v;
+}
+
 export function parseResultHtml(html: string): Omit<GsebResult, "seatNo" | "prefix" | "number" | "rawHtml"> {
-  const pctMatch =
-    html.match(/Percentage\s*[:\-]?\s*<[^>]*>\s*([\d.]+)/i) ||
-    html.match(/PERCENTAGE[^0-9]*([\d.]+)/i) ||
-    html.match(/Overall\s*[%]?\s*[:\-]?\s*([\d.]+)/i) ||
-    html.match(/([\d]{2,3}\.[\d]{1,2})\s*%/);
-  const gradeMatch =
-    html.match(/Grade\s*[:\-]?\s*<[^>]*>\s*([A-Z0-9]+)/i) ||
-    html.match(/\b(A1|A2|B1|B2|C1|C2|D|E|F)\b/);
-  const nameMatch = html.match(/(?:Name|Student\s*Name)\s*[:\-]?\s*<[^>]*>\s*([^<]+)/i);
-  const schoolMatch = html.match(/School\s*[:\-]?\s*<[^>]*>\s*([^<]+)/i);
-  const resultMatch = html.match(/Result\s*[:\-]?\s*<[^>]*>\s*([^<]+)/i);
+  // Refuse to invent results from search/error pages
+  if (isGsebErrorPage(html) || isGsebSearchForm(html) || !looksLikeGsebResultPage(html)) {
+    return {
+      percentage: null,
+      grade: null,
+      studentName: null,
+      schoolName: null,
+      result: null,
+      subjects: {},
+      totalMarks: null,
+    };
+  }
+
+  const pctRaw =
+    extractLabeledValue(html, /Percentage|PERCENTAGE|Overall\s*%?|ટકાવારી/) ||
+    (() => {
+      const m = html.match(/Percentage\s*[:\-]?\s*<[^>]*>\s*([\d.]+)/i);
+      return m?.[1] ?? null;
+    })();
+
+  let percentage: number | null = null;
+  if (pctRaw) {
+    const n = parseFloat(pctRaw.replace(/[^\d.]/g, ""));
+    if (Number.isFinite(n) && n >= 0 && n <= 100) percentage = n;
+  }
+
+  const gradeRaw = extractLabeledValue(html, /Grade|ગ્રેડ/);
+  const grade =
+    gradeRaw && /^(A1|A2|B1|B2|C1|C2|C|D|E|F)$/i.test(gradeRaw.trim())
+      ? gradeRaw.trim().toUpperCase()
+      : null;
+
+  const studentName =
+    extractLabeledValue(html, /Student\s*Name|Candidate\s*Name|Name\s*of\s*(?:the\s*)?Student|વિદ્યાર્થી(?:નું)?\s*નામ/) ||
+    null;
+  const schoolName = extractLabeledValue(html, /School(?:\s*Name)?|શાળા/) || null;
+  const resultText = extractLabeledValue(html, /Result|પરિણામ/) || null;
 
   const subjects = parseSubjectMarksFromHtml(html);
   const subVals = Object.values(subjects).filter((v) => v != null) as number[];
   const totalMarks = subVals.length ? subVals.reduce((a, b) => a + b, 0) : null;
 
-  let percentage = pctMatch ? parseFloat(pctMatch[1]) : null;
-  if (percentage == null && subVals.length >= 4) {
+  // Only derive % from subjects when we already trust this is a result page AND have enough marks
+  if (percentage == null && subVals.length >= 5) {
     percentage = Math.round((subVals.reduce((a, b) => a + b, 0) / subVals.length) * 100) / 100;
   }
 
-  const resultText = resultMatch?.[1]?.trim() || null;
-  const normalizedResult =
-    resultText ||
-    (percentage != null ? (percentage >= 35 ? "પાસ" : "નાપાસ") : null);
+  let normalizedResult: string | null = resultText;
+  if (!normalizedResult && percentage != null && (studentName || subVals.length >= 3)) {
+    normalizedResult = percentage >= 35 ? "પાસ" : "નાપાસ";
+  }
 
   return {
     percentage,
-    grade: gradeMatch?.[1] ?? null,
-    studentName: nameMatch?.[1]?.trim() ?? null,
-    schoolName: schoolMatch?.[1]?.trim() ?? null,
+    grade,
+    studentName,
+    schoolName,
     result: normalizedResult,
     subjects,
     totalMarks,
@@ -197,16 +276,29 @@ export async function postGsebForm(opts: {
   const resultHtml = await resultRes.text();
   const seatLabel = `${opts.prefix}${opts.seatNumber}`;
 
-  if (!resultRes.ok || isGsebErrorPage(resultHtml)) {
-    if (/Invalid\s+Seat|invalid\s+seat/i.test(resultHtml)) {
-      throw new Error(`GSEB invalid seat — ${seatLabel} not on official portal`);
+  if (!resultRes.ok) {
+    throw new Error(`GSEB portal error for ${seatLabel}`);
+  }
+
+  if (isGsebErrorPage(resultHtml)) {
+    if (/Invalid\s+Seat|invalid\s+seat|Seat\s*No\.?\s*(is\s*)?not\s*valid|અમાન્ય\s*સીટ|સીટ\s*નંબર/i.test(resultHtml)) {
+      throw new Error(`Invalid GSEB seat — ${seatLabel} not found on official portal`);
     }
-    throw new Error(`No GSEB result for ${seatLabel} — invalid or not published`);
+    throw new Error(`No GSEB result for ${seatLabel} — invalid seat or not published`);
+  }
+
+  // Invalid seat often just redisplays the search form
+  if (isGsebSearchForm(resultHtml)) {
+    throw new Error(`Invalid GSEB seat — ${seatLabel} rejected by result.gseb.org`);
+  }
+
+  if (!looksLikeGsebResultPage(resultHtml)) {
+    throw new Error(`GSEB did not return a result page for ${seatLabel}`);
   }
 
   const parsed = parseResultHtml(resultHtml);
   if (!hasValidGsebResult(parsed)) {
-    throw new Error(`GSEB returned no marks for ${seatLabel}`);
+    throw new Error(`Invalid GSEB seat or empty result for ${seatLabel}`);
   }
 
   return resultHtml;

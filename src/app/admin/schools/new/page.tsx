@@ -1,11 +1,13 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { BOARDS } from "@/lib/constants";
@@ -22,20 +24,7 @@ import { StepWizard } from "@/components/admin/admin-ui";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { InfoModal } from "@/components/ui/info-modal";
 import { OtpInput } from "@/components/ui/otp-input";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Save,
-  School,
-  User,
-  FileText,
-  LayoutGrid,
-  Loader2,
-  ShieldCheck,
-  Mail,
-  Trash2,
-  Database,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, School, User, FileText, LayoutGrid, ShieldCheck, Mail, Trash2, Database } from "lucide-react";
 
 const INITIAL_FORM = {
   name: "",
@@ -502,12 +491,31 @@ export default function NewSchoolPage() {
       if (logoFile && schoolId) {
         const fd = new FormData();
         fd.append("file", logoFile);
-        await fetch(`/api/admin/schools/${schoolId}/logo`, { method: "POST", body: fd });
+        const logoRes = await fetch(`/api/admin/schools/${schoolId}/logo`, { method: "POST", body: fd });
+        if (!logoRes.ok) {
+          const logoData = await logoRes.json().catch(() => ({}));
+          setErrorMsg(
+            `School created, but logo upload failed: ${logoData.error || "Unknown error"}. You can upload it from the school page.`,
+          );
+          router.push(`/admin/schools/${schoolId}`);
+          return;
+        }
       }
       if (contractFile && schoolId) {
         const fd = new FormData();
         fd.append("file", contractFile);
-        await fetch(`/api/admin/schools/${schoolId}/contract`, { method: "POST", body: fd });
+        const contractRes = await fetch(`/api/admin/schools/${schoolId}/contract`, {
+          method: "POST",
+          body: fd,
+        });
+        if (!contractRes.ok) {
+          const contractData = await contractRes.json().catch(() => ({}));
+          setErrorMsg(
+            `School created, but contract upload failed: ${contractData.error || "Unknown error"}. Upload it from the Contract tab.`,
+          );
+          router.push(`/admin/schools/${schoolId}?tab=contract`);
+          return;
+        }
       }
 
       const code = normalizeCode(formRef.current.code) || draftCodeRef.current;
@@ -575,7 +583,7 @@ export default function NewSchoolPage() {
             >
               {dbSaving ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Saving to database…
+                  <Spinner size="sm" /> Saving to database…
                 </span>
               ) : (
                 statusHint
@@ -680,7 +688,7 @@ export default function NewSchoolPage() {
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                 {codeSuggesting ? (
                   <span className="text-violet-600 inline-flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Generating code…
+                    <Spinner size="sm" /> Generating code…
                   </span>
                 ) : form.code ? (
                   <span>
@@ -714,7 +722,7 @@ export default function NewSchoolPage() {
                 >
                   {draftLoading ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+                      <Spinner size="sm" /> Loading…
                     </>
                   ) : (
                     "Load saved fields"
@@ -769,14 +777,34 @@ export default function NewSchoolPage() {
               value={form.udiseCode}
               onChange={(e) => setField("udiseCode", e.target.value)}
             />
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 space-y-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-sm font-semibold text-slate-800">Documents to prepare</p>
+                <ol className="mt-2 space-y-1.5 text-xs text-slate-600 list-decimal pl-4">
+                  <li>
+                    <strong>School logo</strong> — PNG/JPG (square preferred). Used on portal, ID cards &amp; letterhead.
+                  </li>
+                  <li>
+                    <strong>Signed service agreement / contract</strong> — PDF (or scanned image). Official deal copy for billing.
+                  </li>
+                </ol>
+              </div>
               <FileUploadField
-                label="School Logo"
-                hint="PNG/JPG — used on ID cards & portal"
+                label="1. School Logo"
+                accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                hint="Max recommended 2 MB · PNG or JPG"
+                requirements={[
+                  "Clear school crest / logo on transparent or white background",
+                  "Square or near-square image works best on ID cards",
+                ]}
                 previewUrl={logoPreview}
                 onFile={(f) => {
                   setLogoFile(f);
                   setLogoPreview(URL.createObjectURL(f));
+                }}
+                onClear={() => {
+                  setLogoFile(null);
+                  setLogoPreview(undefined);
                 }}
               />
             </div>
@@ -843,7 +871,7 @@ export default function NewSchoolPage() {
                     >
                       {otpSending ? (
                         <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending…
+                          <Spinner size="sm" /> Sending…
                         </>
                       ) : (
                         "Send OTP"
@@ -867,7 +895,7 @@ export default function NewSchoolPage() {
                     >
                       {otpVerifying ? (
                         <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Verifying…
+                          <Spinner size="sm" /> Verifying…
                         </>
                       ) : (
                         "Verify OTP"
@@ -916,17 +944,19 @@ export default function NewSchoolPage() {
                 setField("totalAmount", e.target.value);
               }}
             />
-            <Input
+            <DateField
               label="Contract Start Date"
-              type="date"
               value={form.contractStartDate}
-              onChange={(e) => setField("contractStartDate", e.target.value)}
+              onChange={(v) => setField("contractStartDate", v)}
+              outputFormat="iso"
+              showHint={false}
             />
-            <Input
+            <DateField
               label="Contract End Date"
-              type="date"
               value={form.contractEndDate}
-              onChange={(e) => setField("contractEndDate", e.target.value)}
+              onChange={(v) => setField("contractEndDate", v)}
+              outputFormat="iso"
+              showHint={false}
             />
             <Input
               label="Total Amount (₹)"
@@ -951,11 +981,12 @@ export default function NewSchoolPage() {
               value={form.initialPaymentRef}
               onChange={(e) => setField("initialPaymentRef", e.target.value)}
             />
-            <Input
+            <DateField
               label="Next Due Date"
-              type="date"
               value={form.nextDueDate}
-              onChange={(e) => setField("nextDueDate", e.target.value)}
+              onChange={(v) => setField("nextDueDate", v)}
+              outputFormat="iso"
+              showHint={false}
             />
             <div className="md:col-span-2">
               <Textarea
@@ -967,11 +998,17 @@ export default function NewSchoolPage() {
             </div>
             <div className="md:col-span-2">
               <FileUploadField
-                label="Contract Document"
-                accept=".pdf,.png,.jpg,.jpeg"
+                label="2. Signed Contract / Agreement"
+                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                 isImage={false}
-                hint="PDF or image — signed agreement"
+                hint="PDF preferred · scanned signed copy also OK"
+                requirements={[
+                  "Signed service agreement between SHS and the school",
+                  "Must show school name, contract value / plan, and signatures",
+                  "PDF recommended (PNG/JPG scan accepted)",
+                ]}
                 onFile={setContractFile}
+                onClear={() => setContractFile(null)}
               />
             </div>
           </CardContent>

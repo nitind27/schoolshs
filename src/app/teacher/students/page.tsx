@@ -1,21 +1,13 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/page-shell";
 import { teacherTheme as tp } from "@/components/teacher/teacher-theme";
 import { useT } from "@/i18n/locale-provider";
-import {
-  Users,
-  Search,
-  ClipboardList,
-  FileSpreadsheet,
-  FileText,
-  FilterX,
-  UserRound,
-  Phone,
-} from "lucide-react";
+import { Users, Search, ClipboardList, FileSpreadsheet, FileText, FilterX, UserRound, Phone } from "lucide-react";
 import { studentShortNameGu } from "@/lib/student-names";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { paginateSlice } from "@/lib/pagination";
@@ -393,7 +385,7 @@ export default function TeacherStudentsPage() {
 
       {loading ? (
         <div className="flex h-40 items-center justify-center">
-          <div className={`h-8 w-8 animate-spin rounded-full border-2 border-t-transparent border-teal-600`} />
+          <Spinner size="lg" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-16 text-center">

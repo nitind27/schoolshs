@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -56,9 +57,7 @@ export default function ClassDetailPage() {
 
   if (loading || !schoolClass) {
     return (
-      <div className="flex justify-center h-48 items-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
+      <PageLoader />
     );
   }
 

@@ -1,11 +1,12 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { GUJARAT_DISTRICTS } from "@/lib/constants";
 import type { PincodeOffice } from "@/lib/pincode-lookup";
-import { Loader2, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 export type SchoolLocationValues = {
   pincode: string;
@@ -127,7 +128,7 @@ export function SchoolLocationFields({ values, onChange }: Props) {
         <p className="mt-1.5 text-xs text-slate-500 flex items-center gap-1.5">
           {pincodeLoading ? (
             <>
-              <Loader2 className="h-3 w-3 animate-spin text-violet-600" />
+              <Spinner size="sm" />
               <span className="text-violet-600">Fetching taluka, district & address…</span>
             </>
           ) : pincodeError ? (

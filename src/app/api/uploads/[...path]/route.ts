@@ -26,6 +26,14 @@ async function assertUploadAccess(segments: string[]) {
   const session = await getSession();
   if (!session) throw new AuthError("Login required", 401);
 
+  // School logo / contract documents: schools/{schoolId}/...
+  if (segments[0] === "schools" && segments[1]) {
+    const schoolId = segments[1];
+    if (session.role === "super_admin") return;
+    if (session.schoolId && session.schoolId === schoolId) return;
+    throw new AuthError("Access denied", 403);
+  }
+
   if (segments[0] === "students" && segments[1]) {
     const studentId = segments[1];
     if (session.role === "student" && session.studentId !== studentId) {
@@ -68,11 +76,12 @@ async function assertUploadAccess(segments: string[]) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   try {
     const { path: segments } = await params;
-    if (!segments?.length || (segments[0] !== "students" && segments[0] !== "chat")) {
+    const allowedRoots = new Set(["students", "chat", "schools"]);
+    if (!segments?.length || !allowedRoots.has(segments[0])) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 

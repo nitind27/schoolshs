@@ -1,16 +1,13 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { CategoryBadge } from "@/components/ui/badge";
 import { useT } from "@/i18n/locale-provider";
-import {
-  Play, RefreshCw, CheckCircle, XCircle, Clock, Loader2,
-  Square, CheckSquare, Bot, LogIn, Shield, Save, ExternalLink,
-  Users, BookOpen, Search, ChevronDown, Info, X,
-} from "lucide-react";
+import { Play, RefreshCw, CheckCircle, XCircle, Clock, Square, CheckSquare, Bot, LogIn, Shield, Save, ExternalLink, Users, BookOpen, Search, ChevronDown, Info, X } from "lucide-react";
 import type { Student } from "@/generated/prisma/client";
 
 interface StudentProgressItem {
@@ -410,7 +407,7 @@ function AutoApplyContent() {
                   <p className="text-[10px] text-slate-400">{t("autoApply.lastLogin", { date: new Date(portalLastLogin).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" }) })}</p>
                 )}
                 <Button variant="outline" size="sm" className="w-full" onClick={saveDgCredentials} disabled={savingCreds}>
-                  {savingCreds ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  {savingCreds ? <Spinner size="sm" /> : <Save className="h-3.5 w-3.5" />}
                   {credsSaved ? t("autoApply.savedOk") : t("autoApply.saveCredentials")}
                 </Button>
               </div>
@@ -425,7 +422,7 @@ function AutoApplyContent() {
             >
               <span className="flex items-center justify-center gap-2">
                 {starting || jobRunning ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" />{jobRunning ? t("autoApply.runningJob", { done: activeJob!.completedCount, total: activeJob!.totalCount }) : t("autoApply.startingAutomation")}</>
+                  <><Spinner size="sm" />{jobRunning ? t("autoApply.runningJob", { done: activeJob!.completedCount, total: activeJob!.totalCount }) : t("autoApply.startingAutomation")}</>
                 ) : (
                   <><Play className="h-4 w-4" />{t("autoApply.startWithCount", { count: selected.size })}</>
                 )}
@@ -492,13 +489,7 @@ function AutoApplyContent() {
           </div>
 
           {loading ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
-              <div className="relative">
-                <div className="h-12 w-12 rounded-full border-4 border-violet-100" />
-                <Loader2 className="absolute inset-0 m-auto h-12 w-12 animate-spin text-violet-600" />
-              </div>
-              <p className="text-sm text-slate-500">{t("autoApply.loadingStudents")}</p>
-            </div>
+            <PageLoader label={t("autoApply.loadingStudents")} />
           ) : students.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center text-slate-400">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
@@ -628,7 +619,7 @@ function AutoApplyContent() {
             className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/40 transition-colors"
           >
             {activeJob.status === "running" ? (
-              <Loader2 className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
+              <Spinner size="sm" />
             ) : activeJob.status === "completed" ? (
               <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
             ) : (
@@ -683,7 +674,7 @@ function AutoApplyLoading() {
   const t = useT();
   return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
-      <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-200 border-t-emerald-600" />
+      <Spinner size="lg" />
       <p className="text-sm text-slate-500">{t("autoApply.loadingPage")}</p>
     </div>
   );

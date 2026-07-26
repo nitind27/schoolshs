@@ -8,7 +8,11 @@ import {
   padBoardResultListRows,
 } from "@/lib/board-records/result-list-data";
 import { fetchGsebResult } from "@/lib/gseb/fetch-gseb";
-import { seatFieldsForStandard, studentUpdateFromGseb } from "@/lib/gseb/persist-gseb-result";
+import {
+  clearGsebStoredResult,
+  seatFieldsForStandard,
+  studentUpdateFromGseb,
+} from "@/lib/gseb/persist-gseb-result";
 
 const BOARD_STANDARDS = ["10", "12"];
 const BATCH_DELAY_MS = 500;
@@ -98,8 +102,16 @@ export async function POST(request: NextRequest) {
 
       try {
         const result = await fetchGsebResult(standard, prefix, number);
-        if (result.percentage == null) {
-          throw new Error(`No marks for seat ${prefix}${number}`);
+        const subjectHits = Object.values(result.subjects).filter((v) => v != null).length;
+        const looksValid =
+          (result.percentage != null &&
+            Number.isFinite(result.percentage) &&
+            !!result.studentName &&
+            result.studentName.replace(/\s+/g, "").length >= 3) ||
+          (subjectHits >= 3 && result.percentage != null) ||
+          !!(result.studentName && result.result && result.percentage != null);
+        if (!looksValid) {
+          throw new Error(`Invalid GSEB seat or no result for ${prefix}${number}`);
         }
         await prisma.student.update({
           where: { id: s.id },
@@ -107,6 +119,10 @@ export async function POST(request: NextRequest) {
         });
         summary.ok++;
       } catch (e) {
+        await prisma.student.update({
+          where: { id: s.id },
+          data: clearGsebStoredResult(standard),
+        });
         summary.fail++;
         summary.errors.push({
           studentId: s.id,

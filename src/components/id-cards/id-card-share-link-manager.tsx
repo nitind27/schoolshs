@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useT } from "@/i18n/locale-provider";
 import { useConfirm } from "@/hooks/use-confirm";
 import type { SchoolClass } from "@/generated/prisma/client";
-import { Copy, ExternalLink, Link2, Loader2, Plus, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Copy, ExternalLink, Link2, Plus, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 
 interface ShareLink {
   id: string;
@@ -169,7 +170,7 @@ export function IdCardShareLinkManager({ classId, standard, section, academicYea
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex gap-2">
               <Button size="sm" onClick={createLink} disabled={creating || !form.username || !form.password}>
-                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : t("idCardShare.generateLink")}
+                {creating ? <Spinner size="sm" /> : t("idCardShare.generateLink")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>
             </div>
@@ -199,7 +200,7 @@ export function IdCardShareLinkManager({ classId, standard, section, academicYea
         )}
 
         {loading ? (
-          <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-violet-600" /></div>
+          <div className="flex justify-center py-6"><Spinner size="md" /></div>
         ) : links.length === 0 ? (
           <p className="text-sm text-slate-500 py-4 text-center">{t("idCardShare.noLinks")}</p>
         ) : (

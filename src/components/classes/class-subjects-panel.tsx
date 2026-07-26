@@ -1,21 +1,13 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useT } from "@/i18n/locale-provider";
-import {
-  BookOpen,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  Plus,
-  RefreshCw,
-  Save,
-  Trash2,
-} from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 
 type SubjectRow = {
   id?: string;
@@ -198,7 +190,7 @@ export function ClassSubjectsPanel({ classId, canEdit = true }: Props) {
                 {t("classes.subjectsReset")}
               </Button>
               <Button size="sm" onClick={save} disabled={saving || subjects.length === 0}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
                 {t("classes.subjectsSave")}
               </Button>
             </div>
@@ -207,9 +199,7 @@ export function ClassSubjectsPanel({ classId, canEdit = true }: Props) {
       </CardHeader>
       <CardContent className="space-y-3">
         {loading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
-          </div>
+          <PageLoader />
         ) : (
           <>
             {error && (

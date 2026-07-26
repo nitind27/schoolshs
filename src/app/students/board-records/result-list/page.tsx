@@ -1,9 +1,10 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, usePathname } from "next/navigation";
-import { ArrowLeft, Loader2, Printer, Save } from "lucide-react";
+import { ArrowLeft, Printer, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CertificateFilters, type CertFilters } from "@/components/certificates/certificate-filters";
 import { BoardResultListTable } from "@/components/board-records/board-result-list";
@@ -133,10 +134,19 @@ function BoardResultListContent() {
     <div className="space-y-5">
       <div className="no-print flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link href={boardBackHref}>
+          <Link
+            href={boardBackHref}
+            onClick={(e) => {
+              // Prefer browser history when user came from board-records hub
+              if (typeof window !== "undefined" && window.history.length > 1) {
+                e.preventDefault();
+                window.history.back();
+              }
+            }}
+          >
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4" />
-              {t("boardRecords.title")}
+              {t("common.back")}
             </Button>
           </Link>
           <div>
@@ -150,7 +160,7 @@ function BoardResultListContent() {
             {t("boardRecords.print")}
           </Button>
           <Button size="sm" onClick={save} disabled={!rows.length || saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
             {t("boardRecords.save")}
           </Button>
         </div>
@@ -189,9 +199,7 @@ function BoardResultListContent() {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
+        <PageLoader />
       ) : data && rows.length > 0 ? (
         <div className="print-area board-result-print bg-white p-2 md:p-4 overflow-x-auto">
           <BoardResultListTable

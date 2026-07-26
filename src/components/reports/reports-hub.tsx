@@ -1,35 +1,12 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  FileSpreadsheet,
-  FileText,
-  Download,
-  Search,
-  Loader2,
-  BarChart3,
-  Users,
-  ClipboardCheck,
-  CalendarCheck,
-  CalendarRange,
-  GraduationCap,
-  Clock,
-  Trophy,
-  Briefcase,
-  Wallet,
-  School,
-  Scale,
-  Receipt,
-  BookOpen,
-  BookMarked,
-  LayoutGrid,
-  PieChart,
-  UserCheck,
-  CreditCard,
-} from "lucide-react";
+import { FileSpreadsheet, FileText, Download, Search, BarChart3, Users, ClipboardCheck, CalendarCheck, CalendarRange, GraduationCap, Clock, Trophy, Briefcase, Wallet, School, Scale, Receipt, BookOpen, BookMarked, LayoutGrid, PieChart, UserCheck, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { InfoModal } from "@/components/ui/info-modal";
 import { ReportPrintView } from "@/components/reports/report-print-view";
 import { useT } from "@/i18n/locale-provider";
@@ -497,17 +474,19 @@ export function ReportsHub() {
                   )}
                   {hasDateRange && (
                     <>
-                      <Input
-                        type="date"
+                      <DateField
                         label={t("reportsHub.filterDateFrom")}
                         value={filters.dateFrom}
-                        onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                        onChange={(v) => setFilters({ ...filters, dateFrom: v })}
+                        outputFormat="iso"
+                        showHint={false}
                       />
-                      <Input
-                        type="date"
+                      <DateField
                         label={t("reportsHub.filterDateTo")}
                         value={filters.dateTo}
-                        onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                        onChange={(v) => setFilters({ ...filters, dateTo: v })}
+                        outputFormat="iso"
+                        showHint={false}
                       />
                       <p className="sm:col-span-2 text-[11px] text-slate-500">
                         {t("reportsHub.dateRangeHint")}
@@ -528,19 +507,19 @@ export function ReportsHub() {
               </Button>
               {selected.formats.includes("xlsx") && (
                 <Button onClick={() => void downloadExcel()} disabled={!!busy} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-                  {busy === "xlsx" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+                  {busy === "xlsx" ? <Spinner size="sm" /> : <FileSpreadsheet className="h-4 w-4" />}
                   {t("reportsHub.downloadExcel")}
                 </Button>
               )}
               {selected.formats.includes("csv") && (
                 <Button variant="outline" onClick={() => void downloadCsv()} disabled={!!busy} className="gap-2">
-                  {busy === "csv" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {busy === "csv" ? <Spinner size="sm" /> : <Download className="h-4 w-4" />}
                   {t("reportsHub.downloadCsv")}
                 </Button>
               )}
               {selected.formats.includes("pdf") && (
                 <Button variant="outline" onClick={() => void exportPdf()} disabled={!!busy} className="gap-2">
-                  {busy === "pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                  {busy === "pdf" ? <Spinner size="sm" /> : <FileText className="h-4 w-4" />}
                   {t("reportsHub.savePdf")}
                 </Button>
               )}

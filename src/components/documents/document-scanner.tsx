@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
@@ -14,19 +15,7 @@ import {
   type ScanMode,
 } from "@/lib/scanner-bridge.client";
 import { useLocale, useT } from "@/i18n/locale-provider";
-import {
-  ScanLine,
-  X,
-  Camera,
-  RotateCcw,
-  Check,
-  Loader2,
-  SwitchCamera,
-  AlertCircle,
-  Printer,
-  RefreshCw,
-  Plug,
-} from "lucide-react";
+import { ScanLine, X, Camera, RotateCcw, Check, SwitchCamera, AlertCircle, Printer, RefreshCw, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
@@ -413,7 +402,7 @@ export function DocumentScanner({
         <div className="relative bg-black flex-1 min-h-[280px] flex items-center justify-center overflow-hidden">
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white z-10">
-              <Loader2 className="h-10 w-10 animate-spin text-blue-400" />
+              <Spinner size="sm" />
               <p className="text-sm">
                 {scanMode === "hardware" ? t("documents.scannerHardwareWaiting") : t("documents.scannerConnecting")}
               </p>
@@ -520,7 +509,7 @@ export function DocumentScanner({
                 {t("documents.scannerRetake")}
               </Button>
               <Button className="flex-1" variant="success" onClick={() => void handleUseScan()} disabled={processing}>
-                {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                {processing ? <Spinner size="sm" /> : <Check className="h-4 w-4" />}
                 {t("documents.scannerUse")}
               </Button>
             </>

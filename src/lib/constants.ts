@@ -30,7 +30,7 @@ export const SCHOLARSHIP_SCHEMES = [
 ] as const;
 
 export const FINANCIAL_YEARS = [
-  "2025-26", "2024-25", "2023-24",
+  "2026-27", "2025-26", "2024-25", "2023-24",
 ] as const;
 
 export const COURSE_TYPES = [
@@ -77,6 +77,40 @@ export const STAFF_DESIGNATIONS = [
   "Librarian",
   "Accountant",
   "Other",
+] as const;
+
+/** Common school staff academic / professional qualifications */
+export const STAFF_QUALIFICATIONS = [
+  "SSC (10th)",
+  "HSC (12th)",
+  "Diploma",
+  "ITI",
+  "PTC / D.El.Ed.",
+  "D.Ed.",
+  "B.A.",
+  "B.Sc.",
+  "B.Com.",
+  "B.B.A.",
+  "B.C.A.",
+  "B.Ed.",
+  "B.P.Ed.",
+  "B.E. / B.Tech.",
+  "LL.B.",
+  "M.A.",
+  "M.Sc.",
+  "M.Com.",
+  "M.B.A.",
+  "M.C.A.",
+  "M.Ed.",
+  "M.P.Ed.",
+  "M.Phil.",
+  "Ph.D.",
+  "CTET",
+  "TET / TAT",
+  "CCC / CCC+",
+  "PGDCA",
+  "Special Education",
+  "Music / Arts Diploma",
 ] as const;
 
 export const STAFF_ROLE_WORK: Record<string, string[]> = {

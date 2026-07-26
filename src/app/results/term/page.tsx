@@ -1,12 +1,13 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { ArrowLeft, Save, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import type { ExamTermKey } from "@/lib/results/exam-terms";
@@ -169,7 +170,7 @@ export default function TermMarksPage() {
         </div>
         {data?.editable && (
           <Button onClick={save} disabled={saving} size="lg" className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
             {saving ? t("results.save") + "..." : t("results.save")}
           </Button>
         )}
@@ -214,9 +215,7 @@ export default function TermMarksPage() {
       )}
 
       {loading ? (
-        <div className="flex justify-center h-48 items-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
+        <PageLoader />
       ) : !classId ? (
         <Card><CardContent className="p-12 text-center text-slate-500">{t("examTerms.selectClassFirst")}</CardContent></Card>
       ) : data && rows.length > 0 ? (

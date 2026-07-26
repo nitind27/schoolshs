@@ -1,11 +1,13 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { FeatureToggleGrid } from "@/components/admin/feature-toggle-grid";
@@ -21,24 +23,7 @@ import {
   normalizeFeatureList,
   type SchoolFeatureKey,
 } from "@/lib/school-features";
-import {
-  ArrowLeft,
-  School,
-  Save,
-  ToggleLeft,
-  ToggleRight,
-  FileText,
-  CreditCard,
-  LayoutGrid,
-  Users,
-  MapPin,
-  Phone,
-  Mail,
-  Globe,
-  Pencil,
-  Trash2,
-  Loader2,
-} from "lucide-react";
+import { ArrowLeft, School, Save, ToggleLeft, ToggleRight, FileText, CreditCard, LayoutGrid, Users, MapPin, Phone, Mail, Globe, Pencil, Trash2 } from "lucide-react";
 
 type Tab = "overview" | "edit" | "contract" | "payments" | "features" | "admins";
 
@@ -166,6 +151,8 @@ export default function SchoolDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [contractUploading, setContractUploading] = useState(false);
 
   const load = useCallback(() => {
     fetch(`/api/admin/schools/${id}`)
@@ -303,26 +290,46 @@ export default function SchoolDetailPage() {
   };
 
   const uploadLogo = async (file: File) => {
-    const fd = new FormData();
-    fd.append("file", file);
-    await fetch(`/api/admin/schools/${id}/logo`, { method: "POST", body: fd });
-    setMsg("Logo updated.");
-    load();
+    setLogoUploading(true);
+    setErr("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/admin/schools/${id}/logo`, { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErr(data.error || "Logo upload failed");
+        return;
+      }
+      setMsg("Logo updated.");
+      load();
+    } finally {
+      setLogoUploading(false);
+    }
   };
 
   const uploadContract = async (file: File) => {
-    const fd = new FormData();
-    fd.append("file", file);
-    await fetch(`/api/admin/schools/${id}/contract`, { method: "POST", body: fd });
-    setMsg("Contract document uploaded.");
-    load();
+    setContractUploading(true);
+    setErr("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/admin/schools/${id}/contract`, { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErr(data.error || "Contract upload failed");
+        return;
+      }
+      setMsg("Contract document uploaded.");
+      load();
+    } finally {
+      setContractUploading(false);
+    }
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-violet-200 border-t-violet-600" />
-      </div>
+      <PageLoader />
     );
   }
 
@@ -381,7 +388,7 @@ export default function SchoolDetailPage() {
             }}
           >
             {toggling ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner size="sm" />
             ) : school.isActive ? (
               <>
                 <ToggleRight className="h-4 w-4 text-emerald-600" /> Deactivate
@@ -499,7 +506,15 @@ export default function SchoolDetailPage() {
             <CardContent>
               <FileUploadField
                 label="Update Logo"
+                accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
                 previewUrl={settings?.logoPath ? `/api/uploads/${settings.logoPath}` : undefined}
+                existingFileName={settings?.logoPath ? settings.logoPath.split("/").pop() : undefined}
+                uploading={logoUploading}
+                requirements={[
+                  "PNG or JPG school crest / logo",
+                  "Used on portal header, ID cards and letterhead",
+                ]}
+                hint="Replace anytime — old logo is overwritten"
                 onFile={uploadLogo}
               />
             </CardContent>
@@ -517,7 +532,7 @@ export default function SchoolDetailPage() {
             <Button onClick={saveEdit} disabled={saving} className="bg-violet-600 hover:bg-violet-700">
               {saving ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                  <Spinner size="sm" /> Saving…
                 </>
               ) : (
                 <>
@@ -615,17 +630,19 @@ export default function SchoolDetailPage() {
                     setEdit("totalAmount", e.target.value);
                   }}
                 />
-                <Input
+                <DateField
                   label="Contract Start"
-                  type="date"
                   value={editForm.contractStartDate}
-                  onChange={(e) => setEdit("contractStartDate", e.target.value)}
+                  onChange={(v) => setEdit("contractStartDate", v)}
+                  outputFormat="iso"
+                  showHint={false}
                 />
-                <Input
+                <DateField
                   label="Contract End"
-                  type="date"
                   value={editForm.contractEndDate}
-                  onChange={(e) => setEdit("contractEndDate", e.target.value)}
+                  onChange={(v) => setEdit("contractEndDate", v)}
+                  outputFormat="iso"
+                  showHint={false}
                 />
                 <Input
                   label="Total Amount (₹)"
@@ -644,11 +661,12 @@ export default function SchoolDetailPage() {
                   value={editForm.paymentStatus}
                   onChange={(e) => setEdit("paymentStatus", e.target.value)}
                 />
-                <Input
+                <DateField
                   label="Next Due Date"
-                  type="date"
                   value={editForm.nextDueDate}
-                  onChange={(e) => setEdit("nextDueDate", e.target.value)}
+                  onChange={(v) => setEdit("nextDueDate", v)}
+                  outputFormat="iso"
+                  showHint={false}
                 />
                 <div className="md:col-span-2">
                   <Textarea
@@ -713,27 +731,56 @@ export default function SchoolDetailPage() {
                 <p className="text-slate-600 bg-slate-50 rounded-lg p-3">{String(sub.contractNotes)}</p>
               ) : null}
               {sub?.contractDocumentPath ? (
-                <a
-                  href={`/api/uploads/${sub.contractDocumentPath}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 text-violet-600 hover:underline text-sm font-medium"
-                >
-                  <FileText className="h-4 w-4" /> View Contract Document
-                </a>
-              ) : null}
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-emerald-800">Uploaded contract on file</p>
+                  <a
+                    href={`/api/uploads/${sub.contractDocumentPath}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 text-sky-800 hover:underline text-sm font-medium"
+                  >
+                    <FileText className="h-4 w-4" />
+                    {String(sub.contractDocumentPath).split("/").pop() || "View Contract Document"}
+                  </a>
+                </div>
+              ) : (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                  No contract document uploaded yet.
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
               <CardTitle>Upload Contract</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              <div className="rounded-lg border border-sky-100 bg-sky-50/80 px-3 py-2 text-xs text-sky-900">
+                <p className="font-semibold mb-1">Which document to upload?</p>
+                <p>
+                  Upload the <strong>signed service agreement / contract PDF</strong> between SHS and this
+                  school (with signatures, school name, and agreed amount). Scanned PNG/JPG is also accepted.
+                </p>
+              </div>
               <FileUploadField
                 label="Contract Document"
-                accept=".pdf,.png,.jpg,.jpeg"
+                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                 isImage={false}
-                hint="Signed agreement PDF"
+                uploading={contractUploading}
+                previewUrl={
+                  sub?.contractDocumentPath ? `/api/uploads/${sub.contractDocumentPath}` : undefined
+                }
+                existingFileName={
+                  sub?.contractDocumentPath
+                    ? String(sub.contractDocumentPath).split("/").pop()
+                    : undefined
+                }
+                requirements={[
+                  "Signed agreement PDF (preferred)",
+                  "Must include school name + signatures",
+                  "Replacing uploads a new file and updates the link",
+                ]}
+                hint="PDF or image scan"
                 onFile={uploadContract}
               />
             </CardContent>

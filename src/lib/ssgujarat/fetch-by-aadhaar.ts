@@ -1,5 +1,6 @@
 import { chromium, type Page } from "playwright";
 import { enrichRecordsWithProfiles } from "./fetch-by-child-uid";
+import { SSG_MSG } from "./message-codes";
 import type { SsgujaratFetchResult, SsgujaratStudentRecord } from "./types";
 
 const SS_GUJARAT_LOGIN = "https://www.ssgujarat.org/CTELogin.aspx";
@@ -64,7 +65,7 @@ export async function fetchSsgujaratByAadhaar(aadhaarNumber: string): Promise<Ss
   const searchedAadhaar = normalizeAadhaar(aadhaarNumber);
 
   if (!/^\d{12}$/.test(searchedAadhaar)) {
-    throw new Error("Aadhaar number 12 digits hona chahiye");
+    throw new Error(SSG_MSG.AADHAAR_INVALID);
   }
 
   const browser = await chromium.launch({ headless: true });
@@ -94,9 +95,7 @@ export async function fetchSsgujaratByAadhaar(aadhaarNumber: string): Promise<Ss
         searchType: "aadhaar",
         searchId: searchedAadhaar,
         records: [],
-        message: noData
-          ? "SSGujarat par is Aadhaar ka koi record nahi mila"
-          : "SSGujarat se data nahi mila — shayad Aadhaar galat hai ya portal par entry nahi hai",
+        message: noData ? SSG_MSG.NO_RECORD_AADHAAR : SSG_MSG.NO_DATA,
       };
     }
 
@@ -110,10 +109,8 @@ export async function fetchSsgujaratByAadhaar(aadhaarNumber: string): Promise<Ss
       searchType: "aadhaar",
       searchId: searchedAadhaar,
       records,
-      message:
-        records.length > 1
-          ? `${records.length} students mile — sahi wala select karein (last 4 digits match)`
-          : undefined,
+      message: records.length > 1 ? SSG_MSG.MULTIPLE_MATCHES : undefined,
+      matchCount: records.length > 1 ? records.length : undefined,
     };
   } finally {
     await browser.close();

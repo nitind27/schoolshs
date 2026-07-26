@@ -4,16 +4,21 @@ import { AuthError, setSessionCookie } from "@/lib/auth";
 import { verifyCaptchaAnswer } from "@/lib/captcha";
 import { EmailNotVerifiedError } from "@/lib/email-verification";
 import { getRoleHome } from "@/lib/roles";
-import {
-  AccountLockedError,
-  getClientIp,
-  loginErrorPayload,
-} from "@/lib/login-security";
+import { AccountLockedError, loginErrorPayload } from "@/lib/login-security";
+import { buildLoginContext } from "@/lib/login-geo";
+import type { SessionAction } from "@/lib/user-sessions";
+
+function parseSessionAction(value: unknown): SessionAction | null {
+  if (value === "keep_all" || value === "logout_others") return value;
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, password, captchaToken, captchaAnswer } = body;
+    const sessionAction = parseSessionAction(body.sessionAction);
+    const rememberMe = body.rememberMe === true;
 
     if (!captchaToken || !captchaAnswer) {
       return NextResponse.json(
@@ -29,14 +34,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ip = getClientIp(request);
-    const sessionUser = await authenticateCredentials(email, password, ip);
+    const ctx = await buildLoginContext(request, body, "web");
+    const result = await authenticateCredentials(email, password, ctx, { sessionAction });
+
+    if (result.kind === "device_choice") {
+      return NextResponse.json(
+        {
+          requiresDeviceChoice: true,
+          sessions: result.sessions,
+          user: { name: result.name, email: result.email, role: result.role },
+        },
+        { status: 409 },
+      );
+    }
 
     const res = NextResponse.json({
-      user: sessionUser,
-      redirect: getRoleHome(sessionUser.role),
+      user: result.session,
+      redirect: getRoleHome(result.session.role),
+      revokedOthers: result.revokedOthers,
     });
-    await setSessionCookie(res, sessionUser);
+    await setSessionCookie(res, result.session, { rememberMe });
     return res;
   } catch (error) {
     if (error instanceof AuthError) {

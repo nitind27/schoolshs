@@ -3,13 +3,21 @@
 export const RETIREMENT_AGE = 58;
 export const HIGHER_GRADE_YEARS = [9, 20, 31] as const;
 
-/** Parse DD-MM-YYYY (or D-M-YYYY / DD/MM/YYYY) into a Date, else null */
+/** Parse DD-MM-YYYY, DD/MM/YYYY, or YYYY-MM-DD into a Date, else null */
 export function parseDMY(value?: string | null): Date | null {
   if (!value) return null;
-  const m = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/.exec(value.trim());
-  if (!m) return null;
-  const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
-  return Number.isNaN(d.getTime()) ? null : d;
+  const v = value.trim();
+  const m = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/.exec(v);
+  if (m) {
+    const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (iso) {
+    const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
 }
 
 export function formatDMY(d: Date | null): string {

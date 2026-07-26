@@ -1,11 +1,12 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StudentIdCard } from "@/components/id-cards/student-id-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CreditCard, Loader2, Lock, LogOut, Printer, Shield } from "lucide-react";
+import { CreditCard, Lock, LogOut, Printer, Shield } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import type { SchoolSettings, Student } from "@/generated/prisma/client";
@@ -115,7 +116,7 @@ export function IdCardSharePortal() {
   if (pageLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -168,7 +169,7 @@ export function IdCardSharePortal() {
               </p>
             )}
             <Button type="submit" className="w-full" disabled={authLoading}>
-              {authLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("idCardShare.openCards")}
+              {authLoading ? <Spinner size="sm" /> : t("idCardShare.openCards")}
             </Button>
           </form>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader, Spinner } from "@/components/ui/loader";
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -15,15 +16,7 @@ import {
 import { getCategoryMeta, type DgCategory } from "@/lib/category-inference";
 import { genderShort } from "@/lib/gender-utils";
 import { useT } from "@/i18n/locale-provider";
-import {
-  ArrowLeft,
-  Search,
-  Edit,
-  Eye,
-  Users,
-  Filter,
-  X,
-} from "lucide-react";
+import { ArrowLeft, Search, Edit, Eye, Users, Filter, X } from "lucide-react";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGE_SIZE } from "@/lib/pagination";
 
@@ -219,9 +212,7 @@ function CategoryReportContent() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center h-48 items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            </div>
+            <PageLoader />
           ) : students.length === 0 ? (
             <p className="text-center py-16 text-slate-500">{t("categoryPage.noStudentsFilter")}</p>
           ) : (
@@ -286,7 +277,7 @@ function CategoryReportContent() {
 
 export default function CategoryReportPage() {
   return (
-    <Suspense fallback={<div className="flex justify-center h-48 items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>}>
+    <Suspense fallback={<PageLoader />}>
       <CategoryReportContent />
     </Suspense>
   );

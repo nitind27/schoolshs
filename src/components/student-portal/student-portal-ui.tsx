@@ -1,10 +1,11 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/locale-provider";
-import { ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { ArrowRight, AlertCircle } from "lucide-react";
 
 export type StudentPortalData = Record<string, unknown> & {
   firstName?: string;
@@ -69,7 +70,7 @@ export function useStudentData() {
 export function StudentLoading({ label }: { label?: string }) {
   return (
     <div className="flex min-h-[280px] flex-col items-center justify-center gap-3">
-      <Loader2 className="h-8 w-8 animate-spin text-[var(--sp-accent,#0d7377)]" />
+      <Spinner size="lg" />
       {label && <p className="text-sm text-slate-500">{label}</p>}
     </div>
   );

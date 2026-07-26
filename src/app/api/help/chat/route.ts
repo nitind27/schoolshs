@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unsupported role" }, { status: 403 });
     }
     const preferred = parseLang(request.nextUrl.searchParams.get("lang"));
-    const welcome = getWelcomeMessage(session.role, preferred || "en");
+    const welcome = getWelcomeMessage(session.role, preferred || "gu");
     return NextResponse.json({
       ...welcome,
       role: session.role,

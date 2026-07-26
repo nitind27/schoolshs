@@ -349,6 +349,7 @@
             box-shadow: var(--app-shadow);
         }
 
+        .app-tool-section.section-logo { border-left: 3px solid #b45309; }
         .app-tool-section.section-page { border-left: 3px solid var(--lh-ink); }
         .app-tool-section.section-insert { border-left: 3px solid #0e7490; }
         .app-tool-section.section-quick { border-left: 3px solid var(--lh-crimson); }
@@ -979,8 +980,23 @@
             margin: 0 auto;
         }
 
+        .logo-placeholder.has-logo,
+        .logo-placeholder:has(img) {
+            border: none;
+            background: transparent;
+            height: auto;
+            min-height: 70px;
+        }
+
         .logo-placeholder:hover {
             background: #ffe5e5;
+        }
+
+        .logo-placeholder.has-logo:hover,
+        .logo-placeholder:has(img):hover {
+            background: rgba(196, 30, 58, 0.06);
+            outline: 1px dashed #c41e3a;
+            outline-offset: 2px;
         }
 
         .logo-placeholder span {
@@ -1399,6 +1415,178 @@
             display: block;
         }
 
+        /* Logo gallery panel */
+        .logo-panel {
+            max-width: 210mm;
+            margin: 0 auto 10px;
+            background: linear-gradient(145deg, #0f172a 0%, #134e4a 100%);
+            border-radius: 12px;
+            padding: 14px 15px 16px;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.28);
+            color: #ecfeff;
+        }
+
+        .logo-panel.active {
+            display: block;
+        }
+
+        .logo-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .logo-panel-header h3 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: var(--ui-font);
+        }
+
+        .logo-panel-close {
+            border: 0;
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logo-panel-close:hover {
+            background: rgba(255,255,255,0.22);
+        }
+
+        .logo-panel-hint {
+            margin: 0 0 12px;
+            font-size: 12px;
+            line-height: 1.45;
+            color: rgba(204, 251, 241, 0.9);
+        }
+
+        .logo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+            gap: 10px;
+        }
+
+        .logo-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 8px 8px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+            text-align: center;
+        }
+
+        .logo-card:hover {
+            background: rgba(255,255,255,0.14);
+            border-color: rgba(94, 234, 212, 0.55);
+            transform: translateY(-1px);
+        }
+
+        .logo-card.is-active {
+            border-color: #5eead4;
+            background: rgba(13, 115, 119, 0.45);
+            box-shadow: 0 0 0 2px rgba(94, 234, 212, 0.25);
+        }
+
+        .logo-card.is-default::after {
+            content: "DEFAULT";
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            font-size: 8px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            padding: 2px 5px;
+            border-radius: 999px;
+            background: #f59e0b;
+            color: #111;
+        }
+
+        .logo-card img {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            background: #fff;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .logo-card-label {
+            font-size: 10px;
+            font-weight: 650;
+            color: #ecfeff;
+            line-height: 1.25;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .logo-card-remove {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 20px;
+            height: 20px;
+            border: 0;
+            border-radius: 6px;
+            background: rgba(239, 68, 68, 0.9);
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .logo-card.is-custom:hover .logo-card-remove {
+            display: inline-flex;
+        }
+
+        .logo-panel-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .logo-panel-actions .app-tool-btn {
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            border-color: rgba(255,255,255,0.2);
+            cursor: pointer;
+        }
+
+        .logo-panel-actions .app-tool-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        @media print {
+            .logo-panel {
+                display: none !important;
+            }
+        }
+
+        html.embedded .logo-panel {
+            max-width: none;
+            margin-left: 12px;
+            margin-right: 12px;
+        }
+
         .stamp-panel-header {
             display: flex;
             justify-content: space-between;
@@ -1774,6 +1962,12 @@
             </div>
         </div>
         <div class="app-toolbar">
+            <div class="app-tool-section section-logo">
+                <span class="app-tool-label">Logo</span>
+                <button type="button" class="app-tool-btn" onclick="toggleLogoPanel()" title="Browse saved logos">Gallery</button>
+                <button type="button" class="app-tool-btn" onclick="changeLogo()" title="Upload a new logo">Upload</button>
+                <button type="button" class="app-tool-btn" onclick="resetDefaultLogo()" title="Use default SHS logo">Default</button>
+            </div>
             <div class="app-tool-section section-page">
                 <span class="app-tool-label">Page</span>
                 <button type="button" class="app-tool-btn" onclick="addNewPage()">+ Add</button>
@@ -1938,8 +2132,8 @@
                                 <table class="header-table">
                                     <tr>
                                         <td class="logo-cell">
-                                            <div class="logo-placeholder" id="logoContainer" onclick="document.getElementById('logoInput').click()">
-                                                <img src="logo.png" style="width: 70px; height: auto;" alt="Logo">
+                                            <div class="logo-placeholder has-logo" id="logoContainer" onclick="toggleLogoPanel()" title="Click to choose logo">
+                                                <img src="/shs/logo.png" style="width: 70px; height: auto;" alt="School Logo">
                                             </div>
                                         </td>
                                         <td class="school-name-cell">
@@ -2022,6 +2216,21 @@
 
     <!-- Add Page Button -->
     <button class="add-page-btn" onclick="addNewPage()">+ Add new page</button>
+    </div>
+
+    <!-- Logo Gallery Panel -->
+    <div class="logo-panel" id="logoPanel">
+        <div class="logo-panel-header">
+            <h3>🏫 School Logo Gallery</h3>
+            <button type="button" class="logo-panel-close" onclick="toggleLogoPanel(false)">✕</button>
+        </div>
+        <p class="logo-panel-hint">Default is <strong>SHS logo.png</strong>. Click any preview to use it on the letterhead. Upload adds to this list.</p>
+        <div class="logo-gallery" id="logoGallery"></div>
+        <div class="logo-panel-actions">
+            <button type="button" class="app-tool-btn" onclick="changeLogo()">+ Upload logo</button>
+            <button type="button" class="app-tool-btn" onclick="resetDefaultLogo()">Use default</button>
+            <button type="button" class="app-tool-btn" onclick="toggleLogoPanel(false)">Done</button>
+        </div>
     </div>
 
     <!-- Stamp Selection Panel -->
@@ -2135,7 +2344,18 @@
 
     <script>
         let editMode = false;
-        let logoData = 'logo.png'; // Default logo
+        /** Default: E:\shs\scholarship-portal\shs\logo.png → served as /shs/logo.png */
+        const DEFAULT_LOGO_URL = '/shs/logo.png';
+        const LOGO_LIBRARY_KEY = 'letterheadCustomLogos';
+        const BUILTIN_LOGOS = [
+            { id: 'default', label: 'SHS Default', src: DEFAULT_LOGO_URL, builtin: true },
+            { id: 'school-logo', label: 'School Crest', src: '/shs/logos/school-logo.png', builtin: true },
+            { id: 'sarvajanik', label: 'Sarvajanik Crest', src: '/shs/logos/sarvajanik-crest.png', builtin: true },
+            { id: 'logo-jpeg', label: 'Logo JPEG', src: '/shs/logos/logo.jpeg', builtin: true },
+            { id: 'school-photo', label: 'School Photo', src: '/shs/logos/school-photo.jpeg', builtin: true },
+            { id: 'mark', label: 'Mark', src: '/shs/logos/mark.png', builtin: true },
+        ];
+        let logoData = DEFAULT_LOGO_URL;
         let pageCount = 1;
         let selectedStamp = null;
         let stampCounter = 0;
@@ -3075,22 +3295,136 @@
             reader.readAsText(file);
         }
 
-        function handleLogoUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    logoData = e.target.result;
-                    // Update all logo containers
-                    document.querySelectorAll('.logo-placeholder, .logo-container').forEach(container => {
-                        container.innerHTML = `<img src="${logoData}" style="width: 70px; height: auto;">`;
-                        container.style.border = 'none';
-                        container.style.background = 'transparent';
-                    });
-                    saveToLocalStorage();
-                };
-                reader.readAsDataURL(file);
+        function normalizeLogoSrc(src) {
+            if (!src || typeof src !== 'string') return DEFAULT_LOGO_URL;
+            const trimmed = src.trim();
+            if (!trimmed) return DEFAULT_LOGO_URL;
+            if (
+                trimmed === 'logo.png' ||
+                trimmed === './logo.png' ||
+                trimmed === 'shs/logo.png' ||
+                trimmed.endsWith('/undefined')
+            ) {
+                return DEFAULT_LOGO_URL;
             }
+            return trimmed;
+        }
+
+        function loadCustomLogos() {
+            try {
+                const raw = localStorage.getItem(LOGO_LIBRARY_KEY);
+                const list = raw ? JSON.parse(raw) : [];
+                return Array.isArray(list) ? list.filter((x) => x && x.src && x.id) : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function saveCustomLogos(list) {
+            localStorage.setItem(LOGO_LIBRARY_KEY, JSON.stringify(list.slice(0, 16)));
+        }
+
+        function getAllLogos() {
+            return [...BUILTIN_LOGOS, ...loadCustomLogos()];
+        }
+
+        function renderLogoGallery() {
+            const gallery = document.getElementById('logoGallery');
+            if (!gallery) return;
+            const active = normalizeLogoSrc(logoData);
+            gallery.innerHTML = getAllLogos()
+                .map((item) => {
+                    const isActive = item.src === active;
+                    const isDefault = item.src === DEFAULT_LOGO_URL;
+                    const customCls = item.builtin ? '' : ' is-custom';
+                    const activeCls = isActive ? ' is-active' : '';
+                    const defaultCls = isDefault ? ' is-default' : '';
+                    const removeBtn = item.builtin
+                        ? ''
+                        : `<button type="button" class="logo-card-remove" title="Remove uploaded logo" onclick="event.stopPropagation(); removeCustomLogo('${item.id}')">✕</button>`;
+                    return `<button type="button" class="logo-card${activeCls}${defaultCls}${customCls}" onclick="selectLibraryLogo('${item.id}')" title="${item.label}">
+                        ${removeBtn}
+                        <img src="${item.src}" alt="${item.label}" onerror="this.style.opacity=0.3">
+                        <span class="logo-card-label">${item.label}</span>
+                    </button>`;
+                })
+                .join('');
+        }
+
+        function selectLibraryLogo(id) {
+            const item = getAllLogos().find((x) => x.id === id);
+            if (!item) return;
+            applyLogo(item.src, true);
+            renderLogoGallery();
+        }
+
+        function removeCustomLogo(id) {
+            const customs = loadCustomLogos();
+            const removed = customs.find((x) => x.id === id);
+            saveCustomLogos(customs.filter((x) => x.id !== id));
+            if (removed && logoData === removed.src) {
+                applyLogo(DEFAULT_LOGO_URL, true);
+            } else {
+                renderLogoGallery();
+            }
+        }
+
+        function toggleLogoPanel(force) {
+            const panel = document.getElementById('logoPanel');
+            if (!panel) return;
+            const stamp = document.getElementById('stampPanel');
+            const ocr = document.getElementById('ocrPanel');
+            if (stamp) stamp.classList.remove('active');
+            if (ocr) ocr.classList.remove('active');
+            const open = typeof force === 'boolean' ? force : !panel.classList.contains('active');
+            panel.classList.toggle('active', open);
+            if (open) renderLogoGallery();
+        }
+
+        function applyLogo(src, persist) {
+            logoData = normalizeLogoSrc(src);
+            document.querySelectorAll('.logo-placeholder, .logo-container').forEach((container) => {
+                container.innerHTML =
+                    `<img src="${logoData}" style="width: 70px; height: auto;" alt="School Logo" onerror="this.onerror=null;this.src='${DEFAULT_LOGO_URL}'">`;
+                container.classList.add('has-logo');
+                container.style.border = 'none';
+                container.style.background = 'transparent';
+                container.style.cursor = 'pointer';
+                container.title = 'Click to choose logo';
+                container.onclick = function () {
+                    toggleLogoPanel(true);
+                };
+            });
+            if (persist) saveToLocalStorage();
+            renderLogoGallery();
+        }
+
+        function changeLogo() {
+            const input = document.getElementById('logoInput');
+            if (input) input.click();
+        }
+
+        function resetDefaultLogo() {
+            applyLogo(DEFAULT_LOGO_URL, true);
+            toggleLogoPanel(true);
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const src = e.target.result;
+                const custom = loadCustomLogos();
+                const id = `custom-${Date.now()}`;
+                const label = (file.name || 'Uploaded').replace(/\.[^.]+$/, '').slice(0, 28) || 'Uploaded';
+                custom.unshift({ id, label, src, builtin: false });
+                saveCustomLogos(custom);
+                applyLogo(src, true);
+                toggleLogoPanel(true);
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
         }
 
         // Add new page with same header
@@ -3162,14 +3496,8 @@
             // Setup new page for stamp drag-drop
             setupPageForStamp(newPage);
             
-            // Update logo on new page if exists
-            if (logoData) {
-                newPage.querySelectorAll('.logo-placeholder').forEach(container => {
-                    container.innerHTML = `<img src="${logoData}" style="width: 70px; height: auto;">`;
-                    container.style.border = 'none';
-                    container.style.background = 'transparent';
-                });
-            }
+            // Keep logo in sync on new page
+            applyLogo(logoData, false);
             
             // Scroll to new page
             newPage.scrollIntoView({ behavior: 'smooth' });
@@ -3461,14 +3789,11 @@
                 }
                 
                 if (data.logo) {
-                    logoData = data.logo;
+                    logoData = normalizeLogoSrc(data.logo);
+                } else {
+                    logoData = DEFAULT_LOGO_URL;
                 }
-                // Always update logo containers with current logoData (default or saved)
-                document.querySelectorAll('.logo-placeholder').forEach(container => {
-                    container.innerHTML = `<img src="${logoData}" style="width: 70px; height: auto;">`;
-                    container.style.border = 'none';
-                    container.style.background = 'transparent';
-                });
+                applyLogo(logoData, false);
 
                 // Load stamps
                 if (data.stamps && data.stamps.length > 0) {
@@ -3519,6 +3844,8 @@
         // Load saved data on page load
         window.onload = function() {
             loadFromLocalStorage();
+            // Ensure default /shs/logo.png is visible even with empty / legacy storage
+            applyLogo(logoData || DEFAULT_LOGO_URL, false);
             updateWordCount();
         };
     </script>

@@ -2,6 +2,7 @@ import type { SsgujaratFetchResult } from "./types";
 import { detectSsgujaratSearchType, normalizeSsgSearchId } from "./id-utils";
 import { fetchSsgujaratByAadhaar } from "./fetch-by-aadhaar";
 import { fetchSsgujaratByChildUid } from "./fetch-by-child-uid";
+import { SSG_MSG } from "./message-codes";
 
 export { detectSsgujaratSearchType, normalizeSsgSearchId, describeSsgSearchType } from "./id-utils";
 
@@ -11,7 +12,7 @@ export async function fetchSsgujaratById(id: string): Promise<SsgujaratFetchResu
   const clean = normalizeSsgSearchId(id);
 
   if (!searchType) {
-    throw new Error("12-digit Aadhaar ya 18-digit Child UID enter karein");
+    throw new Error(SSG_MSG.INVALID_SEARCH_ID);
   }
 
   if (searchType === "aadhaar") {

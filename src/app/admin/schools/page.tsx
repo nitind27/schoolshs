@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,20 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatINR, StatusBadge } from "@/components/admin/admin-ui";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { InfoModal } from "@/components/ui/info-modal";
-import {
-  School,
-  Plus,
-  Search,
-  MapPin,
-  Users,
-  GraduationCap,
-  ExternalLink,
-  Pencil,
-  Trash2,
-  ToggleLeft,
-  ToggleRight,
-  Loader2,
-} from "lucide-react";
+import { School, Plus, Search, MapPin, Users, GraduationCap, ExternalLink, Pencil, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 
 interface SchoolRow {
   id: string;
@@ -165,9 +153,7 @@ export default function SchoolsListPage() {
       </Card>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-10 w-10 border-2 border-violet-200 border-t-violet-600" />
-        </div>
+        <PageLoader />
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center text-slate-400">
@@ -254,7 +240,7 @@ export default function SchoolsListPage() {
                     }}
                   >
                     {busyId === s.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Spinner size="sm" />
                     ) : s.isActive ? (
                       <>
                         <ToggleRight className="h-3.5 w-3.5 text-emerald-600" /> Off

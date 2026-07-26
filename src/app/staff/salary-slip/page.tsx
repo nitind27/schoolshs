@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -217,9 +218,7 @@ export default function SalarySlipPage() {
       )}
 
       {loading ? (
-        <div className="flex h-48 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
-        </div>
+        <PageLoader />
       ) : !staff ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-16 text-center">
           <FileText className="mx-auto mb-3 h-12 w-12 text-slate-300" />

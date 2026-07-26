@@ -45,7 +45,7 @@ const selectClass =
 
 export function DashboardFiltersBar({ filters, meta, onChange, onReset, resultCount }: Props) {
   const t = useT();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const hasActive =
     filters.standard ||

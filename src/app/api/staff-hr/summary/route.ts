@@ -36,6 +36,7 @@ export async function GET() {
       totalStaff,
       withSalary,
       attendanceMarked,
+      attendanceUnmarked: Math.max(0, totalStaff - attendanceMarked),
       payrollPending,
       payrollPaid,
       totalGross: monthPayroll._sum.grossSalary || 0,

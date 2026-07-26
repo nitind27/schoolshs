@@ -15,6 +15,7 @@ export interface LCData {
     dateOfBirth: string;
     currentCity?: string | null;
     currentDistrict?: string | null;
+    birthTaluka?: string | null;
     standard?: string | null;
     section?: string | null;
     childUid?: string | null;
@@ -31,372 +32,465 @@ export interface LCData {
   remarks?: string;
   sscExam?: string;
   sscSeatNo?: string;
+  medium?: string;
   issueDate: string;
 }
 
-/* underline fill line */
-function Line({
-  v = "",
-  w,
+const FONT = '"Times New Roman", Times, Georgia, serif';
+
+function Fill({
+  value = "",
+  minWidth = 80,
   flex,
-  bold,
+  center,
 }: {
-  v?: string;
-  w?: number | string;
+  value?: string;
+  minWidth?: number | string;
   flex?: number;
-  bold?: boolean;
+  center?: boolean;
 }) {
   return (
-    <span style={{
-      display: "inline-block",
-      borderBottom: "1px solid #000",
-      minWidth: w ?? 120,
-      flex,
-      verticalAlign: "bottom",
-      lineHeight: "1.55",
-      fontWeight: bold || v ? 600 : 400,
-      letterSpacing: v ? "0.01em" : 0,
-      paddingLeft: v ? 2 : 0,
-      paddingRight: v ? 2 : 0,
-    }}>
-      {v}
+    <span
+      style={{
+        display: "inline-block",
+        borderBottom: "1px solid #111",
+        minWidth,
+        flex: flex ?? undefined,
+        verticalAlign: "bottom",
+        lineHeight: 1.35,
+        fontWeight: value ? 600 : 400,
+        padding: "0 3px 1px",
+        textAlign: center ? "center" : "left",
+        wordBreak: "break-word",
+      }}
+    >
+      {value || "\u00a0"}
     </span>
   );
 }
 
-export function LeavingCertificateView({ data }: { data: LCData }) {
-  const S   = data.student;
-  const nm  = studentFullName(S);
-  const rc  = [S.religion, S.caste].filter(Boolean).join(" / ");
-  const bp  = [S.currentCity, S.currentDistrict ? `Dist. ${S.currentDistrict}` : ""].filter(Boolean).join(", ");
-  const dob = S.dateOfBirth;
-  const dobW = dateToWords(dob, "en");
-  const std  = data.studyingStandard || [S.standard, S.section].filter(Boolean).join("-");
-  const uid  = (S.childUid || "").replace(/\D/g, "");
-  const boxes = Array.from({ length: 18 }, (_, i) => uid[i] || "");
-
-  /* shared font */
-  const F: React.CSSProperties = {
-    fontFamily: '"Times New Roman", "Times", Georgia, serif',
-    color: "#000",
-  };
-
-  /* label style */
-  const LB: React.CSSProperties = { fontWeight: 700, fontSize: 11 };
-  const GU: React.CSSProperties = { fontSize: 10, display: "block", paddingLeft: 18, lineHeight: "1.6" };
-
+function Field({
+  n,
+  en,
+  gu,
+  children,
+}: {
+  n: number | string;
+  en: React.ReactNode;
+  gu?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
   return (
-    <div style={{
-      ...F,
-      fontSize: 11,
-      background: "#fff",
-      width: "100%",
-      maxWidth: 680,
-      margin: "0 auto",
-      border: "1.5px solid #000",
-      outline: "3px solid #000",
-      outlineOffset: "3px",
-      padding: "12px 18px 14px",
-      boxSizing: "border-box",
-      lineHeight: 1.45,
-      printColorAdjust: "exact",
-      WebkitPrintColorAdjust: "exact",
-    }}>
-
-      {/* ── TITLE ─────────────────────────────────────── */}
-      <p style={{ textAlign: "center", fontWeight: 700, fontSize: 13, margin: "0 0 1px", letterSpacing: "0.1em" }}>
-        SCHOOL LEAVING CERTIFICATE
-      </p>
-      <p style={{ textAlign: "center", fontWeight: 700, fontSize: 12, margin: "0 0 5px" }}>
-        શાળા છોડ્યાનું પ્રમાણપત્ર
-      </p>
-
-      {/* ── SCHOOL NAME ───────────────────────────────── */}
-      <p style={{ textAlign: "center", fontWeight: 700, fontSize: 18, margin: "0 0 0", letterSpacing: "0.01em" }}>
-        {CERTIFICATE_SCHOOL.nameEnAlt}
-      </p>
-      <p style={{ textAlign: "center", fontWeight: 700, fontSize: 14, margin: "0 0 6px" }}>
-        {CERTIFICATE_SCHOOL.nameGu}
-      </p>
-
-      {/* ── META ROW ──────────────────────────────────── */}
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10, marginBottom: 6, borderTop: "1px solid #000", borderBottom: "1px solid #000", paddingTop: 4, paddingBottom: 4 }}>
-        <tbody>
-          <tr>
-            <td style={{ verticalAlign: "top", width: "52%", paddingTop: 3 }}>
-              <div>S.S.C. Index No. : <b>{CERTIFICATE_SCHOOL.sscIndex}</b>
-                &nbsp;&nbsp;&nbsp; <b>Ta. Songadh, Dist. Tapi</b>
-              </div>
-              <div style={{ fontSize: 9 }}>
-                એસ.એસ.સી. ઈન્ડેક્સ નં. : {CERTIFICATE_SCHOOL.sscIndex}
-                &nbsp;&nbsp;&nbsp; તા. સોનગઢ, જિ. તાપી
-              </div>
-              <div style={{ marginTop: 2 }}>
-                H.S.C. Index No. : <b>{CERTIFICATE_SCHOOL.hscIndex}</b>
-                &nbsp;&nbsp;&nbsp; <b>Madhyamik / Ucchattar Madhyamik</b>
-              </div>
-              <div style={{ fontSize: 9 }}>
-                એચ.એસ.સી. ઈન્ડેક્સ નં. : {CERTIFICATE_SCHOOL.hscIndex}
-              </div>
-              <div style={{ marginTop: 2 }}>
-                ડાયસ કોડ નં. {CERTIFICATE_SCHOOL.diseCode}
-              </div>
-            </td>
-            <td style={{ verticalAlign: "top", textAlign: "right", paddingTop: 3 }}>
-              <div>
-                No.&nbsp;
-                <span style={{ display: "inline-block", borderBottom: "1px solid #000", minWidth: 48, fontWeight: 700, fontSize: 13, textAlign: "center" }}>
-                  {data.serialNo}
-                </span>
-              </div>
-              <div style={{ marginTop: 4 }}>
-                G.R.No./જી.આર.નં. :&nbsp;
-                <Line v={S.grNumber || ""} w={60} />
-              </div>
-              <div style={{ marginTop: 4 }}>
-                Medium/માધ્યમ :&nbsp;
-                <u style={{ fontWeight: 600 }}>ગુજરાતી/Gujarati</u>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      {/* ── FIELDS ────────────────────────────────────── */}
-      <div style={{ marginTop: 4 }}>
-
-        {/* 1 */}
-        <Row n="1">
-          <span style={LB}>Full Name of the Student&nbsp;</span><Line v={nm} flex={1} />
-          <span style={GU}>વિદ્યાર્થીનું પૂરેપૂરું નામ&nbsp;<Line v={nm} flex={1} /></span>
-        </Row>
-
-        {/* 2 */}
-        <Row n="2">
-          <span style={LB}>Religion and Caste&nbsp;</span><Line v={rc} flex={1} />
-          <span style={GU}>ધર્મ અને જાતિ&nbsp;<Line v={rc} flex={1} /></span>
-        </Row>
-
-        {/* 3 */}
-        <Row n="3">
-          <span style={LB}>Mother&apos;s Name&nbsp;</span><Line v={S.motherName} flex={1} />
-          <span style={GU}>માતાનું નામ&nbsp;<Line v={S.motherName} flex={1} /></span>
-        </Row>
-
-        {/* 4 */}
-        <Row n="4">
-          <span style={LB}>Place of Birth <span style={{ fontWeight: 400, fontSize: 10 }}>(With Taluka/District)</span>&nbsp;</span>
-          <Line v={bp} flex={1} />
-          <span style={GU}>જન્મ સ્થળ (તાલુકા, જિલ્લા સહિત)&nbsp;<Line v={bp} flex={1} /></span>
-        </Row>
-
-        {/* 5 */}
-        <Row n="5">
-          <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 4 }}>
-            <span style={LB}>Date of Birth&nbsp;</span>
-            <Line v={dob} w={100} />
-          </div>
-          <div style={{ fontSize: 10, lineHeight: "1.6", marginTop: 1 }}>
-            (in Figures and words as per Christian Calendar)
-          </div>
-          <div style={{ fontSize: 10, display: "flex", alignItems: "flex-end", gap: 4, marginTop: 1 }}>
-            <span>ખ્રિસ્તી વર્ષ અનુસાર જન્મ તારીખ&nbsp;</span>
-            <Line v={dob} w={80} />
-          </div>
-          <div style={{ fontSize: 10, display: "flex", alignItems: "flex-end", gap: 4 }}>
-            <span>(આંકડામાં અને શબ્દમાં)&nbsp;</span>
-            <Line v={dobW} w={180} />
-          </div>
-        </Row>
-
-        {/* 6 */}
-        <Row n="6">
-          <span style={LB}>Last School Attended&nbsp;</span>
-          <Line v={data.lastSchool || CERTIFICATE_SCHOOL.nameEnAlt} flex={1} />
-          <span style={GU}>જ્યાં ભણ્યો હોય તે છેલ્લી શાળા&nbsp;
-            <Line v={data.lastSchool || CERTIFICATE_SCHOOL.nameEnAlt} flex={1} />
-          </span>
-        </Row>
-
-        {/* 7 + 8 */}
-        <Row n="">
-          <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 6 }}>
-            <span style={LB}>7.&nbsp;Date of Admission(With Class)&nbsp;</span>
-            <Line v={data.admissionDate || ""} w={90} />
-            <span style={{ ...LB, marginLeft: 8 }}>8.&nbsp;Date of Leaving the School&nbsp;</span>
-            <Line v={data.leavingDate || ""} w={90} />
-          </div>
-          <div style={{ fontSize: 10, display: "flex", gap: 8, marginTop: 1 }}>
-            <span>પ્રવેશ તારીખ (ધોરણ સહિત)&nbsp;<Line v={data.admissionDate || ""} w={70} /></span>
-            <span style={{ marginLeft: 12 }}>શાળા છોડ્યા તારીખ&nbsp;<Line v={data.leavingDate || ""} w={70} /></span>
-          </div>
-        </Row>
-
-        {/* 9 */}
-        <Row n="9">
-          <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 4 }}>
-            <span style={LB}>In which Standard he/she&nbsp;</span>
-            <Line v={std} w={70} />
-          </div>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, marginTop: 2 }}>
-            <span style={LB}>Studying &amp; Since When?&nbsp;</span>
-            <Line v={data.studyingSince || ""} w={160} />
-          </div>
-          <span style={GU}>
-            કયા ધોરણમાં અભ્યાસ કરે છે? ક્યારથી?&nbsp;
-            <Line v={std} w={90} />
-          </span>
-        </Row>
-
-        {/* 10 */}
-        <Row n="10">
-          <span style={LB}>Reason of leaving the School&nbsp;</span>
-          <Line v={data.reason || "Further Education"} flex={1} />
-          <span style={GU}>શાળા છોડ્યાનું કારણ&nbsp;
-            <Line v={data.reason || "Further Education"} flex={1} />
-          </span>
-        </Row>
-
-        {/* 11 */}
-        <Row n="11">
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 4 }}>
-            <span style={LB}>Progress /&nbsp;</span>
-            <span style={{ fontSize: 10 }}>પ્રગતિ&nbsp;</span>
-            <Line v={data.progress || "Good"} w={200} />
-          </div>
-        </Row>
-
-        {/* 12 */}
-        <Row n="12">
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 4 }}>
-            <span style={LB}>Conduct /&nbsp;</span>
-            <span style={{ fontSize: 10 }}>વર્તણૂંક&nbsp;</span>
-            <Line v={data.conduct || "Good"} w={200} />
-          </div>
-        </Row>
-
-        {/* 13 */}
-        <Row n="13">
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 120 }}>
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 4 }}>
-                <span style={LB}>Remarks /&nbsp;</span>
-                <span style={{ fontSize: 10 }}>વિશેષ નોંધ&nbsp;</span>
-                <Line v={data.remarks || ""} w={80} />
-              </div>
-            </div>
-            {/* SSC box */}
-            <div style={{
-              border: "1px solid #000",
-              padding: "3px 8px",
-              fontSize: 10,
-              flexShrink: 0,
-              minWidth: 180,
-            }}>
-              <div style={{ fontWeight: 700, textAlign: "center", fontSize: 10, marginBottom: 2 }}>
-                Appeared in S.S.C. Exam
-              </div>
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 4, fontSize: 10 }}>
-                <span>March /&nbsp;</span>
-                <Line v={data.sscExam || ""} w={28} />
-                <span>&nbsp;Seat No.&nbsp;</span>
-                <Line v={data.sscSeatNo || ""} w={60} />
-              </div>
-            </div>
-          </div>
-        </Row>
-
-        {/* 14 — UID */}
-        <Row n="14">
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={LB}>UID No. /&nbsp;</span>
-            <span style={{ fontSize: 10 }}>યુઆઈડી નં.&nbsp;</span>
-            <div style={{ display: "flex", gap: 1 }}>
-              {boxes.map((ch, i) => (
-                <div key={i} style={{
-                  width: 17, height: 20,
-                  border: "1px solid #000",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, fontWeight: ch ? 700 : 400,
-                }}>
-                  {ch}
-                </div>
-              ))}
-            </div>
-          </div>
-        </Row>
-
-      </div>{/* end fields */}
-
-      {/* ── DATE + CERTIFY ────────────────────────────── */}
-      <div style={{ marginTop: 8, borderTop: "1px solid #ccc", paddingTop: 5 }}>
-        <div style={{ display: "flex", gap: 4, alignItems: "baseline", marginBottom: 3 }}>
-          <span style={{ fontWeight: 700 }}>Date :</span>
-          <Line v={data.issueDate} w={90} />
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1.35rem 1fr",
+        columnGap: 6,
+        marginBottom: 7,
+        alignItems: "start",
+      }}
+    >
+      <span style={{ fontWeight: 700, fontSize: 11, lineHeight: 1.4 }}>{n}.</span>
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+            gap: "2px 6px",
+            fontSize: 11,
+            lineHeight: 1.35,
+          }}
+        >
+          <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{en}</span>
+          {children}
         </div>
-        <p style={{ fontSize: 9, margin: "0 0 1px", fontWeight: 700 }}>તારીખ :</p>
-        <p style={{ fontSize: 9, lineHeight: 1.55, margin: 0 }}>
-          I Certifiy that the above information is verified by me with school register and found to be correct.
-        </p>
-        <p style={{ fontSize: 9, lineHeight: 1.55, margin: 0 }}>
-          આથી પ્રમાણિત કરવામાં આવે છે કે ઉપરની માહિતીની ચકાસણી શાળાના જનરલ રજીસ્ટર સાથે
-          કરવામાં આવેલ છે. અને સાચી માલુમ પડેલ છે.
-        </p>
-      </div>
-
-      {/* ── SIGNATURES ───────────────────────────────── */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, fontSize: 11 }}>
-        {[
-          { en: "Clerk", gu: "ક્લાર્ક" },
-          { en: "Class Teacher", gu: "વર્ગ શિક્ષક" },
-          { en: "Principal", gu: "આચાર્ય" },
-        ].map(({ en, gu }) => (
-          <div key={en} style={{ textAlign: "center", minWidth: 100 }}>
-            <div style={{ height: 28 }} />{/* signature space */}
-            <div style={{ borderTop: "1px solid #000", paddingTop: 3 }}>
-              <div style={{ fontWeight: 700 }}>{en}</div>
-              <div style={{ fontSize: 10 }}>{gu}</div>
-            </div>
+        {gu ? (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "flex-end",
+              gap: "2px 6px",
+              marginTop: 2,
+              fontSize: 10,
+              lineHeight: 1.4,
+            }}
+          >
+            {gu}
           </div>
-        ))}
-      </div>
-
-      {/* ── STATUTORY WARNING ────────────────────────── */}
-      <div style={{ marginTop: 8, borderTop: "1px solid #000", paddingTop: 5, fontSize: 8, lineHeight: 1.55 }}>
-        <span style={{ fontWeight: 700 }}>Statutory Warning : </span>
-        No one can issue this certificate or make any Changes in any entry except the Principal of the school or the authorized person appointed for such work in the absence or unavailability of the principal
-        <br />
-        : શાળાના આચાર્ય અથવા તેમની ગેરહાજરીમાં સહી કરવા માટે અધિકૃત કરેલ વ્યક્તિ સિવાય અન્ય કોઈ
-        વ્યક્તિ આ પ્રમાણપત્ર આપી શકશે નહીં તેની કોઈ નોંધમાં ફેરફાર કરી શકશે નહીં.
+        ) : null}
       </div>
     </div>
   );
 }
 
-/* ── helper: numbered row wrapper ────────────────── */
-function Row({ n, children }: { n: string | number; children: React.ReactNode }) {
+export function LeavingCertificateView({ data }: { data: LCData }) {
+  const S = data.student;
+  const nm = studentFullName(S);
+  const religionCaste = [S.religion, S.caste].filter(Boolean).join(" / ");
+  const birthPlace = [
+    S.currentCity,
+    S.birthTaluka ? `Ta. ${S.birthTaluka}` : null,
+    S.currentDistrict ? `Dist. ${S.currentDistrict}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const dob = S.dateOfBirth || "";
+  const dobWords = dateToWords(dob, "en");
+  const studying =
+    data.studyingStandard ||
+    [S.standard ? `Std ${S.standard}` : "", S.section].filter(Boolean).join("-");
+  const uid = (S.childUid || "").replace(/\D/g, "");
+  const uidBoxes = Array.from({ length: 18 }, (_, i) => uid[i] || "");
+  const medium = data.medium || "ગુજરાતી / Gujarati";
+  const lastSchool = data.lastSchool || CERTIFICATE_SCHOOL.nameEnAlt;
+
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      marginBottom: 5,
-      paddingBottom: 3,
-      borderBottom: "0.5px solid #e0e0e0",
-    }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
-        {n !== "" && (
-          <span style={{
-            fontWeight: 700,
-            fontSize: 11,
-            flexShrink: 0,
-            minWidth: 18,
-            fontFamily: '"Times New Roman", Times, serif',
-          }}>
-            {n}.
-          </span>
-        )}
-        <div style={{ flex: 1 }}>{children}</div>
+    <div className="lc-sheet" style={{ fontFamily: FONT, color: "#000", width: "100%", maxWidth: 720, margin: "0 auto" }}>
+      {/* Double border like official blank */}
+      <div
+        style={{
+          border: "2.5px solid #111",
+          padding: 3,
+          background: "#fff",
+          boxSizing: "border-box",
+          printColorAdjust: "exact",
+          WebkitPrintColorAdjust: "exact",
+        }}
+      >
+        <div
+          style={{
+            border: "1px solid #111",
+            padding: "10px 14px 12px",
+            boxSizing: "border-box",
+          }}
+        >
+          {/* Title */}
+          <p
+            style={{
+              textAlign: "center",
+              fontWeight: 700,
+              fontSize: 14,
+              margin: 0,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
+            SCHOOL LEAVING CERTIFICATE
+          </p>
+          <p style={{ textAlign: "center", fontWeight: 700, fontSize: 13, margin: "1px 0 6px" }}>
+            શાળા છોડ્યાનું પ્રમાણપત્ર
+          </p>
+
+          {/* School name */}
+          <p
+            style={{
+              textAlign: "center",
+              fontWeight: 800,
+              fontSize: 17,
+              margin: 0,
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
+          >
+            {CERTIFICATE_SCHOOL.nameEnAlt}
+          </p>
+          <p style={{ textAlign: "center", fontWeight: 700, fontSize: 13, margin: "2px 0 8px" }}>
+            {CERTIFICATE_SCHOOL.nameGu}
+          </p>
+
+          {/* Meta — 3 columns like physical LC */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.15fr 1fr 0.95fr",
+              gap: 8,
+              borderTop: "1px solid #111",
+              borderBottom: "1px solid #111",
+              padding: "6px 0 7px",
+              marginBottom: 10,
+              fontSize: 10,
+              lineHeight: 1.45,
+            }}
+          >
+            <div>
+              <div>
+                S.S.C. Index No. : <b>{CERTIFICATE_SCHOOL.sscIndex}</b>
+              </div>
+              <div style={{ fontSize: 9 }}>એસ.એસ.સી. ઈન્ડેક્સ નં. : {CERTIFICATE_SCHOOL.sscIndex}</div>
+              <div style={{ marginTop: 3 }}>
+                H.S.C. Index No. : <b>{CERTIFICATE_SCHOOL.hscIndex}</b>
+              </div>
+              <div style={{ fontSize: 9 }}>એચ.એસ.સી. ઈન્ડેક્સ નં. : {CERTIFICATE_SCHOOL.hscIndex}</div>
+              <div style={{ marginTop: 3 }}>
+                Dise Code No. : <b>{CERTIFICATE_SCHOOL.diseCode}</b>
+              </div>
+              <div style={{ fontSize: 9 }}>ડાયસ કોડ નં. : {CERTIFICATE_SCHOOL.diseCode}</div>
+            </div>
+
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontWeight: 700 }}>Ta. Songadh, Dist. Tapi</div>
+              <div style={{ fontSize: 9 }}>{CERTIFICATE_SCHOOL.addressGu}</div>
+              <div style={{ marginTop: 8, fontWeight: 700 }}>Madhyamik / Ucchattar Madhyamik</div>
+              <div style={{ fontSize: 9 }}>માધ્યમિક / ઉચ્ચત્તર માધ્યમિક</div>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <div>
+                No. :{" "}
+                <Fill value={data.serialNo} minWidth={52} center />
+              </div>
+              <div style={{ marginTop: 6 }}>
+                G.R. No. / જી.આર.નં. : <Fill value={S.grNumber || ""} minWidth={56} center />
+              </div>
+              <div style={{ marginTop: 6 }}>
+                Medium / માધ્યમ : <span style={{ fontWeight: 600, textDecoration: "underline" }}>{medium}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Fields 1–14 */}
+          <Field n={1} en="Full Name of the Student" gu={<>વિદ્યાર્થીનું પૂરેપૂરું નામ <Fill value={nm} flex={1} minWidth={160} /></>}>
+            <Fill value={nm} flex={1} minWidth={180} />
+          </Field>
+
+          <Field n={2} en="Religion and Caste" gu={<>ધર્મ અને જાતિ <Fill value={religionCaste} flex={1} minWidth={140} /></>}>
+            <Fill value={religionCaste} flex={1} minWidth={160} />
+          </Field>
+
+          <Field n={3} en="Mother's Name" gu={<>માતાનું નામ <Fill value={S.motherName || ""} flex={1} minWidth={140} /></>}>
+            <Fill value={S.motherName || ""} flex={1} minWidth={160} />
+          </Field>
+
+          <Field
+            n={4}
+            en={
+              <>
+                Place of Birth <span style={{ fontWeight: 400 }}>(With Taluka / District)</span>
+              </>
+            }
+            gu={<>જન્મ સ્થળ (તાલુકા, જિલ્લા સહિત) <Fill value={birthPlace} flex={1} minWidth={140} /></>}
+          >
+            <Fill value={birthPlace} flex={1} minWidth={160} />
+          </Field>
+
+          <Field
+            n={5}
+            en="Date of Birth"
+            gu={
+              <>
+                ખ્રિસ્તી વર્ષ અનુસાર જન્મ તારીખ <Fill value={dob} minWidth={96} />
+              </>
+            }
+          >
+            <Fill value={dob} minWidth={110} />
+            <span style={{ width: "100%", fontWeight: 400, fontSize: 9.5, marginTop: 2 }}>
+              (In Figures and words as per Christian Calendar)
+            </span>
+            <span style={{ width: "100%", fontSize: 10, marginTop: 2, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "flex-end" }}>
+              <span>(આંકડામાં અને શબ્દમાં)</span>
+              <Fill value={dobWords} flex={1} minWidth={200} />
+            </span>
+          </Field>
+
+          <Field n={6} en="Last School Attended" gu={<>જ્યાં ભણ્યો હોય તે છેલ્લી શાળા <Fill value={lastSchool} flex={1} minWidth={140} /></>}>
+            <Fill value={lastSchool} flex={1} minWidth={160} />
+          </Field>
+
+          {/* 7 + 8 on same row */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.35rem 1fr",
+              columnGap: 6,
+              marginBottom: 7,
+            }}
+          >
+            <span />
+            <div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                  fontSize: 11,
+                }}
+              >
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 4 }}>
+                  <span style={{ fontWeight: 700 }}>7. Date of Admission (With Class)</span>
+                  <Fill value={data.admissionDate || ""} flex={1} minWidth={90} />
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 4 }}>
+                  <span style={{ fontWeight: 700 }}>8. Date of Leaving the School</span>
+                  <Fill value={data.leavingDate || ""} flex={1} minWidth={90} />
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                  marginTop: 2,
+                  fontSize: 10,
+                }}
+              >
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 4 }}>
+                  <span>પ્રવેશ તારીખ (ધોરણ સહિત)</span>
+                  <Fill value={data.admissionDate || ""} flex={1} minWidth={70} />
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 4 }}>
+                  <span>શાળા છોડ્યા તારીખ</span>
+                  <Fill value={data.leavingDate || ""} flex={1} minWidth={70} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Field
+            n={9}
+            en="In which Standard he/she Studying & Since When?"
+            gu={
+              <>
+                કયા ધોરણમાં અભ્યાસ કરે છે? ક્યારથી?{" "}
+                <Fill value={[studying, data.studyingSince].filter(Boolean).join(" · ")} flex={1} minWidth={140} />
+              </>
+            }
+          >
+            <Fill value={studying} minWidth={90} />
+            <Fill value={data.studyingSince || ""} flex={1} minWidth={120} />
+          </Field>
+
+          <Field n={10} en="Reason for leaving the School" gu={<>શાળા છોડ્યાનું કારણ <Fill value={data.reason || ""} flex={1} minWidth={140} /></>}>
+            <Fill value={data.reason || ""} flex={1} minWidth={160} />
+          </Field>
+
+          <Field n={11} en="Progress" gu={<>પ્રગતિ <Fill value={data.progress || ""} flex={1} minWidth={140} /></>}>
+            <Fill value={data.progress || ""} flex={1} minWidth={160} />
+          </Field>
+
+          <Field n={12} en="Conduct" gu={<>વર્તણૂંક <Fill value={data.conduct || ""} flex={1} minWidth={140} /></>}>
+            <Fill value={data.conduct || ""} flex={1} minWidth={160} />
+          </Field>
+
+          <Field n={13} en="Remarks" gu={<>વિશેષ નોંધ <Fill value={data.remarks || ""} flex={1} minWidth={140} /></>}>
+            <Fill value={data.remarks || ""} flex={1} minWidth={120} />
+            <span
+              style={{
+                width: "100%",
+                marginTop: 4,
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "flex-end",
+                gap: 6,
+                fontSize: 10.5,
+                fontWeight: 600,
+              }}
+            >
+              Appeared in S.S.C. Exam March /
+              <Fill value={data.sscExam || ""} minWidth={48} center />
+              Seat No.
+              <Fill value={data.sscSeatNo || ""} minWidth={90} center />
+            </span>
+          </Field>
+
+          <Field
+            n={14}
+            en={
+              <>
+                UID No. / <span style={{ fontWeight: 600 }}>યુઆઈડી નં.</span>
+              </>
+            }
+          >
+            <div style={{ display: "flex", gap: 1.5, flexWrap: "nowrap" }}>
+              {uidBoxes.map((ch, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 16,
+                    height: 19,
+                    border: "1px solid #111",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 10,
+                    fontWeight: ch ? 700 : 400,
+                    flexShrink: 0,
+                  }}
+                >
+                  {ch || ""}
+                </div>
+              ))}
+            </div>
+          </Field>
+
+          {/* Date + certify */}
+          <div style={{ marginTop: 10, borderTop: "1px solid #bbb", paddingTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, marginBottom: 6, fontSize: 11 }}>
+              <span style={{ fontWeight: 700 }}>Date / તારીખ :</span>
+              <Fill value={data.issueDate} minWidth={110} />
+            </div>
+            <p style={{ margin: "0 0 2px", fontSize: 10, lineHeight: 1.5, fontWeight: 600 }}>
+              I Certify that the above information is verified by me with school register and found to be correct.
+            </p>
+            <p style={{ margin: 0, fontSize: 9.5, lineHeight: 1.5 }}>
+              આથી પ્રમાણિત કરવામાં આવે છે કે ઉપરની માહિતીની ચકાસણી શાળાના જનરલ રજીસ્ટર સાથે કરવામાં આવેલ છે અને સાચી માલૂમ પડેલ છે.
+            </p>
+          </div>
+
+          {/* Signatures */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 12,
+              marginTop: 28,
+              fontSize: 11,
+            }}
+          >
+            {[
+              { en: "Clerk", gu: "કલાર્ક" },
+              { en: "Class Teacher", gu: "વર્ગ શિક્ષક" },
+              { en: "Principal", gu: "આચાર્ય" },
+            ].map((s) => (
+              <div key={s.en} style={{ textAlign: "center" }}>
+                <div style={{ height: 32 }} />
+                <div style={{ borderTop: "1px solid #111", paddingTop: 4 }}>
+                  <div style={{ fontWeight: 700 }}>{s.en}</div>
+                  <div style={{ fontSize: 10 }}>{s.gu}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Statutory warning */}
+          <div
+            style={{
+              marginTop: 12,
+              borderTop: "1px solid #111",
+              paddingTop: 6,
+              fontSize: 8,
+              lineHeight: 1.5,
+            }}
+          >
+            <b>Statutory Warning :</b> No one can issue this certificate or make any changes in any entry except the
+            Principal of the school or the authorized person appointed for such work in the absence or unavailability of
+            the Principal.
+            <br />
+            : શાળાના આચાર્ય અથવા તેમની ગેરહાજરીમાં સહી કરવા માટે અધિકૃત કરેલ વ્યક્તિ સિવાય અન્ય કોઈ વ્યક્તિ આ પ્રમાણપત્ર આપી શકશે નહીં કે
+            તેની કોઈ નોંધમાં ફેરફાર કરી શકશે નહીં.
+          </div>
+        </div>
       </div>
+
+      <style jsx global>{`
+        @media print {
+          .lc-sheet {
+            max-width: none !important;
+            width: 100% !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/loader";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -10,8 +11,6 @@ export default function NewClassPage() {
     router.replace("/classes");
   }, [router]);
   return (
-    <div className="flex h-48 items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
-    </div>
+    <PageLoader />
   );
 }

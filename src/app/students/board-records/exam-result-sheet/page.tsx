@@ -1,9 +1,10 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, usePathname } from "next/navigation";
-import { ArrowLeft, Loader2, Printer } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CertificateFilters, type CertFilters } from "@/components/certificates/certificate-filters";
 import { ExamResultSheetRegister } from "@/components/board-records/exam-result-sheet-register";
@@ -101,10 +102,18 @@ function ExamResultSheetContent() {
       {/* Top bar */}
       <div className="no-print flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link href={boardBackHref}>
+          <Link
+            href={boardBackHref}
+            onClick={(e) => {
+              if (typeof window !== "undefined" && window.history.length > 1) {
+                e.preventDefault();
+                window.history.back();
+              }
+            }}
+          >
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4" />
-              {t("boardRecords.title")}
+              {t("common.back")}
             </Button>
           </Link>
           <div>
@@ -186,9 +195,7 @@ function ExamResultSheetContent() {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
+        <PageLoader />
       ) : data && data.rows.length > 0 ? (
         <div className="exam-result-sheet-print print-area bg-white p-2 md:p-4 rounded-xl border border-slate-200">
           <div className="no-print mb-3 flex flex-wrap items-center justify-between gap-2">

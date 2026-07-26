@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useEffect, useState, use } from "react";
 import { User } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
@@ -23,7 +24,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <Spinner size="lg" />
       </div>
     );
   }

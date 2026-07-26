@@ -1,11 +1,12 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/admin/admin-ui";
-import { Users, Plus, ExternalLink, Trash2, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
+import { Users, Plus, ExternalLink, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { InfoModal } from "@/components/ui/info-modal";
 import { PAGE_SIZE, paginateSlice } from "@/lib/pagination";
@@ -122,9 +123,7 @@ export default function AdminsListPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-200 border-t-blue-600" />
-            </div>
+            <PageLoader />
           ) : admins.length === 0 ? (
             <p className="py-16 text-center text-sm text-slate-500">No school admins yet.</p>
           ) : (
@@ -195,7 +194,7 @@ export default function AdminsListPage() {
                             }
                           >
                             {busy ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <Spinner size="sm" />
                             ) : a.isActive ? (
                               <ToggleRight className="h-3.5 w-3.5" />
                             ) : (

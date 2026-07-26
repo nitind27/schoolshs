@@ -37,10 +37,14 @@ export async function GET(request: NextRequest) {
       recentSubmissions,
       totalClasses,
       totalStaff,
+      staffTotalAll,
       byStandard,
       bySection,
       studentsForGender,
       filterStudents,
+      admissionGrouped,
+      recentVerified,
+      staffByDesignation,
     ] = await Promise.all([
       prisma.student.count({ where }),
       prisma.student.count({ where: { ...where, status: "draft" } }),
@@ -53,6 +57,7 @@ export async function GET(request: NextRequest) {
       prisma.bulkSubmission.findMany({ where: schoolScope, orderBy: { createdAt: "desc" }, take: 5 }),
       prisma.schoolClass.count({ where: schoolScope }),
       prisma.staff.count({ where: { ...schoolScope, isActive: true } }),
+      prisma.staff.count({ where: schoolScope }),
       prisma.student.groupBy({ by: ["standard"], where: { ...where, standard: { not: null } }, _count: { standard: true } }),
       prisma.student.groupBy({
         by: ["standard", "section"],
@@ -63,6 +68,35 @@ export async function GET(request: NextRequest) {
       prisma.student.findMany({
         where: schoolScope,
         select: { standard: true, section: true, status: true, category: true, gender: true },
+      }),
+      prisma.student.groupBy({
+        by: ["admissionStatus"],
+        where: schoolScope,
+        _count: true,
+      }),
+      prisma.student.findMany({
+        where: { ...schoolScope, admissionStatus: "verified" },
+        orderBy: [{ verifiedAt: "desc" }, { updatedAt: "desc" }],
+        take: 10,
+        select: {
+          id: true,
+          firstName: true,
+          surname: true,
+          firstNameGu: true,
+          surnameGu: true,
+          standard: true,
+          section: true,
+          category: true,
+          verifiedAt: true,
+          verifiedBy: true,
+          updatedAt: true,
+          schoolClass: { select: { name: true } },
+        },
+      }),
+      prisma.staff.groupBy({
+        by: ["designation"],
+        where: { ...schoolScope, isActive: true },
+        _count: true,
       }),
     ]);
 
@@ -103,6 +137,32 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.count - a.count);
 
+    const admissionMap = Object.fromEntries(
+      admissionGrouped.map((r) => [r.admissionStatus || "pending", r._count]),
+    );
+    const admissions = {
+      pending: admissionMap.pending || 0,
+      verified: admissionMap.verified || 0,
+      rejected: (admissionMap.rejected || 0) + (admissionMap.cancelled || 0),
+      total: admissionGrouped.reduce((sum, r) => sum + r._count, 0),
+    };
+
+    const admissionRecent = recentVerified.map((s) => ({
+      id: s.id,
+      name: [s.firstNameGu || s.firstName, s.surnameGu || s.surname].filter(Boolean).join(" "),
+      classLabel: s.schoolClass?.name || [s.standard, s.section].filter(Boolean).join("-") || "—",
+      category: s.category || null,
+      verifiedAt: s.verifiedAt || s.updatedAt,
+      verifiedBy: s.verifiedBy || "—",
+    }));
+
+    const staffDesignation = staffByDesignation
+      .map((r) => ({
+        designation: r.designation || "Other",
+        count: r._count,
+      }))
+      .sort((a, b) => b.count - a.count);
+
     return NextResponse.json({
       total,
       byStatus: { draft, ready, pending, submitted, approved, rejected },
@@ -116,6 +176,10 @@ export async function GET(request: NextRequest) {
       byGender,
       totalClasses,
       totalStaff,
+      staffTotalAll,
+      admissions,
+      admissionRecent,
+      staffByDesignation: staffDesignation,
       recentSubmissions,
       completionRate: total > 0 ? Math.round(((ready + submitted + approved) / total) * 100) : 0,
       schoolName: session.schoolName,

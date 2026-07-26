@@ -24,6 +24,8 @@ export interface StaffAttendanceRow {
   halfDays: number;
   note: string;
   monthlySalary: number;
+  /** True when a StaffAttendanceMonth row exists for this month */
+  marked: boolean;
 }
 
 export interface StaffPayrollRow {
@@ -160,6 +162,7 @@ export function buildStaffAttendanceRows(
       halfDays: countStaffHalf(attendance),
       note: rec?.note || "",
       monthlySalary: s.monthlySalary || 0,
+      marked: Boolean(rec),
     };
   });
 }

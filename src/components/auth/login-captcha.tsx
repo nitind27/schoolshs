@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, RefreshCw, Shield } from "lucide-react";
+import { RefreshCw, Shield } from "lucide-react";
+import { Spinner } from "@/components/ui/loader";
 import { useT } from "@/i18n/locale-provider";
 
 type Props = {
@@ -71,7 +72,7 @@ export function LoginCaptcha({
         <div className="auth-captcha-image" aria-hidden={loading}>
           {loading ? (
             <div className="auth-captcha-image-loading">
-              <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--auth-blue, #2563eb)" }} />
+              <Spinner size="sm" />
             </div>
           ) : svg ? (
             <div className="auth-captcha-svg" dangerouslySetInnerHTML={{ __html: svg }} />

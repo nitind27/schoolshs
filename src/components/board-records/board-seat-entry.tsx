@@ -1,10 +1,8 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Download, Upload, Save, Users, BookOpen, CheckCircle2, AlertCircle,
-  ChevronRight, GraduationCap, Layers,
-} from "lucide-react";
+import { Download, Upload, Save, Users, BookOpen, CheckCircle2, AlertCircle, ChevronRight, GraduationCap, Layers } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { formatBoardNo } from "@/lib/board-records/gseb";
 import {
@@ -412,9 +410,7 @@ export function BoardSeatEntry({
           )}
 
           {loading ? (
-            <div className="flex justify-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-200 border-t-blue-600" />
-            </div>
+            <PageLoader />
           ) : rows.length === 0 ? (
             <div className="rounded-2xl bg-white border border-amber-200 bg-amber-50 p-12 text-center">
               <Users className="h-10 w-10 text-amber-500 mx-auto mb-2" />

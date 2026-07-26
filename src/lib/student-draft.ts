@@ -1,9 +1,28 @@
 import type { Student } from "@/generated/prisma/client";
 import { stableDraftAadhaarFromGr } from "@/lib/gr-student-utils";
+import { todayDobDisplay } from "@/lib/student-age";
 
 type StudentDraftInput = Partial<Student>;
 
 const DRAFT_PLACEHOLDER = "—";
+
+/** Old draft DOB that should not be shown as a real birth date */
+export const DRAFT_DOB_PLACEHOLDERS = new Set([
+  "01/01/2000",
+  "01-01-2000",
+  "2000-01-01",
+  "1/1/2000",
+  "1-1-2000",
+]);
+
+export function isDraftDobPlaceholder(value: string | null | undefined): boolean {
+  if (!value?.trim()) return true;
+  const raw = value.trim();
+  if (DRAFT_DOB_PLACEHOLDERS.has(raw)) return true;
+  const norm = raw.replace(/-/g, "/");
+  if (DRAFT_DOB_PLACEHOLDERS.has(norm)) return true;
+  return /^0?1\/0?1\/2000$/.test(norm);
+}
 
 function isEmpty(value: unknown): boolean {
   if (value === null || value === undefined) return true;
@@ -28,7 +47,10 @@ export function applyDraftDefaults(data: StudentDraftInput): StudentDraftInput {
     DRAFT_PLACEHOLDER;
 
   setStr("aadhaarName", name);
-  setStr("dateOfBirth", "01/01/2000");
+  // Use today's date — never seed a fake historic DOB like 01/01/2000
+  if (isEmpty(out.dateOfBirth) || isDraftDobPlaceholder(String(out.dateOfBirth))) {
+    out.dateOfBirth = todayDobDisplay();
+  }
   setStr("gender", "Male");
   setStr("mobileNumber", "9000000000");
   setStr("motherName", DRAFT_PLACEHOLDER);

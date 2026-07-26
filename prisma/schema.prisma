@@ -163,6 +163,15 @@ model User {
   student      Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
+  lastLoginIp  String?
+  lastLoginLat Float?
+  lastLoginLon Float?
+  lastLoginAccuracyM Float?
+  lastLoginUserAgent String?  @db.Text
+  lastLoginCity      String?
+  lastLoginRegion    String?
+  lastLoginCountry   String?
+  lastLoginGeoSource String?  // browser | ip | cloudflare | unknown
   failedLoginCount Int   @default(0)
   lockedUntil  DateTime?
   emailVerified            Boolean   @default(false)
@@ -177,10 +186,68 @@ model User {
   chatParticipants ChatParticipant[]
   chatMessagesSent ChatMessage[] @relation("ChatMessageSender")
   notifications    Notification[]
+  loginEvents      LoginEvent[]
+  sessions         UserSession[]
 
   @@index([schoolId])
   @@index([role])
+  @@index([lastLoginAt])
   @@map("user")
+}
+
+/** Active web/mobile sessions for multi-device login control */
+model UserSession {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /** Unique key embedded in JWT as `sid` */
+  sessionKey String @unique
+  channel    String @default("web") // web | mobile
+  deviceLabel String?
+  userAgent   String? @db.Text
+  ip          String?
+  city        String?
+  region      String?
+  country     String?
+
+  revokedAt     DateTime?
+  revokeReason  String?
+
+  @@index([userId, channel, revokedAt])
+  @@index([lastSeenAt])
+  @@map("usersession")
+}
+
+/** Every successful portal login (admin / teacher / clerk / student / CA) */
+model LoginEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  email     String
+  role      String
+  schoolId  String?
+  ip        String
+  latitude  Float?
+  longitude Float?
+  accuracyM Float?
+  userAgent String? @db.Text
+  source    String  @default("web") // web | mobile
+  geoSource String? // browser | ip | cloudflare | unknown
+  city      String?
+  region    String?
+  country   String?
+
+  @@index([userId, createdAt])
+  @@index([ip, createdAt])
+  @@index([createdAt])
+  @@map("loginevent")
 }
 
 model SchoolSettings {
@@ -284,7 +351,9 @@ model Staff {
   school        School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   employeeId    String?
   firstName     String
+  firstNameGu   String?
   lastName      String
+  lastNameGu    String?
   designation   String
   department    String?
   mobileNumber  String

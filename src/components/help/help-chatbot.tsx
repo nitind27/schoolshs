@@ -1,19 +1,14 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Bot,
-  X,
-  Send,
-  Sparkles,
-  ExternalLink,
-  Loader2,
-} from "lucide-react";
+import { Bot, X, Send, Sparkles, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/i18n/locale-provider";
 import { sanitizeHelpHref } from "@/lib/help/engine";
+import { AUTH_CHANGED_EVENT } from "@/lib/auth-client";
 
 type HelpLang = "en" | "hi" | "gu";
 
@@ -37,10 +32,14 @@ export function HelpChatbot() {
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [replyLang, setReplyLang] = useState<HelpLang>(locale === "gu" ? "gu" : "en");
+  const [replyLang, setReplyLang] = useState<HelpLang>(locale === "en" ? "en" : "gu");
   const [sessionRole, setSessionRole] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setReplyLang(locale === "en" ? "en" : "gu");
+  }, [locale]);
 
   const preferredLang: HelpLang = replyLang;
 
@@ -59,24 +58,34 @@ export function HelpChatbot() {
   // Keep chatbot bound to current login role — never reuse another panel's chat
   useEffect(() => {
     let alive = true;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => {
-        if (!alive) return;
-        const role = d.user?.role ? String(d.user.role) : null;
-        setSessionRole((prev) => {
-          if (prev && role && prev !== role) {
-            resetChat();
-            setOpen(false);
-          }
-          return role;
+    const load = () => {
+      fetch("/api/auth/me", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((d) => {
+          if (!alive) return;
+          const role = d.user?.role ? String(d.user.role) : null;
+          setSessionRole((prev) => {
+            if (prev && role && prev !== role) {
+              resetChat();
+              setOpen(false);
+            }
+            if (!role && prev) {
+              resetChat();
+              setOpen(false);
+            }
+            return role;
+          });
+        })
+        .catch(() => {
+          if (alive) setSessionRole(null);
         });
-      })
-      .catch(() => {
-        if (alive) setSessionRole(null);
-      });
+    };
+    load();
+    const onAuth = () => load();
+    window.addEventListener(AUTH_CHANGED_EVENT, onAuth);
     return () => {
       alive = false;
+      window.removeEventListener(AUTH_CHANGED_EVENT, onAuth);
     };
   }, [pathname, resetChat]);
 
@@ -323,7 +332,7 @@ export function HelpChatbot() {
             {loading && (
               <div className="flex justify-start">
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-600" />
+                  <Spinner size="sm" />
                   {t("helpBot.thinking")}
                 </div>
               </div>

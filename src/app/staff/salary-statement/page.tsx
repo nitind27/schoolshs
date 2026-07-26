@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -178,9 +179,7 @@ export default function SalaryStatementPage() {
       )}
 
       {loading ? (
-        <div className="flex h-48 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
-        </div>
+        <PageLoader />
       ) : (
         <div className="salary-statement-area space-y-6">
           <div className="ss-print-header">

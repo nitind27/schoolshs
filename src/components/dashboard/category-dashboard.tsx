@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CategoryBadge } from "@/components/ui/badge";
@@ -70,7 +71,7 @@ export function CategoryDashboardPanel({ embedded = false }: { embedded?: boolea
   if (loading) {
     return (
       <div className="flex h-32 items-center justify-center">
-        <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-blue-100 border-t-blue-600" />
+        <Spinner size="lg" />
       </div>
     );
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { X, ChevronLeft, Users, BookOpen, Search } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
@@ -170,9 +171,7 @@ export function GrStudentPickerModal({
 
         <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
-            <div className="flex justify-center items-center h-48">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            </div>
+            <PageLoader />
           ) : step === "class" ? (
             groupedClasses.length === 0 ? (
               <p className="text-center text-slate-500 py-12">{t("results.noClasses")}</p>

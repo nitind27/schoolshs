@@ -1,19 +1,9 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  ClipboardCheck,
-  CheckCircle,
-  UserPlus,
-  Search,
-  X,
-  RefreshCw,
-  Clock,
-  Users,
-  Ban,
-  Inbox,
-} from "lucide-react";
+import { ClipboardCheck, CheckCircle, UserPlus, Search, X, RefreshCw, Clock, Users, Ban, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -345,7 +335,7 @@ export default function AdmissionsPage() {
       {/* Student cards */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
+          <Spinner size="lg" />
           <p className="text-sm text-slate-500">{t("common.loading")}</p>
         </div>
       ) : students.length === 0 ? (

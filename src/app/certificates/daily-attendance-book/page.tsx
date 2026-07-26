@@ -1,10 +1,11 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useState } from "react";
 import { CertificatePrintShell } from "@/components/certificates/certificate-print-shell";
 import { DailyAttendanceBookView } from "@/components/certificates/daily-attendance-book";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { Select } from "@/components/ui/select";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import {
@@ -14,7 +15,7 @@ import {
   type DailyAttendanceBookRow,
 } from "@/lib/certificates/daily-attendance-book";
 import { useT } from "@/i18n/locale-provider";
-import { Loader2, Printer, RefreshCw, Save } from "lucide-react";
+import { Printer, RefreshCw, Save } from "lucide-react";
 
 function todayIso() {
   const d = new Date();
@@ -109,11 +110,12 @@ export default function DailyAttendanceBookPage() {
             <p className="text-sm font-semibold text-slate-700">{t("certificates.dailyAttendanceHint")}</p>
           </div>
           <div className="p-4 flex flex-wrap items-end gap-3">
-            <Input
+            <DateField
               label={t("certificates.dailyAttendanceDate")}
-              type="date"
               value={dateIso}
-              onChange={(e) => setDateIso(e.target.value)}
+              onChange={setDateIso}
+              outputFormat="iso"
+              showHint={false}
             />
             <Select
               label={t("certificates.academicYear")}
@@ -122,7 +124,7 @@ export default function DailyAttendanceBookPage() {
               onChange={(e) => setAcademicYear(e.target.value)}
             />
             <Button onClick={load} disabled={loading} className="gap-1.5">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {loading ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
               {t("certificates.loadData")}
             </Button>
             {meta && (
@@ -132,7 +134,7 @@ export default function DailyAttendanceBookPage() {
                 disabled={saving}
                 className="gap-1.5 border-emerald-300 text-emerald-800"
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
                 {t("certificates.dailyAttendanceSave")}
               </Button>
             )}

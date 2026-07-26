@@ -12,7 +12,7 @@ export type { HelpLang };
 const GUJARATI_RE = /[\u0A80-\u0AFF]/;
 const DEVANAGARI_RE = /[\u0900-\u097F]/;
 
-export function detectHelpLang(text: string, fallback: HelpLang = "en"): HelpLang {
+export function detectHelpLang(text: string, fallback: HelpLang = "gu"): HelpLang {
   if (GUJARATI_RE.test(text)) return "gu";
   if (DEVANAGARI_RE.test(text)) return "hi";
   const t = text.toLowerCase();
@@ -221,7 +221,7 @@ export function answerHelpQuery(
   role: UserRole,
   preferredLang?: HelpLang
 ): HelpReply {
-  const lang = detectHelpLang(rawQuery, preferredLang || "en");
+  const lang = detectHelpLang(rawQuery, preferredLang || "gu");
 
   if (
     role !== "super_admin" &&

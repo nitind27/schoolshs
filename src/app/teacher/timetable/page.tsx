@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarClock, Clock3, Printer, User } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
@@ -104,7 +105,7 @@ export default function TeacherTimetablePage() {
 
       {loading ? (
         <div className="flex h-64 items-center justify-center">
-          <div className={`h-8 w-8 animate-spin rounded-full border-2 border-t-transparent border-teal-600`} />
+          <Spinner size="lg" />
         </div>
       ) : empty ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-16 text-center print:hidden">

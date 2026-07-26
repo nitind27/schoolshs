@@ -1,6 +1,9 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { forwardRef, type ButtonHTMLAttributes } from "react";
+import { Spinner } from "@/components/ui/loader";
 
 const buttonVariants = cva(
   [
@@ -37,16 +40,33 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+    VariantProps<typeof buttonVariants> {
+  /** Shows unified spinner and disables the button */
+  loading?: boolean;
+}
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => (
-    <button
-      className={cn(buttonVariants({ variant, size, className }))}
-      ref={ref}
-      {...props}
-    />
-  )
+  ({ className, variant, size, loading, disabled, children, ...props }, ref) => {
+    const isDark =
+      variant === "default" ||
+      variant === "destructive" ||
+      variant === "success" ||
+      variant === "warning" ||
+      variant == null;
+
+    return (
+      <button
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
+        {...props}
+      >
+        {loading ? <Spinner size="sm" white={isDark} className="shrink-0" /> : null}
+        {children}
+      </button>
+    );
+  }
 );
 Button.displayName = "Button";
 

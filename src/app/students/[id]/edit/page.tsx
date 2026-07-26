@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { StudentForm } from "@/components/forms/student-form";
@@ -37,9 +38,7 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
+      <PageLoader />
     );
   }
 

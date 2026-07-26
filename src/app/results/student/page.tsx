@@ -1,11 +1,13 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { ArrowLeft, Save, Printer, Award, User } from "lucide-react";
 import { ANNUAL_RESULT_TOTAL_MARKS } from "@/lib/results/config";
 import { computeStudentTotals } from "@/lib/results/calculations";
@@ -159,7 +161,7 @@ function StudentResultInner() {
   }
 
   if (loading) {
-    return <div className="flex justify-center h-64 items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
+    return <PageLoader />;
   }
 
   const fullName = student ? `${student.firstName} ${student.surname}` : "";
@@ -287,7 +289,13 @@ function StudentResultInner() {
         <CardHeader className="pb-2"><CardTitle className="text-base">{t("results.otherDetails")}</CardTitle></CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-4">
           <Input label={t("results.passNo")} value={meta.passNumber} onChange={(e) => setMeta({ ...meta, passNumber: e.target.value })} />
-          <Input label={t("results.reopeningDate")} type="date" value={reopeningDate} onChange={(e) => setReopeningDate(e.target.value)} />
+          <DateField
+            label={t("results.reopeningDate")}
+            value={reopeningDate}
+            onChange={setReopeningDate}
+            outputFormat="iso"
+            showHint={false}
+          />
           <Input label={t("results.present")} type="number" value={meta.attendancePresent} onChange={(e) => setMeta({ ...meta, attendancePresent: e.target.value })} />
           <Input label={t("results.totalDays")} type="number" value={meta.attendanceTotal} onChange={(e) => setMeta({ ...meta, attendanceTotal: e.target.value })} />
         </CardContent>

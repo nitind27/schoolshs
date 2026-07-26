@@ -6,6 +6,9 @@ export type LoginPayload = {
   password: string;
   captchaToken: string;
   captchaAnswer: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracyM?: number | null;
 };
 
 function pickEmail(source: Record<string, unknown>): string {
@@ -32,12 +35,24 @@ function pickCaptcha(source: Record<string, unknown>) {
   };
 }
 
+function pickCoord(source: Record<string, unknown>, ...keys: string[]): number | null {
+  for (const key of keys) {
+    if (source[key] === undefined || source[key] === null || source[key] === "") continue;
+    const n = Number(source[key]);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
 function fromRecord(source: Record<string, unknown>): LoginPayload {
   const captcha = pickCaptcha(source);
   return {
     email: pickEmail(source),
     password: pickPassword(source),
     ...captcha,
+    latitude: pickCoord(source, "latitude", "lat"),
+    longitude: pickCoord(source, "longitude", "lon", "lng"),
+    accuracyM: pickCoord(source, "accuracyM", "accuracy"),
   };
 }
 

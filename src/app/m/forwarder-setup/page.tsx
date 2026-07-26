@@ -1,8 +1,9 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Zap, Copy, CheckCircle, Loader2, ExternalLink, Smartphone } from "lucide-react";
+import { Zap, Copy, CheckCircle, ExternalLink, Smartphone } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 
 function ForwarderSetupContent() {
@@ -136,7 +137,7 @@ export default function ForwarderSetupPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-emerald-950">
-          <Loader2 className="h-8 w-8 animate-spin text-white" />
+          <Spinner size="lg" white />
         </div>
       }
     >

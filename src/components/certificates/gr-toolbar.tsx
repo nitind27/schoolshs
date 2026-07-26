@@ -1,8 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
-import { Search, Plus, Users, Pencil, X, CalendarDays } from "lucide-react";
+import { Search, Plus, Users, Pencil, X } from "lucide-react";
 import type { GeneralRegisterRow } from "@/lib/certificates/general-register";
 
 export interface GrSearchFilters {
@@ -84,17 +85,13 @@ export function GrToolbar({
           </div>
 
           <div className="w-full lg:w-52 shrink-0">
-            <div className="relative">
-              <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
-              <input
-                type="date"
-                value={search.dob}
-                onChange={(e) => set({ dob: e.target.value })}
-                onKeyDown={handleKeyDown}
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-10 pr-3 text-sm text-slate-900 shadow-sm focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                aria-label={t("certificates.grFilterDob")}
-              />
-            </div>
+            <DateField
+              value={search.dob}
+              onChange={(v) => set({ dob: v })}
+              outputFormat="iso"
+              showHint={false}
+              placeholder={t("certificates.grFilterDob")}
+            />
             <p className="mt-1 text-[10px] text-slate-400 px-1">{t("certificates.grFilterDob")}</p>
           </div>
 

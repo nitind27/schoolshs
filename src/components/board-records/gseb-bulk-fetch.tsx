@@ -1,7 +1,8 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useRef, useState } from "react";
-import { Download, Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Download, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/locale-provider";
 
@@ -43,7 +44,10 @@ export function GsebBulkFetch({
   const [open, setOpen] = useState(false);
 
   const minDigits = seatDigitLen(standard);
-  const eligible = students.filter((s) => s.seatNo && s.seatNo.replace(/\D/g, "").length >= minDigits);
+  const eligible = students.filter((s) => {
+    const digits = (s.seatNo || "").replace(/\D/g, "");
+    return !!s.seatNo && s.seatNo !== "—" && digits.length === minDigits;
+  });
 
   const start = useCallback(async () => {
     if (!eligible.length) {
@@ -76,18 +80,29 @@ export function GsebBulkFetch({
         });
         const data = await res.json();
 
-        if (res.ok && data.result?.percentage != null) {
+        if (res.ok && data.result && data.result.studentName && data.result.percentage != null) {
           const pct = data.result.percentage;
+          const label = `${pct}%${data.result.result ? ` · ${data.result.result}` : ""}`;
           setRows((prev) =>
             prev.map((r) =>
-              r.id === student.id ? { ...r, status: "ok", message: `${pct}%` } : r,
+              r.id === student.id ? { ...r, status: "ok", message: label } : r,
             ),
           );
         } else {
           setRows((prev) =>
             prev.map((r) =>
               r.id === student.id
-                ? { ...r, status: "fail", message: data.error || "No result / invalid seat" }
+                ? {
+                    ...r,
+                    status: "fail",
+                    message:
+                      data.error ||
+                      (data.invalidSeat
+                        ? "Invalid seat — result cleared"
+                        : data.cleared
+                          ? "Failed — old result cleared"
+                          : "No result / invalid seat"),
+                  }
                 : r,
             ),
           );
@@ -141,7 +156,7 @@ export function GsebBulkFetch({
           onClick={() => void start()}
           className="gap-1.5 bg-violet-600 hover:bg-violet-700"
         >
-          {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          {running ? <Spinner size="sm" /> : <Download className="h-4 w-4" />}
           {running
             ? t("boardRecords.gsebBulkRunning", { done: finished, total: eligible.length })
             : t("boardRecords.gsebBulkBtn", { count: eligible.length })}
@@ -177,7 +192,7 @@ export function GsebBulkFetch({
           <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white text-xs divide-y divide-slate-100">
             {rows.map((r) => (
               <div key={r.id} className="flex items-center gap-2 px-3 py-2">
-                {r.status === "running" && <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-600 shrink-0" />}
+                {r.status === "running" && <Spinner size="sm" />}
                 {r.status === "ok" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />}
                 {r.status === "fail" && <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />}
                 {r.status === "pending" && <AlertCircle className="h-3.5 w-3.5 text-slate-300 shrink-0" />}
@@ -273,7 +288,7 @@ export function ResultListGsebFetch({
         onClick={() => void fetchAll()}
         className="gap-1.5 bg-violet-600 hover:bg-violet-700 shrink-0"
       >
-        {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+        {running ? <Spinner size="sm" /> : <Download className="h-4 w-4" />}
         {running
           ? t("boardRecords.gsebBulkRunning", { done: "…", total: eligibleCount })
           : t("boardRecords.gsebBulkBtn", { count: eligibleCount })}

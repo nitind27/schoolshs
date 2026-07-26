@@ -26,7 +26,7 @@ const SelectInner = forwardRef<HTMLSelectElement, SelectProps>(
         id={id}
         ref={ref}
         className={cn(
-          "flex h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 cursor-pointer focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50",
           error && "border-red-500 focus:border-red-500 focus:ring-red-500/20",
           className
         )}

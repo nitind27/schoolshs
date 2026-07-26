@@ -1,18 +1,9 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  BookOpen,
-  Edit,
-  ExternalLink,
-  RefreshCw,
-  ZoomIn,
-  ZoomOut,
-  AlertCircle,
-  CheckCircle2,
-  Hash,
-} from "lucide-react";
+import { BookOpen, Edit, ExternalLink, RefreshCw, ZoomIn, ZoomOut, AlertCircle, CheckCircle2, Hash } from "lucide-react";
 import { GeneralRegisterView } from "@/components/certificates/general-register";
 import { GrEntryDialog } from "@/components/certificates/gr-entry-dialog";
 import { DashboardSection } from "@/components/ui/card";
@@ -68,7 +59,7 @@ export function StudentGrTab({ studentId, student }: { studentId: string; studen
   if (loading) {
     return (
       <div className="flex h-48 items-center justify-center rounded-2xl border border-slate-200 bg-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <Spinner size="lg" />
       </div>
     );
   }

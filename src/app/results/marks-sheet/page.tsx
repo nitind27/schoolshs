@@ -1,9 +1,10 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Printer, Save } from "lucide-react";
+import { ArrowLeft, Printer, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CertificateFilters, type CertFilters } from "@/components/certificates/certificate-filters";
 import {
@@ -148,7 +149,7 @@ function MarksSheetContent() {
             {t("results.print")}
           </Button>
           <Button size="sm" onClick={save} disabled={!students.length || saving || data?.exam?.isPublished}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
             {t("results.save")}
           </Button>
         </div>
@@ -175,9 +176,7 @@ function MarksSheetContent() {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
+        <PageLoader />
       ) : students.length > 0 && data ? (
         <div className="print-area marks-sheet-print bg-white p-2 md:p-4">
           <ClassMarksSheetView

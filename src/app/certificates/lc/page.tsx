@@ -8,6 +8,7 @@ import { LeavingCertificateView, type LCData } from "@/components/certificates/l
 import { formatToday } from "@/lib/certificates/date-to-words";
 import { SAMPLE_LC } from "@/lib/certificates/sample-data";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
 
 function LCContent() {
@@ -70,19 +71,56 @@ function LCContent() {
       onPreview={showPreview}
       onExitPreview={() => setSource(lcData ? "live" : "none")}
       canPrint={!!displayData}
+      printMargin="6mm"
     >
       <CertificateFilters value={filters} onChange={setFilters} onLoad={load} showStudent students={students} />
-      <div className="no-print grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-        <div><label className="text-sm font-medium">{t("certificates.leavingDate")}</label>
-          <Input value={extra.leavingDate} onChange={(e) => setExtra({ ...extra, leavingDate: e.target.value })} placeholder="DD/MM/YYYY" /></div>
-        <div><label className="text-sm font-medium">{t("certificates.reason")}</label>
-          <Input value={extra.reason} onChange={(e) => setExtra({ ...extra, reason: e.target.value })} /></div>
-        <div><label className="text-sm font-medium">{t("certificates.sscExam")}</label>
-          <Input value={extra.sscExam} onChange={(e) => setExtra({ ...extra, sscExam: e.target.value })} /></div>
-        <div><label className="text-sm font-medium">{t("certificates.sscSeatNo")}</label>
-          <Input value={extra.sscSeatNo} onChange={(e) => setExtra({ ...extra, sscSeatNo: e.target.value })} /></div>
+      <div className="no-print grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div>
+          <DateField
+            label={t("certificates.leavingDate")}
+            value={extra.leavingDate}
+            onChange={(v) => setExtra({ ...extra, leavingDate: v })}
+            outputFormat="dmy-slash"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">{t("certificates.reason")}</label>
+          <Input value={extra.reason} onChange={(e) => setExtra({ ...extra, reason: e.target.value })} />
+        </div>
+        <div>
+          <label className="text-sm font-medium">{t("certificates.progress")}</label>
+          <Input value={extra.progress} onChange={(e) => setExtra({ ...extra, progress: e.target.value })} />
+        </div>
+        <div>
+          <label className="text-sm font-medium">{t("certificates.conduct")}</label>
+          <Input value={extra.conduct} onChange={(e) => setExtra({ ...extra, conduct: e.target.value })} />
+        </div>
+        <div>
+          <label className="text-sm font-medium">{t("certificates.sscExam")}</label>
+          <Input value={extra.sscExam} onChange={(e) => setExtra({ ...extra, sscExam: e.target.value })} placeholder="2026" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">{t("certificates.sscSeatNo")}</label>
+          <Input value={extra.sscSeatNo} onChange={(e) => setExtra({ ...extra, sscSeatNo: e.target.value })} placeholder="Seat No." />
+        </div>
       </div>
-      {displayData ? <LeavingCertificateView data={displayData} /> : (
+      {displayData ? (
+        <LeavingCertificateView
+          data={
+            source === "preview"
+              ? SAMPLE_LC
+              : {
+                  ...displayData,
+                  leavingDate: extra.leavingDate || displayData.leavingDate,
+                  reason: extra.reason,
+                  progress: extra.progress,
+                  conduct: extra.conduct,
+                  sscExam: extra.sscExam,
+                  sscSeatNo: extra.sscSeatNo,
+                }
+          }
+        />
+      ) : (
         <p className="no-print text-slate-500 text-center py-12">{t("certificates.previewOrLoad")}</p>
       )}
     </CertificatePrintShell>

@@ -1,18 +1,10 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, StatCard } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Headphones,
-  Mail,
-  Phone,
-  School,
-  Trash2,
-  CheckCircle2,
-  Eye,
-  Inbox,
-} from "lucide-react";
+import { Headphones, Mail, Phone, School, Trash2, CheckCircle2, Eye, Inbox } from "lucide-react";
 
 type MsgStatus = "new" | "read" | "resolved";
 
@@ -154,9 +146,7 @@ export default function AdminContactSupportPage() {
           </CardHeader>
           <CardContent className="p-0">
             {loading ? (
-              <div className="flex justify-center py-16">
-                <div className="h-9 w-9 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
-              </div>
+              <PageLoader />
             ) : messages.length === 0 ? (
               <p className="px-5 py-12 text-center text-sm text-slate-500">No messages yet</p>
             ) : (

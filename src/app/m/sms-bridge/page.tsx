@@ -1,9 +1,10 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Smartphone, CheckCircle, Loader2, AlertCircle, Wifi, Zap } from "lucide-react";
+import { Smartphone, CheckCircle, AlertCircle, Wifi, Zap } from "lucide-react";
 import { extractOtpFromSms } from "@/lib/sms-otp";
 import { useT } from "@/i18n/locale-provider";
 
@@ -156,7 +157,7 @@ function SmsBridgeContent() {
         >
           {sending ? (
             <span className="flex items-center justify-center gap-2">
-              <Loader2 className="h-5 w-5 animate-spin" /> {t("otpMobile.sending")}
+              <Spinner size="md" /> {t("otpMobile.sending")}
             </span>
           ) : (
             t("otpMobile.sendToWebsite")
@@ -181,7 +182,7 @@ export default function SmsBridgePage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-blue-950">
-          <Loader2 className="h-8 w-8 animate-spin text-white" />
+          <Spinner size="lg" white />
         </div>
       }
     >

@@ -1,5 +1,6 @@
 import { chromium, type Browser } from "playwright";
 import { parseStudentProfilePage, mergeSsgRecords } from "./parse-profile";
+import { SSG_MSG } from "./message-codes";
 import type { SsgujaratFetchResult, SsgujaratStudentRecord } from "./types";
 
 const SS_GUJARAT_LOGIN = "https://www.ssgujarat.org/CTELogin.aspx";
@@ -53,7 +54,7 @@ export async function fetchSsgujaratByChildUid(childUid: string): Promise<Ssguja
   const searchId = normalizeId(childUid);
 
   if (!/^\d{18}$/.test(searchId)) {
-    throw new Error("Child UID 18 digits hona chahiye");
+    throw new Error(SSG_MSG.CHILD_UID_INVALID);
   }
 
   const browser = await chromium.launch({ headless: true });
@@ -67,7 +68,7 @@ export async function fetchSsgujaratByChildUid(childUid: string): Promise<Ssguja
         searchType: "childUid",
         searchId,
         records: [],
-        message: "SSGujarat par is 18-digit Child UID ka record nahi mila",
+        message: SSG_MSG.NO_RECORD_CHILD_UID,
       };
     }
 

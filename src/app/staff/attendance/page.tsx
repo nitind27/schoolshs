@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader, Spinner } from "@/components/ui/loader";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
@@ -8,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { STAFF_DESIGNATIONS } from "@/lib/constants";
 import { MONTH_NAMES, type StaffAttendanceRow } from "@/lib/staff-hr";
 import { useT } from "@/i18n/locale-provider";
-import { ClipboardList, Loader2, Save, CheckCircle2, IndianRupee } from "lucide-react";
+import { ClipboardList, Save, CheckCircle2, IndianRupee } from "lucide-react";
 
 export default function StaffAttendancePage() {
   const t = useT();
@@ -79,7 +80,7 @@ export default function StaffAttendancePage() {
           </Link>
           <button onClick={save} disabled={saving || !rows.length}
             className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
             {t("common.save")}
           </button>
         </div>
@@ -104,7 +105,7 @@ export default function StaffAttendancePage() {
         {error && <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
 
         {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-violet-600" /></div>
+          <PageLoader />
         ) : rows.length === 0 ? (
           <div className="text-center py-16 text-slate-500">{t("staffHr.noStaff")}</div>
         ) : (

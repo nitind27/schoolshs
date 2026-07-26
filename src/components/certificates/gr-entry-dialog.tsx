@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { InfoModal } from "@/components/ui/info-modal";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useT } from "@/i18n/locale-provider";
 import { recomputeDobPreview, type GeneralRegisterRow } from "@/lib/certificates/general-register";
-import { fromDateInputValue, toDateInputValue } from "@/lib/certificates/gujarati-date";
 import { GrStudentPickerModal, type GrPickedStudent } from "@/components/certificates/gr-student-picker-modal";
 import { CLASS_SECTIONS } from "@/lib/constants";
 import { Save, Users } from "lucide-react";
@@ -193,8 +193,7 @@ export function GrEntryDialog({
     }
   };
 
-  const handleDobChange = (isoDate: string) => {
-    const dob = fromDateInputValue(isoDate);
+  const handleDobChange = (dob: string) => {
     const preview = recomputeDobPreview(dob);
     set({
       dateOfBirth: dob,
@@ -321,12 +320,12 @@ export function GrEntryDialog({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("certificates.grDob")}</label>
-            <input
-              type="date"
-              className="flex h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
-              value={toDateInputValue(form.dateOfBirth)}
-              onChange={(e) => handleDobChange(e.target.value)}
+            <DateField
+              label={t("certificates.grDob")}
+              value={form.dateOfBirth}
+              onChange={handleDobChange}
+              outputFormat="dmy-slash"
+              showHint={false}
             />
             {dobPreview && (
               <div className="mt-2 rounded-lg bg-amber-50 border border-amber-100 p-3 text-sm space-y-1">
@@ -363,11 +362,12 @@ export function GrEntryDialog({
             value={form.udiseDigits}
             onChange={(e) => set({ udiseDigits: e.target.value.replace(/\D/g, "").slice(0, 11) })}
           />
-          <Input
+          <DateField
             label={t("certificates.grAdmissionDate")}
-            type="date"
-            value={toDateInputValue(form.admissionDate)}
-            onChange={(e) => set({ admissionDate: fromDateInputValue(e.target.value) })}
+            value={form.admissionDate}
+            onChange={(v) => set({ admissionDate: v })}
+            outputFormat="dmy-slash"
+            showHint={false}
           />
           <Select
             label={t("certificates.grFee")}
@@ -380,22 +380,24 @@ export function GrEntryDialog({
           />
           <Input label={t("certificates.grProgress")} value={form.progress} onChange={(e) => set({ progress: e.target.value })} />
           <Input label={t("certificates.grConduct")} value={form.conduct} onChange={(e) => set({ conduct: e.target.value })} />
-          <Input
+          <DateField
             label={t("certificates.grLeavingDate")}
-            type="date"
-            value={toDateInputValue(form.leavingDate)}
-            onChange={(e) => set({ leavingDate: fromDateInputValue(e.target.value) })}
+            value={form.leavingDate}
+            onChange={(v) => set({ leavingDate: v })}
+            outputFormat="dmy-slash"
+            showHint={false}
           />
           <Input
             label={t("certificates.grLeavingStd")}
             value={form.leavingStdClass}
             onChange={(e) => set({ leavingStdClass: e.target.value })}
           />
-          <Input
+          <DateField
             label={t("certificates.grLcDate")}
-            type="date"
-            value={toDateInputValue(form.lcIssueDate)}
-            onChange={(e) => set({ lcIssueDate: fromDateInputValue(e.target.value) })}
+            value={form.lcIssueDate}
+            onChange={(v) => set({ lcIssueDate: v })}
+            outputFormat="dmy-slash"
+            showHint={false}
           />
         </div>
 

@@ -1,10 +1,8 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  MessageCircle, Search, Send, Paperclip, Users, Hash,
-  Loader2, Image as ImageIcon, FileText, X, Plus, Wifi, WifiOff,
-} from "lucide-react";
+import { MessageCircle, Search, Send, Paperclip, Users, Hash, Image as ImageIcon, FileText, X, Plus, Wifi, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/locale-provider";
 import { useChatSocket } from "@/hooks/use-chat-socket";
@@ -335,7 +333,7 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
         <div className="min-h-0 flex-1 overflow-y-auto p-2 space-y-1">
           {loadingRooms ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-violet-400" />
+              <Spinner size="md" />
             </div>
           ) : filteredRooms.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-400">{t("chat.noRooms")}</p>
@@ -454,7 +452,7 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
             >
               {loadingMessages ? (
                 <div className="flex justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-violet-400" />
+                  <Spinner size="md" />
                 </div>
               ) : (
                 messages.map((msg) => {
@@ -541,7 +539,7 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-violet-100 hover:text-violet-600 transition-colors disabled:opacity-50"
                   title={t("chat.attach")}
                 >
-                  {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
+                  {uploading ? <Spinner size="md" /> : <Paperclip className="h-5 w-5" />}
                 </button>
                 <div className="relative min-w-0 flex-1">
                   <textarea

@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,15 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageShell } from "@/components/layout/page-shell";
 import { useT } from "@/i18n/locale-provider";
-import {
-  KeyRound,
-  ShieldAlert,
-  User,
-  Mail,
-  Building2,
-  CheckCircle2,
-  Lock,
-} from "lucide-react";
+import { KeyRound, ShieldAlert, User, Mail, Building2, CheckCircle2, Lock } from "lucide-react";
 
 type MeUser = {
   name: string;
@@ -80,9 +73,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center h-48 items-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
+      <PageLoader />
     );
   }
 

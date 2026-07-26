@@ -1,13 +1,12 @@
 "use client";
 
+import { PageLoader } from "@/components/ui/loader";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowLeft, Award, Printer, Send, Users, CheckCircle2, Clock, AlertCircle, FileSpreadsheet,
-} from "lucide-react";
+import { ArrowLeft, Award, Printer, Send, Users, CheckCircle2, Clock, AlertCircle, FileSpreadsheet } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { useConfirm } from "@/hooks/use-confirm";
 import { ExamTermDashboard, type TermStat } from "@/components/results/exam-term-dashboard";
@@ -192,7 +191,7 @@ export default function ResultsClassPage() {
   );
 
   if (loading) {
-    return <div className="flex justify-center h-64 items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
+    return <PageLoader />;
   }
 
   if (!data?.class) {

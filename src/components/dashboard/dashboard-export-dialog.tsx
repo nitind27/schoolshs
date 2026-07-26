@@ -1,7 +1,8 @@
 "use client";
 
+import { Spinner } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
-import { CheckSquare, FileSpreadsheet, FileText, Loader2, Square } from "lucide-react";
+import { CheckSquare, FileSpreadsheet, FileText, Square } from "lucide-react";
 import { InfoModal } from "@/components/ui/info-modal";
 import { Button } from "@/components/ui/button";
 import { useLocale, useT } from "@/i18n/locale-provider";
@@ -213,7 +214,7 @@ export function DashboardExportDialog({
               mode === "excel" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"
             )}
           >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ActionIcon className="h-4 w-4" />}
+            {busy ? <Spinner size="sm" /> : <ActionIcon className="h-4 w-4" />}
             {actionLabel(mode, t)}
           </Button>
         </div>

@@ -42,9 +42,9 @@ export const SAMPLE_LC: LCData = {
   reason: "Further Education",
   progress: "Good",
   conduct: "Good",
-  remarks: "Appeared in S.S.C. Exam March 2026",
+  remarks: "",
   sscExam: "2026",
-  sscSeatNo: "K-123456",
+  sscSeatNo: "C4000020",
   issueDate: "06/07/2026",
 };
 

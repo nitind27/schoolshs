@@ -59,5 +59,7 @@ export interface SsgujaratFetchResult {
   searchType: SsgujaratSearchType;
   searchId: string;
   records: SsgujaratStudentRecord[];
+  /** Stable code from SSG_MSG — translate via i18n on the client */
   message?: string;
+  matchCount?: number;
 }

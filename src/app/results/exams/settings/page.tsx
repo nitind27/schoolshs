@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { DateField } from "@/components/ui/date-field";
 import { ArrowLeft, Save } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import type { ExamTermKey } from "@/lib/results/exam-terms";
@@ -138,13 +139,12 @@ export default function ExamSettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-500">{t("examTerms.examDateLabel")}</label>
-                    <input
-                      type="text"
-                      placeholder="DD/MM/YYYY"
+                    <DateField
+                      label={t("examTerms.examDateLabel")}
                       value={term.examDate}
-                      onChange={(e) => updateTerm(key, "examDate", e.target.value)}
-                      className="w-full h-10 border rounded-lg px-3 text-sm mt-1"
+                      onChange={(v) => updateTerm(key, "examDate", v)}
+                      outputFormat="dmy-slash"
+                      showHint={false}
                     />
                   </div>
                 </div>

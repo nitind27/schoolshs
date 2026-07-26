@@ -14,6 +14,8 @@ export interface SessionUser {
   activeSchoolName?: string | null;
   staffId?: string | null;
   studentId?: string | null;
+  /** DB-backed session id — used to revoke other devices */
+  sid?: string | null;
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -45,7 +47,7 @@ async function getHmacKey(): Promise<CryptoKey> {
       new TextEncoder().encode(getAuthSecret()),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign", "verify"]
+      ["sign", "verify"],
     );
   }
   return hmacKey;
@@ -67,9 +69,19 @@ async function verifyPayload(payload: string, sig: string): Promise<boolean> {
   }
 }
 
-export async function createSessionToken(user: SessionUser): Promise<string> {
+export async function createSessionToken(
+  user: SessionUser,
+  options?: { maxAgeSec?: number },
+): Promise<string> {
+  const maxAgeSec = options?.maxAgeSec ?? 7 * 24 * 60 * 60;
   const payload = toBase64Url(
-    new TextEncoder().encode(JSON.stringify({ ...user, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 }))
+    new TextEncoder().encode(
+      JSON.stringify({
+        ...user,
+        sid: user.sid ?? null,
+        exp: Date.now() + maxAgeSec * 1000,
+      }),
+    ),
   );
   return `${payload}.${await signPayload(payload)}`;
 }
@@ -95,6 +107,7 @@ export async function parseSessionToken(token: string): Promise<SessionUser | nu
       activeSchoolName: data.activeSchoolName ?? data.schoolName ?? null,
       staffId: data.staffId ?? null,
       studentId: data.studentId ?? null,
+      sid: data.sid ?? null,
     };
   } catch {
     return null;

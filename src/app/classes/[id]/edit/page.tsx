@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ClassForm } from "@/components/forms/class-form";
@@ -58,9 +59,7 @@ export default function EditClassPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center h-48 items-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
+      <PageLoader />
     );
   }
 
