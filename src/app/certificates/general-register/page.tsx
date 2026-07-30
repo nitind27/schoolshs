@@ -29,7 +29,7 @@ function filtersFromParams(searchParams: URLSearchParams) {
     standard: searchParams.get("standard") || "",
     section: searchParams.get("section") || "",
     academicYear: searchParams.get("academicYear") || "2025-26",
-    studentId: "",
+    studentId: searchParams.get("studentId") || "",
     month: "",
     year: "",
   };
@@ -38,8 +38,13 @@ function filtersFromParams(searchParams: URLSearchParams) {
 function GeneralRegisterContent() {
   const t = useT();
   const searchParams = useSearchParams();
+  const lockedStudentId = searchParams.get("studentId") || "";
+  const lockedGr = searchParams.get("grNumber") || "";
   const [filters, setFilters] = useState(() => filtersFromParams(searchParams));
-  const [search, setSearch] = useState<GrSearchFilters>({ query: "", dob: "" });
+  const [search, setSearch] = useState<GrSearchFilters>({
+    query: lockedGr || "",
+    dob: "",
+  });
   const [rows, setRows] = useState<GeneralRegisterRow[]>([]);
   const [displayRows, setDisplayRows] = useState<GeneralRegisterRow[]>([]);
   const [meta, setMeta] = useState({
@@ -85,18 +90,35 @@ function GeneralRegisterContent() {
       return;
     }
     const filled = dedupeGrRows((data.rows || []).filter((r: GeneralRegisterRow) => !r.isEmpty));
-    setRows(filled);
-    setDisplayRows(applySearch(filled, search));
+    let scoped = filled;
+    if (lockedStudentId || lockedGr) {
+      scoped = filled.filter(
+        (r) =>
+          (lockedStudentId && r.studentId === lockedStudentId) ||
+          (lockedGr && String(r.grNumber || "") === lockedGr),
+      );
+      if (!scoped.length && lockedGr) {
+        scoped = filled.filter((r) => String(r.grNumber || "").includes(lockedGr));
+      }
+      // If still empty, keep full class but search will highlight via query
+      if (!scoped.length) scoped = filled;
+    }
+    setRows(scoped);
+    const activeSearch =
+      lockedStudentId || lockedGr
+        ? { query: lockedGr || search.query, dob: search.dob }
+        : search;
+    setDisplayRows(applySearch(scoped, activeSearch));
     setMeta({
       schoolName: data.schoolName || "",
       academicYear: data.academicYear || filters.academicYear,
       classLabel: data.class?.label || data.class?.name || "",
-      studentCount: data.studentCount ?? filled.length,
+      studentCount: data.studentCount ?? scoped.length,
     });
     setLoaded(true);
-    setSelectedRow(null);
+    setSelectedRow(scoped.length === 1 ? scoped[0] : null);
     setPage(1);
-  }, [applySearch, buildParams, filters.academicYear, filters.classId, search]);
+  }, [applySearch, buildParams, filters.academicYear, filters.classId, search, lockedStudentId, lockedGr]);
 
   const handleSearch = useCallback(
     (override?: GrSearchFilters) => {

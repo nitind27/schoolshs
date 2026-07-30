@@ -1,7 +1,7 @@
 "use client";
 
-import { Spinner, PageLoader } from "@/components/ui/loader";
-import { useEffect, useState, Suspense } from "react";
+import { PageLoader } from "@/components/ui/loader";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { Send, CheckCircle, AlertCircle, Square, CheckSquare } from "lucide-reac
 import type { Student } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 import { useConfirm } from "@/hooks/use-confirm";
-import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGE_SIZE } from "@/lib/pagination";
+import type { ColumnDef } from "@tanstack/react-table";
+import { GlobalDataTable } from "@/components/ui/global-data-table";
 
 interface SubmitResult {
   total: number;
@@ -30,7 +31,11 @@ function BulkSubmitContent() {
   const t = useT();
   const { confirm, ConfirmDialog } = useConfirm();
   const searchParams = useSearchParams();
-  const preSelectedIds = searchParams.get("ids")?.split(",") || [];
+  const idsParam = searchParams.get("ids") || "";
+  const preSelectedIds = useMemo(
+    () => (idsParam ? idsParam.split(",").filter(Boolean) : []),
+    [idsParam],
+  );
 
   const [students, setStudents] = useState<Student[]>([]);
   const [total, setTotal] = useState(0);
@@ -41,6 +46,7 @@ function BulkSubmitContent() {
   const [result, setResult] = useState<SubmitResult | null>(null);
 
   useEffect(() => {
+    setLoading(true);
     if (preSelectedIds.length > 0) {
       fetch(`/api/students?limit=${PAGE_SIZE}&page=${page}&ids=${preSelectedIds.join(",")}`)
         .then((r) => r.json())
@@ -95,7 +101,60 @@ function BulkSubmitContent() {
     });
   };
 
-  if (loading) {
+  const columns = useMemo<ColumnDef<Student>[]>(
+    () => [
+      {
+        id: "select",
+        enableSorting: false,
+        header: "",
+        cell: ({ row }) => (
+          <button type="button" onClick={() => toggleSelect(row.original.id)}>
+            {selected.has(row.original.id) ? (
+              <CheckSquare className="h-4 w-4 text-blue-600" />
+            ) : (
+              <Square className="h-4 w-4 text-slate-400" />
+            )}
+          </button>
+        ),
+      },
+      {
+        header: t("common.name"),
+        accessorFn: (s) => `${s.firstName || ""} ${s.surname || ""}`.trim(),
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.firstName} {row.original.surname}
+          </span>
+        ),
+      },
+      {
+        header: t("fields.aadhaar"),
+        accessorKey: "aadhaarNumber",
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.aadhaarNumber}</span>
+        ),
+      },
+      {
+        header: t("fields.category"),
+        accessorKey: "category",
+        cell: ({ row }) => <CategoryBadge category={row.original.category} />,
+      },
+      {
+        header: t("fields.scheme"),
+        accessorKey: "scholarshipScheme",
+        cell: ({ row }) => (
+          <span className="text-slate-700">{row.original.scholarshipScheme}</span>
+        ),
+      },
+      {
+        header: t("common.status"),
+        accessorKey: "status",
+        cell: ({ row }) => <Badge status={row.original.status} />,
+      },
+    ],
+    [selected, t],
+  );
+
+  if (loading && students.length === 0) {
     return (
       <PageLoader />
     );
@@ -127,47 +186,21 @@ function BulkSubmitContent() {
             <CardTitle>{t("bulkSubmitPage.readyStudents", { count: total })}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {students.length === 0 ? (
-              <p className="text-center text-slate-500 py-12">
-                {t("bulkSubmitPage.noReadyHint")}
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="p-3 w-10"></th>
-                      <th className="p-3 text-left font-medium text-slate-600">{t("common.name")}</th>
-                      <th className="p-3 text-left font-medium text-slate-600">{t("fields.aadhaar")}</th>
-                      <th className="p-3 text-left font-medium text-slate-600">{t("fields.category")}</th>
-                      <th className="p-3 text-left font-medium text-slate-600">{t("fields.scheme")}</th>
-                      <th className="p-3 text-left font-medium text-slate-600">{t("common.status")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {students.map((student) => (
-                      <tr key={student.id} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="p-3">
-                          <button onClick={() => toggleSelect(student.id)}>
-                            {selected.has(student.id) ? (
-                              <CheckSquare className="h-4 w-4 text-blue-600" />
-                            ) : (
-                              <Square className="h-4 w-4 text-slate-400" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="p-3 font-medium">{student.firstName} {student.surname}</td>
-                        <td className="p-3 font-mono text-xs">{student.aadhaarNumber}</td>
-                        <td className="p-3"><CategoryBadge category={student.category} /></td>
-                        <td className="p-3 text-slate-700">{student.scholarshipScheme}</td>
-                        <td className="p-3"><Badge status={student.status} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <TablePagination page={page} total={total} onPageChange={setPage} />
+            <GlobalDataTable
+              data={students}
+              columns={columns}
+              loading={loading}
+              emptyText={t("bulkSubmitPage.noReadyHint")}
+              manualPagination
+              totalRows={total}
+              pageSize={PAGE_SIZE}
+              pageIndex={Math.max(page - 1, 0)}
+              onPageChange={(idx) => setPage(idx + 1)}
+              getRowClassName={(row) =>
+                selected.has(row.id) ? "bg-blue-50/50" : undefined
+              }
+              className="rounded-none border-0 shadow-none"
+            />
           </CardContent>
         </Card>
       )}
@@ -185,7 +218,7 @@ function BulkSubmitContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
               <div className="bg-slate-50 rounded-lg p-4 text-center">
                 <p className="text-2xl font-bold">{result.total}</p>
                 <p className="text-xs text-slate-500">{t("bulkSubmitPage.totalLabel")}</p>

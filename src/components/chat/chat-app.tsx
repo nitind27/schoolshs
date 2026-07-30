@@ -247,11 +247,11 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
       {/* Left panel — room list */}
       <div
         className={cn(
-          "flex w-full flex-col border-r border-slate-100 bg-gradient-to-b from-slate-50 to-white lg:w-[320px] lg:shrink-0",
-          mobileShowChat && activeRoomId ? "hidden lg:flex" : "flex"
+          "flex w-full min-w-0 flex-col border-r border-slate-100 bg-gradient-to-b from-slate-50 to-white md:w-[300px] md:shrink-0 lg:w-[320px]",
+          mobileShowChat && activeRoomId ? "hidden md:flex" : "flex"
         )}
       >
-        <div className="shrink-0 border-b border-slate-100 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 p-4 text-white">
+        <div className="shrink-0 border-b border-slate-100 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 p-3 text-white sm:p-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
@@ -330,7 +330,7 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
           ))}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-1.5 sm:p-2">
           {loadingRooms ? (
             <div className="flex justify-center py-12">
               <Spinner size="md" />
@@ -344,7 +344,7 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
                 type="button"
                 onClick={() => selectRoom(room.id)}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-xl p-3 text-left transition-all",
+                  "flex w-full items-center gap-2.5 rounded-xl p-2.5 text-left transition-all sm:gap-3 sm:p-3",
                   activeRoomId === room.id
                     ? "bg-gradient-to-r from-violet-50 to-indigo-50 ring-1 ring-violet-200 shadow-sm"
                     : "hover:bg-slate-50"
@@ -393,7 +393,7 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
       <div
         className={cn(
           "flex min-w-0 flex-1 flex-col bg-slate-50/50",
-          !mobileShowChat && !activeRoomId ? "hidden lg:flex" : "flex"
+          !mobileShowChat ? "hidden md:flex" : "flex"
         )}
       >
         {!activeRoom ? (
@@ -408,11 +408,12 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
           </div>
         ) : (
           <>
-            <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 bg-white/80 px-4 py-3 backdrop-blur">
+            <div className="flex min-w-0 shrink-0 items-center gap-2.5 border-b border-slate-100 bg-white/90 px-3 py-2.5 backdrop-blur sm:gap-3 sm:px-4 sm:py-3">
               <button
                 type="button"
-                className="lg:hidden rounded-lg p-1.5 hover:bg-slate-100"
+                className="rounded-lg p-1.5 hover:bg-slate-100 md:hidden"
                 onClick={() => setMobileShowChat(false)}
+                aria-label={t("common.back")}
               >
                 <X className="h-5 w-5 text-slate-500" />
               </button>
@@ -443,7 +444,7 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
             </div>
 
             <div
-              className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-3"
+              className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4"
               style={{
                 backgroundImage:
                   "radial-gradient(circle at 1px 1px, rgb(226 232 240 / 0.5) 1px, transparent 0)",
@@ -458,15 +459,15 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
                 messages.map((msg) => {
                   const mine = msg.senderId === currentUser?.userId;
                   return (
-                    <div key={msg.id} className={cn("flex gap-2", mine ? "flex-row-reverse" : "flex-row")}>
+                    <div key={msg.id} className={cn("flex min-w-0 gap-2", mine ? "flex-row-reverse" : "flex-row")}>
                       {!mine && <Avatar name={msg.sender.name} size="sm" />}
-                      <div className={cn("max-w-[75%] space-y-1", mine ? "items-end" : "items-start")}>
+                      <div className={cn("min-w-0 max-w-[84%] space-y-1 sm:max-w-[75%]", mine ? "items-end" : "items-start")}>
                         {!mine && (
                           <p className="px-1 text-[11px] font-medium text-slate-500">{msg.sender.name}</p>
                         )}
                         <div
                           className={cn(
-                            "rounded-2xl px-4 py-2.5 shadow-sm",
+                            "min-w-0 rounded-2xl px-3.5 py-2.5 shadow-sm sm:px-4",
                             mine
                               ? "rounded-br-md bg-gradient-to-br from-violet-600 to-indigo-600 text-white"
                               : "rounded-bl-md bg-white text-slate-800 ring-1 ring-slate-100"
@@ -478,7 +479,7 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
                               <img
                                 src={msg.attachments[0].url}
                                 alt={msg.attachments[0].fileName}
-                                className="max-h-64 rounded-xl object-cover"
+                              className="h-auto max-h-64 max-w-full rounded-xl object-cover"
                               />
                             </a>
                           ) : msg.type === "file" && msg.attachments[0] ? (
@@ -519,7 +520,10 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="shrink-0 border-t border-slate-100 bg-white p-3">
+            <div
+              className="shrink-0 border-t border-slate-100 bg-white p-2 sm:p-3"
+              style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+            >
               <div className="flex items-end gap-2">
                 <input
                   ref={fileInputRef}
@@ -536,7 +540,7 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
                   type="button"
                   disabled={uploading}
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-violet-100 hover:text-violet-600 transition-colors disabled:opacity-50"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-violet-100 hover:text-violet-600 disabled:opacity-50 sm:h-11 sm:w-11"
                   title={t("chat.attach")}
                 >
                   {uploading ? <Spinner size="md" /> : <Paperclip className="h-5 w-5" />}
@@ -553,7 +557,7 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
                     }}
                     rows={1}
                     placeholder={t("chat.placeholder")}
-                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm focus:border-violet-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-200"
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-9 text-sm focus:border-violet-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-200 sm:px-4 sm:py-3 sm:pr-10"
                   />
                   <ImageIcon className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-slate-300" />
                 </div>
@@ -561,12 +565,12 @@ export function ChatApp({ variant = "page" }: { variant?: "page" | "drawer" }) {
                   type="button"
                   onClick={handleSend}
                   disabled={!text.trim()}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200 hover:shadow-violet-300 transition-all disabled:opacity-40 disabled:shadow-none"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200 transition-all hover:shadow-violet-300 disabled:opacity-40 disabled:shadow-none sm:h-11 sm:w-11"
                 >
                   <Send className="h-5 w-5" />
                 </button>
               </div>
-              <p className="mt-1.5 text-center text-[10px] text-slate-400">{t("chat.hint")}</p>
+              <p className="mt-1.5 hidden text-center text-[10px] text-slate-400 sm:block">{t("chat.hint")}</p>
             </div>
           </>
         )}

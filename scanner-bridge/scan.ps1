@@ -32,9 +32,23 @@ $itemIndex = 1
 if ($device.Items.Count -eq 1) { $itemIndex = 1 }
 $item = $device.Items.Item($itemIndex)
 $image = $item.Transfer()
+
+# Convert to JPEG so the portal preview/upload always gets a real .jpg
+$jpegFormatId = "{B96B3CAE-0728-11D3-9D7B-0000F81EF32E}"
+$ip = New-Object -ComObject WIA.ImageProcess
+$ip.Filters.Add($ip.FilterInfos.Item("Convert").FilterID) | Out-Null
+$ip.Filters.Item(1).Properties.Item("FormatID").Value = $jpegFormatId
+try {
+    $ip.Filters.Item(1).Properties.Item("Quality").Value = 85
+} catch { }
+$image = $ip.Apply($image)
+
 $dir = Split-Path -Parent $OutputPath
 if ($dir -and -not (Test-Path $dir)) {
     New-Item -ItemType Directory -Path $dir -Force | Out-Null
+}
+if (Test-Path $OutputPath) {
+    Remove-Item -Force $OutputPath
 }
 $image.SaveFile($OutputPath)
 Write-Output $OutputPath

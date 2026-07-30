@@ -166,7 +166,7 @@ export function DashboardExportDialog({
                 type="button"
                 onClick={() => toggle(key)}
                 className={cn(
-                  "flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-colors",
+                  "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors sm:p-4",
                   checked
                     ? "border-emerald-300 bg-emerald-50/80 shadow-sm"
                     : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
@@ -187,11 +187,11 @@ export function DashboardExportDialog({
           })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={selectAll} className="text-xs font-semibold">
+        <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center">
+          <Button type="button" variant="outline" size="sm" onClick={selectAll} className="w-full text-xs font-semibold sm:w-auto">
             {t("dashboard.exportSelectAll")}
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={clearAll} className="text-xs font-semibold">
+          <Button type="button" variant="outline" size="sm" onClick={clearAll} className="w-full text-xs font-semibold sm:w-auto">
             {t("dashboard.exportClearAll")}
           </Button>
         </div>
@@ -201,8 +201,8 @@ export function DashboardExportDialog({
         )}
         {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
-        <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
-          <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:flex-wrap sm:justify-end">
+          <Button type="button" className="w-full sm:w-auto" variant="outline" onClick={onClose} disabled={busy}>
             {t("dashboard.exportCancel")}
           </Button>
           <Button
@@ -210,7 +210,7 @@ export function DashboardExportDialog({
             onClick={handleAction}
             disabled={!canProceed || busy}
             className={cn(
-              "gap-2 font-semibold",
+              "w-full gap-2 font-semibold sm:w-auto",
               mode === "excel" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"
             )}
           >

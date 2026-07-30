@@ -5,6 +5,25 @@ import { requireSchoolAuth, AuthError } from "@/lib/auth";
 export async function GET() {
   try {
     const session = await requireSchoolAuth();
+    const staleMinutes = Math.max(
+      1,
+      Number(process.env.AUTOMATION_STALE_MINUTES || "20"),
+    );
+    await prisma.automationJob.updateMany({
+      where: {
+        schoolId: session.schoolId,
+        status: { in: ["pending", "running"] },
+        updatedAt: {
+          lt: new Date(Date.now() - staleMinutes * 60_000),
+        },
+      },
+      data: {
+        status: "failed",
+        currentStep: "Worker stopped",
+        errorMessage: "Stale automation job closed automatically.",
+        finishedAt: new Date(),
+      },
+    });
     const jobs = await prisma.automationJob.findMany({
       where: { schoolId: session.schoolId },
       orderBy: { createdAt: "desc" },

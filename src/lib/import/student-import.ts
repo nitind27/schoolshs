@@ -2,7 +2,11 @@ import { normalizeGender, parseImportDate } from "@/lib/import/import-formats";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { CSV_HEADERS, CSV_HEADER_LABELS } from "@/lib/constants";
-import { normalizeStudentRow, validateStudent, type ValidationError } from "@/lib/validation";
+import {
+  normalizeStudentRow,
+  validateStudent,
+  type ValidationError,
+} from "@/lib/validation";
 
 export type ImportFieldKey = (typeof CSV_HEADERS)[number];
 
@@ -138,7 +142,9 @@ export function normalizeHeader(h: string): string {
     .trim();
 }
 
-export function autoMapColumns(fileHeaders: string[]): Record<string, ImportFieldKey | ""> {
+export function autoMapColumns(
+  fileHeaders: string[],
+): Record<string, ImportFieldKey | ""> {
   const map: Record<string, ImportFieldKey | ""> = {};
   const used = new Set<ImportFieldKey>();
 
@@ -172,7 +178,12 @@ function coerceFieldValue(key: ImportFieldKey, value: unknown): unknown {
   }
   if (key === "gender") return normalizeGender(value);
   if (key === "ifscCode") return String(value).toUpperCase().trim();
-  if (key === "aadhaarNumber" || key === "mobileNumber" || key === "accountNumber" || key === "childUid") {
+  if (
+    key === "aadhaarNumber" ||
+    key === "mobileNumber" ||
+    key === "accountNumber" ||
+    key === "childUid"
+  ) {
     return String(value).replace(/\s/g, "").trim();
   }
   return String(value).trim();
@@ -180,38 +191,50 @@ function coerceFieldValue(key: ImportFieldKey, value: unknown): unknown {
 
 export function applyColumnMap(
   rawRows: Record<string, unknown>[],
-  columnMap: Record<string, ImportFieldKey | "">
+  columnMap: Record<string, ImportFieldKey | "">,
 ): Record<string, unknown>[] {
   return rawRows.map((raw) => {
     const row: Record<string, unknown> = {};
     for (const [fileHeader, fieldKey] of Object.entries(columnMap)) {
       if (!fieldKey || !(raw[fileHeader] !== undefined)) continue;
       const val = raw[fileHeader];
-      if (val === null || val === undefined || String(val).trim() === "") continue;
+      if (val === null || val === undefined || String(val).trim() === "")
+        continue;
       row[fieldKey] = coerceFieldValue(fieldKey, val);
     }
     return row;
   });
 }
 
-export function validateImportRows(rows: Record<string, unknown>[]): RowValidation[] {
+export function validateImportRows(
+  rows: Record<string, unknown>[],
+): RowValidation[] {
   return rows.map((raw, i) => {
     const normalized = normalizeStudentRow(raw);
     const errors = validateStudent(normalized);
     const aadhaar = normalized.aadhaarNumber || "";
-    const name = [normalized.firstName, normalized.surname].filter(Boolean).join(" ") || "—";
+    const name =
+      [normalized.firstName, normalized.surname].filter(Boolean).join(" ") ||
+      "—";
 
     let status: RowValidation["status"] = "valid";
     if (!aadhaar) status = "error";
     else if (errors.length > 0) status = "warning";
 
-    return { rowIndex: i + 1, aadhaarNumber: aadhaar, name, status, errors, normalized: raw };
+    return {
+      rowIndex: i + 1,
+      aadhaarNumber: aadhaar,
+      name,
+      status,
+      errors,
+      normalized: raw,
+    };
   });
 }
 
 export async function parseStudentImportFile(
   file: File,
-  sheetName?: string
+  sheetName?: string,
 ): Promise<ParsedImportFile> {
   const ext = file.name.split(".").pop()?.toLowerCase() || "";
 
@@ -224,7 +247,9 @@ export async function parseStudentImportFile(
     });
     const fileHeaders = parsed.meta.fields || [];
     const rawRows = (parsed.data || []).filter((r) =>
-      Object.values(r).some((v) => v !== null && v !== undefined && String(v).trim() !== "")
+      Object.values(r).some(
+        (v) => v !== null && v !== undefined && String(v).trim() !== "",
+      ),
     );
     return {
       fileName: file.name,
@@ -237,9 +262,15 @@ export async function parseStudentImportFile(
   }
 
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(new Uint8Array(buffer), { type: "array", cellDates: false });
-  const sheetNames = workbook.SheetNames.filter((n) => !/^instructions?$/i.test(n));
-  const selectedSheet = sheetName && sheetNames.includes(sheetName) ? sheetName : sheetNames[0];
+  const workbook = XLSX.read(new Uint8Array(buffer), {
+    type: "array",
+    cellDates: false,
+  });
+  const sheetNames = workbook.SheetNames.filter(
+    (n) => !/^instructions?$/i.test(n),
+  );
+  const selectedSheet =
+    sheetName && sheetNames.includes(sheetName) ? sheetName : sheetNames[0];
   const sheet = workbook.Sheets[selectedSheet];
 
   let headerRow = 0;
@@ -252,8 +283,13 @@ export async function parseStudentImportFile(
     }
     const nonEmpty = cells.filter(Boolean).length;
     if (nonEmpty >= 3) {
-      const matched = cells.filter((h) => HEADER_ALIASES[normalizeHeader(h)]).length;
-      if (matched >= 2 || cells.some((h) => CSV_HEADERS.includes(h as ImportFieldKey))) {
+      const matched = cells.filter(
+        (h) => HEADER_ALIASES[normalizeHeader(h)],
+      ).length;
+      if (
+        matched >= 2 ||
+        cells.some((h) => CSV_HEADERS.includes(h as ImportFieldKey))
+      ) {
         headerRow = r;
         break;
       }
@@ -267,7 +303,9 @@ export async function parseStudentImportFile(
   });
 
   const filtered = rawRows.filter((r) =>
-    Object.values(r).some((v) => v !== null && v !== undefined && String(v).trim() !== "")
+    Object.values(r).some(
+      (v) => v !== null && v !== undefined && String(v).trim() !== "",
+    ),
   );
 
   const fileHeaders = filtered.length > 0 ? Object.keys(filtered[0]) : [];
@@ -289,6 +327,8 @@ export const SAMPLE_IMPORT_ROW: Record<ImportFieldKey, string | number> = {
   dateOfBirth: "15/07/2010",
   gender: "Male",
   aadhaarNumber: "123456789012",
+  panNumber: "",
+  apaarId: "",
   rationCardNumber: "",
   mobileNumber: "9876543210",
   email: "",
@@ -357,7 +397,9 @@ export function downloadImportTemplate(format: "csv" | "xlsx") {
       labels.map((l) => `"${l}"`).join(","),
       sample.map((v) => `"${v}"`).join(","),
     ];
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
     triggerDownload(blob, "scholarship_import_template.csv");
   } else {
     const ws = XLSX.utils.aoa_to_sheet([keys, labels, sample]);
@@ -367,7 +409,10 @@ export function downloadImportTemplate(format: "csv" | "xlsx") {
 
     const guideRows = [
       ["Field", "Format / Example"],
-      ...keys.map((k) => [CSV_HEADER_LABELS[k] || k, String(SAMPLE_IMPORT_ROW[k] || "—")]),
+      ...keys.map((k) => [
+        CSV_HEADER_LABELS[k] || k,
+        String(SAMPLE_IMPORT_ROW[k] || "—"),
+      ]),
     ];
     const guide = XLSX.utils.aoa_to_sheet(guideRows);
     guide["!cols"] = [{ wch: 35 }, { wch: 40 }];
@@ -376,13 +421,18 @@ export function downloadImportTemplate(format: "csv" | "xlsx") {
   }
 }
 
-export function downloadFailedRows(rows: RowValidation[], format: "csv" | "xlsx") {
+export function downloadFailedRows(
+  rows: RowValidation[],
+  format: "csv" | "xlsx",
+) {
   const keys = [...CSV_HEADERS];
   const data = rows
     .filter((r) => r.status !== "valid")
     .map((r) => {
       const normalized = normalizeStudentRow(r.normalized);
-      const base = keys.map((k) => normalized[k as keyof typeof normalized] ?? "");
+      const base = keys.map(
+        (k) => normalized[k as keyof typeof normalized] ?? "",
+      );
       return [...base, r.errors.map((e) => e.message).join("; ")];
     });
 
@@ -391,8 +441,14 @@ export function downloadFailedRows(rows: RowValidation[], format: "csv" | "xlsx"
   const headers = [...keys.map((k) => CSV_HEADER_LABELS[k] || k), "Errors"];
 
   if (format === "csv") {
-    const csv = [headers.join(","), ...data.map((row) => row.map((v) => `"${v}"`).join(","))].join("\n");
-    triggerDownload(new Blob([csv], { type: "text/csv" }), "import_failed_rows.csv");
+    const csv = [
+      headers.join(","),
+      ...data.map((row) => row.map((v) => `"${v}"`).join(",")),
+    ].join("\n");
+    triggerDownload(
+      new Blob([csv], { type: "text/csv" }),
+      "import_failed_rows.csv",
+    );
   } else {
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     const wb = XLSX.utils.book_new();
@@ -415,13 +471,19 @@ export const IMPORT_BATCH_SIZE = 50;
 export async function runBulkImport(
   rows: Record<string, unknown>[],
   options: { skipInvalid?: boolean; validRowIndexes?: Set<number> },
-  onProgress?: (done: number, total: number) => void
+  onProgress?: (done: number, total: number) => void,
 ): Promise<ImportResult> {
   const toSend = options.validRowIndexes
     ? rows.filter((_, i) => options.validRowIndexes!.has(i))
     : rows;
 
-  const aggregate: ImportResult = { total: toSend.length, created: 0, updated: 0, failed: 0, errors: [] };
+  const aggregate: ImportResult = {
+    total: toSend.length,
+    created: 0,
+    updated: 0,
+    failed: 0,
+    errors: [],
+  };
 
   for (let i = 0; i < toSend.length; i += IMPORT_BATCH_SIZE) {
     const batch = toSend.slice(i, i + IMPORT_BATCH_SIZE);
@@ -443,7 +505,9 @@ export async function runBulkImport(
   return aggregate;
 }
 
-export function getMappedFieldCount(columnMap: Record<string, ImportFieldKey | "">): number {
+export function getMappedFieldCount(
+  columnMap: Record<string, ImportFieldKey | "">,
+): number {
   return new Set(Object.values(columnMap).filter(Boolean)).size;
 }
 

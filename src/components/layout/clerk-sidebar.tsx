@@ -1,6 +1,9 @@
 "use client";
 
-import { PortalSidebar, PortalLayout } from "@/components/layout/portal-sidebar";
+import {
+  PortalSidebar,
+  PortalLayout,
+} from "@/components/layout/portal-sidebar";
 import type { NavEntry } from "@/components/layout/sidebar-nav";
 import {
   LayoutDashboard,
@@ -26,6 +29,8 @@ import {
   IndianRupee,
   CalendarClock,
   FolderOpen,
+  Hash,
+  Armchair,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import "@/components/clerk/clerk-portal.css";
@@ -48,13 +53,41 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
       icon: School,
       children: [
         { href: "/classes", label: t("nav.classes"), icon: School },
+        { href: "/subjects", label: t("nav.subjects"), icon: BookOpen },
+        { href: "/exams", label: t("nav.exams"), icon: Award },
+        {
+          href: "/exam-seat-numbers",
+          label: t("examSeats.title"),
+          icon: Armchair,
+        },
         { href: "/students", label: t("nav.studentsAll"), icon: Users },
         { href: "/students/new", label: t("nav.addStudent"), icon: UserPlus },
-        { href: "/admissions", label: t("navExt.admissions"), icon: ClipboardCheck },
-        { href: "/attendance", label: t("navExt.studentAttendance"), icon: CalendarDays },
-        { href: "/timetable", label: t("navExt.timetable"), icon: CalendarClock },
+        {
+          href: "/students/roll-numbers",
+          label: t("rollNumbers.title"),
+          icon: Hash,
+        },
+        {
+          href: "/admissions",
+          label: t("navExt.admissions"),
+          icon: ClipboardCheck,
+        },
+        {
+          href: "/attendance",
+          label: t("navExt.studentAttendance"),
+          icon: CalendarDays,
+        },
+        {
+          href: "/timetable",
+          label: t("navExt.timetable"),
+          icon: CalendarClock,
+        },
         { href: "/results", label: t("navExt.results"), icon: Award },
-        { href: "/students/board-records", label: t("navExt.boardRecords"), icon: FileSearch },
+        {
+          href: "/students/board-records",
+          label: t("navExt.boardRecords"),
+          icon: FileSearch,
+        },
       ],
     },
     {
@@ -65,13 +98,41 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
       children: [
         { href: "/staff", label: t("nav.staffAll"), icon: Users },
         { href: "/staff/new", label: t("nav.staffAdd"), icon: UserPlus },
-        { href: "/staff/attendance", label: t("nav.staffAttendance"), icon: ClipboardList },
-        { href: "/staff/payroll", label: t("nav.staffPayroll"), icon: IndianRupee },
-        { href: "/staff/register", label: t("staffRegister.title"), icon: FileText },
-        { href: "/staff/salary-statement", label: t("salaryStatement.title"), icon: Calculator },
-        { href: "/staff/salary-slip", label: t("salarySlip.title"), icon: CreditCard },
-        { href: "/staff/income-tax", label: t("incomeTax.title"), icon: Calculator },
-        { href: "/staff/salary-ledger", label: t("salaryLedger.title"), icon: BookOpen },
+        {
+          href: "/staff/attendance",
+          label: t("nav.staffAttendance"),
+          icon: ClipboardList,
+        },
+        {
+          href: "/staff/payroll",
+          label: t("nav.staffPayroll"),
+          icon: IndianRupee,
+        },
+        {
+          href: "/staff/register",
+          label: t("staffRegister.title"),
+          icon: FileText,
+        },
+        {
+          href: "/staff/salary-statement",
+          label: t("salaryStatement.title"),
+          icon: Calculator,
+        },
+        {
+          href: "/staff/salary-slip",
+          label: t("salarySlip.title"),
+          icon: CreditCard,
+        },
+        {
+          href: "/staff/income-tax",
+          label: t("incomeTax.title"),
+          icon: Calculator,
+        },
+        {
+          href: "/staff/salary-ledger",
+          label: t("salaryLedger.title"),
+          icon: BookOpen,
+        },
       ],
     },
     {
@@ -80,7 +141,11 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
       label: t("clerkNav.groupScholarship"),
       icon: FileCheck,
       children: [
-        { href: "/clerk/scholarship", label: t("clerkNav.scholarship"), icon: FileCheck },
+        {
+          href: "/clerk/scholarship",
+          label: t("clerkNav.scholarship"),
+          icon: FileCheck,
+        },
         { href: "/import", label: t("nav.bulkImport"), icon: Upload },
         { href: "/bulk-submit", label: t("nav.bulkSubmit"), icon: Send },
         { href: "/auto-apply", label: t("nav.autoApply"), icon: Bot },
@@ -93,9 +158,21 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
       label: t("clerkNav.groupFinanceDocs"),
       icon: FolderOpen,
       children: [
-        { href: "/accounting", label: t("navExt.accounting"), icon: Calculator },
-        { href: "/certificates", label: t("navExt.certificates"), icon: FileText },
-        { href: "/certificates/general-register", label: t("navExt.generalRegister"), icon: BookOpen },
+        {
+          href: "/accounting",
+          label: t("navExt.accounting"),
+          icon: Calculator,
+        },
+        {
+          href: "/certificates",
+          label: t("navExt.certificates"),
+          icon: FileText,
+        },
+        {
+          href: "/certificates/general-register",
+          label: t("navExt.generalRegister"),
+          icon: BookOpen,
+        },
         { href: "/id-cards", label: t("nav.idCards"), icon: CreditCard },
       ],
     },
@@ -105,14 +182,58 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
       label: t("megaMenu.trigger"),
       icon: FileText,
       children: [
-        { href: "/certificates", label: t("megaMenu.allCertificates"), icon: FileText },
-        { href: "/certificates/bonafide", label: t("megaMenu.bonafide"), icon: FileText },
+        {
+          href: "/certificates",
+          label: t("megaMenu.allCertificates"),
+          icon: FileText,
+        },
+        {
+          href: "/certificates/bonafide",
+          label: t("megaMenu.bonafide"),
+          icon: FileText,
+        },
         { href: "/certificates/lc", label: t("megaMenu.lc"), icon: FileText },
-        { href: "/certificates/general-register", label: t("megaMenu.generalRegister"), icon: BookOpen },
+        {
+          href: "/certificates/general-register",
+          label: t("megaMenu.generalRegister"),
+          icon: BookOpen,
+        },
+        {
+          href: "/students/board-records",
+          label: t("megaMenu.boardViewPrint"),
+          icon: FileSearch,
+        },
+        {
+          href: "/students/board-records/result-list",
+          label: t("megaMenu.boardResultList"),
+          icon: ClipboardList,
+        },
+        {
+          href: "/students/board-records/exam-result-sheet",
+          label: t("megaMenu.boardExamSheet"),
+          icon: FileText,
+        },
+        {
+          href: "/students/board-records/overall-analysis",
+          label: t("megaMenu.boardOverall"),
+          icon: Award,
+        },
         { href: "/export", label: t("megaMenu.reportsHub"), icon: Download },
-        { href: "/staff/payroll", label: t("megaMenu.payroll"), icon: IndianRupee },
-        { href: "/staff/salary-statement", label: t("megaMenu.salaryStatement"), icon: Calculator },
-        { href: "/attendance/reports", label: t("megaMenu.attendanceReports"), icon: CalendarDays },
+        {
+          href: "/staff/payroll",
+          label: t("megaMenu.payroll"),
+          icon: IndianRupee,
+        },
+        {
+          href: "/staff/salary-statement",
+          label: t("megaMenu.salaryStatement"),
+          icon: Calculator,
+        },
+        {
+          href: "/attendance/reports",
+          label: t("megaMenu.attendanceReports"),
+          icon: CalendarDays,
+        },
         { href: "/id-cards", label: t("megaMenu.idCards"), icon: CreditCard },
       ],
     },
@@ -129,7 +250,9 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
         roleIcon={UserCheck}
       />
       <main className="shell-main">
-        <div className="mx-auto max-w-[1600px] px-4 pb-5 pt-[4.5rem] lg:px-6 lg:pb-7">{children}</div>
+        <div className="mx-auto max-w-[1600px] px-4 pb-5 pt-[4.5rem] lg:px-6 lg:pb-7">
+          {children}
+        </div>
       </main>
     </PortalLayout>
   );

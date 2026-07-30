@@ -50,7 +50,7 @@ export default function ResultsClassPage() {
   const [publishing, setPublishing] = useState(false);
   const [unpublishing, setUnpublishing] = useState(false);
   const [termStats, setTermStats] = useState<TermStat[]>([]);
-  const [midExamCount, setMidExamCount] = useState<1 | 2>(2);
+  const [midExamCount, setMidExamCount] = useState<1 | 2 | 3>(2);
   const [busyTerm, setBusyTerm] = useState<ExamTermKey | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [search, setSearch] = useState("");
@@ -253,6 +253,7 @@ export default function ResultsClassPage() {
         <ExamTermDashboard
           classId={classId}
           examId={exam.id}
+          standard={cls.standard}
           termStats={termStats}
           midExamCount={midExamCount}
           isAdmin={isAdmin}

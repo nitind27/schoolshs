@@ -48,7 +48,7 @@ export function DeviceSessionModal({
   const t = useT();
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-3 sm:p-6">
+    <div className="fixed inset-0 z-[120] flex items-end justify-center p-2 sm:items-center sm:p-6">
       <button
         type="button"
         className="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px] cursor-pointer"
@@ -58,9 +58,9 @@ export function DeviceSessionModal({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        className="relative z-10 flex max-h-[calc(100dvh-1rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]"
       >
-        <div className="bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 px-5 py-4 text-white">
+        <div className="shrink-0 bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 px-4 py-3.5 text-white sm:px-5 sm:py-4">
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 border border-white/15">
               <ShieldAlert className="h-5 w-5 text-sky-200" />
@@ -77,7 +77,7 @@ export function DeviceSessionModal({
           </div>
         </div>
 
-        <div className="px-5 py-4 space-y-3">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 overscroll-contain sm:px-5">
           <p className="text-sm text-slate-600 leading-relaxed">{t("login.deviceModalBody")}</p>
 
           <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">

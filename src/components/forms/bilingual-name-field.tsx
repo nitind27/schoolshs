@@ -42,7 +42,7 @@ export function BilingualNameField({
   };
 
   return (
-    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50/80 to-white p-3 shadow-sm">
+    <div className="grid min-w-0 grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50/80 to-white p-3 shadow-sm md:col-span-2 md:grid-cols-2 [&>*]:min-w-0">
       <Input
         id={enId}
         label={`${label} (${t("fields.nameEnglish")})`}

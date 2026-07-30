@@ -49,8 +49,8 @@ function NewStudentContent() {
   return (
     <PageShell
       title={t("students.newStudent")}
-      subtitle={t("studentForm.grSetupDesc")}
-      icon={<UserPlus className="h-6 w-6 text-teal-700" />}
+      subtitle={t("students.newStudentSubtitle")}
+      icon={<UserPlus className="h-5 w-5 text-teal-700" />}
       accentColor="border-teal-500"
       breadcrumbs={[
         { label: t("nav.dashboard"), href: dashHref },
@@ -58,23 +58,24 @@ function NewStudentContent() {
         { label: t("students.newStudent") },
       ]}
       actions={(
-        <Link href={classId ? `/classes/${classId}` : "/students"}>
+        <Link
+          href={classId ? `/classes/${classId}` : "/students"}
+          className="w-full sm:w-auto"
+        >
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            className="inline-flex h-10 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 sm:w-auto"
           >
-            <ArrowLeft className="h-4 w-4" /> Back
+            <ArrowLeft className="h-4 w-4" /> {t("common.back")}
           </button>
         </Link>
       )}
     >
-      <div className="rounded-2xl bg-gradient-to-b from-slate-50/90 via-white to-slate-50/40 p-3 sm:p-4 md:p-5">
-        <StudentForm
-          onSubmit={handleSubmit}
-          onFinish={() => handleFinish(classId)}
-          initialClassId={classId}
-        />
-      </div>
+      <StudentForm
+        onSubmit={handleSubmit}
+        onFinish={() => handleFinish(classId)}
+        initialClassId={classId}
+      />
     </PageShell>
   );
 }

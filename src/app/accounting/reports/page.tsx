@@ -65,15 +65,15 @@ export default function FinancialReportsPage() {
             <div className="space-y-2 text-sm">
               <p className="font-semibold text-emerald-700 pt-2">{t("accounting.income")}</p>
               {tb.filter((a) => a.groupType === "income").map((a) => (
-                <div key={a.name} className="flex justify-between pl-4"><span>{a.name}</span><span>{formatIndianCurrency(a.closingCredit)}</span></div>
+                <div key={a.name} className="flex items-start justify-between gap-3 pl-4"><span className="min-w-0 break-words">{a.name}</span><span className="shrink-0 text-right">{formatIndianCurrency(a.closingCredit)}</span></div>
               ))}
-              <div className="flex justify-between font-bold border-t pt-2"><span>{t("accounting.totalIncomeLabel")}</span><span>{formatIndianCurrency(income)}</span></div>
+              <div className="flex items-start justify-between gap-3 border-t pt-2 font-bold"><span className="min-w-0 break-words">{t("accounting.totalIncomeLabel")}</span><span className="shrink-0 text-right">{formatIndianCurrency(income)}</span></div>
               <p className="font-semibold text-red-700 pt-4">{t("accounting.expenses")}</p>
               {tb.filter((a) => a.groupType === "expenses").map((a) => (
-                <div key={a.name} className="flex justify-between pl-4"><span>{a.name}</span><span>{formatIndianCurrency(a.closingDebit)}</span></div>
+                <div key={a.name} className="flex items-start justify-between gap-3 pl-4"><span className="min-w-0 break-words">{a.name}</span><span className="shrink-0 text-right">{formatIndianCurrency(a.closingDebit)}</span></div>
               ))}
-              <div className="flex justify-between font-bold border-t pt-2"><span>{t("accounting.totalExpensesLabel")}</span><span>{formatIndianCurrency(expenses)}</span></div>
-              <div className="flex justify-between font-bold text-lg border-t-2 pt-3 mt-3"><span>{t("accounting.netSurplus")}</span><span className={surplus >= 0 ? "text-emerald-700" : "text-red-700"}>{formatIndianCurrency(surplus)}</span></div>
+              <div className="flex items-start justify-between gap-3 border-t pt-2 font-bold"><span className="min-w-0 break-words">{t("accounting.totalExpensesLabel")}</span><span className="shrink-0 text-right">{formatIndianCurrency(expenses)}</span></div>
+              <div className="mt-3 flex items-start justify-between gap-3 border-t-2 pt-3 text-lg font-bold"><span className="min-w-0 break-words">{t("accounting.netSurplus")}</span><span className={`shrink-0 text-right ${surplus >= 0 ? "text-emerald-700" : "text-red-700"}`}>{formatIndianCurrency(surplus)}</span></div>
             </div>
           </CardContent>
         </Card>
@@ -84,18 +84,18 @@ export default function FinancialReportsPage() {
             <div className="space-y-2 text-sm">
               <p className="font-semibold text-blue-700">{t("accounting.assets")}</p>
               {tb.filter((a) => a.groupType === "assets").map((a) => (
-                <div key={a.name} className="flex justify-between pl-4"><span>{a.name}</span><span>{formatIndianCurrency(a.closingDebit)}</span></div>
+                <div key={a.name} className="flex items-start justify-between gap-3 pl-4"><span className="min-w-0 break-words">{a.name}</span><span className="shrink-0 text-right">{formatIndianCurrency(a.closingDebit)}</span></div>
               ))}
-              <div className="flex justify-between font-bold border-t pt-2"><span>{t("accounting.totalAssets")}</span><span>{formatIndianCurrency(assets)}</span></div>
+              <div className="flex items-start justify-between gap-3 border-t pt-2 font-bold"><span className="min-w-0 break-words">{t("accounting.totalAssets")}</span><span className="shrink-0 text-right">{formatIndianCurrency(assets)}</span></div>
               <p className="font-semibold text-orange-700 pt-4">{t("accounting.liabilitiesFund")}</p>
               {tb.filter((a) => a.groupType === "liabilities").map((a) => (
-                <div key={a.name} className="flex justify-between pl-4"><span>{a.name}</span><span>{formatIndianCurrency(a.closingCredit)}</span></div>
+                <div key={a.name} className="flex items-start justify-between gap-3 pl-4"><span className="min-w-0 break-words">{a.name}</span><span className="shrink-0 text-right">{formatIndianCurrency(a.closingCredit)}</span></div>
               ))}
               {tb.filter((a) => a.groupType === "capital").map((a) => (
-                <div key={a.name} className="flex justify-between pl-4"><span>{a.name}</span><span>{formatIndianCurrency(a.closingCredit)}</span></div>
+                <div key={a.name} className="flex items-start justify-between gap-3 pl-4"><span className="min-w-0 break-words">{a.name}</span><span className="shrink-0 text-right">{formatIndianCurrency(a.closingCredit)}</span></div>
               ))}
-              <div className="flex justify-between pl-4"><span>{t("accounting.surplus")}</span><span>{formatIndianCurrency(Math.max(surplus, 0))}</span></div>
-              <div className="flex justify-between font-bold border-t-2 pt-3 mt-3"><span>{t("accounting.total")}</span><span>{formatIndianCurrency(liabilities + capital + Math.max(surplus, 0))}</span></div>
+              <div className="flex items-start justify-between gap-3 pl-4"><span className="min-w-0 break-words">{t("accounting.surplus")}</span><span className="shrink-0 text-right">{formatIndianCurrency(Math.max(surplus, 0))}</span></div>
+              <div className="mt-3 flex items-start justify-between gap-3 border-t-2 pt-3 font-bold"><span className="min-w-0 break-words">{t("accounting.total")}</span><span className="shrink-0 text-right">{formatIndianCurrency(liabilities + capital + Math.max(surplus, 0))}</span></div>
             </div>
           </CardContent>
         </Card>

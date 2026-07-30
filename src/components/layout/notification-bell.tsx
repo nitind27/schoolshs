@@ -89,6 +89,15 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  useEffect(() => {
+    if (!open || window.innerWidth >= 768) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
   const markAll = async () => {
     setLoading(true);
     try {
@@ -123,7 +132,7 @@ export function NotificationBell() {
   const badge = unread > 99 ? "99+" : unread > 0 ? String(unread) : null;
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="tn-notification relative" ref={ref}>
       <button
         type="button"
         onClick={() => {
@@ -139,8 +148,15 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-[min(100vw-1.5rem,360px)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/80">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
+        <>
+          <button
+            type="button"
+            className="tn-notification-backdrop md:hidden"
+            onClick={() => setOpen(false)}
+            aria-label={t("common.cancel")}
+          />
+          <div className="tn-notification-panel absolute right-0 z-50 mt-2 w-[min(100vw-1.5rem,360px)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/80">
+          <div className="tn-notification-head flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
             <div>
               <p className="text-sm font-semibold text-slate-900">{t("notifications.title")}</p>
               <p className="text-[11px] text-slate-500">
@@ -157,12 +173,12 @@ export function NotificationBell() {
                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
-                {t("notifications.markAllRead")}
+                <span className="tn-notification-mark-label">{t("notifications.markAllRead")}</span>
               </button>
             )}
           </div>
 
-          <div className="max-h-[min(70vh,420px)] overflow-y-auto">
+          <div className="tn-notification-list max-h-[min(70dvh,420px)] overflow-y-auto">
             {items.length === 0 ? (
               <div className="px-4 py-10 text-center">
                 <Bell className="mx-auto mb-2 h-8 w-8 text-slate-300" />
@@ -245,7 +261,8 @@ export function NotificationBell() {
               </ul>
             )}
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

@@ -93,8 +93,14 @@ export default function StaffAttendancePage() {
             value={month} onChange={(e) => setMonth(e.target.value)} />
           <Select label={t("staffHr.year")} className="w-28"
             options={["2024", "2025", "2026"]} value={year} onChange={(e) => setYear(e.target.value)} />
-          <Select label={t("staffPage.designation")} className="w-44"
-            options={["", ...STAFF_DESIGNATIONS]} value={designation} onChange={(e) => setDesignation(e.target.value)} />
+          <Select
+            label={t("staffPage.designation")}
+            className="w-44"
+            options={[...STAFF_DESIGNATIONS]}
+            emptyLabel={t("staffPage.allDesignations")}
+            value={designation}
+            onChange={(e) => setDesignation(e.target.value)}
+          />
         </div>
 
         {saved && (
@@ -109,7 +115,12 @@ export default function StaffAttendancePage() {
         ) : rows.length === 0 ? (
           <div className="text-center py-16 text-slate-500">{t("staffHr.noStaff")}</div>
         ) : (
-          <StaffAttendanceGrid rows={rows} onChange={setRows} />
+          <StaffAttendanceGrid
+            rows={rows}
+            onChange={setRows}
+            month={parseInt(month, 10)}
+            year={parseInt(year, 10)}
+          />
         )}
       </div>
     </PageShell>

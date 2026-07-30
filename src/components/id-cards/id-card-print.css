@@ -45,6 +45,7 @@
 
   .id-card-print-size {
     width: 85.6mm !important;
+    max-width: 85.6mm !important;
     transform-origin: center center;
     box-shadow: none !important;
     border: 0.3mm solid #ccc !important;

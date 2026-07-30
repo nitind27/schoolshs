@@ -20,7 +20,7 @@ export function NavbarLetterheadButton({ role }: { role?: string | null }) {
   return (
     <Link
       href="/letterhead"
-      className={cn("tn-btn", isActive && "tn-btn--active")}
+      className={cn("tn-btn tn-letterhead", isActive && "tn-btn--active")}
       data-active={isActive ? "true" : "false"}
       aria-label={t("navExt.letterhead")}
       title={t("navExt.letterhead")}

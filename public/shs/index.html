@@ -338,6 +338,10 @@
             border-bottom: 1px solid var(--app-border);
         }
 
+        .mobile-scroll-hint {
+            display: none;
+        }
+
         .app-tool-section {
             display: flex;
             align-items: center;
@@ -1893,6 +1897,277 @@
             right: 12px;
         }
 
+        /* Compact touch workspace — keep every editor control usable on phones */
+        @media screen and (max-width: 700px) {
+            html.embedded .editor-sticky-bar {
+                max-height: none;
+                overflow: visible;
+                padding: 6px 6px 0;
+            }
+
+            html.embedded .app-chrome {
+                border-radius: 9px;
+            }
+
+            html.embedded .app-header {
+                display: flex;
+                gap: 7px;
+                padding: 8px;
+            }
+
+            html.embedded .app-brand {
+                width: 100%;
+                min-width: 0;
+                gap: 8px;
+                padding-left: 2px;
+            }
+
+            html.embedded .app-brand-icon {
+                width: 34px;
+                height: 34px;
+                border-radius: 9px;
+            }
+
+            html.embedded .app-brand-title {
+                font-size: 12px;
+            }
+
+            html.embedded .app-brand-sub {
+                font-size: 10px;
+            }
+
+            html.embedded .app-header-actions {
+                width: 100%;
+                flex: 1 0 100%;
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                overflow-x: auto;
+                padding: 1px 1px 4px;
+                scrollbar-width: none;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            html.embedded .app-header-actions::-webkit-scrollbar {
+                display: none;
+            }
+
+            html.embedded .mobile-scroll-hint {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 5px;
+                min-height: 24px;
+                border-top: 1px solid var(--app-border);
+                background: linear-gradient(90deg, #f8fafc, #eef2f7, #f8fafc);
+                color: #64748b;
+                font-family: var(--ui-font);
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+            }
+
+            html.embedded .app-action-cluster,
+            html.embedded .app-divider {
+                flex-shrink: 0;
+            }
+
+            html.embedded .app-btn {
+                min-height: 34px;
+                padding: 6px 10px;
+                font-size: 10px;
+            }
+
+            html.embedded .app-meta {
+                width: 100%;
+                margin-left: 0;
+                justify-content: space-between;
+                gap: 5px;
+            }
+
+            html.embedded .app-stat {
+                flex: 1;
+                padding: 5px 7px;
+                text-align: center;
+            }
+
+            html.embedded .app-zoom {
+                flex-shrink: 0;
+            }
+
+            html.embedded .app-toolbar {
+                flex-wrap: nowrap;
+                gap: 6px;
+                overflow-x: auto;
+                padding: 7px 8px;
+                scrollbar-width: thin;
+                scrollbar-color: #94a3b8 #e2e8f0;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            html.embedded .app-toolbar::-webkit-scrollbar,
+            html.embedded .editor-toolbar::-webkit-scrollbar {
+                height: 5px;
+            }
+
+            html.embedded .app-toolbar::-webkit-scrollbar-track,
+            html.embedded .editor-toolbar::-webkit-scrollbar-track {
+                background: #e2e8f0;
+            }
+
+            html.embedded .app-toolbar::-webkit-scrollbar-thumb,
+            html.embedded .editor-toolbar::-webkit-scrollbar-thumb {
+                border-radius: 999px;
+                background: #94a3b8;
+            }
+
+            html.embedded .app-tool-section {
+                flex-shrink: 0;
+            }
+
+            html.embedded .app-tool-btn {
+                min-height: 30px;
+                padding: 5px 8px;
+                font-size: 10px;
+            }
+
+            html.embedded .editor-toolbar {
+                flex-wrap: nowrap;
+                gap: 4px;
+                overflow-x: auto;
+                padding: 7px 8px;
+                scrollbar-width: thin;
+                scrollbar-color: #94a3b8 #e2e8f0;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            html.embedded .toolbar-group {
+                flex-shrink: 0;
+                padding-right: 5px;
+            }
+
+            html.embedded .toolbar-btn {
+                width: 30px;
+                height: 30px;
+            }
+
+            html.embedded .toolbar-select {
+                min-width: 76px;
+                max-width: 112px;
+            }
+
+            html.embedded .editor-scroll-area {
+                overflow-x: hidden;
+                padding: 10px 6px 16px;
+            }
+
+            html.embedded .page-container {
+                width: 100%;
+                min-height: auto;
+                margin-bottom: 12px;
+                padding: 5mm 4mm 12mm;
+                overflow-wrap: anywhere;
+            }
+
+            html.embedded .print-table,
+            html.embedded .header-table,
+            html.embedded .contact-table,
+            html.embedded .footer-table,
+            html.embedded .serial-date-table {
+                width: 100%;
+                table-layout: fixed;
+            }
+
+            html.embedded .header-top {
+                font-size: 10px;
+            }
+
+            html.embedded .logo-cell {
+                width: 58px;
+            }
+
+            html.embedded .logo-cell img,
+            html.embedded .logo-placeholder {
+                width: 50px;
+            }
+
+            html.embedded .logo-placeholder {
+                height: 58px;
+            }
+
+            html.embedded .school-name {
+                font-size: clamp(16px, 5.3vw, 20px);
+                letter-spacing: 0;
+                overflow-wrap: anywhere;
+            }
+
+            html.embedded .contact-table td,
+            html.embedded .footer-table td {
+                padding: 2px;
+                font-size: 9px;
+                overflow-wrap: anywhere;
+            }
+
+            html.embedded .serial-date-table {
+                margin-top: 10px;
+                font-size: 11px;
+            }
+
+            html.embedded .serial-date-table td {
+                padding: 3px 2px;
+                overflow-wrap: anywhere;
+            }
+
+            html.embedded .underline-field {
+                max-width: 100%;
+            }
+
+            html.embedded .content-area {
+                min-height: 55mm;
+                margin-top: 12px;
+                padding: 6px 2px;
+                font-size: 12px;
+                line-height: 1.75;
+                overflow-wrap: anywhere;
+            }
+
+            html.embedded .page-number {
+                right: 4mm;
+                bottom: 4mm;
+                font-size: 9px;
+            }
+
+            html.embedded .stamp-panel,
+            html.embedded .ocr-panel,
+            html.embedded .template-panel {
+                width: calc(100vw - 16px);
+                max-height: calc(100dvh - 24px);
+                padding: 14px;
+                border-radius: 12px;
+            }
+
+            html.embedded .ocr-content {
+                flex-direction: column;
+            }
+
+            html.embedded .ocr-upload-area,
+            html.embedded .ocr-preview {
+                width: 100%;
+                min-width: 0;
+            }
+
+            html.embedded .template-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            html.embedded .edit-indicator {
+                right: 8px;
+                bottom: 8px;
+                max-width: calc(100vw - 16px);
+                font-size: 10px;
+            }
+        }
+
         /* Responsive */
         @media screen and (max-width: 900px) {
             .page-container {
@@ -1913,6 +2188,93 @@
                 padding-right: 5px;
             }
         }
+
+        /*
+         * On phones keep the document itself in true A4 proportions.
+         * The studio controls reflow, but the printable page only scales down,
+         * so its desktop/laptop layout never changes.
+         */
+        @media screen and (max-width: 700px) {
+            html.embedded .editor-scroll-area {
+                overflow-x: auto;
+            }
+
+            html.embedded .page-container {
+                width: 210mm;
+                max-width: none;
+                min-height: 297mm;
+                padding: 8mm 15mm 15mm;
+                zoom: var(--mobile-page-fit, 1);
+                overflow-wrap: normal;
+            }
+
+            html.embedded .print-table,
+            html.embedded .header-table,
+            html.embedded .contact-table,
+            html.embedded .footer-table,
+            html.embedded .serial-date-table {
+                table-layout: auto;
+            }
+
+            html.embedded .header-top {
+                font-size: 13px;
+            }
+
+            html.embedded .logo-cell {
+                width: 80px;
+            }
+
+            html.embedded .logo-cell img,
+            html.embedded .logo-placeholder {
+                width: 70px;
+            }
+
+            html.embedded .logo-placeholder {
+                height: 80px;
+            }
+
+            html.embedded .school-name {
+                font-size: 28px;
+                letter-spacing: 1px;
+                overflow-wrap: normal;
+            }
+
+            html.embedded .contact-table td,
+            html.embedded .footer-table td {
+                padding: 2px 5px;
+                font-size: 11px;
+                overflow-wrap: normal;
+            }
+
+            html.embedded .serial-date-table {
+                margin-top: 15px;
+                font-size: 14px;
+            }
+
+            html.embedded .serial-date-table td {
+                padding: 5px;
+                overflow-wrap: normal;
+            }
+
+            html.embedded .underline-field {
+                max-width: none;
+            }
+
+            html.embedded .content-area {
+                min-height: 80mm;
+                margin-top: 20px;
+                padding: 10px;
+                font-size: 14px;
+                line-height: 2;
+                overflow-wrap: normal;
+            }
+
+            html.embedded .page-number {
+                right: 15mm;
+                bottom: 8mm;
+                font-size: 12px;
+            }
+        }
     </style>
     <!-- Tesseract.js OCR Library -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -1924,6 +2286,27 @@
             "embedded",
             new URLSearchParams(window.location.search).get("embed") === "1"
         );
+
+        function updateMobilePageFit() {
+            const root = document.documentElement;
+            if (!root.classList.contains("embedded") || window.innerWidth > 700) {
+                root.style.removeProperty("--mobile-page-fit");
+                return;
+            }
+
+            const workspace = document.querySelector(".editor-scroll-area");
+            const availableWidth = Math.max(
+                240,
+                (workspace?.clientWidth || window.innerWidth) - 12
+            );
+            const a4WidthPx = 210 * (96 / 25.4);
+            const fit = Math.min(1, availableWidth / a4WidthPx);
+            root.style.setProperty("--mobile-page-fit", fit.toFixed(4));
+        }
+
+        window.addEventListener("resize", updateMobilePageFit, { passive: true });
+        window.addEventListener("DOMContentLoaded", updateMobilePageFit);
+        window.addEventListener("load", updateMobilePageFit);
     </script>
     <div class="edit-indicator">Edit mode — click any text to edit</div>
     <div class="panel-backdrop" id="panelBackdrop" onclick="closeFloatingPanels()"></div>
@@ -1960,6 +2343,11 @@
                     <button type="button" onclick="setPageZoom(10)" title="Zoom in">+</button>
                 </div>
             </div>
+        </div>
+        <div class="mobile-scroll-hint" aria-hidden="true">
+            <span>←</span>
+            <span>Swipe toolbars left / right</span>
+            <span>→</span>
         </div>
         <div class="app-toolbar">
             <div class="app-tool-section section-logo">

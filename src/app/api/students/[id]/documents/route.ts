@@ -54,7 +54,7 @@ export async function GET(
       DOC_TYPES.map(async (type) => {
         const field = DOC_FIELD_MAP[type];
         const stored = student[field as keyof typeof student] as string | null;
-        const abs = resolveDocAbsolutePath(id, stored);
+        const abs = resolveDocAbsolutePath(id, stored, type);
         let previewUrl: string | null = null;
         let fileName: string | null = null;
         let size: number | null = null;

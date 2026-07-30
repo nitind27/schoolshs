@@ -23,6 +23,9 @@ function IdCardsContent() {
   const t = useT();
   const searchParams = useSearchParams();
   const initialClassId = searchParams.get("classId") || "";
+  const initialStudentId = searchParams.get("studentId") || "";
+  const initialIds = searchParams.get("ids") || "";
+  const singleStudentMode = Boolean(initialStudentId || initialIds);
 
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [students, setStudents] = useState<StudentWithClass[]>([]);
@@ -37,7 +40,7 @@ function IdCardsContent() {
   const [signaturePreview, setSignaturePreview] = useState<string | undefined>();
 
   useEffect(() => {
-    fetch("/api/classes?academicYear=2025-26")
+    fetch("/api/classes")
       .then((r) => r.json())
       .then((d) => setClasses(d.classes || []));
     fetch("/api/school/settings")
@@ -45,7 +48,6 @@ function IdCardsContent() {
       .then((s) => {
         setSettings(s);
         setSettingsForm(s);
-        // Prefer uploaded school logo; otherwise canonical public crest
         if (s?.logoPath) {
           setLogoPreview(`/api/uploads/${s.logoPath}`);
         } else {
@@ -57,7 +59,13 @@ function IdCardsContent() {
   const fetchCards = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ academicYear });
-    if (classId) params.set("classId", classId);
+    if (initialStudentId) {
+      params.set("studentId", initialStudentId);
+    } else if (initialIds) {
+      params.set("ids", initialIds);
+    } else if (classId) {
+      params.set("classId", classId);
+    }
     const res = await fetch(`/api/id-cards?${params}`);
     const data = await res.json();
     setStudents(data.students || []);
@@ -66,7 +74,7 @@ function IdCardsContent() {
       setSettingsForm(data.settings);
     }
     setLoading(false);
-  }, [classId, academicYear]);
+  }, [classId, academicYear, initialStudentId, initialIds]);
 
   useEffect(() => { fetchCards(); }, [fetchCards]);
 
@@ -129,10 +137,31 @@ function IdCardsContent() {
             {t("idCards.processPhotos")}
           </Button>
           <Button onClick={() => window.print()}>
-            <Printer className="h-4 w-4" /> {t("idCards.printAll")}
+            <Printer className="h-4 w-4" />
+            {singleStudentMode ? t("idCards.printCard") : t("idCards.printAll")}
           </Button>
         </div>
       </div>
+
+      {singleStudentMode && (
+        <Card className="border-pink-200 bg-pink-50/70 print:hidden">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div>
+              <p className="font-semibold text-pink-900">{t("idCards.singleStudentTitle")}</p>
+              <p className="text-sm text-pink-800/80">
+                {students[0]
+                  ? t("idCards.singleStudentDesc", {
+                      name: `${students[0].firstName} ${students[0].surname}`.trim(),
+                    })
+                  : t("idCards.singleStudentLoading")}
+              </p>
+            </div>
+            <a href="/id-cards" className="text-sm font-medium text-pink-800 underline underline-offset-2">
+              {t("idCards.viewAllCards")}
+            </a>
+          </CardContent>
+        </Card>
+      )}
 
       {showSettings && settings && (
         <Card className="print:hidden">
@@ -200,21 +229,24 @@ function IdCardsContent() {
         </Card>
       )}
 
-      <Card className="print:hidden">
-        <CardContent className="p-4 flex flex-wrap gap-3">
-          <Select label={t("fields.class")} options={classOptions} value={classId} onChange={(e) => setClassId(e.target.value)} className="w-56" />
-          <Select label={t("idCards.year")} options={FINANCIAL_YEARS} value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="w-32" />
-        </CardContent>
-      </Card>
+      {!singleStudentMode && (
+        <Card className="print:hidden">
+          <CardContent className="p-4 flex flex-wrap gap-3">
+            <Select label={t("fields.class")} options={classOptions} value={classId} onChange={(e) => setClassId(e.target.value)} className="w-56" />
+            <Select label={t("idCards.year")} options={FINANCIAL_YEARS} value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="w-32" />
+          </CardContent>
+        </Card>
+      )}
 
-      <IdCardShareLinkManager
-        classId={classId}
-        standard={selectedClass?.standard || ""}
-        section={selectedClass?.section || ""}
-        academicYear={academicYear}
-        classes={classes}
-      />
-
+      {!singleStudentMode && (
+        <IdCardShareLinkManager
+          classId={classId}
+          standard={selectedClass?.standard || ""}
+          section={selectedClass?.section || ""}
+          academicYear={academicYear}
+          classes={classes}
+        />
+      )}
       {loading ? (
         <PageLoader />
       ) : students.length === 0 ? (
@@ -226,18 +258,22 @@ function IdCardsContent() {
         </Card>
       ) : (
         <>
-          <p className="text-sm text-slate-500 print:hidden">{t("idCards.cardsReady", { count: students.length })}</p>
-          <div className="id-cards-grid flex flex-wrap gap-8 justify-center print:gap-4 print:justify-start">
-            {settings && students.map((s) => (
-              <StudentIdCard
-                key={s.id}
-                student={s}
-                settings={settings}
-                photoUrl={photoUrl(s)}
-                logoUrl={logoPreview || SCHOOL_LOGO_URL}
-                signatureUrl={signaturePreview}
-              />
-            ))}
+          <p className="text-sm text-slate-500 print:hidden">
+            {t("idCards.cardsReady", { count: students.length })}
+          </p>
+          <div className="id-cards-grid mx-auto flex max-w-4xl flex-wrap justify-center gap-8 pb-10 print:gap-4">
+            {settings &&
+              students.map((s) => (
+                <div key={s.id} className="id-card-wrap flex justify-center">
+                  <StudentIdCard
+                    student={s}
+                    settings={settings}
+                    photoUrl={photoUrl(s)}
+                    logoUrl={logoPreview || SCHOOL_LOGO_URL}
+                    signatureUrl={signaturePreview}
+                  />
+                </div>
+              ))}
           </div>
         </>
       )}
@@ -249,16 +285,19 @@ function IdCardsContent() {
           main { padding: 0 !important; margin: 0 !important; }
           .lg\\:pl-64 { padding-left: 0 !important; }
           .id-cards-grid {
-            display: grid !important;
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 12mm !important;
-            padding: 10mm !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+            gap: 8mm !important;
+            padding: 8mm !important;
           }
-          .id-card {
+          .id-card-wrap {
             page-break-inside: avoid;
             break-inside: avoid;
+          }
+          .id-card {
             box-shadow: none !important;
-            border: 1px solid #ddd;
+            border: 1px solid #d1d5db;
           }
         }
       `}</style>

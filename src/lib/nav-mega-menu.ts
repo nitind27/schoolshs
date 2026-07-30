@@ -8,12 +8,15 @@ import {
   ClipboardList,
   CreditCard,
   Download,
-  FileSearch,
+  ChartColumn,
   FileSpreadsheet,
   FileText,
+  GraduationCap,
   IndianRupee,
   LayoutGrid,
+  Printer,
   ScrollText,
+  Table2,
   UserCheck,
   Wallet,
 } from "lucide-react";
@@ -90,6 +93,38 @@ export const REPORTS_CERTS_MEGA_MENU: MegaMenuColumn[] = [
     ],
   },
   {
+    id: "board-print",
+    titleKey: "megaMenu.colBoardPrint",
+    accent: "text-violet-600 bg-violet-50",
+    icon: GraduationCap,
+    links: [
+      {
+        href: "/students/board-records",
+        labelKey: "megaMenu.boardViewPrint",
+        descKey: "megaMenu.boardViewPrintDesc",
+        icon: Printer,
+      },
+      {
+        href: "/students/board-records/result-list",
+        labelKey: "megaMenu.boardResultList",
+        descKey: "megaMenu.boardResultListDesc",
+        icon: Table2,
+      },
+      {
+        href: "/students/board-records/exam-result-sheet",
+        labelKey: "megaMenu.boardExamSheet",
+        descKey: "megaMenu.boardExamSheetDesc",
+        icon: FileSpreadsheet,
+      },
+      {
+        href: "/students/board-records/overall-analysis",
+        labelKey: "megaMenu.boardOverall",
+        descKey: "megaMenu.boardOverallDesc",
+        icon: ChartColumn,
+      },
+    ],
+  },
+  {
     id: "staff-reports",
     titleKey: "megaMenu.colStaffReports",
     accent: "text-emerald-600 bg-emerald-50",
@@ -154,11 +189,6 @@ export const REPORTS_CERTS_MEGA_MENU: MegaMenuColumn[] = [
         href: "/accounting/reports",
         labelKey: "megaMenu.accountingReports",
         icon: Calculator,
-      },
-      {
-        href: "/students/board-records",
-        labelKey: "megaMenu.boardRecords",
-        icon: FileSearch,
       },
       {
         href: "/id-cards",

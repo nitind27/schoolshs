@@ -4,7 +4,24 @@ import { todayDobDisplay } from "@/lib/student-age";
 
 type StudentDraftInput = Partial<Student>;
 
-const DRAFT_PLACEHOLDER = "—";
+export const DRAFT_PLACEHOLDER = "—";
+
+/** Known auto-filled draft values that are NOT real user input */
+export const DRAFT_FAKE_DEFAULTS: Partial<Record<keyof Student, string | number>> = {
+  mobileNumber: "9000000000",
+  accountNumber: "0000000000",
+  ifscCode: "SBIN0000000",
+  currentPincode: "380001",
+  permanentPincode: "380001",
+  annualFamilyIncome: 0,
+  percentage10th: 0,
+  percentage12th: 0,
+  courseName: "Class",
+  courseType: "School",
+  currentYear: "1",
+  scholarshipScheme: "Pre-Matric",
+  category: "General",
+};
 
 /** Old draft DOB that should not be shown as a real birth date */
 export const DRAFT_DOB_PLACEHOLDERS = new Set([
@@ -22,6 +39,70 @@ export function isDraftDobPlaceholder(value: string | null | undefined): boolean
   const norm = raw.replace(/-/g, "/");
   if (DRAFT_DOB_PLACEHOLDERS.has(norm)) return true;
   return /^0?1\/0?1\/2000$/.test(norm);
+}
+
+/** True for empty / em-dash draft placeholders */
+export function isDraftPlaceholderValue(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "number") return Number.isNaN(value);
+  if (typeof value !== "string") return false;
+  const v = value.trim();
+  return !v || v === DRAFT_PLACEHOLDER || v === "-" || v === "–";
+}
+
+/**
+ * Clear DB draft placeholders / fake defaults so the UI form shows empty fields
+ * and progress % reflects real user input only.
+ * @param mode "placeholders" = only "—" ; "all" = also known draft fake defaults (new student)
+ */
+export function stripDraftPlaceholdersForForm<T extends Record<string, unknown>>(
+  data: T,
+  mode: "placeholders" | "all" = "all",
+): T {
+  const out = { ...data } as Record<string, unknown>;
+
+  for (const [key, value] of Object.entries(out)) {
+    if (typeof value === "string" && isDraftPlaceholderValue(value)) {
+      out[key] = "";
+      continue;
+    }
+    if (mode === "all") {
+      const fake = DRAFT_FAKE_DEFAULTS[key as keyof Student];
+      if (fake !== undefined && value === fake) {
+        out[key] = typeof fake === "number" ? null : "";
+      }
+    }
+  }
+
+  if (mode === "all") {
+    // Extra draft defaults that are common real values — only clear on new-student mode
+    const extra: Record<string, string> = {
+      gender: "Male",
+      religion: "Hindu",
+      currentDistrict: "Ahmedabad",
+      permanentDistrict: "Ahmedabad",
+      institutionDistrict: "Ahmedabad",
+      board10th: "GSEB",
+      year10th: "2025",
+    };
+    for (const [key, fake] of Object.entries(extra)) {
+      if (String(out[key] || "").trim() === fake) out[key] = "";
+    }
+
+    const aadhaar = String(out.aadhaarNumber || "").replace(/\s/g, "");
+    // Random draft aadhaar (9…)
+    if (/^9\d{11}$/.test(aadhaar)) {
+      out.aadhaarNumber = "";
+    } else {
+      // GR-linked draft aadhaar (8 + padded GR) — only clear exact match
+      const gr = String(out.grNumber || "").trim();
+      if (gr && aadhaar === stableDraftAadhaarFromGr(gr)) {
+        out.aadhaarNumber = "";
+      }
+    }
+  }
+
+  return out as T;
 }
 
 function isEmpty(value: unknown): boolean {
@@ -67,7 +148,9 @@ export function applyDraftDefaults(data: StudentDraftInput): StudentDraftInput {
   setStr("permanentDistrict", String(out.currentDistrict || "Ahmedabad"));
   setStr("permanentCity", String(out.currentCity || DRAFT_PLACEHOLDER));
   setStr("permanentPincode", String(out.currentPincode || "380001"));
-  setStr("scholarshipScheme", "Pre-Matric");
+  // Never seed a vague placeholder like "Pre-Matric" — that blocked Auto-Apply
+  // and looked like a real scheme. Empty keeps drafts from becoming "ready".
+  setStr("scholarshipScheme", "");
   setStr("financialYear", "2025-26");
   setStr("courseType", "School");
   setStr("courseName", "Class");
@@ -118,14 +201,22 @@ export function hasDraftContent(data: StudentDraftInput): boolean {
     "id",
     "createdAt",
     "updatedAt",
+    "grNumber",
+    "classId",
+    "standard",
+    "section",
   ]);
 
   for (const [key, value] of Object.entries(data)) {
     if (skip.has(key)) continue;
     if (value === null || value === undefined) continue;
-    if (typeof value === "string" && value.trim() === "") continue;
     if (typeof value === "boolean") continue;
+    if (isDraftPlaceholderValue(value)) continue;
+    const fake = DRAFT_FAKE_DEFAULTS[key as keyof Student];
+    if (fake !== undefined && value === fake) continue;
+    if (typeof value === "string" && value.trim() === "") continue;
     if (typeof value === "number" && (key === "familySize" || key === "annualFamilyIncome")) continue;
+    if (key === "aadhaarNumber" && /^9\d{11}$/.test(String(value).replace(/\s/g, ""))) continue;
     return true;
   }
   return false;

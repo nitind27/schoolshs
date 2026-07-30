@@ -1,5 +1,6 @@
 import type { Student } from "@/generated/prisma/client";
 import { normalizeCategory } from "@/lib/category-inference";
+import { isSpecificScholarshipScheme } from "@/lib/dg-portal";
 import { parseImportDate } from "@/lib/import/import-formats";
 import {
   isScholarshipRequired,
@@ -69,6 +70,15 @@ export function validateStudent(data: Partial<StudentInput>): ValidationError[] 
 
   if (isScholarshipRequired(data.category) && isEmpty(data.scholarshipScheme)) {
     errors.push({ field: "scholarshipScheme", message: "Scholarship Scheme is required for this category" });
+  } else if (
+    !isEmpty(data.scholarshipScheme) &&
+    !isSpecificScholarshipScheme(String(data.scholarshipScheme))
+  ) {
+    errors.push({
+      field: "scholarshipScheme",
+      message:
+        "Select a specific scholarship scheme (e.g. Pre Matric Scholarship - SC), not a placeholder like Pre-Matric",
+    });
   }
 
   if (requires10thBoard(data.standard)) {
@@ -115,6 +125,16 @@ export function validateStudent(data: Partial<StudentInput>): ValidationError[] 
       field: "rationCardNumber",
       message: "Ration card number must be 8–15 letters/digits",
     });
+  }
+
+  const pan = String(data.panNumber || "").replace(/\s/g, "").toUpperCase();
+  if (pan && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+    errors.push({ field: "panNumber", message: "PAN must be like ABCDE1234F" });
+  }
+
+  const apaar = String(data.apaarId || "").replace(/\s/g, "");
+  if (apaar && !/^[A-Za-z0-9]{8,16}$/.test(apaar)) {
+    errors.push({ field: "apaarId", message: "APAAR / UPPAR ID looks invalid" });
   }
 
   if (data.percentage10th !== undefined && data.percentage10th !== null && (data.percentage10th < 0 || data.percentage10th > 100)) {
@@ -230,6 +250,11 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     section: String(row.section || "").trim() || null,
     standard: String(row.standard || "").trim() || null,
     childUid: String(row.childUid || "").replace(/\s/g, "").trim() || null,
+    apaarId: String(row.apaarId || "").replace(/\s/g, "").trim().toUpperCase() || null,
+    panNumber: String(row.panNumber || "")
+      .replace(/\s/g, "")
+      .trim()
+      .toUpperCase() || null,
     bloodGroup: String(row.bloodGroup || "").trim() || null,
     idCardValidUpto: parseImportDate(row.idCardValidUpto) || null,
     status: "draft",
@@ -238,9 +263,81 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
 }
 
 export function getCompletionPercentage(data: Partial<StudentInput>): number {
-  const errors = validateStudent(data);
-  // Approximate: count unique required-ish checks via validate
-  const base = 35;
-  const filled = Math.max(0, base - errors.length);
-  return Math.min(100, Math.round((filled / base) * 100));
+  const fields: (keyof StudentInput)[] = [
+    "firstName",
+    "surname",
+    "aadhaarName",
+    "dateOfBirth",
+    "gender",
+    "aadhaarNumber",
+    "mobileNumber",
+    "motherName",
+    "fatherName",
+    "category",
+    "religion",
+    "parentOccupation",
+    "annualFamilyIncome",
+    "currentAddress",
+    "currentDistrict",
+    "currentCity",
+    "currentPincode",
+    "permanentAddress",
+    "permanentDistrict",
+    "permanentCity",
+    "permanentPincode",
+    "courseType",
+    "courseName",
+    "institutionDistrict",
+    "institutionName",
+    "bankName",
+    "branchName",
+    "accountNumber",
+    "ifscCode",
+    "accountHolderName",
+  ];
+
+  if (isScholarshipRequired(data.category)) {
+    fields.push("scholarshipScheme");
+  }
+
+  let filled = 0;
+  for (const field of fields) {
+    if (isFilledForProgress(field, data[field])) filled += 1;
+  }
+
+  return Math.min(100, Math.round((filled / fields.length) * 100));
+}
+
+function isFilledForProgress(field: string, value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "number") {
+    if (Number.isNaN(value)) return false;
+    // Draft zeros / empty income should not count
+    if (
+      (field === "annualFamilyIncome" || field === "percentage10th" || field === "percentage12th") &&
+      value === 0
+    ) {
+      return false;
+    }
+    return true;
+  }
+  if (typeof value !== "string") return Boolean(value);
+  const v = value.trim();
+  if (!v || v === "—" || v === "-" || v === "–") return false;
+
+  // Known auto-draft fakes
+  if (field === "mobileNumber" && v === "9000000000") return false;
+  if (field === "accountNumber" && v === "0000000000") return false;
+  if (field === "ifscCode" && v.toUpperCase() === "SBIN0000000") return false;
+  if ((field === "currentPincode" || field === "permanentPincode") && v === "380001") return false;
+  if (field === "courseName" && (v === "Class" || /^Class\s*$/i.test(v))) return false;
+  if (field === "courseType" && v === "School") return false;
+  if (field === "scholarshipScheme" && v === "Pre-Matric") return false;
+  if (field === "category" && v === "General") return false;
+  if (field === "currentYear" && v === "1") return false;
+  if (field === "aadhaarNumber" && /^9\d{11}$/.test(v.replace(/\s/g, ""))) return false;
+  if (field === "aadhaarNumber" && !/^\d{12}$/.test(v.replace(/\s/g, ""))) return false;
+  if (field === "mobileNumber" && !/^[6-9]\d{9}$/.test(v.replace(/\s/g, ""))) return false;
+
+  return true;
 }

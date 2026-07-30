@@ -16,6 +16,50 @@ export const RELIGIONS = [
   "Hindu", "Muslim", "Christian", "Sikh", "Buddhist", "Jain", "Parsi", "Other",
 ] as const;
 
+/** Parent / guardian occupations — common Gujarat school form options. "Other" is last for free text. */
+export const PARENT_OCCUPATIONS = [
+  "Agriculture / Farmer",
+  "Agricultural Labour",
+  "Daily Wage Labour",
+  "Construction Worker",
+  "Factory Worker",
+  "Driver",
+  "Auto / Taxi Driver",
+  "Shopkeeper / Business",
+  "Trader / Merchant",
+  "Self Employed",
+  "Private Job / Private Service",
+  "Government Service",
+  "Teacher",
+  "Clerk / Office Work",
+  "Police / Defence",
+  "Nurse / Health Worker",
+  "Doctor",
+  "Engineer",
+  "Advocate / Lawyer",
+  "Accountant / CA",
+  "Bank Employee",
+  "Electrician",
+  "Plumber",
+  "Carpenter",
+  "Tailor",
+  "Barber",
+  "Blacksmith / Welder",
+  "Mechanic",
+  "Security Guard",
+  "Peon / Helper",
+  "Cook / Hotel Worker",
+  "Domestic Worker",
+  "Housewife / Homemaker",
+  "Priest / Religious Work",
+  "Artist / Musician",
+  "Fisherman",
+  "Animal Husbandry / Dairy",
+  "Retired",
+  "Unemployed",
+  "Other",
+] as const;
+
 export const SCHOLARSHIP_SCHEMES = [
   "Post Matric Scholarship - SC",
   "Post Matric Scholarship - ST",
@@ -165,7 +209,7 @@ export const CSV_HEADERS = [
   "startDate", "completionDate", "board10th", "percentage10th", "year10th",
   "board12th", "percentage12th", "year12th", "previousQualification",
   "bankName", "branchName", "accountNumber", "ifscCode", "accountHolderName",
-  "rollNumber", "grNumber", "standard", "section", "childUid", "bloodGroup",
+  "rollNumber", "grNumber", "standard", "section", "childUid", "apaarId", "panNumber", "bloodGroup",
 ] as const;
 
 export const CSV_HEADER_LABELS: Record<string, string> = {
@@ -230,6 +274,8 @@ export const CSV_HEADER_LABELS: Record<string, string> = {
   standard: "Standard (Class)",
   section: "Section",
   childUid: "SSG Child UID (18 digit)",
+  apaarId: "APAAR / UPPAR ID",
+  panNumber: "PAN Number",
   bloodGroup: "Blood Group",
 };
 

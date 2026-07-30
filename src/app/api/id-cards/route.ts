@@ -10,13 +10,22 @@ export async function GET(request: NextRequest) {
     const standard = searchParams.get("standard");
     const section = searchParams.get("section");
     const academicYear = searchParams.get("academicYear");
+    const studentId = searchParams.get("studentId");
+    const idsParam = searchParams.get("ids");
     const processPhotos = searchParams.get("processPhotos") === "true";
 
     const where: Record<string, unknown> = { schoolId: session.schoolId };
-    if (classId) where.classId = classId;
-    if (standard) where.standard = standard;
-    if (section) where.section = section;
-    if (academicYear) where.schoolClass = { academicYear };
+    if (studentId) {
+      where.id = studentId;
+    } else if (idsParam) {
+      const idList = idsParam.split(",").map((s) => s.trim()).filter(Boolean);
+      if (idList.length) where.id = { in: idList };
+    } else {
+      if (classId) where.classId = classId;
+      if (standard) where.standard = standard;
+      if (section) where.section = section;
+      if (academicYear) where.schoolClass = { academicYear };
+    }
 
     const students = await prisma.student.findMany({
       where,

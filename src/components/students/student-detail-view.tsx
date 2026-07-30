@@ -12,6 +12,7 @@ import {
   Edit,
   Play,
   CreditCard,
+  FileBadge,
   Phone,
   Hash,
   Calendar,
@@ -142,13 +143,19 @@ export function StudentDetailView({ student, id }: { student: Student; id: strin
       icon={<User className="h-5 w-5" />}
       actions={
         <>
-          <Link href={`/id-cards?classId=${student.classId || ""}`}>
+          <Link href={`/students/${id}/analysis`}>
+            <Button variant="outline" size="sm">
+              <FileBadge className="h-4 w-4" />
+              {t("studentAnalysis.breadcrumb")}
+            </Button>
+          </Link>
+          <Link href={`/id-cards?studentId=${student.id}`}>
             <Button variant="outline" size="sm">
               <CreditCard className="h-4 w-4" />
               {t("students.idCard")}
             </Button>
           </Link>
-          <Link href={`/students/${id}/auto-submit`}>
+          <Link href={`/auto-apply?ids=${id}`}>
             <Button variant="success" size="sm">
               <Play className="h-4 w-4" />
               {t("students.directAutoFill")}
@@ -326,6 +333,9 @@ export function StudentDetailView({ student, id }: { student: Student; id: strin
             <InfoField label={t("fields.maritalStatus")} value={student.maritalStatus} />
             <InfoField label={t("fields.bloodGroup")} value={student.bloodGroup} />
             <InfoField label={t("fields.rationCardNumber")} value={student.rationCardNumber} mono />
+            <InfoField label={t("fields.childUid")} value={student.childUid} mono />
+            <InfoField label={t("fields.apaarId")} value={student.apaarId} mono />
+            <InfoField label={t("fields.panNumber")} value={student.panNumber} mono />
           </div>
         </DashboardSection>
       )}

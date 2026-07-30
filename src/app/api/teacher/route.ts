@@ -26,7 +26,11 @@ export async function GET() {
         academicYear: true,
         students: {
           where: { status: { not: "archived" } },
-          orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
+          orderBy: [
+            { rollNumber: "asc" },
+            { surname: "asc" },
+            { firstName: "asc" },
+          ],
           select: {
             id: true,
             firstName: true,
@@ -45,6 +49,10 @@ export async function GET() {
             aadhaarNumber: true,
             fatherName: true,
             motherName: true,
+            sscSeatPrefix: true,
+            sscSeatNumber: true,
+            hscSeatPrefix: true,
+            hscSeatNumber: true,
           },
         },
       },
@@ -73,7 +81,8 @@ export async function GET() {
       },
     });
   } catch (e) {
-    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError)
+      return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("[teacher GET]", e);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }

@@ -40,10 +40,10 @@ export function PageShell({
       : accentColor;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className={cn(heroClass, "p-5 md:p-6")}>
+    <div className="space-y-4 animate-fade-in">
+      <div className={cn(heroClass, "p-4 md:p-5")}>
         {breadcrumbs.length > 0 && (
-          <nav className="mb-3 flex flex-wrap items-center gap-1 text-xs text-slate-500" aria-label="Breadcrumb">
+          <nav className="mb-2 flex flex-wrap items-center gap-1 text-xs text-slate-500" aria-label="Breadcrumb">
             <Link
               href={variant === "teacher" ? "/teacher" : "/dashboard"}
               className="flex items-center gap-1 hover:text-slate-700 transition-colors"
@@ -51,32 +51,32 @@ export function PageShell({
               <Home className="h-3 w-3" />
             </Link>
             {breadcrumbs.map((item, idx) => (
-              <span key={`${item.label}-${idx}`} className="flex items-center gap-1">
-                <ChevronRight className="h-3 w-3 text-slate-400" />
+              <span key={`${item.label}-${idx}`} className="flex min-w-0 items-center gap-1">
+                <ChevronRight className="h-3 w-3 shrink-0 text-slate-400" />
                 {item.href ? (
-                  <Link href={item.href} className="hover:text-slate-700 hover:underline underline-offset-2 transition-colors">
+                  <Link href={item.href} className="min-w-0 break-words transition-colors hover:text-slate-700 hover:underline underline-offset-2">
                     {item.label}
                   </Link>
                 ) : (
-                  <span className="font-medium text-slate-700">{item.label}</span>
+                  <span className="min-w-0 break-words font-medium text-slate-700">{item.label}</span>
                 )}
               </span>
             ))}
           </nav>
         )}
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className={cn("flex items-center gap-3 border-l-4 pl-4", resolvedAccent)}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className={cn("flex min-w-0 items-center gap-2.5 border-l-4 pl-3", resolvedAccent)}>
             {icon && <span className="shrink-0 text-slate-600">{icon}</span>}
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">{title}</h1>
+            <div className="min-w-0">
+              <h1 className="break-words text-lg font-bold leading-tight text-slate-900 md:text-xl">{title}</h1>
               {subtitle && (
-                <p className="mt-0.5 text-sm text-slate-500 leading-snug">{subtitle}</p>
+                <p className="mt-0.5 break-words text-sm leading-snug text-slate-500">{subtitle}</p>
               )}
             </div>
           </div>
           {actions && (
-            <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div>
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">{actions}</div>
           )}
         </div>
       </div>
@@ -99,9 +99,9 @@ export function SectionHeader({
 }) {
   return (
     <div className={cn("flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4", className)}>
-      <div>
-        <h2 className="text-base font-semibold text-slate-800">{title}</h2>
-        {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+      <div className="min-w-0">
+        <h2 className="break-words text-base font-semibold leading-snug text-slate-800">{title}</h2>
+        {subtitle && <p className="mt-0.5 break-words text-sm leading-snug text-slate-500">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

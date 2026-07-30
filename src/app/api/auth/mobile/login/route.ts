@@ -49,6 +49,19 @@ export async function POST(request: NextRequest) {
       sessionAction: "keep_all",
     });
 
+    if (result.kind === "student_setup") {
+      return mobileJson(
+        {
+          error:
+            "First login setup required. Verify your email OTP and change the temporary password in the web portal.",
+          studentSetupRequired: true,
+          otpSent: result.otpSent,
+        },
+        { status: 403 },
+        origin,
+      );
+    }
+
     if (result.kind !== "ok") {
       return mobileJson({ error: "Login failed" }, { status: 500 }, origin);
     }

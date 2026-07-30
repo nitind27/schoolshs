@@ -1,26 +1,39 @@
 "use client";
 
-import { PageLoader, Spinner } from "@/components/ui/loader";
-import { Suspense, useEffect, useState } from "react";
+import { PageLoader } from "@/components/ui/loader";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileCheck, Send } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
-import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGE_SIZE } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
+import type { ColumnDef } from "@tanstack/react-table";
+import { GlobalDataTable } from "@/components/ui/global-data-table";
 
 const STATUS_FILTERS = ["draft", "ready", "pending", "submitted", "approved", "rejected"] as const;
+
+type ClerkStudent = {
+  id: string;
+  firstName?: string | null;
+  middleName?: string | null;
+  surname?: string | null;
+  standard?: string | null;
+  section?: string | null;
+  category?: string | null;
+  status?: string | null;
+};
 
 function ClerkScholarshipContent() {
   const t = useT();
   const searchParams = useSearchParams();
   const initialStatus = searchParams.get("status") || "ready";
-  const [students, setStudents] = useState<Record<string, unknown>[]>([]);
+  const [students, setStudents] = useState<ClerkStudent[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState(
     STATUS_FILTERS.includes(initialStatus as (typeof STATUS_FILTERS)[number])
       ? initialStatus
@@ -36,13 +49,54 @@ function ClerkScholarshipContent() {
   }, [searchParams]);
 
   useEffect(() => {
+    setLoading(true);
     fetch(`/api/students?status=${status}&page=${page}&limit=${PAGE_SIZE}`)
       .then((r) => r.json())
       .then((d) => {
         setStudents(d.students || []);
         setTotal(d.total ?? 0);
-      });
+      })
+      .finally(() => setLoading(false));
   }, [status, page]);
+
+  const columns = useMemo<ColumnDef<ClerkStudent>[]>(
+    () => [
+      {
+        header: "Name",
+        accessorFn: (st) => [st.firstName, st.middleName, st.surname].filter(Boolean).join(" "),
+        cell: ({ row }) => {
+          const st = row.original;
+          return (
+            <Link href={`/students/${st.id}`} className="font-medium text-slate-800 hover:text-cyan-700">
+              {[st.firstName, st.middleName, st.surname].filter(Boolean).join(" ")}
+            </Link>
+          );
+        },
+      },
+      {
+        header: "Class",
+        accessorFn: (st) => `${st.standard || ""}-${st.section || ""}`,
+        cell: ({ row }) => (
+          <span className="text-slate-600">
+            {String(row.original.standard || "")}-{String(row.original.section || "")}
+          </span>
+        ),
+      },
+      {
+        header: "Category",
+        accessorKey: "category",
+        cell: ({ row }) => (
+          <span className="text-slate-600">{String(row.original.category || "—")}</span>
+        ),
+      },
+      {
+        header: "Status",
+        accessorKey: "status",
+        cell: ({ row }) => <Badge status={String(row.original.status || "")} />,
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="space-y-5">
@@ -88,47 +142,19 @@ function ClerkScholarshipContent() {
             </span>
           </h2>
         </div>
-        <div className="px-4 py-3">
-          {students.length === 0 ? (
-            <p className="py-10 text-center text-sm text-slate-500">{t("common.noData")}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    <th className="pb-2.5 pr-3">Name</th>
-                    <th className="pb-2.5 pr-3">Class</th>
-                    <th className="pb-2.5 pr-3">Category</th>
-                    <th className="pb-2.5">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((st) => (
-                    <tr key={String(st.id)} className="border-b border-slate-50 transition-colors hover:bg-cyan-50/40">
-                      <td className="py-2.5 pr-3 font-medium">
-                        <Link href={`/students/${st.id}`} className="text-slate-800 hover:text-cyan-700">
-                          {[st.firstName, st.middleName, st.surname].filter(Boolean).join(" ")}
-                        </Link>
-                      </td>
-                      <td className="py-2.5 pr-3 text-slate-600">
-                        {String(st.standard || "")}-{String(st.section || "")}
-                      </td>
-                      <td className="py-2.5 pr-3 text-slate-600">{String(st.category || "—")}</td>
-                      <td className="py-2.5">
-                        <Badge status={String(st.status)} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <TablePagination
-                page={page}
-                total={total}
-                pageSize={PAGE_SIZE}
-                onPageChange={setPage}
-              />
-            </div>
-          )}
+        <div className="p-0">
+          <GlobalDataTable
+            data={students}
+            columns={columns}
+            loading={loading}
+            emptyText={t("common.noData")}
+            manualPagination
+            totalRows={total}
+            pageSize={PAGE_SIZE}
+            pageIndex={Math.max(page - 1, 0)}
+            onPageChange={(idx) => setPage(idx + 1)}
+            className="rounded-none border-0 shadow-none"
+          />
         </div>
       </div>
     </div>

@@ -13,7 +13,24 @@ export type MarksSheetExamRowDef = {
   key: string;
   label: string;
   maxMarks: number | null;
-  kind: "max" | "first" | "second" | "internal" | "annual" | "total" | "converted" | "achievement" | "special" | "grace" | "final";
+  kind:
+    | "max"
+    | "first"
+    | "second"
+    | "third"
+    | "term"
+    | "internal"
+    | "annual"
+    | "total"
+    | "converted"
+    | "achievement"
+    | "special"
+    | "grace"
+    | "final";
+  /** Links dynamic exam template term */
+  termKey?: string;
+  /** Whether this dynamic row stores paper or teacher/internal marks */
+  scoreType?: "paper" | "internal";
 };
 
 export type MarksSheetConfig = {
@@ -99,6 +116,11 @@ export function getMarksSheetConfig(standard: string, stream?: string | null): M
 export type MarksSheetTermData = {
   first?: number | null;
   second?: number | null;
+  third?: number | null;
+  /** Dynamic exam scores keyed by term key */
+  scores?: Record<string, number | null>;
+  /** Teacher/internal scores keyed by term key */
+  internalScores?: Record<string, number | null>;
   internal?: number | null;
   special?: number | null;
   letterGrade?: string | null;
@@ -111,6 +133,12 @@ export function parseTermRemarks(remarks?: string | null): MarksSheetTermData {
     return {
       first: parsed.first ?? null,
       second: parsed.second ?? null,
+      third: parsed.third ?? null,
+      scores: parsed.scores && typeof parsed.scores === "object" ? parsed.scores : {},
+      internalScores:
+        parsed.internalScores && typeof parsed.internalScores === "object"
+          ? parsed.internalScores
+          : {},
       internal: parsed.internal ?? null,
       special: parsed.special ?? null,
       letterGrade: parsed.letterGrade ?? null,
@@ -124,6 +152,9 @@ export function serializeTermRemarks(data: MarksSheetTermData): string {
   return JSON.stringify({
     first: data.first ?? null,
     second: data.second ?? null,
+    third: data.third ?? null,
+    scores: data.scores || {},
+    internalScores: data.internalScores || {},
     internal: data.internal ?? null,
     special: data.special ?? null,
     letterGrade: data.letterGrade ?? null,

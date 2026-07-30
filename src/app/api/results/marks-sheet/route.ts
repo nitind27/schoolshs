@@ -175,6 +175,9 @@ export async function POST(request: NextRequest) {
         const remarks = serializeTermRemarks({
           first: sub.first,
           second: sub.second,
+          third: sub.third,
+          scores: sub.scores || {},
+          internalScores: sub.internalScores || {},
           internal: sub.internal,
           special: sub.special,
           letterGrade: sub.letterGrade,

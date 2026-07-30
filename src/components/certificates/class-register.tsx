@@ -248,19 +248,36 @@ export function ClassRegisterView({
             visibility: visible !important;
           }
 
+          .print-area:has(.cr-print-wrap),
+          .cr-print-wrap {
+            width: 285mm !important;
+            height: 198mm !important;
+            max-height: 198mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-inside: avoid !important;
+            break-after: avoid-page !important;
+          }
+
           .cr-root {
             display: block !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
+            position: relative !important;
+            width: 285mm !important;
+            height: 198mm !important;
+            max-height: 198mm !important;
+            margin: 0 !important;
+            overflow: hidden !important;
             background: #fff !important;
-            z-index: 99999 !important;
           }
 
           .cr-sheet {
-            width: 289mm !important;
-            min-height: 202mm !important;
+            width: 285mm !important;
+            height: 198mm !important;
+            min-height: 0 !important;
+            max-height: 198mm !important;
             max-width: none !important;
             margin: 0 !important;
             padding: 2mm !important;
@@ -269,6 +286,9 @@ export function ClassRegisterView({
             border-radius: 0 !important;
             overflow: hidden !important;
             page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-inside: avoid !important;
+            break-after: avoid-page !important;
           }
 
           .print-landscape-wide {

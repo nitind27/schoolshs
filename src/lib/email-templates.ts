@@ -140,6 +140,43 @@ Do not share this code with anyone.`;
   };
 }
 
+export function buildStudentFirstLoginOtpEmail(params: {
+  name: string;
+  schoolName?: string | null;
+  otp: string;
+  expiresMinutes: number;
+}) {
+  const schoolLine = params.schoolName
+    ? `<p style="margin:0 0 20px;">School: <strong>${params.schoolName}</strong></p>`
+    : "";
+  const html = buildEmailHtml({
+    title: "Student Portal Verification",
+    preheader: `Your student portal verification code is ${params.otp}`,
+    bodyHtml: `
+      <p style="margin:0 0 16px;color:#334155;">Hello <strong>${params.name}</strong>,</p>
+      <p style="margin:0 0 20px;color:#334155;">Use this OTP to verify your email and replace the temporary password for your SHS Student Portal account.</p>
+      ${schoolLine}
+      ${buildOtpDisplayHtml(params.otp)}
+      <p style="margin:16px 0 8px;text-align:center;color:#64748b;font-size:13px;">Enter this code on the login page together with your new password.</p>
+      <p style="margin:0;text-align:center;color:#94a3b8;font-size:12px;">This code expires in <strong>${params.expiresMinutes} minutes</strong>. Do not share it with anyone.</p>
+    `,
+    footerNote:
+      "If you did not try to access this student account, contact your school immediately.",
+  });
+
+  return {
+    subject: `${params.otp} — Student Portal Verification Code`,
+    html,
+    text: `Hello ${params.name},
+
+Your SHS Student Portal verification code is: ${params.otp}
+${params.schoolName ? `School: ${params.schoolName}\n` : ""}
+Enter this code on the login page and choose a new password. It expires in ${params.expiresMinutes} minutes.
+
+Do not share this code with anyone.`,
+  };
+}
+
 export function buildTestEmail(params: { toName: string }) {
   const html = buildEmailHtml({
     title: "SMTP test successful",

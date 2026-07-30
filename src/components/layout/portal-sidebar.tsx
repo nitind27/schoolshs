@@ -182,7 +182,7 @@ export function PortalSidebar({
               onNavigate={closeMobile}
               accentColor={`${colors.accent}4D`}
               inactiveTextClass={colors.text}
-              collapsed={collapsed}
+              collapsed={collapsed && !mobileOpen}
             />
           ) : (
             Object.entries(grouped).map(([group, items]) => (
@@ -209,13 +209,13 @@ export function PortalSidebar({
                         key={item.href}
                         href={item.href}
                         onClick={closeMobile}
-                        title={collapsed ? item.label : undefined}
+                        title={collapsed && !mobileOpen ? item.label : undefined}
                         className={cn(
                           "shell-nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 group",
                           isActive
                             ? "bg-white/[.12] text-white shadow-sm"
                             : cn(colors.text, "hover:bg-white/[.07] hover:text-white"),
-                          collapsed && "justify-center px-2",
+                          collapsed && !mobileOpen && "justify-center px-2",
                         )}
                       >
                         <span

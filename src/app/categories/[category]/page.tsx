@@ -1,7 +1,7 @@
 "use client";
 
-import { PageLoader, Spinner } from "@/components/ui/loader";
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { PageLoader } from "@/components/ui/loader";
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,8 +17,9 @@ import { getCategoryMeta, type DgCategory } from "@/lib/category-inference";
 import { genderShort } from "@/lib/gender-utils";
 import { useT } from "@/i18n/locale-provider";
 import { ArrowLeft, Search, Edit, Eye, Users, Filter, X } from "lucide-react";
-import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGE_SIZE } from "@/lib/pagination";
+import type { ColumnDef } from "@tanstack/react-table";
+import { GlobalDataTable } from "@/components/ui/global-data-table";
 
 interface CategoryStudent {
   id: string;
@@ -116,6 +117,98 @@ function CategoryReportContent() {
       : []),
   ];
 
+  const columns = useMemo<ColumnDef<CategoryStudent>[]>(
+    () => [
+      {
+        header: t("fields.roll"),
+        accessorKey: "rollNumber",
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.rollNumber || "—"}</span>
+        ),
+      },
+      {
+        header: t("categoryPage.genderMF"),
+        accessorKey: "normalizedGender",
+        cell: ({ row }) => (
+          <span
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+              row.original.normalizedGender === "Female"
+                ? "bg-pink-100 text-pink-700"
+                : row.original.normalizedGender === "Male"
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {genderShort(row.original.normalizedGender)}
+          </span>
+        ),
+      },
+      {
+        header: t("common.name"),
+        accessorFn: (s) => `${s.firstName} ${s.middleName || ""}`.trim(),
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.firstName} {row.original.middleName || ""}
+          </span>
+        ),
+      },
+      {
+        header: t("categoryPage.surname"),
+        accessorKey: "surname",
+        cell: ({ row }) => (
+          <span className="font-semibold text-slate-800">{row.original.surname}</span>
+        ),
+      },
+      {
+        header: t("fields.class"),
+        accessorFn: (s) => (s.standard ? `${s.standard}-${s.section || ""}` : ""),
+        cell: ({ row }) =>
+          row.original.standard
+            ? `${row.original.standard}-${row.original.section || ""}`
+            : "—",
+      },
+      {
+        header: t("fields.dob"),
+        accessorKey: "dateOfBirth",
+        cell: ({ row }) => <span className="text-xs">{row.original.dateOfBirth}</span>,
+      },
+      {
+        header: t("fields.mobile"),
+        accessorKey: "mobileNumber",
+      },
+      {
+        header: t("fields.category"),
+        accessorKey: "category",
+        cell: ({ row }) => <CategoryBadge category={row.original.category} />,
+      },
+      {
+        header: t("common.status"),
+        accessorKey: "status",
+        cell: ({ row }) => <Badge status={row.original.status} />,
+      },
+      {
+        id: "actions",
+        header: t("common.actions"),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex gap-1">
+            <Link href={`/students/${row.original.id}`}>
+              <Button variant="ghost" size="icon">
+                <Eye className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href={`/students/${row.original.id}/edit`}>
+              <Button variant="ghost" size="icon">
+                <Edit className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        ),
+      },
+    ],
+    [t],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -173,19 +266,22 @@ function CategoryReportContent() {
               />
             </div>
             <Select
-              options={["", ...SCHOOL_STANDARDS]}
+              options={[...SCHOOL_STANDARDS]}
+              emptyLabel={t("common.all")}
               value={standardFilter}
               onChange={(e) => { setStandardFilter(e.target.value); setPage(1); }}
               className="w-32"
             />
             <Select
-              options={["", ...CLASS_SECTIONS]}
+              options={[...CLASS_SECTIONS]}
+              emptyLabel={t("common.all")}
               value={sectionFilter}
               onChange={(e) => { setSectionFilter(e.target.value); setPage(1); }}
               className="w-28"
             />
             <Select
               options={STUDENT_STATUSES.map((s) => s.value)}
+              emptyLabel={t("common.all")}
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="w-36"
@@ -211,64 +307,22 @@ function CategoryReportContent() {
 
       <Card>
         <CardContent className="p-0">
-          {loading ? (
+          {loading && students.length === 0 ? (
             <PageLoader />
-          ) : students.length === 0 ? (
-            <p className="text-center py-16 text-slate-500">{t("categoryPage.noStudentsFilter")}</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-slate-50">
-                    <th className="p-3 text-left font-medium text-slate-600">{t("fields.roll")}</th>
-                    <th className="p-3 text-left font-medium text-slate-600">{t("categoryPage.genderMF")}</th>
-                    <th className="p-3 text-left font-medium text-slate-600">{t("common.name")}</th>
-                    <th className="p-3 text-left font-medium text-slate-600">{t("categoryPage.surname")}</th>
-                    <th className="p-3 text-left font-medium text-slate-600">{t("fields.class")}</th>
-                    <th className="p-3 text-left font-medium text-slate-600">{t("fields.dob")}</th>
-                    <th className="p-3 text-left font-medium text-slate-600">{t("fields.mobile")}</th>
-                    <th className="p-3 text-left font-medium text-slate-600">{t("fields.category")}</th>
-                    <th className="p-3 text-left font-medium text-slate-600">{t("common.status")}</th>
-                    <th className="p-3 text-left font-medium text-slate-600">{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((s) => (
-                    <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="p-3 font-mono text-xs">{s.rollNumber || "—"}</td>
-                      <td className="p-3">
-                        <span
-                          className={`inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold ${
-                            s.normalizedGender === "Female"
-                              ? "bg-pink-100 text-pink-700"
-                              : s.normalizedGender === "Male"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {genderShort(s.normalizedGender)}
-                        </span>
-                      </td>
-                      <td className="p-3 font-medium">{s.firstName} {s.middleName || ""}</td>
-                      <td className="p-3 font-semibold text-slate-800">{s.surname}</td>
-                      <td className="p-3">{s.standard ? `${s.standard}-${s.section || ""}` : "—"}</td>
-                      <td className="p-3 text-xs">{s.dateOfBirth}</td>
-                      <td className="p-3">{s.mobileNumber}</td>
-                      <td className="p-3"><CategoryBadge category={s.category} /></td>
-                      <td className="p-3"><Badge status={s.status} /></td>
-                      <td className="p-3">
-                        <div className="flex gap-1">
-                          <Link href={`/students/${s.id}`}><Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button></Link>
-                          <Link href={`/students/${s.id}/edit`}><Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button></Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <GlobalDataTable
+              data={students}
+              columns={columns}
+              loading={loading}
+              emptyText={t("categoryPage.noStudentsFilter")}
+              manualPagination
+              totalRows={total}
+              pageSize={PAGE_SIZE}
+              pageIndex={Math.max(page - 1, 0)}
+              onPageChange={(idx) => setPage(idx + 1)}
+              className="rounded-none border-0 shadow-none"
+            />
           )}
-          <TablePagination page={page} total={total} onPageChange={setPage} />
         </CardContent>
       </Card>
     </div>

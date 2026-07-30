@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, Suspense } from "react";
+import { useState, useCallback, useEffect, Suspense, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { CertificatePrintShell } from "@/components/certificates/certificate-print-shell";
 import { CertificateFilters } from "@/components/certificates/certificate-filters";
@@ -10,27 +10,45 @@ import { SAMPLE_CHARACTER } from "@/lib/certificates/sample-data";
 import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
+import { studentShortNameGu } from "@/lib/student-names";
 
 function CharacterContent() {
   const t = useT();
   const searchParams = useSearchParams();
+  const lockedStudentId = searchParams.get("studentId") || "";
   const [filters, setFilters] = useState({
     classId: "",
     standard: "",
     section: "",
-    academicYear: "2025-26",
-    studentId: "",
+    academicYear: searchParams.get("academicYear") || "2025-26",
+    studentId: lockedStudentId,
     month: "1",
     year: String(new Date().getFullYear()),
   });
   const [students, setStudents] = useState<
-    { id: string; firstName: string; surname: string; grNumber?: string | null }[]
+    {
+      id: string;
+      firstName: string;
+      surname: string;
+      firstNameGu?: string | null;
+      surnameGu?: string | null;
+      grNumber?: string | null;
+    }[]
   >([]);
   const [source, setSource] = useState<"none" | "preview" | "live">("none");
   const [liveStudent, setLiveStudent] = useState<typeof SAMPLE_CHARACTER.student | null>(null);
   const [examName, setExamName] = useState("GSEB S.S.C. March 2026");
   const [examResult, setExamResult] = useState("First Trial");
   const [issueDate, setIssueDate] = useState(formatToday());
+  const autoLoadedRef = useRef(false);
+
+  const lockedLabel = useMemo(() => {
+    const s = students.find((x) => x.id === lockedStudentId) || liveStudent;
+    if (!s) return "";
+    const name = studentShortNameGu(s as { firstName: string; surname: string });
+    const gr = "grNumber" in s && s.grNumber ? `GR ${s.grNumber}` : "";
+    return [gr, name].filter(Boolean).join(" · ");
+  }, [students, liveStudent, lockedStudentId]);
 
   const showPreview = useCallback(() => {
     setSource("preview");
@@ -45,21 +63,31 @@ function CharacterContent() {
 
   const load = useCallback(async () => {
     const params = new URLSearchParams({ type: "students" });
-    if (filters.classId) params.set("classId", filters.classId);
-    if (filters.standard) params.set("standard", filters.standard);
-    if (filters.section) params.set("section", filters.section);
-    if (filters.studentId) params.set("studentId", filters.studentId);
+    const sid = lockedStudentId || filters.studentId;
+    if (sid) {
+      params.set("studentId", sid);
+    } else {
+      if (filters.classId) params.set("classId", filters.classId);
+      if (filters.standard) params.set("standard", filters.standard);
+      if (filters.section) params.set("section", filters.section);
+    }
     const res = await fetch(`/api/certificates?${params}`);
     const data = await res.json();
-    setStudents(data.students || []);
-    const s = filters.studentId
-      ? (data.students || []).find((x: { id: string }) => x.id === filters.studentId)
-      : data.students?.[0];
+    const list = data.students || [];
+    setStudents(list);
+    const s = sid ? list.find((x: { id: string }) => x.id === sid) : list[0];
     if (s) {
       setLiveStudent(s);
       setSource("live");
+      if (sid) setFilters((f) => ({ ...f, studentId: sid }));
     }
-  }, [filters]);
+  }, [filters.classId, filters.standard, filters.section, filters.studentId, lockedStudentId]);
+
+  useEffect(() => {
+    if (!lockedStudentId || autoLoadedRef.current) return;
+    autoLoadedRef.current = true;
+    void load();
+  }, [lockedStudentId, load]);
 
   const student = source === "preview" ? SAMPLE_CHARACTER.student : liveStudent;
   const grNumber = source === "preview" ? SAMPLE_CHARACTER.grNumber : liveStudent?.grNumber || undefined;
@@ -73,7 +101,15 @@ function CharacterContent() {
       onExitPreview={() => setSource(liveStudent ? "live" : "none")}
       canPrint={!!student}
     >
-      <CertificateFilters value={filters} onChange={setFilters} onLoad={load} showStudent students={students} />
+      <CertificateFilters
+        value={filters}
+        onChange={setFilters}
+        onLoad={load}
+        showStudent={!lockedStudentId}
+        students={students}
+        lockedStudentId={lockedStudentId || undefined}
+        lockedStudentLabel={lockedLabel}
+      />
       <div className="no-print grid gap-4 sm:grid-cols-3 mb-4">
         <div>
           <label className="text-sm font-medium">{t("certificates.examName")}</label>

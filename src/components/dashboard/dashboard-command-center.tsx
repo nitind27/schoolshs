@@ -79,6 +79,10 @@ interface Props {
   onOpenDraftStudents?: () => void;
   /** Render only attention strip, only hubs, or both (default). */
   parts?: Array<"attention" | "hubs">;
+  /** Limit quick-add / attention / hubs to students or staff. */
+  focus?: "students" | "staff" | "all";
+  /** Tighter headers — hide long descriptions. */
+  compact?: boolean;
 }
 
 export function DashboardCommandCenter({
@@ -89,10 +93,14 @@ export function DashboardCommandCenter({
   onOpenPayrollPending,
   onOpenDraftStudents,
   parts = ["attention", "hubs"],
+  focus = "all",
+  compact = false,
 }: Props) {
   const t = useT();
   const showAttention = parts.includes("attention");
   const showHubs = parts.includes("hubs");
+  const studentFocus = focus === "students" || focus === "all";
+  const staffFocus = focus === "staff" || focus === "all";
 
   const attnUnmarked =
     hr?.attendanceUnmarked ??
@@ -152,7 +160,12 @@ export function DashboardCommandCenter({
         icon: Receipt,
       },
     ] satisfies AttentionItem[]
-  ).filter((a) => a.count > 0);
+  ).filter((a) => {
+    if (a.count <= 0) return false;
+    if (focus === "students") return ["adm", "draft", "photo"].includes(a.id);
+    if (focus === "staff") return ["staffAttn", "pay", "voucher"].includes(a.id);
+    return true;
+  });
 
   const hubs: HubCard[] = [
     {
@@ -173,6 +186,7 @@ export function DashboardCommandCenter({
       ],
       links: [
         { href: "/classes", label: t("nav.classes") },
+        { href: "/classes/class-teachers", label: t("classes.assignClassTeachers") },
         { href: "/students", label: t("nav.students") },
         { href: "/admissions", label: t("navExt.admissions") },
         { href: "/attendance", label: t("navExt.attendance") },
@@ -251,7 +265,7 @@ export function DashboardCommandCenter({
       desc: t("dashboard.hubDocsDesc"),
       icon: FileSpreadsheet,
       tone: "sky",
-      primaryHref: "/certificates",
+      primaryHref: "/students/board-records",
       stats: [
         {
           label: t("dashboard.hubStatWithPhoto"),
@@ -260,26 +274,35 @@ export function DashboardCommandCenter({
         { label: t("dashboard.hubStatVerifiedAdm"), value: String(ops?.admissions?.verified ?? "—") },
       ],
       links: [
+        { href: "/students/board-records", label: t("megaMenu.boardViewPrint") },
+        { href: "/students/board-records/result-list", label: t("megaMenu.boardResultList") },
+        { href: "/students/board-records/exam-result-sheet", label: t("megaMenu.boardExamSheet") },
+        { href: "/students/board-records/overall-analysis", label: t("megaMenu.boardOverall") },
         { href: "/certificates", label: t("navExt.certificates") },
         { href: "/id-cards", label: t("nav.idCards") },
-        { href: "/bonafide", label: t("dashboard.hubLinkBonafide") },
-        { href: "/lc", label: t("dashboard.hubLinkLc") },
-        { href: "/students/board-records", label: t("dashboard.hubLinkBoard") },
-        { href: "/export", label: t("nav.exportData") },
       ],
     },
-  ];
+  ].filter((hub) => {
+    if (focus === "students") return ["academics", "scholarship", "docs"].includes(hub.id);
+    if (focus === "staff") return ["staff", "finance"].includes(hub.id);
+    return true;
+  });
 
   if (!showAttention && !showHubs) return null;
 
   return (
     <section
       className={
-        showAttention && !showHubs
-          ? "ops-command ops-command-priority"
-          : !showAttention && showHubs
-            ? "ops-command ops-command-hubs"
-            : "ops-command"
+        [
+          showAttention && !showHubs
+            ? "ops-command ops-command-priority"
+            : !showAttention && showHubs
+              ? "ops-command ops-command-hubs"
+              : "ops-command",
+          compact ? "is-compact" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
       }
     >
       {showHubs ? (
@@ -287,20 +310,28 @@ export function DashboardCommandCenter({
           <div>
             <p className="ops-eyebrow">{t("dashboard.commandEyebrow")}</p>
             <h2>{t("dashboard.hubsTitle")}</h2>
-            <p>
-              {t("dashboard.hubsDesc")}
-              {ops?.academicYear ? (
-                <span className="ops-command-year"> · {ops.academicYear}</span>
-              ) : null}
-            </p>
+            {!compact ? (
+              <p>
+                {t("dashboard.hubsDesc")}
+                {ops?.academicYear ? (
+                  <span className="ops-command-year"> · {ops.academicYear}</span>
+                ) : null}
+              </p>
+            ) : null}
           </div>
         </header>
       ) : (
         <header className="ops-command-head">
           <div>
             <p className="ops-eyebrow">{t("dashboard.priorityEyebrow")}</p>
-            <h2>{t("dashboard.priorityTitle")}</h2>
-            <p>{t("dashboard.priorityDesc")}</p>
+            <h2>
+              {focus === "staff"
+                ? t("dashboard.priorityTitleStaff")
+                : focus === "students"
+                  ? t("dashboard.priorityTitleStudents")
+                  : t("dashboard.priorityTitle")}
+            </h2>
+            {!compact ? <p>{t("dashboard.priorityDesc")}</p> : null}
           </div>
         </header>
       )}
@@ -312,27 +343,37 @@ export function DashboardCommandCenter({
               <UserPlus className="h-4 w-4" />
               <span>{t("dashboard.priorityQuickAdd")}</span>
             </div>
-            <div className="ops-quick-add-grid">
-              <Link href="/students/new" className="ops-quick-add-card is-student">
-                <span className="ops-quick-add-ico">
-                  <UserPlus className="h-5 w-5" />
-                </span>
-                <span className="ops-quick-add-copy">
-                  <strong>{t("nav.addStudent")}</strong>
-                  <small>{t("dashboard.featuredAddStudent")}</small>
-                </span>
-                <ArrowRight className="ops-quick-add-arrow h-4 w-4" />
-              </Link>
-              <Link href="/staff/new" className="ops-quick-add-card is-staff">
-                <span className="ops-quick-add-ico">
-                  <Briefcase className="h-5 w-5" />
-                </span>
-                <span className="ops-quick-add-copy">
-                  <strong>{t("nav.staffAdd")}</strong>
-                  <small>{t("dashboard.featuredAddStaff")}</small>
-                </span>
-                <ArrowRight className="ops-quick-add-arrow h-4 w-4" />
-              </Link>
+            <div
+              className={
+                studentFocus && staffFocus
+                  ? "ops-quick-add-grid"
+                  : "ops-quick-add-grid is-single"
+              }
+            >
+              {studentFocus ? (
+                <Link href="/students/new" className="ops-quick-add-card is-student">
+                  <span className="ops-quick-add-ico">
+                    <UserPlus className="h-5 w-5" />
+                  </span>
+                  <span className="ops-quick-add-copy">
+                    <strong>{t("nav.addStudent")}</strong>
+                    <small>{t("dashboard.featuredAddStudent")}</small>
+                  </span>
+                  <ArrowRight className="ops-quick-add-arrow h-4 w-4" />
+                </Link>
+              ) : null}
+              {staffFocus ? (
+                <Link href="/staff/new" className="ops-quick-add-card is-staff">
+                  <span className="ops-quick-add-ico">
+                    <Briefcase className="h-5 w-5" />
+                  </span>
+                  <span className="ops-quick-add-copy">
+                    <strong>{t("nav.staffAdd")}</strong>
+                    <small>{t("dashboard.featuredAddStaff")}</small>
+                  </span>
+                  <ArrowRight className="ops-quick-add-arrow h-4 w-4" />
+                </Link>
+              ) : null}
             </div>
           </div>
 

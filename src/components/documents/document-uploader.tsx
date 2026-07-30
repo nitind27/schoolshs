@@ -269,13 +269,13 @@ function DocumentCard({
         )}
 
         {hasFile && !busy && (
-          <div className="absolute top-2 right-2">
+          <div className="absolute left-2 right-2 top-2 flex justify-end">
             {dgReady ? (
-              <span className="inline-flex items-center gap-1 bg-emerald-500 text-white text-xs px-2 py-1 rounded-full shadow-sm">
+              <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-500 px-2 py-1 text-right text-xs leading-tight text-white shadow-sm">
                 <ShieldCheck className="h-3 w-3" /> {t("documents.dgReady")}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 bg-amber-500 text-white text-xs px-2 py-1 rounded-full shadow-sm">
+              <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-amber-500 px-2 py-1 text-right text-xs leading-tight text-white shadow-sm">
                 <AlertCircle className="h-3 w-3" /> {t("documents.overLimit", { maxKB })}
               </span>
             )}
@@ -296,10 +296,12 @@ function DocumentCard({
           </div>
           {hasFile && (
             <button
+              type="button"
               onClick={handleRemove}
               disabled={busy}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
               title={t("documents.remove")}
+              aria-label={t("documents.remove")}
             >
               <X className="h-4 w-4" />
             </button>
@@ -332,12 +334,11 @@ function DocumentCard({
           }}
         />
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 min-[360px]:flex-row">
           <Button
             type="button"
             variant={hasFile ? "outline" : "default"}
-            size="sm"
-            className="flex-1"
+            className="h-auto min-h-11 flex-1 whitespace-normal"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
           >
@@ -347,8 +348,7 @@ function DocumentCard({
           <Button
             type="button"
             variant="secondary"
-            size="sm"
-            className="flex-1"
+            className="h-auto min-h-11 flex-1 whitespace-normal"
             disabled={busy}
             onClick={() => setScannerOpen(true)}
           >
@@ -400,11 +400,11 @@ export function DocumentUploader({
             {t("documents.autoCompressBanner", { maxKB: DG_DOC_LIMITS.photo.maxKB })}
           </span>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
           <span className="text-xs text-blue-700">
             {t("documents.uploadedCount", { uploaded, total: documents.length, ready: dgReadyCount })}
           </span>
-          <div className="h-2 w-24 bg-blue-100 rounded-full overflow-hidden">
+          <div className="h-2 w-20 shrink-0 overflow-hidden rounded-full bg-blue-100 sm:w-24">
             <div
               className="h-full bg-emerald-500 rounded-full transition-all"
               style={{ width: `${uploaded ? (dgReadyCount / documents.length) * 100 : 0}%` }}
@@ -413,7 +413,7 @@ export function DocumentUploader({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {documents.map((doc) => (
           <DocumentCard
             key={doc.type}

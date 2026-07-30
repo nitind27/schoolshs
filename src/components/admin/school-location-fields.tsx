@@ -158,7 +158,8 @@ export function SchoolLocationFields({ values, onChange }: Props) {
 
       <Select
         label="District"
-        options={["", ...GUJARAT_DISTRICTS]}
+        options={[...GUJARAT_DISTRICTS]}
+        emptyLabel="Select district"
         value={values.district}
         onChange={(e) => onChange({ district: e.target.value })}
       />

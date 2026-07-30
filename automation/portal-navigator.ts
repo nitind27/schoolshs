@@ -1,6 +1,7 @@
 import type { Page } from "playwright";
 import type { LogFn } from "./form-filler";
 import type { DgPortalConfig } from "../src/lib/dg-portal";
+import { getSchemeSearchTerms } from "../src/lib/dg-portal";
 import { goToPortalEntry } from "./dg-nav";
 
 export type ApplyActionMode = "auto" | "new_apply" | "edit";
@@ -88,6 +89,33 @@ async function clickByPatterns(page: Page, patterns: (string | RegExp)[], log: L
   return false;
 }
 
+async function hasByPatterns(
+  page: Page,
+  patterns: (string | RegExp)[],
+): Promise<boolean> {
+  for (const pattern of patterns) {
+    try {
+      if (typeof pattern === "string") {
+        if (await page.locator(pattern).first().isVisible({ timeout: 500 })) {
+          return true;
+        }
+      } else {
+        const candidates = [
+          page.getByRole("button", { name: pattern }).first(),
+          page.getByRole("link", { name: pattern }).first(),
+          page.getByText(pattern).first(),
+        ];
+        for (const candidate of candidates) {
+          if (await candidate.isVisible({ timeout: 400 })) return true;
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+  return false;
+}
+
 async function fillSearchAndGo(page: Page, term: string, log: LogFn): Promise<boolean> {
   const searchSelectors = [
     'input[type="search"]',
@@ -129,6 +157,81 @@ async function fillSearchAndGo(page: Page, term: string, log: LogFn): Promise<bo
   return false;
 }
 
+async function clickExactScheme(
+  page: Page,
+  scheme: string,
+  log: LogFn,
+): Promise<boolean> {
+  const terms = getSchemeSearchTerms(scheme);
+  for (const term of terms) {
+    try {
+      const direct = page
+        .locator("a, button")
+        .filter({ hasText: term })
+        .first();
+      if (await direct.isVisible({ timeout: 1000 })) {
+        await direct.click();
+        log(`✓ Scholarship scheme opened: ${term}`);
+        await page.waitForTimeout(2000);
+        return true;
+      }
+
+      const text = page.getByText(term, { exact: false }).first();
+      if (await text.isVisible({ timeout: 1000 })) {
+        const container = text.locator(
+          "xpath=ancestor::*[self::tr or self::li or contains(@class,'card')][1]",
+        );
+        const action = container
+          .locator(
+            'a:has-text("Apply"), button:has-text("Apply"), input[value*="Apply" i], a:has-text("Continue"), button:has-text("Continue")',
+          )
+          .first();
+        if (await action.isVisible({ timeout: 800 })) {
+          await action.click();
+        } else {
+          await text.click();
+        }
+        log(`✓ Scholarship scheme matched: ${term}`);
+        await page.waitForTimeout(2000);
+        return true;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  const searchSelectors = [
+    'input[type="search"]',
+    'input[id*="Search" i]',
+    'input[name*="Search" i]',
+    'input[placeholder*="Search" i]',
+  ];
+  for (const selector of searchSelectors) {
+    try {
+      const input = page.locator(selector).first();
+      if (!(await input.isVisible({ timeout: 800 }))) continue;
+      await input.fill(terms[0] || scheme);
+      await page.keyboard.press("Enter").catch(() => {});
+      await page.waitForTimeout(1800);
+      for (const term of terms) {
+        const result = page
+          .locator("a, button")
+          .filter({ hasText: term })
+          .first();
+        if (await result.isVisible({ timeout: 800 })) {
+          await result.click();
+          log(`✓ Scholarship scheme found by search: ${term}`);
+          await page.waitForTimeout(2000);
+          return true;
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+  return false;
+}
+
 export async function goToPortalHome(page: Page, portal: DgPortalConfig, log: LogFn, profileDir?: string) {
   await goToPortalEntry(page, portal, log, profileDir);
 }
@@ -141,6 +244,19 @@ export async function openScholarshipService(
   profileDir?: string
 ): Promise<boolean> {
   await goToPortalHome(page, portal, log, profileDir);
+
+  if (await clickExactScheme(page, scheme, log)) return true;
+
+  if (
+    await clickByPatterns(
+      page,
+      [/services/i, /apply for services/i, /citizen services/i],
+      log,
+    )
+  ) {
+    await page.waitForTimeout(2000);
+    if (await clickExactScheme(page, scheme, log)) return true;
+  }
 
   for (const pattern of SCHOLARSHIP_LINK_PATTERNS) {
     if (scheme.toLowerCase().includes("pre matric") && !/pre|sjed|matric/i.test(pattern.source)) continue;
@@ -228,6 +344,20 @@ export async function scrapePortalStatus(page: Page): Promise<string | undefined
   }
 }
 
+export async function hasSubmissionConfirmation(page: Page): Promise<boolean> {
+  try {
+    const text = (await page.locator("body").innerText()).toLowerCase();
+    return (
+      /application\s+(?:has\s+been\s+)?submitted\s+successfully/.test(text) ||
+      /successfully\s+submitted/.test(text) ||
+      /final\s+submitted/.test(text) ||
+      /application\s+(?:number|no\.?|id)\s*[:\-]\s*[a-z0-9/-]+/.test(text)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function autoClickNext(page: Page, log: LogFn): Promise<boolean> {
   const clicked = await clickByPatterns(page, NEXT_PATTERNS, log);
   if (clicked) {
@@ -238,8 +368,25 @@ export async function autoClickNext(page: Page, log: LogFn): Promise<boolean> {
 }
 
 export async function autoClickSubmit(page: Page, log: LogFn): Promise<boolean> {
+  if (!(await hasByPatterns(page, SUBMIT_PATTERNS))) return false;
+  page.once("dialog", async (dialog) => {
+    log(`✓ Final confirmation dialog accepted: ${dialog.type()}`);
+    await dialog.accept().catch(() => {});
+  });
   const clicked = await clickByPatterns(page, SUBMIT_PATTERNS, log);
   if (clicked) {
+    await page.waitForTimeout(1000);
+    await clickByPatterns(
+      page,
+      [
+        'button:has-text("Yes")',
+        'button:has-text("Confirm")',
+        'button:has-text("OK")',
+        'input[type="submit"][value="Yes" i]',
+        'input[type="button"][value="Confirm" i]',
+      ],
+      log,
+    ).catch(() => false);
     await page.waitForTimeout(3000);
     return true;
   }
@@ -251,16 +398,15 @@ export async function autoFillAllPages(
   fillFn: () => Promise<void>,
   log: LogFn,
   maxPages = 8
-): Promise<number> {
+): Promise<{ pagesDone: number; readyToSubmit: boolean }> {
   let pagesDone = 0;
   for (let i = 0; i < maxPages; i++) {
     await fillFn();
     pagesDone++;
 
-    const submitted = await autoClickSubmit(page, log);
-    if (submitted) {
-      log("✓ Auto-submit clicked");
-      break;
+    if (await hasByPatterns(page, SUBMIT_PATTERNS)) {
+      log("✓ Final preview/submit step reached — waiting for approval");
+      return { pagesDone, readyToSubmit: true };
     }
 
     const next = await autoClickNext(page, log);
@@ -270,5 +416,5 @@ export async function autoFillAllPages(
     }
     log(`→ Auto-advanced to page ${i + 2}`);
   }
-  return pagesDone;
+  return { pagesDone, readyToSubmit: false };
 }

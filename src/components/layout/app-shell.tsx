@@ -81,6 +81,12 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }, [publicRoute]);
 
   useEffect(() => {
+    if (publicRoute) return;
+    document.body.style.removeProperty("overflow");
+    document.documentElement.style.removeProperty("overflow");
+  }, [pathname, publicRoute]);
+
+  useEffect(() => {
     const onAuthChanged = () => {
       if (window.__shsSessionRedirecting) return;
       setAuthTick((n) => n + 1);

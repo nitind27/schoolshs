@@ -208,7 +208,8 @@ export default function IncomeTaxPage() {
       ) : (
         <Card>
           <CardContent className="p-3 md:p-5">
-            <div className="income-tax-area mx-auto max-w-4xl">
+            <div className="max-w-full overflow-x-auto">
+            <div className="income-tax-area mx-auto min-w-[680px] max-w-4xl">
               {/* ── Form title ── */}
               <div className="it-form-title">
                 <p className="it-t1">આવકવેરાની ગણતરી દર્શાવતું પત્રક</p>
@@ -457,6 +458,7 @@ export default function IncomeTaxPage() {
                 <span>કર્મચારીની સહી</span>
                 <span>તારીખ: ____________</span>
               </div>
+            </div>
             </div>
           </CardContent>
         </Card>

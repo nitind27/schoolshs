@@ -12,24 +12,28 @@ function countSeatsFilled(
     sscSeatNumber: string | null;
     hscSeatNumber: string | null;
   }>,
-  standard: string
+  standard: string,
 ) {
   return students.filter((s) => {
     const seat = standard === "10" ? s.sscSeatNumber : s.hscSeatNumber;
-    return seat && seat.length === 7;
+    return seat && seat.length === (standard === "12" ? 6 : 7);
   }).length;
 }
 
 export async function GET() {
   try {
-    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
+    const session = await requireSchoolAuth([
+      "school_admin",
+      "teacher",
+      "clerk",
+    ]);
 
     const classWhere: Record<string, unknown> = {
       schoolId: session.schoolId,
       standard: { in: ["10", "12"] },
     };
-    if (session.role === "teacher" && session.staffId) {
-      classWhere.classTeacherId = session.staffId;
+    if (session.role === "teacher") {
+      classWhere.classTeacherId = session.staffId || "__unlinked__";
     }
 
     const classes = await prisma.schoolClass.findMany({
@@ -62,9 +66,12 @@ export async function GET() {
       },
     });
 
-    const buildClassInfo = (cls: (typeof classes)[0], extraStudents: typeof alsoStudents = []): BoardClassInfo => {
+    const buildClassInfo = (
+      cls: (typeof classes)[0],
+      extraStudents: typeof alsoStudents = [],
+    ): BoardClassInfo => {
       const matched = alsoStudents.filter(
-        (s) => s.standard === cls.standard && s.section === cls.section
+        (s) => s.standard === cls.standard && s.section === cls.section,
       );
       const allStudents = [...cls.students, ...matched];
       return {
@@ -77,7 +84,7 @@ export async function GET() {
         studentCount: allStudents.length,
         seatsFilled: countSeatsFilled(
           allStudents.map((s) => ({ ...s, standard: cls.standard })),
-          cls.standard
+          cls.standard,
         ),
         classTeacher: cls.classTeacher
           ? `${cls.classTeacher.firstName} ${cls.classTeacher.lastName}`
@@ -85,8 +92,12 @@ export async function GET() {
       };
     };
 
-    const class10 = classes.filter((c) => c.standard === "10").map((c) => buildClassInfo(c));
-    const class12 = classes.filter((c) => c.standard === "12").map((c) => buildClassInfo(c));
+    const class10 = classes
+      .filter((c) => c.standard === "10")
+      .map((c) => buildClassInfo(c));
+    const class12 = classes
+      .filter((c) => c.standard === "12")
+      .map((c) => buildClassInfo(c));
 
     const sscStudents = class10.reduce((n, c) => n + c.studentCount, 0);
     const hscStudents = class12.reduce((n, c) => n + c.studentCount, 0);
@@ -108,7 +119,8 @@ export async function GET() {
       },
     });
   } catch (e) {
-    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError)
+      return NextResponse.json({ error: e.message }, { status: e.status });
     console.error(e);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }

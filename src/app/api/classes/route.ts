@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { buildClassName } from "@/lib/class-structure";
 import { seedClassSubjects } from "@/lib/class-subjects";
+import { assertStaffInSchool, assertClassTeacherAvailable } from "@/lib/school-assertions";
 
 function normalizeStream(standard: string, stream: unknown): string {
   const s = String(stream || "").trim();
@@ -113,13 +114,19 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const classTeacherId = body.classTeacherId ? String(body.classTeacherId) : null;
+    if (classTeacherId) {
+      await assertStaffInSchool(session.schoolId, [classTeacherId]);
+      await assertClassTeacherAvailable(session.schoolId, classTeacherId);
+    }
+
     const schoolClass = await prisma.schoolClass.create({
       data: {
         ...data,
         schoolId: session.schoolId,
         institutionName: school?.settings?.schoolName || school?.name || null,
         institutionDistrict: school?.district || null,
-        classTeacherId: null,
+        classTeacherId,
       },
       include: {
         classTeacher: { select: { id: true, firstName: true, lastName: true } },

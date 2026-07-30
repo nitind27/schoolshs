@@ -4,6 +4,7 @@ import { Spinner } from "@/components/ui/loader";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import {
   GraduationCap,
   ArrowRight,
@@ -22,12 +23,13 @@ import {
   School,
   Send,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { useT } from "@/i18n/locale-provider";
-import { LandingHeroCanvas } from "@/components/landing/landing-hero-canvas";
 import {
   CONTACT_LIMITS,
   validateContactForm,
@@ -54,6 +56,27 @@ const SERVICES = [
   { icon: IdCard, key: "idCards" },
   { icon: FileText, key: "certificates" },
   { icon: Users, key: "students" },
+] as const;
+
+const HERO_SLIDES = [
+  {
+    src: "/shs/landing/school-campus-slide.webp",
+    tag: "landing.slide1Tag",
+    title: "landing.slide1Title",
+    sub: "landing.slide1Sub",
+  },
+  {
+    src: "/shs/landing/school-classroom-slide.webp",
+    tag: "landing.slide2Tag",
+    title: "landing.slide2Title",
+    sub: "landing.slide2Sub",
+  },
+  {
+    src: "/shs/landing/school-students-slide.webp",
+    tag: "landing.slide4Tag",
+    title: "landing.slide4Title",
+    sub: "landing.slide4Sub",
+  },
 ] as const;
 
 type ServiceKey = (typeof SERVICES)[number]["key"];
@@ -166,40 +189,9 @@ function useScrollReveal() {
   return rootRef;
 }
 
-function useHeroTilt() {
-  const stageRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    const onMove = (e: PointerEvent) => {
-      const rect = stage.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-      const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-      stage.style.setProperty("--tilt-x", `${(-y * 4.5).toFixed(2)}deg`);
-      stage.style.setProperty("--tilt-y", `${(x * 6).toFixed(2)}deg`);
-      stage.style.setProperty("--tilt-px", `${(x * 10).toFixed(1)}px`);
-      stage.style.setProperty("--tilt-py", `${(y * 8).toFixed(1)}px`);
-    };
-    const onLeave = () => {
-      stage.style.setProperty("--tilt-x", "0deg");
-      stage.style.setProperty("--tilt-y", "0deg");
-      stage.style.setProperty("--tilt-px", "0px");
-      stage.style.setProperty("--tilt-py", "0px");
-    };
-    stage.addEventListener("pointermove", onMove);
-    stage.addEventListener("pointerleave", onLeave);
-    return () => {
-      stage.removeEventListener("pointermove", onMove);
-      stage.removeEventListener("pointerleave", onLeave);
-    };
-  }, []);
-  return stageRef;
-}
-
 export function SchoolLandingPage() {
   const t = useT();
   const pageRef = useScrollReveal();
-  const heroTiltRef = useHeroTilt();
   const [scrolled, setScrolled] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -214,6 +206,7 @@ export function SchoolLandingPage() {
   const [formErr, setFormErr] = useState("");
   const [fieldErrors, setFieldErrors] = useState<ContactFieldErrors>({});
   const [activeModule, setActiveModule] = useState<{ key: ServiceKey; index: number } | null>(null);
+  const [activeSlide, setActiveSlide] = useState(0);
 
   const errorForCode = (code?: ContactErrorCode, fallback?: string) => {
     if (!code) return fallback || t("landing.formError");
@@ -240,6 +233,13 @@ export function SchoolLandingPage() {
     fn();
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % HERO_SLIDES.length);
+    }, 5500);
+    return () => window.clearInterval(timer);
   }, []);
 
   async function onSubmit(e: FormEvent) {
@@ -319,33 +319,107 @@ export function SchoolLandingPage() {
         </div>
       </header>
 
-      {/* Hero — canvas 3D mesh + perspective stage */}
-      <section className="lp-hero" ref={heroTiltRef}>
-        <LandingHeroCanvas />
-        <div className="lp-hero-veil" aria-hidden />
-
-        <div className="lp-hero-stage" aria-hidden>
-          <div className="lp-cube">
-            <span /><span /><span /><span />
+      <section className="lp-hero">
+        <div className="lp-shell lp-hero-layout">
+          <div className="lp-hero-copy landing-fade landing-fade--show">
+            <div className="lp-hero-badge">
+              <span className="lp-hero-dot" />
+              {t("landing.heroBadge")}
+            </div>
+            <h1 className="lp-brand-title">{t("landing.productName")}</h1>
+            <p className="lp-headline">{t("landing.heroHeadline")}</p>
+            <p className="lp-lede">{t("landing.heroDesc")}</p>
+            <div className="lp-cta-row">
+              <Link href="/login" className="lp-btn-primary">
+                <span>{t("landing.ctaPortal")}</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <a href="#modules" className="lp-btn-soft">
+                {t("landing.ctaExplore")}
+              </a>
+            </div>
+            <div className="lp-hero-trust">
+              <span><CheckCircle2 className="h-4 w-4" />{t("landing.module_students")}</span>
+              <span><CheckCircle2 className="h-4 w-4" />{t("landing.module_results")}</span>
+              <span><CheckCircle2 className="h-4 w-4" />{t("landing.module_accounting")}</span>
+            </div>
           </div>
-        </div>
 
-        <div className="lp-shell lp-hero-center landing-fade landing-fade--show">
-          <div className="lp-hero-badge">
-            <span className="lp-hero-dot" />
-            {t("landing.heroBadge")}
-          </div>
-          <h1 className="lp-brand-title">{t("landing.productName")}</h1>
-          <p className="lp-headline">{t("landing.heroHeadline")}</p>
-          <p className="lp-lede">{t("landing.heroDesc")}</p>
-          <div className="lp-cta-row">
-            <Link href="/login" className="lp-btn-primary">
-              <span>{t("landing.ctaPortal")}</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <a href="#modules" className="lp-btn-soft">
-              {t("landing.ctaExplore")}
-            </a>
+          <div
+            className="lp-hero-slider landing-fade landing-fade--show"
+            role="region"
+            aria-label={t("landing.galleryTitle")}
+          >
+            <div className="lp-slider-viewport">
+              <div className="lp-slider-topbar" aria-hidden>
+                <span className="lp-slider-brand">
+                  <School className="h-3.5 w-3.5" />
+                  {t("landing.productName")}
+                </span>
+                <span className="lp-slider-count">
+                  {String(activeSlide + 1).padStart(2, "0")}
+                  <i />
+                  {String(HERO_SLIDES.length).padStart(2, "0")}
+                </span>
+              </div>
+              {HERO_SLIDES.map((slide, index) => (
+                <div
+                  key={slide.src}
+                  className={`lp-slide ${index === activeSlide ? "is-active" : ""}`}
+                  style={{ position: "absolute", inset: 0 }}
+                  aria-hidden={index !== activeSlide}
+                >
+                  <Image
+                    src={slide.src}
+                    alt={t(slide.title)}
+                    fill
+                    priority={index === 0}
+                    sizes="(max-width: 849px) 100vw, 48vw"
+                  />
+                  <div className="lp-slide-shade" />
+                  <div className="lp-slide-copy">
+                    <span>{t(slide.tag)}</span>
+                    <strong>{t(slide.title)}</strong>
+                    <p>{t(slide.sub)}</p>
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="lp-slider-arrow lp-slider-arrow--prev"
+                onClick={() =>
+                  setActiveSlide(
+                    (current) =>
+                      (current - 1 + HERO_SLIDES.length) % HERO_SLIDES.length,
+                  )
+                }
+                aria-label="Previous slide"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                className="lp-slider-arrow lp-slider-arrow--next"
+                onClick={() =>
+                  setActiveSlide((current) => (current + 1) % HERO_SLIDES.length)
+                }
+                aria-label="Next slide"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="lp-slider-dots">
+              {HERO_SLIDES.map((slide, index) => (
+                <button
+                  key={slide.src}
+                  type="button"
+                  className={index === activeSlide ? "is-active" : ""}
+                  onClick={() => setActiveSlide(index)}
+                  aria-label={`${t(slide.tag)} ${index + 1}`}
+                  aria-current={index === activeSlide ? "true" : undefined}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -447,13 +521,27 @@ export function SchoolLandingPage() {
 
       <section id="contact" className="lp-support-band">
         <div className="lp-shell lp-section">
-          <div className="landing-fade lp-section-head lp-section-head--center">
-            <p className="lp-eyebrow">{t("landing.supportEyebrow")}</p>
-            <h2>{t("landing.supportTitle")}</h2>
-            <p className="lp-section-lead">{t("landing.supportDesc")}</p>
-          </div>
+          <div className="lp-monitor landing-fade">
+            <div className="lp-monitor-screen">
+              <div className="lp-monitor-bar" aria-hidden>
+                <span className="lp-monitor-dots">
+                  <i /><i /><i />
+                </span>
+                <span className="lp-monitor-url">
+                  <Lock className="h-3 w-3" />
+                  {t("landing.productName")}
+                </span>
+                <span className="lp-monitor-spacer" />
+              </div>
 
-          <form className="lp-contact-form landing-fade" onSubmit={onSubmit} noValidate>
+              <div className="lp-monitor-inner">
+                <div className="lp-section-head lp-section-head--center">
+                  <p className="lp-eyebrow">{t("landing.supportEyebrow")}</p>
+                  <h2>{t("landing.supportTitle")}</h2>
+                  <p className="lp-section-lead">{t("landing.supportDesc")}</p>
+                </div>
+
+                <form className="lp-contact-form" onSubmit={onSubmit} noValidate>
             <div className="lp-contact-grid">
               <label className={`lp-field${fieldErrors.name ? " has-error" : ""}`}>
                 <span>{t("landing.formName")}</span>
@@ -595,7 +683,15 @@ export function SchoolLandingPage() {
                 </>
               )}
             </button>
-          </form>
+                </form>
+              </div>
+            </div>
+
+            <div className="lp-monitor-stand" aria-hidden>
+              <span className="lp-monitor-neck" />
+              <span className="lp-monitor-base" />
+            </div>
+          </div>
         </div>
       </section>
 

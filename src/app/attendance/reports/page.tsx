@@ -1,7 +1,7 @@
 "use client";
 
 import { PageLoader, Spinner } from "@/components/ui/loader";
-import { useCallback, useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { CertificateFilters } from "@/components/certificates/certificate-filters";
 import { AttendanceReportSummaryCards } from "@/components/attendance/attendance-report-summary";
@@ -50,14 +50,15 @@ interface StudentDetail extends AttendanceStudentReport {
 function ReportsContent() {
   const t = useT();
   const searchParams = useSearchParams();
+  const lockedStudentId = searchParams.get("studentId") || "";
   const [filters, setFilters] = useState({
     classId: searchParams.get("classId") || "",
-    standard: "",
-    section: "",
+    standard: searchParams.get("standard") || "",
+    section: searchParams.get("section") || "",
     academicYear: "2025-26",
-    studentId: "",
-    month: String(new Date().getMonth() + 1),
-    year: String(new Date().getFullYear()),
+    studentId: lockedStudentId,
+    month: searchParams.get("month") || String(new Date().getMonth() + 1),
+    year: searchParams.get("year") || String(new Date().getFullYear()),
   });
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [students, setStudents] = useState<AttendanceStudentReport[]>([]);
@@ -68,6 +69,7 @@ function ReportsContent() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<StudentDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const autoLoadedRef = useRef(false);
 
   const monthLabel = `${ENGLISH_MONTHS[parseInt(filters.month, 10) - 1] || filters.month} ${filters.year}`;
 
@@ -76,9 +78,14 @@ function ReportsContent() {
     setError("");
     setSelected(null);
     const params = new URLSearchParams({ month: filters.month, year: filters.year });
-    if (filters.classId) params.set("classId", filters.classId);
-    if (filters.standard) params.set("standard", filters.standard);
-    if (filters.section) params.set("section", filters.section);
+    const sid = lockedStudentId || filters.studentId;
+    if (sid) {
+      params.set("studentId", sid);
+    } else {
+      if (filters.classId) params.set("classId", filters.classId);
+      if (filters.standard) params.set("standard", filters.standard);
+      if (filters.section) params.set("section", filters.section);
+    }
 
     const res = await fetch(`/api/attendance/reports?${params}`);
     const data = await res.json();
@@ -96,7 +103,12 @@ function ReportsContent() {
     });
     setLoaded(true);
     setLoading(false);
-  }, [filters]);
+    if (data.studentDetail) {
+      setSelected(data.studentDetail);
+    } else if (sid && data.students?.[0]) {
+      // fallback detail fetch already included when studentId set
+    }
+  }, [filters, lockedStudentId]);
 
   const loadStudentDetail = useCallback(
     async (student: AttendanceStudentReport) => {
@@ -106,9 +118,6 @@ function ReportsContent() {
         year: filters.year,
         studentId: student.studentId,
       });
-      if (filters.classId) params.set("classId", filters.classId);
-      if (filters.standard) params.set("standard", filters.standard);
-      if (filters.section) params.set("section", filters.section);
 
       const res = await fetch(`/api/attendance/reports?${params}`);
       const data = await res.json();
@@ -122,9 +131,21 @@ function ReportsContent() {
 
   useEffect(() => {
     if (searchParams.get("classId") && searchParams.get("auto") === "1") {
-      load();
+      void load();
     }
   }, [searchParams, load]);
+
+  useEffect(() => {
+    if (!lockedStudentId || autoLoadedRef.current) return;
+    autoLoadedRef.current = true;
+    void load();
+  }, [lockedStudentId, load]);
+
+  const lockedLabel = selected
+    ? `GR ${selected.grNumber || "—"} · ${selected.name}`
+    : students[0]
+      ? `GR ${students[0].grNumber || "—"} · ${students[0].name}`
+      : "";
 
   return (
     <div className="space-y-6">
@@ -136,7 +157,14 @@ function ReportsContent() {
         <p className="mt-1 text-sm text-slate-500">{t("attendance.reportSubtitle")}</p>
       </div>
 
-      <CertificateFilters value={filters} onChange={setFilters} onLoad={load} showMonth />
+      <CertificateFilters
+        value={filters}
+        onChange={setFilters}
+        onLoad={load}
+        showMonth
+        lockedStudentId={lockedStudentId || undefined}
+        lockedStudentLabel={lockedLabel}
+      />
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
@@ -230,8 +258,8 @@ function ReportsContent() {
                         {selected.history.length > 1 && (
                           <div>
                             <h4 className="mb-2 text-sm font-semibold text-slate-800">{t("attendance.reportHistory")}</h4>
-                            <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-100">
-                              <table className="w-full text-xs">
+                            <div className="max-h-48 max-w-full overflow-auto rounded-lg border border-slate-100">
+                              <table className="min-w-[28rem] w-full text-xs">
                                 <thead className="bg-slate-50 sticky top-0">
                                   <tr className="text-left text-slate-500">
                                     <th className="px-2 py-1.5">{t("certificates.month")}</th>

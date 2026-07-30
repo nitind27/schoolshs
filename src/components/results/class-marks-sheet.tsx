@@ -1,7 +1,13 @@
 "use client";
 
-import type { MarksSheetConfig, MarksSheetExamRowDef } from "@/lib/results/marks-sheet-config";
-import type { ComputedMarksSheet, SubjectMarksInput } from "@/lib/results/marks-sheet-calculations";
+import type {
+  MarksSheetConfig,
+  MarksSheetExamRowDef,
+} from "@/lib/results/marks-sheet-config";
+import type {
+  ComputedMarksSheet,
+  SubjectMarksInput,
+} from "@/lib/results/marks-sheet-calculations";
 import {
   computeStudentMarksSheet,
   assignSheetRanks,
@@ -97,7 +103,13 @@ function displayValue(v: string | number | null | undefined) {
   return String(v);
 }
 
-function VerticalLabel({ children, height = 76 }: { children: React.ReactNode; height?: number }) {
+function VerticalLabel({
+  children,
+  height = 76,
+}: {
+  children: React.ReactNode;
+  height?: number;
+}) {
   return (
     <div
       className="marks-sheet-vertical-label"
@@ -193,8 +205,12 @@ function StudentInfoHeader({
           <td colSpan={4} style={{ ...LABEL, fontSize: "11px" }}>
             વિદ્યાર્થીનું નામ :- <strong>{name}</strong>
           </td>
-          <td style={{ ...CELL, fontWeight: 700, fontSize: "11px" }}>ધોરણ-{standard}</td>
-          <td style={{ ...CELL, fontWeight: 700, fontSize: "11px" }}>વર્ગ - {section}</td>
+          <td style={{ ...CELL, fontWeight: 700, fontSize: "11px" }}>
+            ધોરણ-{standard}
+          </td>
+          <td style={{ ...CELL, fontWeight: 700, fontSize: "11px" }}>
+            વર્ગ - {section}
+          </td>
         </tr>
         <tr>
           {metaLabels.map((label) => (
@@ -222,7 +238,11 @@ function StudentInfoHeader({
             {editable ? (
               <MarksInput
                 value={student.attendancePresent}
-                onChange={(v) => onMetaChange({ attendancePresent: v === "" ? null : Number(v) })}
+                onChange={(v) =>
+                  onMetaChange({
+                    attendancePresent: v === "" ? null : Number(v),
+                  })
+                }
               />
             ) : (
               displayValue(student.attendancePresent)
@@ -232,7 +252,9 @@ function StudentInfoHeader({
             {editable ? (
               <MarksInput
                 value={student.attendanceTotal}
-                onChange={(v) => onMetaChange({ attendanceTotal: v === "" ? null : Number(v) })}
+                onChange={(v) =>
+                  onMetaChange({ attendanceTotal: v === "" ? null : Number(v) })
+                }
               />
             ) : (
               displayValue(student.attendanceTotal)
@@ -254,7 +276,10 @@ function StudentFooter({
   rank: number | null;
 }) {
   return (
-    <table className="marks-sheet-footer-table" style={{ ...TABLE_BASE, marginTop: "-1px" }}>
+    <table
+      className="marks-sheet-footer-table"
+      style={{ ...TABLE_BASE, marginTop: "-1px" }}
+    >
       <colgroup>
         <col style={{ width: "33.333%" }} />
         <col style={{ width: "33.333%" }} />
@@ -262,11 +287,27 @@ function StudentFooter({
       </colgroup>
       <tbody>
         <tr>
-          <td style={{ ...LABEL, fontWeight: 700 }}>પરિણામ :- {result || "પાસ"}</td>
-          <td style={{ ...CELL, textAlign: "left", paddingLeft: "10px", fontWeight: 600 }}>
+          <td style={{ ...LABEL, fontWeight: 700 }}>
+            પરિણામ :- {result || "પાસ"}
+          </td>
+          <td
+            style={{
+              ...CELL,
+              textAlign: "left",
+              paddingLeft: "10px",
+              fontWeight: 600,
+            }}
+          >
             ટકાવારી :- {percentage != null ? Number(percentage).toFixed(2) : ""}
           </td>
-          <td style={{ ...CELL, textAlign: "left", paddingLeft: "10px", fontWeight: 600 }}>
+          <td
+            style={{
+              ...CELL,
+              textAlign: "left",
+              paddingLeft: "10px",
+              fontWeight: 600,
+            }}
+          >
             રેંક :- {rank ?? ""}
           </td>
         </tr>
@@ -296,7 +337,9 @@ function StudentMarksBlock({
 }) {
   const { computed, subjectInputs } = student;
   const name = studentName(student);
-  const numericCount = config.subjects.filter((s) => s.type === "numeric").length;
+  const numericCount = config.subjects.filter(
+    (s) => s.type === "numeric",
+  ).length;
 
   const updateSubject = (code: string, patch: Partial<SubjectMarksInput>) => {
     const nextInputs = subjectInputs.map((s) =>
@@ -320,9 +363,10 @@ function StudentMarksBlock({
     const perSubject: Record<string, number> = {
       first: 50,
       second: 50,
+      third: 50,
       internal: 20,
       annual: 80,
-      total: 200,
+      total: config.totalTermMax || 200,
       converted: 100,
       achievement: 15,
       grace: 10,
@@ -335,18 +379,28 @@ function StudentMarksBlock({
   const renderRow = (row: MarksSheetExamRowDef) => {
     const redRow = isRedRow(row.kind);
     const rowTotal = computed.summaryCells[row.key] as number | string | null;
-    const rowMax = row.maxMarks != null ? row.maxMarks * numericCount : rowMaxTotal(row.kind);
+    const rowMax =
+      row.maxMarks != null
+        ? row.maxMarks * numericCount
+        : rowMaxTotal(row.kind);
     const rowResult = rowPassFail(
       typeof rowTotal === "number" ? rowTotal : Number(rowTotal) || null,
       rowMax,
     );
     const showResult =
-      row.kind === "first" || row.kind === "second" || row.kind === "annual" || row.kind === "final";
+      row.kind === "first" ||
+      row.kind === "second" ||
+      row.kind === "third" ||
+      row.kind === "term" ||
+      row.kind === "annual" ||
+      row.kind === "final";
 
     return (
       <tr key={row.key}>
         <td style={LABEL}>{row.label}</td>
-        <td style={MAX_COL}>{row.kind === "max" ? "ગુણ" : row.maxMarks ?? ""}</td>
+        <td style={MAX_COL}>
+          {row.kind === "max" ? "ગુણ" : (row.maxMarks ?? "")}
+        </td>
         {config.subjects.map((sub) => {
           const input = subjectInputs.find((s) => s.subject.code === sub.code)!;
           const cells = computed.subjectCells[sub.code];
@@ -370,7 +424,9 @@ function StudentMarksBlock({
                   <MarksInput
                     value={input.letterGrade}
                     type="text"
-                    onChange={(v) => updateSubject(sub.code, { letterGrade: v || null })}
+                    onChange={(v) =>
+                      updateSubject(sub.code, { letterGrade: v || null })
+                    }
                     width={28}
                   />
                 ) : (
@@ -383,6 +439,7 @@ function StudentMarksBlock({
           const fieldMap: Record<string, keyof SubjectMarksInput> = {
             first: "first",
             second: "second",
+            third: "third",
             internal: "internal",
             annual: "annual",
             achievement: "achievement",
@@ -390,6 +447,81 @@ function StudentMarksBlock({
             grace: "grace",
           };
           const field = fieldMap[row.kind];
+
+          if (row.scoreType === "internal" && row.termKey) {
+            const scoreKey = row.termKey;
+            const current =
+              input.internalScores?.[scoreKey] ??
+              (scoreKey === "final" ? input.internal : null);
+            return (
+              <td key={sub.code} style={SUBJECT_COL}>
+                {editable ? (
+                  <MarksInput
+                    value={current}
+                    max={row.maxMarks ?? undefined}
+                    onChange={(v) => {
+                      const nextVal = v === "" ? null : Number(v);
+                      const internalScores = {
+                        ...(input.internalScores || {}),
+                        [scoreKey]: nextVal,
+                      };
+                      updateSubject(sub.code, {
+                        internalScores,
+                        ...(scoreKey === "final" ? { internal: nextVal } : {}),
+                      });
+                    }}
+                    width={30}
+                  />
+                ) : (
+                  displayValue(cells[row.key])
+                )}
+              </td>
+            );
+          }
+
+          if (
+            row.kind === "term" ||
+            (row.termKey &&
+              (row.kind === "first" ||
+                row.kind === "second" ||
+                row.kind === "third"))
+          ) {
+            const scoreKey = row.termKey || row.key;
+            const current =
+              (input.scores && input.scores[scoreKey] != null
+                ? input.scores[scoreKey]
+                : field
+                  ? (input[field] as number | null)
+                  : null) ?? null;
+            return (
+              <td key={sub.code} style={SUBJECT_COL}>
+                {editable ? (
+                  <MarksInput
+                    value={current}
+                    max={row.maxMarks ?? undefined}
+                    onChange={(v) => {
+                      const nextVal = v === "" ? null : Number(v);
+                      const scores = {
+                        ...(input.scores || {}),
+                        [scoreKey]: nextVal,
+                      };
+                      const patch: Partial<SubjectMarksInput> = { scores };
+                      if (row.kind === "first" || scoreKey === "mid1")
+                        patch.first = nextVal;
+                      if (row.kind === "second" || scoreKey === "mid2")
+                        patch.second = nextVal;
+                      if (row.kind === "third" || scoreKey === "mid3")
+                        patch.third = nextVal;
+                      updateSubject(sub.code, patch);
+                    }}
+                    width={30}
+                  />
+                ) : (
+                  displayValue(cells[row.key])
+                )}
+              </td>
+            );
+          }
 
           if (field) {
             return (
@@ -435,7 +567,11 @@ function StudentMarksBlock({
             fontWeight: rowResult ? 700 : 400,
           }}
         >
-          {showResult ? rowResult : row.kind === "final" ? computed.footer.result || "" : ""}
+          {showResult
+            ? rowResult
+            : row.kind === "final"
+              ? computed.footer.result || ""
+              : ""}
         </td>
         <td style={SUMMARY_COL}>
           {row.kind === "final" ? displayValue(computed.footer.rank) : ""}
@@ -445,7 +581,10 @@ function StudentMarksBlock({
   };
 
   return (
-    <div className="marks-sheet-block" style={{ marginBottom: "24px", breakInside: "avoid" }}>
+    <div
+      className="marks-sheet-block"
+      style={{ marginBottom: "24px", breakInside: "avoid" }}
+    >
       <StudentInfoHeader
         name={name}
         standard={standard}
@@ -455,14 +594,20 @@ function StudentMarksBlock({
         onMetaChange={updateMeta}
       />
 
-      <table className="marks-sheet-table" style={{ ...TABLE_BASE, marginTop: "-1px" }}>
+      <table
+        className="marks-sheet-table"
+        style={{ ...TABLE_BASE, marginTop: "-1px" }}
+      >
         <tbody>
           <tr>
             <td colSpan={2} style={{ ...LABEL, textAlign: "center" }}>
               વિષય
             </td>
             {config.subjects.map((sub) => (
-              <td key={sub.code} style={{ ...SUBJECT_COL, padding: "6px 2px", height: "84px" }}>
+              <td
+                key={sub.code}
+                style={{ ...SUBJECT_COL, padding: "6px 2px", height: "84px" }}
+              >
                 <VerticalLabel>{sub.name}</VerticalLabel>
               </td>
             ))}
@@ -550,15 +695,62 @@ export function ClassMarksSheetView({
           outline: 1px solid #f59e0b;
         }
         @media print {
+          .marks-sheet-bundle {
+            display: block;
+            width: 100%;
+          }
+          /* A4 portrait minus 5mm page margins = 287mm usable; 3 blocks of 94mm + 1mm gap */
           .marks-sheet-block {
-            break-inside: avoid;
-            page-break-inside: avoid;
-            margin-bottom: 18px;
+            display: flex !important;
+            flex-direction: column !important;
+            height: 94mm !important;
+            max-height: 94mm !important;
+            margin: 0 0 1mm !important;
+            overflow: hidden !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          .marks-sheet-block:nth-child(3n) {
+            break-after: page;
+            page-break-after: always;
+            margin-bottom: 0 !important;
+          }
+          .marks-sheet-block:last-child {
+            break-after: auto;
+            page-break-after: auto;
+            margin-bottom: 0 !important;
+          }
+          .marks-sheet-block > .marks-sheet-info-table,
+          .marks-sheet-block > .marks-sheet-footer-table {
+            flex: 0 0 auto !important;
+          }
+          .marks-sheet-block > .marks-sheet-table {
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+          }
+          .marks-sheet-info-table td,
+          .marks-sheet-table td,
+          .marks-sheet-footer-table td {
+            height: 12px !important;
+            padding: 1px 2px !important;
+            font-size: 7.5px !important;
+            line-height: 1.05 !important;
+          }
+          .marks-sheet-table tr:first-child td {
+            height: 46px !important;
+            padding: 1px !important;
+          }
+          .marks-sheet-vertical-label {
+            height: 42px !important;
+            font-size: 7px !important;
+            line-height: 1 !important;
           }
           .marks-sheet-input {
             border: none !important;
             outline: none !important;
             background: transparent !important;
+            font-size: 7.5px !important;
+            line-height: 1 !important;
           }
         }
       `}</style>

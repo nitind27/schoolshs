@@ -126,34 +126,82 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
     setForm((prev) => ({ ...prev, [pathKey]: "" }));
   };
 
-  const saveCredentials = async () => {
+  const saveCredentials = async (opts?: { silent?: boolean }) => {
     setSaving(true);
-    await fetch(`/api/students/${id}/credentials`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setSaving(false);
-    alert(t("autoSubmit.saved"));
+    try {
+      const res = await fetch(`/api/students/${id}/credentials`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || t("autoSubmit.saveFailed"));
+        return false;
+      }
+      if (!opts?.silent) alert(t("autoSubmit.saved"));
+      return true;
+    } finally {
+      setSaving(false);
+    }
   };
 
   const startAutomation = async (mode: string) => {
-    await saveCredentials();
+    if (!form.dgLoginId.trim() && mode === "full") {
+      alert(t("autoSubmit.loginRequired"));
+      return;
+    }
+    const saved = await saveCredentials({ silent: true });
+    if (!saved) return;
     setStarting(true);
 
-    const res = await fetch("/api/automation/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId: id, mode }),
-    });
+    try {
+      const preflightRes = await fetch("/api/automation/preflight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentIds: [id] }),
+      });
+      const preflight = await preflightRes.json().catch(() => ({}));
+      const row = Array.isArray(preflight.students) ? preflight.students[0] : null;
+      if (!preflightRes.ok) {
+        alert(preflight.error || t("autoSubmit.startFailed"));
+        return;
+      }
+      if (!row?.ready) {
+        const blockers = [
+          ...(row?.missingFields || []).map(
+            (f: { message: string }) => f.message,
+          ),
+          ...(row?.missingDocuments || []).map(
+            (doc: string) => `Missing document: ${doc}`,
+          ),
+          ...(row?.invalidDocuments || []).map(
+            (doc: string) => `Document too large / not DG-ready: ${doc}`,
+          ),
+        ].filter(Boolean);
+        alert(
+          blockers.length
+            ? `${t("autoSubmit.preflightBlocked")}\n\n${blockers.join("\n")}`
+            : t("autoSubmit.preflightBlocked"),
+        );
+        return;
+      }
 
-    const data = await res.json();
-    setStarting(false);
+      const res = await fetch("/api/automation/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Portal is resolved server-side from scholarshipScheme — do not send a client portalType.
+        body: JSON.stringify({ studentId: id, mode }),
+      });
 
-    if (res.ok) {
-      setStarted(true);
-    } else {
-      alert(data.error || t("autoSubmit.startFailed"));
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setStarted(true);
+      } else {
+        alert(data.error || t("autoSubmit.startFailed"));
+      }
+    } finally {
+      setStarting(false);
     }
   };
 
@@ -335,7 +383,7 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
               {t("autoSubmit.fillOnly")}
             </Button>
 
-            <Button variant="outline" onClick={saveCredentials} disabled={saving}>
+            <Button variant="outline" onClick={() => saveCredentials()} disabled={saving}>
               <Save className="h-4 w-4" />
               {saving ? t("common.saving") : t("autoSubmit.saveCredentials")}
             </Button>

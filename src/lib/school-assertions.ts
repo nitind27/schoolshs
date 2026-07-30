@@ -31,6 +31,28 @@ export async function assertStaffInSchool(schoolId: string, staffIds: string[]) 
   }
 }
 
+/** A staff member can be class teacher of only one class. */
+export async function assertClassTeacherAvailable(
+  schoolId: string,
+  classTeacherId: string,
+  excludeClassId?: string | null,
+) {
+  const taken = await prisma.schoolClass.findFirst({
+    where: {
+      schoolId,
+      classTeacherId,
+      ...(excludeClassId ? { NOT: { id: excludeClassId } } : {}),
+    },
+    select: { name: true },
+  });
+  if (taken) {
+    throw new AuthError(
+      `This teacher is already class teacher of ${taken.name}`,
+      409,
+    );
+  }
+}
+
 export async function assertExamInSchool(schoolId: string, examId: string) {
   const exam = await prisma.exam.findFirst({ where: { id: examId, schoolId } });
   if (!exam) throw new SchoolScopeError("Exam not found in your school");

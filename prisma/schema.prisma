@@ -8,56 +8,59 @@ datasource db {
 }
 
 model School {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  name      String
-  code      String   @unique
-  district  String?
-  taluka    String?
-  city      String?
-  pincode   String?
-  address   String?
-  phone     String?
-  alternatePhone String?
-  email     String?
-  website   String?
-  principalName  String?
-  schoolType     String?
+  id               String   @id @default(cuid())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  name             String
+  code             String   @unique
+  district         String?
+  taluka           String?
+  city             String?
+  pincode          String?
+  address          String?
+  phone            String?
+  alternatePhone   String?
+  email            String?
+  website          String?
+  principalName    String?
+  schoolType       String?
   boardAffiliation String?
-  udiseCode      String?  @unique
-  isActive  Boolean  @default(true)
+  udiseCode        String?  @unique
+  isActive         Boolean  @default(true)
 
-  users           User[]
-  students        Student[]
-  staff           Staff[]
-  classes         SchoolClass[]
-  settings        SchoolSettings?
-  subscription    SchoolSubscription?
-  payments        SchoolPayment[]
-  bulkSubmissions BulkSubmission[]
-  automationJobs  AutomationJob[]
-  smsInbox        SmsInboxMessage[]
-  financialYears  FinancialYear[]
-  accounts        Account[]
-  vouchers        Voucher[]
-  exams           Exam[]
-  auditSessions   CaAuditSession[]
-  caAssignments   CaSchoolAssignment[]
-  idCardShareLinks IdCardShareLink[]
-  attendanceMonths StudentAttendanceMonth[]
-  staffAttendanceMonths StaffAttendanceMonth[]
-  staffPayrolls StaffPayroll[]
-  salaryStatementRows SalaryStatementRow[]
-  staffSalarySlipRows StaffSalarySlipRow[]
-  staffIncomeTaxForms StaffIncomeTaxForm[]
-  chatRooms     ChatRoom[]
+  users                  User[]
+  students               Student[]
+  staff                  Staff[]
+  classes                SchoolClass[]
+  settings               SchoolSettings?
+  subscription           SchoolSubscription?
+  payments               SchoolPayment[]
+  bulkSubmissions        BulkSubmission[]
+  automationJobs         AutomationJob[]
+  smsInbox               SmsInboxMessage[]
+  financialYears         FinancialYear[]
+  accounts               Account[]
+  vouchers               Voucher[]
+  exams                  Exam[]
+  auditSessions          CaAuditSession[]
+  caAssignments          CaSchoolAssignment[]
+  idCardShareLinks       IdCardShareLink[]
+  attendanceMonths       StudentAttendanceMonth[]
+  staffAttendanceMonths  StaffAttendanceMonth[]
+  staffPayrolls          StaffPayroll[]
+  salaryStatementRows    SalaryStatementRow[]
+  staffSalarySlipRows    StaffSalarySlipRow[]
+  staffIncomeTaxForms    StaffIncomeTaxForm[]
+  chatRooms              ChatRoom[]
   generalRegisterEntries GeneralRegisterEntry[]
-  dailyAttendanceBooks DailyAttendanceBook[]
-  timetableEntries TimetableEntry[]
-  timetableConfigs SchoolTimetableConfig[]
-  timetableReleases ClassTimetableRelease[]
-  notifications Notification[]
+  dailyAttendanceBooks   DailyAttendanceBook[]
+  timetableEntries       TimetableEntry[]
+  timetableConfigs       SchoolTimetableConfig[]
+  timetableReleases      ClassTimetableRelease[]
+  notifications          Notification[]
+  schoolSubjects         SchoolSubject[]
+  standardSubjects       StandardSubject[]
+  examSeatAssignments    ExamSeatAssignment[]
 
   @@index([isActive])
   @@index([district])
@@ -71,17 +74,17 @@ model SchoolSubscription {
   schoolId  String   @unique
   school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
-  planName             String   @default("standard")
+  planName             String    @default("standard")
   contractNumber       String?
-  contractValue        Decimal? @db.Decimal(12, 2)
+  contractValue        Decimal?  @db.Decimal(12, 2)
   contractStartDate    DateTime?
   contractEndDate      DateTime?
   contractDocumentPath String?
-  contractNotes        String?  @db.Text
-  enabledFeatures      Json     @default("[]")
-  paymentStatus        String   @default("pending")
-  totalAmount          Decimal? @db.Decimal(12, 2)
-  paidAmount           Decimal  @default(0) @db.Decimal(12, 2)
+  contractNotes        String?   @db.Text
+  enabledFeatures      Json      @default("[]")
+  paymentStatus        String    @default("pending")
+  totalAmount          Decimal?  @db.Decimal(12, 2)
+  paidAmount           Decimal   @default(0) @db.Decimal(12, 2)
   nextDueDate          DateTime?
 
   @@map("schoolsubscription")
@@ -109,18 +112,18 @@ model PlatformSettings {
   id        String   @id @default("platform")
   updatedAt DateTime @updatedAt
 
-  emailEnabled      Boolean  @default(false)
+  emailEnabled      Boolean   @default(false)
   smtpHost          String?
-  smtpPort          Int      @default(587)
-  smtpSecure        Boolean  @default(false)
+  smtpPort          Int       @default(587)
+  smtpSecure        Boolean   @default(false)
   smtpUser          String?
-  smtpPasswordEnc   String?  @db.Text
-  smtpFromName      String?  @default("SHS Education Portal")
+  smtpPasswordEnc   String?   @db.Text
+  smtpFromName      String?   @default("SHS Education Portal")
   smtpFromEmail     String?
   smtpReplyTo       String?
   smtpLastTestAt    DateTime?
   smtpLastTestOk    Boolean?
-  smtpLastTestError String?  @db.Text
+  smtpLastTestError String?   @db.Text
 
   @@map("platformsettings")
 }
@@ -137,7 +140,9 @@ model PendingAdminEmailVerification {
   @@map("pendingadminemailverification")
 }
 
-/** Super-admin school register wizard — draft keyed by unique school code */
+/**
+ * Super-admin school register wizard — draft keyed by unique school code
+ */
 model SchoolRegistrationDraft {
   code      String   @id
   step      Int      @default(0)
@@ -148,46 +153,52 @@ model SchoolRegistrationDraft {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  email        String    @unique
-  passwordHash String
-  name         String
-  role         String
-  schoolId     String?
-  school       School?   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  staffId      String?   @unique
-  staff        Staff?    @relation(fields: [staffId], references: [id], onDelete: SetNull)
-  studentId    String?   @unique
-  student      Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  isActive     Boolean   @default(true)
-  lastLoginAt  DateTime?
-  lastLoginIp  String?
-  lastLoginLat Float?
-  lastLoginLon Float?
-  lastLoginAccuracyM Float?
-  lastLoginUserAgent String?  @db.Text
-  lastLoginCity      String?
-  lastLoginRegion    String?
-  lastLoginCountry   String?
-  lastLoginGeoSource String?  // browser | ip | cloudflare | unknown
-  failedLoginCount Int   @default(0)
-  lockedUntil  DateTime?
+  id                       String    @id @default(cuid())
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  email                    String    @unique
+  passwordHash             String
+  name                     String
+  role                     String
+  schoolId                 String?
+  school                   School?   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staffId                  String?   @unique
+  staff                    Staff?    @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  studentId                String?   @unique
+  student                  Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  isActive                 Boolean   @default(true)
+  lastLoginAt              DateTime?
+  lastLoginIp              String?
+  lastLoginLat             Float?
+  lastLoginLon             Float?
+  lastLoginAccuracyM       Float?
+  lastLoginUserAgent       String?   @db.Text
+  lastLoginCity            String?
+  lastLoginRegion          String?
+  lastLoginCountry         String?
+  lastLoginGeoSource       String? // browser | ip | cloudflare | unknown
+  failedLoginCount         Int       @default(0)
+  lockedUntil              DateTime?
   emailVerified            Boolean   @default(false)
   emailVerificationToken   String?   @unique
   emailVerificationExpires DateTime?
   emailVerifiedAt          DateTime?
+  /**
+   * Student accounts start with a temporary password and cannot access the
+   * student portal until email OTP verification and password replacement.
+   */
+  mustChangePassword       Boolean   @default(false)
+  passwordChangedAt        DateTime?
 
-  vouchersCreated Voucher[]      @relation("VoucherCreatedBy")
-  auditActions    AuditAction[]
+  vouchersCreated     Voucher[]            @relation("VoucherCreatedBy")
+  auditActions        AuditAction[]
   caSchoolAssignments CaSchoolAssignment[]
-  fySubmissions   FinancialYear[] @relation("FySubmittedBy")
-  chatParticipants ChatParticipant[]
-  chatMessagesSent ChatMessage[] @relation("ChatMessageSender")
-  notifications    Notification[]
-  loginEvents      LoginEvent[]
-  sessions         UserSession[]
+  fySubmissions       FinancialYear[]      @relation("FySubmittedBy")
+  chatParticipants    ChatParticipant[]
+  chatMessagesSent    ChatMessage[]        @relation("ChatMessageSender")
+  notifications       Notification[]
+  loginEvents         LoginEvent[]
+  sessions            UserSession[]
 
   @@index([schoolId])
   @@index([role])
@@ -195,18 +206,22 @@ model User {
   @@map("user")
 }
 
-/** Active web/mobile sessions for multi-device login control */
+/**
+ * Active web/mobile sessions for multi-device login control
+ */
 model UserSession {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
   lastSeenAt DateTime @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  /** Unique key embedded in JWT as `sid` */
-  sessionKey String @unique
-  channel    String @default("web") // web | mobile
+  /**
+   * Unique key embedded in JWT as `sid`
+   */
+  sessionKey  String  @unique
+  channel     String  @default("web") // web | mobile
   deviceLabel String?
   userAgent   String? @db.Text
   ip          String?
@@ -214,15 +229,17 @@ model UserSession {
   region      String?
   country     String?
 
-  revokedAt     DateTime?
-  revokeReason  String?
+  revokedAt    DateTime?
+  revokeReason String?
 
   @@index([userId, channel, revokedAt])
   @@index([lastSeenAt])
   @@map("usersession")
 }
 
-/** Every successful portal login (admin / teacher / clerk / student / CA) */
+/**
+ * Every successful portal login (admin / teacher / clerk / student / CA)
+ */
 model LoginEvent {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -251,29 +268,41 @@ model LoginEvent {
 }
 
 model SchoolSettings {
-  id                 String @id @default(cuid())
-  schoolId           String? @unique
-  school             School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  schoolName         String @default("My School")
-  schoolAddress      String?
-  schoolPhone        String?
-  schoolEmail        String?
-  academicYear       String @default("2025-26")
-  logoPath           String?
-  idCardPrimaryColor String @default("#e91e8c")
-  idCardAccentColor  String @default("#1e3a8a")
-  tagline            String?
-  /** School SJED portal login — ek baar save, sab students ke liye same session */
-  dgSjedUsername     String?
-  dgSjedPassword     String?
-  /** Post-Matric Citizen portal (optional) */
-  dgCitizenLoginId   String?
-  dgCitizenPassword  String?
+  id                   String  @id @default(cuid())
+  schoolId             String? @unique
+  school               School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolName           String  @default("My School")
+  schoolAddress        String?
+  schoolPhone          String?
+  schoolEmail          String?
+  academicYear         String  @default("2025-26")
+  logoPath             String?
+  idCardPrimaryColor   String  @default("#e91e8c")
+  idCardAccentColor    String  @default("#1e3a8a")
+  tagline              String?
+  /**
+   * Saved school-wide exam template (paper/internal split JSON)
+   */
+  examTemplate         String? @db.Text
+  /**
+   * School SJED portal login — ek baar save, sab students ke liye same session
+   */
+  dgSjedUsername       String?
+  dgSjedPassword       String?
+  /**
+   * Post-Matric Citizen portal (optional)
+   */
+  dgCitizenLoginId     String?
+  dgCitizenPassword    String?
   dgCitizenLoginMethod String? @default("mobile")
-  /** Phone SMS webhook secret — SMS Forwarder app is token se connect */
-  smsInboxToken      String?  @unique
-  /** DG OTP wala registered mobile — phone bridge link is number se connect */
-  dgOtpMobile        String?
+  /**
+   * Phone SMS webhook secret — SMS Forwarder app is token se connect
+   */
+  smsInboxToken        String? @unique
+  /**
+   * DG OTP wala registered mobile — phone bridge link is number se connect
+   */
+  dgOtpMobile          String?
 
   @@map("schoolsettings")
 }
@@ -329,14 +358,14 @@ model StudentAttendanceMonth {
 }
 
 model SmsInboxMessage {
-  id         String   @id @default(cuid())
-  createdAt  DateTime @default(now())
-  schoolId   String
-  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  sender     String?
-  body       String   @db.Text
-  otpCode    String?
-  consumed   Boolean  @default(false)
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sender    String?
+  body      String   @db.Text
+  otpCode   String?
+  consumed  Boolean  @default(false)
 
   @@index([schoolId, createdAt])
   @@index([schoolId, consumed])
@@ -344,46 +373,50 @@ model SmsInboxMessage {
 }
 
 model Staff {
-  id            String   @id @default(cuid())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  schoolId      String?
-  school        School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  employeeId    String?
-  firstName     String
-  firstNameGu   String?
-  lastName      String
-  lastNameGu    String?
-  designation   String
-  department    String?
-  mobileNumber  String
-  email         String?
-  gender        String?
-  dateOfJoining String?
-  dateOfBirth   String?
-  panNumber     String?
-  gpfCpfNo      String?
-  aadhaarNumber String?
-  qualification String?
-  /** e.g. "LEVEL-8 44900-142400" or "FIX PAY" */
-  payLevel      String?
-  isActive      Boolean  @default(true)
-  photoPath     String?
-  /** Monthly salary structure */
-  monthlySalary   Float?
-  hra             Float?   @default(0)
-  conveyance      Float?   @default(0)
-  pfDeduction     Float?   @default(0)
-  bankName        String?
-  bankAccount     String?
-  ifscCode        String?
-  classes       SchoolClass[] @relation("ClassTeacher")
-  user          User?
+  id               String                 @id @default(cuid())
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  schoolId         String?
+  school           School?                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  employeeId       String?
+  firstName        String
+  firstNameGu      String?
+  lastName         String
+  lastNameGu       String?
+  designation      String
+  department       String?
+  mobileNumber     String
+  email            String?
+  gender           String?
+  dateOfJoining    String?
+  dateOfBirth      String?
+  panNumber        String?
+  gpfCpfNo         String?
+  aadhaarNumber    String?
+  qualification    String?
+  /**
+   * e.g. "LEVEL-8 44900-142400" or "FIX PAY"
+   */
+  payLevel         String?
+  isActive         Boolean                @default(true)
+  photoPath        String?
+  /**
+   * Monthly salary structure
+   */
+  monthlySalary    Float?
+  hra              Float?                 @default(0)
+  conveyance       Float?                 @default(0)
+  pfDeduction      Float?                 @default(0)
+  bankName         String?
+  bankAccount      String?
+  ifscCode         String?
+  classes          SchoolClass[]          @relation("ClassTeacher")
+  user             User?
   attendanceMonths StaffAttendanceMonth[]
-  payrolls       StaffPayroll[]
+  payrolls         StaffPayroll[]
   timetableEntries TimetableEntry[]
-  salarySlipRows StaffSalarySlipRow[]
-  incomeTaxForms StaffIncomeTaxForm[]
+  salarySlipRows   StaffSalarySlipRow[]
+  incomeTaxForms   StaffIncomeTaxForm[]
 
   @@unique([schoolId, employeeId])
   @@index([schoolId])
@@ -449,11 +482,17 @@ model SalaryStatementRow {
   updatedAt     DateTime @updatedAt
   schoolId      String
   school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  /** e.g. "2023-24" */
+  /**
+   * e.g. "2023-24"
+   */
   financialYear String
-  /** secondary | higher_secondary | non_teaching | peon */
+  /**
+   * secondary | higher_secondary | non_teaching | peon
+   */
   category      String
-  /** 1–12 (statement order: Mar=3 … Feb=2) */
+  /**
+   * 1–12 (statement order: Mar=3 … Feb=2)
+   */
   month         Int
   year          Int
   basic         Float    @default(0)
@@ -475,7 +514,9 @@ model SalaryStatementRow {
   @@map("salarystatementrow")
 }
 
-/** Per-employee annual salary slip — one row per month (Apr–Mar) */
+/**
+ * Per-employee annual salary slip — one row per month (Apr–Mar)
+ */
 model StaffSalarySlipRow {
   id            String   @id @default(cuid())
   createdAt     DateTime @default(now())
@@ -484,11 +525,15 @@ model StaffSalarySlipRow {
   school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   staffId       String
   staff         Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  /** e.g. "2025-26" */
+  /**
+   * e.g. "2025-26"
+   */
   financialYear String
   month         Int
   year          Int
-  /** Salary side */
+  /**
+   * Salary side
+   */
   basic         Float    @default(0)
   da            Float    @default(0)
   hra           Float    @default(0)
@@ -500,7 +545,9 @@ model StaffSalarySlipRow {
   washAll       Float    @default(0)
   fpAll         Float    @default(0)
   phAll         Float    @default(0)
-  /** Deduction side */
+  /**
+   * Deduction side
+   */
   gpfCpf        Float    @default(0)
   iTax          Float    @default(0)
   pTax          Float    @default(0)
@@ -512,7 +559,9 @@ model StaffSalarySlipRow {
   @@map("staffsalarysliprow")
 }
 
-/** Per-employee income tax computation form (Avak Vera) — inputs stored as JSON */
+/**
+ * Per-employee income tax computation form (Avak Vera) — inputs stored as JSON
+ */
 model StaffIncomeTaxForm {
   id            String   @id @default(cuid())
   createdAt     DateTime @default(now())
@@ -521,7 +570,9 @@ model StaffIncomeTaxForm {
   school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   staffId       String
   staff         Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  /** e.g. "2025-26" */
+  /**
+   * e.g. "2025-26"
+   */
   financialYear String
   dataJson      String   @db.Text
 
@@ -531,25 +582,28 @@ model StaffIncomeTaxForm {
 }
 
 model SchoolClass {
-  id                  String   @id @default(cuid())
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                  String                  @id @default(cuid())
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
   schoolId            String?
-  school              School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school              School?                 @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   name                String
   standard            String
   section             String
-  /** Arts / Commerce for 11–12; empty for 9–10 */
-  stream              String   @default("")
-  academicYear        String   @default("2025-26")
+  /**
+   * Arts / Commerce for 11–12; empty for 9–10
+   */
+  stream              String                  @default("")
+  academicYear        String                  @default("2025-26")
   institutionName     String?
   institutionDistrict String?
   classTeacherId      String?
-  classTeacher        Staff?   @relation("ClassTeacher", fields: [classTeacherId], references: [id])
+  classTeacher        Staff?                  @relation("ClassTeacher", fields: [classTeacherId], references: [id])
   students            Student[]
   timetableEntries    TimetableEntry[]
   timetableReleases   ClassTimetableRelease[]
   classSubjects       ClassSubject[]
+  examSeatAssignments ExamSeatAssignment[]
 
   @@unique([schoolId, standard, section, stream, academicYear])
   @@index([schoolId])
@@ -567,7 +621,9 @@ model ClassSubject {
   name      String
   code      String
   shortName String      @default("")
-  /** numeric | grade */
+  /**
+   * numeric | grade
+   */
   type      String      @default("numeric")
   maxMarks  Int         @default(100)
   sortOrder Int         @default(0)
@@ -578,6 +634,57 @@ model ClassSubject {
   @@map("classsubject")
 }
 
+/**
+ * School-wide subject master — insert once, then assign by standard / class
+ */
+model SchoolSubject {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name      String
+  code      String
+  shortName String   @default("")
+  /**
+   * numeric | grade
+   */
+  type      String   @default("numeric")
+  maxMarks  Int      @default(100)
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  standardLinks StandardSubject[]
+
+  @@unique([schoolId, code])
+  @@index([schoolId])
+  @@map("schoolsubject")
+}
+
+/**
+ * Which master subjects apply to a standard (+ stream for 11–12)
+ */
+model StandardSubject {
+  id        String        @id @default(cuid())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  schoolId  String
+  school    School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  standard  String
+  /**
+   * "" | Arts | Commerce
+   */
+  stream    String        @default("")
+  subjectId String
+  subject   SchoolSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  sortOrder Int           @default(0)
+
+  @@unique([schoolId, standard, stream, subjectId])
+  @@index([schoolId, standard])
+  @@index([subjectId])
+  @@map("standardsubject")
+}
+
 model Student {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -585,32 +692,32 @@ model Student {
   schoolId  String?
   school    School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
-  firstName        String
-  middleName       String?
-  surname          String
-  firstNameGu      String?
-  middleNameGu     String?
-  surnameGu        String?
-  aadhaarName      String
-  aadhaarNameGu    String?
-  dateOfBirth      String
-  gender           String
-  aadhaarNumber    String
-  rationCardNumber String?
-  mobileNumber     String
-  email            String?
-  motherName       String
-  fatherName       String
-  motherNameGu     String?
-  fatherNameGu     String?
-  guardianName     String?
-  guardianNameGu   String?
-  category         String
-  caste            String?
-  religion         String
-  maritalStatus    String  @default("Unmarried")
-  parentOccupation String
-  isOrphan         Boolean @default(false)
+  firstName          String
+  middleName         String?
+  surname            String
+  firstNameGu        String?
+  middleNameGu       String?
+  surnameGu          String?
+  aadhaarName        String
+  aadhaarNameGu      String?
+  dateOfBirth        String
+  gender             String
+  aadhaarNumber      String
+  rationCardNumber   String?
+  mobileNumber       String
+  email              String?
+  motherName         String
+  fatherName         String
+  motherNameGu       String?
+  fatherNameGu       String?
+  guardianName       String?
+  guardianNameGu     String?
+  category           String
+  caste              String?
+  religion           String
+  maritalStatus      String  @default("Unmarried")
+  parentOccupation   String
+  isOrphan           Boolean @default(false)
   annualFamilyIncome Float
 
   classId              String?
@@ -620,48 +727,58 @@ model Student {
   section              String?
   standard             String?
   childUid             String?
+  /**
+   * APAAR ID (One Nation One Student ID) — also called UPPAR ID in some schools
+   */
+  apaarId              String?      @db.VarChar(16)
+  /**
+   * PAN of student / parent as collected for scholarship / IT forms
+   */
+  panNumber            String?      @db.VarChar(10)
   bloodGroup           String?
   idCardValidUpto      String?
   idPhotoProcessedPath String?
 
-  currentAddress     String   @db.Text
-  currentDistrict    String
-  currentCity        String
-  currentPincode     String
-  permanentAddress   String   @db.Text
-  permanentDistrict  String
-  permanentCity      String
-  permanentPincode   String
-  habitationType     String  @default("Own")
-  familySize         Int     @default(4)
-  residentType       String  @default("Rural")
-  isHosteler         Boolean @default(false)
-  hostelType         String?
-  hostelName         String?
+  currentAddress    String  @db.Text
+  currentDistrict   String
+  currentCity       String
+  currentPincode    String
+  permanentAddress  String  @db.Text
+  permanentDistrict String
+  permanentCity     String
+  permanentPincode  String
+  habitationType    String  @default("Own")
+  familySize        Int     @default(4)
+  residentType      String  @default("Rural")
+  isHosteler        Boolean @default(false)
+  hostelType        String?
+  hostelName        String?
 
-  scholarshipScheme    String
-  financialYear        String
-  courseType           String
-  courseName           String
-  institutionDistrict  String
-  institutionName      String
-  currentYear          String
-  admissionType        String  @default("Regular")
-  startDate            String?
-  completionDate       String?
-  board10th            String
-  percentage10th       Float
-  year10th             String
-  /** GSEB SSC seat — prefix A/B/C/S/P + 7 digit number */
-  sscSeatPrefix        String?  @default("A")
-  sscSeatNumber        String?
-  board12th            String?
-  percentage12th       Float?
-  year12th             String?
-  hscSeatPrefix        String?
-  hscSeatNumber        String?
-  gsebFetchedAt        DateTime?
-  gsebResultJson       String?  @db.Text
+  scholarshipScheme     String
+  financialYear         String
+  courseType            String
+  courseName            String
+  institutionDistrict   String
+  institutionName       String
+  currentYear           String
+  admissionType         String    @default("Regular")
+  startDate             String?
+  completionDate        String?
+  board10th             String
+  percentage10th        Float
+  year10th              String
+  /**
+   * GSEB SSC seat — prefix A/B/C/S/P + 7 digit number
+   */
+  sscSeatPrefix         String?   @default("A")
+  sscSeatNumber         String?
+  board12th             String?
+  percentage12th        Float?
+  year12th              String?
+  hscSeatPrefix         String?
+  hscSeatNumber         String?
+  gsebFetchedAt         DateTime?
+  gsebResultJson        String?   @db.Text
   previousQualification String?
 
   bankName          String
@@ -670,34 +787,35 @@ model Student {
   ifscCode          String
   accountHolderName String
 
-  dgLoginId       String?
-  dgPassword      String?
-  dgLoginMethod   String?  @default("mobile")
+  dgLoginId     String?
+  dgPassword    String?
+  dgLoginMethod String? @default("mobile")
 
-  photoPath           String?
-  aadhaarDocPath      String?
-  incomeCertPath      String?
-  casteCertPath       String?
-  marksheet10Path     String?
-  marksheet12Path     String?
-  bankPassbookPath    String?
-  feeReceiptPath      String?
+  photoPath        String?
+  aadhaarDocPath   String?
+  incomeCertPath   String?
+  casteCertPath    String?
+  marksheet10Path  String?
+  marksheet12Path  String?
+  bankPassbookPath String?
+  feeReceiptPath   String?
 
-  lastAutomationAt    DateTime?
-  lastAutomationLog   String?  @db.Text
+  lastAutomationAt  DateTime?
+  lastAutomationLog String?   @db.Text
 
-  status           String  @default("draft")
-  admissionStatus  String  @default("pending")
+  status           String    @default("draft")
+  admissionStatus  String    @default("pending")
   verifiedAt       DateTime?
   verifiedBy       String?
   submissionDate   DateTime?
-  notes            String?  @db.Text
-  validationErrors String?  @db.Text
+  notes            String?   @db.Text
+  validationErrors String?   @db.Text
 
-  user         User?
-  examResults  ExamResult[]
-  reportCards  ReportCard[]
-  attendanceMonths StudentAttendanceMonth[]
+  user                   User?
+  examResults            ExamResult[]
+  examSeatAssignments    ExamSeatAssignment[]
+  reportCards            ReportCard[]
+  attendanceMonths       StudentAttendanceMonth[]
   generalRegisterEntries GeneralRegisterEntry[]
 
   @@unique([schoolId, aadhaarNumber])
@@ -708,6 +826,8 @@ model Student {
   @@index([classId])
   @@index([standard])
   @@index([section])
+  @@index([apaarId])
+  @@index([panNumber])
   @@map("student")
 }
 
@@ -802,16 +922,16 @@ model ClassTimetableRelease {
 }
 
 model BulkSubmission {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  schoolId    String?
-  school      School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  totalCount  Int
-  successCount Int     @default(0)
-  failedCount  Int     @default(0)
-  status      String   @default("pending")
-  studentIds  String   @db.Text
-  results     String?  @db.Text
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  schoolId     String?
+  school       School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  totalCount   Int
+  successCount Int      @default(0)
+  failedCount  Int      @default(0)
+  status       String   @default("pending")
+  studentIds   String   @db.Text
+  results      String?  @db.Text
 
   @@index([schoolId])
   @@map("bulksubmission")
@@ -838,7 +958,9 @@ model AutomationJob {
   startedAt       DateTime?
   finishedAt      DateTime?
   errorMessage    String?
-  /** User/dashboard se OTP — automation auto-fill karega */
+  /**
+   * User/dashboard se OTP — automation auto-fill karega
+   */
   otpCode         String?
 
   @@index([schoolId])
@@ -849,21 +971,21 @@ model AutomationJob {
 
 // ─── Financial Year (April–March, Indian FY) ───
 model FinancialYear {
-  id         String   @id @default(cuid())
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  schoolId   String
-  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  label      String
-  startDate  DateTime
-  endDate    DateTime
-  isActive   Boolean  @default(false)
-  isLocked   Boolean  @default(false)
-  auditStatus String  @default("open")
-  submittedAt DateTime?
-  submittedById String?
-  submittedBy User?   @relation("FySubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
-  submittedRemarks String? @db.Text
+  id               String    @id @default(cuid())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  schoolId         String
+  school           School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  label            String
+  startDate        DateTime
+  endDate          DateTime
+  isActive         Boolean   @default(false)
+  isLocked         Boolean   @default(false)
+  auditStatus      String    @default("open")
+  submittedAt      DateTime?
+  submittedById    String?
+  submittedBy      User?     @relation("FySubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  submittedRemarks String?   @db.Text
 
   accounts      Account[]
   vouchers      Voucher[]
@@ -876,20 +998,20 @@ model FinancialYear {
 
 // ─── Chart of Accounts (Indian school accounting) ───
 model Account {
-  id              String   @id @default(cuid())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id              String        @id @default(cuid())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   schoolId        String
-  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school          School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   financialYearId String
   financialYear   FinancialYear @relation(fields: [financialYearId], references: [id], onDelete: Cascade)
   code            String
   name            String
   groupType       String
   accountType     String
-  openingBalance  Float    @default(0)
-  balanceType     String   @default("debit")
-  isActive        Boolean  @default(true)
+  openingBalance  Float         @default(0)
+  balanceType     String        @default("debit")
+  isActive        Boolean       @default(true)
   parentId        String?
 
   voucherLines VoucherLine[]
@@ -903,17 +1025,17 @@ model Account {
 
 // ─── Voucher (Payment / Receipt / Journal / Contra) ───
 model Voucher {
-  id              String   @id @default(cuid())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id              String        @id @default(cuid())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   schoolId        String
-  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school          School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   financialYearId String
   financialYear   FinancialYear @relation(fields: [financialYearId], references: [id], onDelete: Cascade)
   voucherNo       String
   voucherType     String
   voucherDate     DateTime
-  narration       String   @db.Text
+  narration       String        @db.Text
   totalAmount     Float
   referenceNo     String?
   partyName       String?
@@ -923,13 +1045,13 @@ model Voucher {
   billNo          String?
   billDate        DateTime?
   gstin           String?
-  auditStatus     String   @default("pending")
-  auditRemarks    String?  @db.Text
+  auditStatus     String        @default("pending")
+  auditRemarks    String?       @db.Text
   auditedAt       DateTime?
   auditedBy       String?
   createdById     String?
-  createdBy       User?    @relation("VoucherCreatedBy", fields: [createdById], references: [id])
-  isPosted        Boolean  @default(true)
+  createdBy       User?         @relation("VoucherCreatedBy", fields: [createdById], references: [id])
+  isPosted        Boolean       @default(true)
 
   lines VoucherLine[]
 
@@ -959,20 +1081,20 @@ model VoucherLine {
 
 // ─── CA Audit Session ───
 model CaAuditSession {
-  id              String   @id @default(cuid())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id              String        @id @default(cuid())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   schoolId        String
-  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school          School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   financialYearId String
   financialYear   FinancialYear @relation(fields: [financialYearId], references: [id], onDelete: Cascade)
-  status          String   @default("in_progress")
-  startedAt       DateTime @default(now())
+  status          String        @default("in_progress")
+  startedAt       DateTime      @default(now())
   completedAt     DateTime?
   caName          String?
   caMembershipNo  String?
-  findings        String?  @db.Text
-  recommendation  String?  @db.Text
+  findings        String?       @db.Text
+  recommendation  String?       @db.Text
 
   actions AuditAction[]
 
@@ -982,16 +1104,16 @@ model CaAuditSession {
 }
 
 model AuditAction {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  sessionId   String
-  session     CaAuditSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  action      String
-  entityType  String
-  entityId    String?
-  remarks     String?  @db.Text
+  id         String         @id @default(cuid())
+  createdAt  DateTime       @default(now())
+  sessionId  String
+  session    CaAuditSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?          @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  remarks    String?        @db.Text
 
   @@index([sessionId])
   @@map("auditaction")
@@ -1015,42 +1137,78 @@ model CaSchoolAssignment {
 
 // ─── Exams & Results ───
 model Exam {
-  id              String   @id @default(cuid())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  schoolId        String
-  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  name            String
-  examType        String
-  academicYear    String
-  standard        String?
-  term            String?
-  section         String?
-  maxMarks        Int      @default(100)
-  passingMarks    Int      @default(33)
-  reopeningDate   String?
-  examDate        DateTime?
-  /** JSON: mid exam count, per-term publish/lock/max marks — see exam-terms.ts */
-  termMeta        String?  @db.Text
-  isPublished     Boolean  @default(false)
-  publishedAt     DateTime?
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  schoolId      String
+  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name          String
+  examType      String
+  academicYear  String
+  standard      String?
+  term          String?
+  section       String?
+  maxMarks      Int       @default(100)
+  passingMarks  Int       @default(33)
+  reopeningDate String?
+  examDate      DateTime?
+  /**
+   * JSON: mid exam count, per-term publish/lock/max marks — see exam-terms.ts
+   */
+  termMeta      String?   @db.Text
+  isPublished   Boolean   @default(false)
+  publishedAt   DateTime?
 
   subjects ExamSubject[]
   results  ExamResult[]
+  seatAssignments ExamSeatAssignment[]
 
   @@index([schoolId])
   @@index([academicYear])
   @@map("exam")
 }
 
+/**
+ * School-internal seat number for one exam term and one student.
+ * This is independent from SSC/HSC board seat numbers on Student.
+ */
+model ExamSeatAssignment {
+  id           String      @id @default(cuid())
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  schoolId     String
+  school       School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  examId       String
+  exam         Exam        @relation(fields: [examId], references: [id], onDelete: Cascade)
+  termKey      String
+  classId      String
+  schoolClass  SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  seatNumber   String      @db.VarChar(40)
+  assignedBy   String?
+  /**
+   * Students only see seat numbers after staff publishes the class+exam plan.
+   */
+  isPublished  Boolean     @default(false)
+  publishedAt  DateTime?
+
+  @@unique([examId, termKey, studentId])
+  @@unique([examId, termKey, seatNumber])
+  @@index([schoolId, classId])
+  @@index([studentId])
+  @@index([examId, termKey, isPublished])
+  @@map("examseatassignment")
+}
+
 model ExamSubject {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   examId    String
-  exam      Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  exam      Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
   name      String
   code      String?
-  maxMarks  Int    @default(100)
-  sortOrder Int    @default(0)
+  maxMarks  Int     @default(100)
+  sortOrder Int     @default(0)
 
   results ExamResult[]
 
@@ -1059,20 +1217,20 @@ model ExamSubject {
 }
 
 model ExamResult {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  examId      String
-  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
-  subjectId   String
-  subject     ExamSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  studentId   String
-  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id               String      @id @default(cuid())
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  examId           String
+  exam             Exam        @relation(fields: [examId], references: [id], onDelete: Cascade)
+  subjectId        String
+  subject          ExamSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  studentId        String
+  student          Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   marksObtained    Float
-  achievementMarks Float   @default(0)
-  graceMarks       Float   @default(0)
+  achievementMarks Float       @default(0)
+  graceMarks       Float       @default(0)
   grade            String?
-  isAbsent         Boolean @default(false)
+  isAbsent         Boolean     @default(false)
   remarks          String?
 
   @@unique([examId, subjectId, studentId])
@@ -1082,13 +1240,13 @@ model ExamResult {
 }
 
 model ReportCard {
-  id           String   @id @default(cuid())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  studentId    String
-  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  examId       String?
-  academicYear String
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  studentId         String
+  student           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  examId            String?
+  academicYear      String
   standard          String
   section           String?
   totalMarks        Float?
@@ -1169,20 +1327,22 @@ model ChatAttachment {
   @@map("chatattachment")
 }
 
-/** School-wide daily attendance register — one book per date */
+/**
+ * School-wide daily attendance register — one book per date
+ */
 model DailyAttendanceBook {
-  id            String   @id @default(cuid())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id            String                   @id @default(cuid())
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
   schoolId      String
-  school        School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school        School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   dateIso       String
   academicYear  String
-  dayOfWeek     String   @default("")
+  dayOfWeek     String                   @default("")
   workingDay    Int?
-  shift         String   @default("")
+  shift         String                   @default("")
   avgPercent    Float?
-  principalSign String   @default("")
+  principalSign String                   @default("")
   rows          DailyAttendanceBookRow[]
 
   @@unique([schoolId, dateIso, academicYear])
@@ -1228,12 +1388,16 @@ model Notification {
   school    School?   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /** chat | student | attendance | system | admission | result */
+  /**
+   * chat | student | attendance | system | admission | result
+   */
   type      String    @default("system")
   title     String
   body      String?   @db.Text
   href      String?
-  /** Optional JSON meta (studentId, roomId, etc.) */
+  /**
+   * Optional JSON meta (studentId, roomId, etc.)
+   */
   metaJson  String?   @db.Text
   readAt    DateTime?
 
@@ -1243,7 +1407,9 @@ model Notification {
   @@map("notification")
 }
 
-/** Public landing “Contact support” form → super admin inbox */
+/**
+ * Public landing “Contact support” form → super admin inbox
+ */
 model ContactSupportMessage {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -1254,10 +1420,12 @@ model ContactSupportMessage {
   phone      String?
   schoolCode String?
   subject    String
-  message    String   @db.Text
-  /** new | read | resolved */
-  status     String   @default("new")
-  adminNote  String?  @db.Text
+  message    String  @db.Text
+  /**
+   * new | read | resolved
+   */
+  status     String  @default("new")
+  adminNote  String? @db.Text
 
   @@index([status, createdAt])
   @@index([createdAt])

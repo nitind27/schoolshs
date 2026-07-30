@@ -32,7 +32,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json();
     const data = await fillStaffGuNames({
-      employeeId: body.employeeId ? String(body.employeeId).trim() : null,
+      employeeId: body.employeeId ? String(body.employeeId).trim().toUpperCase() : null,
       firstName: String(body.firstName || "").trim(),
       firstNameGu: String(body.firstNameGu || "").trim() || null,
       lastName: String(body.lastName || "").trim(),
@@ -57,8 +57,33 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       pfDeduction: body.pfDeduction != null && body.pfDeduction !== "" ? Number(body.pfDeduction) : 0,
       bankName: body.bankName ? String(body.bankName).trim() : null,
       bankAccount: body.bankAccount ? String(body.bankAccount).trim() : null,
-      ifscCode: body.ifscCode ? String(body.ifscCode).trim() : null,
+      ifscCode: body.ifscCode ? String(body.ifscCode).trim().toUpperCase() : null,
     });
+
+    if (!data.firstName || !data.lastName || !data.designation || !data.mobileNumber) {
+      return NextResponse.json({ error: "Name, designation and mobile are required" }, { status: 400 });
+    }
+    if (!data.employeeId) {
+      return NextResponse.json({ error: "Teacher code is required" }, { status: 400 });
+    }
+    if (!/^[A-Z0-9_-]{2,20}$/.test(data.employeeId)) {
+      return NextResponse.json(
+        { error: "Teacher code must be 2–20 characters (letters, numbers, - or _)" },
+        { status: 400 },
+      );
+    }
+    if (!/^[6-9]\d{9}$/.test(data.mobileNumber)) {
+      return NextResponse.json({ error: "Enter a valid 10-digit mobile number" }, { status: 400 });
+    }
+
+    if (data.employeeId !== existing.employeeId) {
+      const duplicate = await prisma.staff.findUnique({
+        where: { schoolId_employeeId: { schoolId: session.schoolId!, employeeId: data.employeeId } },
+      });
+      if (duplicate && duplicate.id !== id) {
+        return NextResponse.json({ error: "Teacher code already exists" }, { status: 409 });
+      }
+    }
 
     const staff = await prisma.staff.update({ where: { id }, data });
     return NextResponse.json(staff);

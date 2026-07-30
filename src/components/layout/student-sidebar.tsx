@@ -1,7 +1,7 @@
 "use client";
 
 import { PortalSidebar, PortalLayout } from "@/components/layout/portal-sidebar";
-import { LayoutDashboard, Award, FileText, GraduationCap, FileCheck, User } from "lucide-react";
+import { LayoutDashboard, Award, FileText, GraduationCap, FileCheck, User, Armchair } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 
 export function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -13,6 +13,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
     { href: "/student/scholarship", label: t("studentNav.scholarshipStatus"), icon: FileCheck, group: t("studentNav.groupScholarship") },
     { href: "/student/documents", label: t("studentNav.documents"), icon: FileText, group: t("studentNav.groupScholarship") },
     { href: "/student/results", label: t("studentNav.myResults"), icon: Award, group: t("studentNav.groupAcademics") },
+    { href: "/student/exam-seat-numbers", label: t("examSeats.myTitle"), icon: Armchair, group: t("studentNav.groupAcademics") },
     { href: "/student/board", label: t("studentNav.boardRecords"), icon: GraduationCap, group: t("studentNav.groupAcademics") },
   ];
 

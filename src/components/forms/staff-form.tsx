@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -32,6 +32,7 @@ type StaffFormData = Partial<Staff> & {
 };
 
 type GuTouchKey = "firstNameGu" | "lastNameGu";
+type FieldErrors = Record<string, string>;
 
 interface StaffFormProps {
   initialData?: StaffFormData;
@@ -39,6 +40,12 @@ interface StaffFormProps {
   submitLabel?: string;
   cancelHref?: string;
 }
+
+const TEACHER_CODE_RE = /^[A-Za-z0-9_-]{2,20}$/;
+const MOBILE_RE = /^[6-9]\d{9}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
 function FormSection({
   step,
@@ -88,6 +95,10 @@ function ensureStaffGuNames(data: StaffFormData): StaffFormData {
   return out;
 }
 
+function normalizeTeacherCode(value: string) {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
+
 export function StaffForm({
   initialData = {},
   onSubmit,
@@ -101,48 +112,88 @@ export function StaffForm({
     ...initialData,
   });
   const [guTouched, setGuTouched] = useState<Partial<Record<GuTouchKey, boolean>>>({});
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   const resolvedSubmitLabel = submitLabel ?? t("staffPage.saveStaff");
   const roleWork = getStaffRoleWork(String(form.designation || ""));
   const isEditMode = Boolean(initialData?.id);
 
+  const clearError = (field: string) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+    setFormError(null);
+  };
+
   const update = (field: string, value: unknown) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    clearError(field);
   };
 
   const markGuTouched = (key: GuTouchKey) => {
     setGuTouched((prev) => ({ ...prev, [key]: true }));
   };
 
-  useEffect(() => {
-    if (isEditMode || form.employeeId) return;
-    fetch("/api/staff?active=false")
-      .then((r) => r.json())
-      .then((d) => {
-        const rows = Array.isArray(d?.staff) ? d.staff : [];
-        const used = new Set<string>(
-          rows
-            .map((s: Staff) => String(s.employeeId || "").trim().toUpperCase())
-            .filter((id: string): id is string => id.length > 0)
-        );
-        let maxSeq = 0;
-        for (const id of used) {
-          const match = /^EMP(\d+)$/.exec(id);
-          if (!match) continue;
-          const seq = Number.parseInt(match[1], 10);
-          if (!Number.isNaN(seq)) maxSeq = Math.max(maxSeq, seq);
-        }
-        const next = `EMP${String(maxSeq + 1).padStart(4, "0")}`;
-        setForm((prev) => (prev.employeeId ? prev : { ...prev, employeeId: next }));
-      })
-      .catch(() => {});
-  }, [isEditMode, form.employeeId]);
+  const validate = (): FieldErrors => {
+    const next: FieldErrors = {};
+    const code = normalizeTeacherCode(String(form.employeeId || ""));
+    const firstName = String(form.firstName || "").trim();
+    const lastName = String(form.lastName || "").trim();
+    const designation = String(form.designation || "").trim();
+    const mobile = String(form.mobileNumber || "").replace(/\D/g, "");
+    const email = String(form.email || "").trim().toLowerCase();
+    const pan = String(form.panNumber || "").trim().toUpperCase();
+    const aadhaar = String(form.aadhaarNumber || "").replace(/\D/g, "");
+    const ifsc = String(form.ifscCode || "").trim().toUpperCase();
+
+    if (!code) next.employeeId = t("staffPage.errTeacherCodeRequired");
+    else if (!TEACHER_CODE_RE.test(code)) next.employeeId = t("staffPage.errTeacherCodeFormat");
+
+    if (!firstName) next.firstName = t("staffPage.errFirstNameRequired");
+    if (!lastName) next.lastName = t("staffPage.errLastNameRequired");
+    if (!designation) next.designation = t("staffPage.errDesignationRequired");
+
+    if (!mobile) next.mobileNumber = t("staffPage.errMobileRequired");
+    else if (!MOBILE_RE.test(mobile)) next.mobileNumber = t("staffPage.errMobileFormat");
+
+    if (!isEditMode || email) {
+      if (!email) next.email = t("staffPage.errEmailRequired");
+      else if (!EMAIL_RE.test(email)) next.email = t("staffPage.errEmailFormat");
+    }
+
+    if (pan && !PAN_RE.test(pan)) next.panNumber = t("staffPage.errPanFormat");
+    if (aadhaar && aadhaar.length !== 12) next.aadhaarNumber = t("staffPage.errAadhaarFormat");
+    if (ifsc && !IFSC_RE.test(ifsc)) next.ifscCode = t("staffPage.errIfscFormat");
+
+    return next;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const nextErrors = validate();
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      setFormError(t("staffPage.fixErrors"));
+      return;
+    }
+
     setLoading(true);
+    setFormError(null);
     try {
-      await onSubmit(ensureStaffGuNames(form));
+      const payload = ensureStaffGuNames({
+        ...form,
+        employeeId: normalizeTeacherCode(String(form.employeeId || "")),
+        firstName: String(form.firstName || "").trim(),
+        lastName: String(form.lastName || "").trim(),
+        email: String(form.email || "").trim().toLowerCase() || null,
+        panNumber: String(form.panNumber || "").trim().toUpperCase() || null,
+        ifscCode: String(form.ifscCode || "").trim().toUpperCase() || null,
+      });
+      await onSubmit(payload);
     } finally {
       setLoading(false);
     }
@@ -150,22 +201,57 @@ export function StaffForm({
 
   return (
     <div className="staff-form-wrap">
-      <form onSubmit={handleSubmit} className="staff-form">
+      <form onSubmit={handleSubmit} className="staff-form" noValidate>
         <FormSection
           step={t("staffPage.sectionStep", { n: 1 })}
           icon={UserRound}
           title={t("staffPage.staffDetails")}
           description={t("staffPage.staffDetailsDesc")}
         >
+          {formError ? <p className="staff-form__banner-error">{formError}</p> : null}
+
           <div className="staff-form__grid">
-            <Input
-              label={t("staffPage.employeeId")}
-              placeholder="EMP0001"
-              value={form.employeeId || ""}
-              onChange={(e) => update("employeeId", e.target.value)}
-              disabled={!isEditMode}
+            <div className="staff-form__field-stack">
+              <Input
+                label={t("staffPage.teacherCode")}
+                placeholder={t("staffPage.teacherCodePlaceholder")}
+                required
+                maxLength={20}
+                value={form.employeeId || ""}
+                error={errors.employeeId}
+                onChange={(e) =>
+                  update(
+                    "employeeId",
+                    e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 20)
+                  )
+                }
+              />
+              <p className="staff-form__hint">{t("staffPage.teacherCodeHint")}</p>
+            </div>
+
+            <Select
+              label={t("staffPage.designation")}
+              required
+              options={STAFF_DESIGNATIONS}
+              value={form.designation || ""}
+              error={errors.designation}
+              onChange={(e) => update("designation", e.target.value)}
             />
-            <div className="staff-form__span-full">
+
+            <Input
+              label={t("staffPage.department")}
+              value={form.department || ""}
+              onChange={(e) => update("department", e.target.value)}
+            />
+
+            <Select
+              label={t("staffPage.gender")}
+              options={GENDERS}
+              value={form.gender || ""}
+              onChange={(e) => update("gender", e.target.value)}
+            />
+
+            <div className="staff-form__span-2">
               <BilingualNameField
                 label={t("staffPage.firstName")}
                 required
@@ -176,8 +262,10 @@ export function StaffForm({
                 guTouched={!!guTouched.firstNameGu}
                 onGuTouched={() => markGuTouched("firstNameGu")}
               />
+              {errors.firstName ? <p className="text-xs text-red-500 mt-1">{errors.firstName}</p> : null}
             </div>
-            <div className="staff-form__span-full">
+
+            <div className="staff-form__span-2">
               <BilingualNameField
                 label={t("staffPage.lastName")}
                 required
@@ -188,46 +276,36 @@ export function StaffForm({
                 guTouched={!!guTouched.lastNameGu}
                 onGuTouched={() => markGuTouched("lastNameGu")}
               />
+              {errors.lastName ? <p className="text-xs text-red-500 mt-1">{errors.lastName}</p> : null}
             </div>
-            <Select
-              label={t("staffPage.designation")}
-              required
-              options={STAFF_DESIGNATIONS}
-              value={form.designation || ""}
-              onChange={(e) => update("designation", e.target.value)}
-            />
-            <Input
-              label={t("staffPage.department")}
-              value={form.department || ""}
-              onChange={(e) => update("department", e.target.value)}
-            />
-            <Select
-              label={t("staffPage.gender")}
-              options={GENDERS}
-              value={form.gender || ""}
-              onChange={(e) => update("gender", e.target.value)}
-            />
+
             <Input
               label={t("staffPage.mobileNumber")}
               required
               maxLength={10}
+              inputMode="numeric"
               value={form.mobileNumber || ""}
+              error={errors.mobileNumber}
               onChange={(e) => update("mobileNumber", e.target.value.replace(/\D/g, "").slice(0, 10))}
             />
+
             <Input
               label={t("common.email")}
               type="email"
               required={!isEditMode}
               value={form.email || ""}
+              error={errors.email}
               onChange={(e) => update("email", e.target.value)}
               placeholder="teacher@school.com"
             />
+
             <DateField
               label={t("staffPage.dateOfJoining")}
               value={form.dateOfJoining || ""}
               onChange={(v) => update("dateOfJoining", v)}
               outputFormat="dmy-dash"
             />
+
             {!isEditMode ? (
               <p className="staff-form__hint staff-form__span-full">{t("staffPage.emailLoginHint")}</p>
             ) : null}
@@ -261,7 +339,10 @@ export function StaffForm({
               placeholder="ABCDE1234F"
               maxLength={10}
               value={form.panNumber || ""}
-              onChange={(e) => update("panNumber", e.target.value.toUpperCase())}
+              error={errors.panNumber}
+              onChange={(e) =>
+                update("panNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))
+              }
             />
             <Input
               label={t("staffRegister.gpfCpfNo")}
@@ -272,7 +353,9 @@ export function StaffForm({
             <Input
               label={t("staffRegister.aadhaarNumber")}
               maxLength={12}
+              inputMode="numeric"
               value={form.aadhaarNumber || ""}
+              error={errors.aadhaarNumber}
               onChange={(e) =>
                 update("aadhaarNumber", e.target.value.replace(/\D/g, "").slice(0, 12))
               }
@@ -350,7 +433,11 @@ export function StaffForm({
             <Input
               label={t("staffHr.ifscCode")}
               value={form.ifscCode || ""}
-              onChange={(e) => update("ifscCode", e.target.value.toUpperCase())}
+              error={errors.ifscCode}
+              maxLength={11}
+              onChange={(e) =>
+                update("ifscCode", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11))
+              }
             />
           </div>
         </FormSection>

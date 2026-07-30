@@ -10,7 +10,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** Bump when schema changes — forces fresh client in dev HMR */
-const SCHEMA_VERSION = 28;
+const SCHEMA_VERSION = 32;
 
 function isClientFresh(client: PrismaClient): boolean {
   const hasLoginSecurity =
@@ -21,6 +21,8 @@ function isClientFresh(client: PrismaClient): boolean {
     "firstNameGu" in Prisma.StaffScalarFieldEnum &&
     "lastNameGu" in Prisma.StaffScalarFieldEnum;
   const hasLoginGeo = "lastLoginIp" in Prisma.UserScalarFieldEnum;
+  const hasExamTemplate =
+    "examTemplate" in Prisma.SchoolSettingsScalarFieldEnum;
 
   return (
     "user" in client &&
@@ -34,12 +36,14 @@ function isClientFresh(client: PrismaClient): boolean {
     "pendingAdminEmailVerification" in client &&
     "schoolRegistrationDraft" in client &&
     "dailyAttendanceBook" in client &&
+    "examSeatAssignment" in client &&
     "loginEvent" in client &&
     "userSession" in client &&
     hasLoginSecurity &&
     hasEmailVerification &&
     hasStaffGuNames &&
-    hasLoginGeo
+    hasLoginGeo &&
+    hasExamTemplate
   );
 }
 
@@ -48,9 +52,9 @@ export function getPrisma(): PrismaClient {
   if (cached && isClientFresh(cached) && globalForPrisma.prismaSchemaVersion === SCHEMA_VERSION) {
     return cached;
   }
-  if (cached) {
-    void cached.$disconnect().catch(() => undefined);
-  }
+  // Do not disconnect the previous client during dev HMR. Requests already
+  // using its pool would otherwise fail with "pool is ending". The old module
+  // instance is reclaimed with the dev process; schema bumps are rare.
   const client = createPrismaClient();
   globalForPrisma.prisma = client;
   globalForPrisma.prismaSchemaVersion = SCHEMA_VERSION;

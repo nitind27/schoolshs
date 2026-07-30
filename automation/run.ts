@@ -20,10 +20,12 @@ import {
   navigateToStudentForm,
   autoFillAllPages,
   autoClickSubmit,
+  hasSubmissionConfirmation,
   scrapePortalStatus,
   type ApplyActionMode,
 } from "./portal-navigator";
 import { resolveDocAbsolutePath } from "../src/lib/student-documents.server";
+import type { DocType } from "../src/lib/student-documents";
 import { JobReporter, buildInitialProgress, type StudentProgressItem } from "./status-reporter";
 import { isAutomationHeadless, VPS_LOGIN_HELP } from "./headless";
 import { prisma } from "../src/lib/db";
@@ -65,18 +67,25 @@ async function fillCurrentPage(page: Page, student: Record<string, unknown>, stu
   const dropdownFilled = await fillDropdowns(page, student, DG_DROPDOWN_MAPPINGS, log);
   await fillRadioAndCheckboxes(page, student, log);
 
-  const docPath = (stored: unknown) =>
-    resolveDocAbsolutePath(studentId, stored ? String(stored) : null) || "";
+  const docPath = (type: DocType, stored: unknown) =>
+    resolveDocAbsolutePath(
+      studentId,
+      stored ? String(stored) : null,
+      type,
+    ) || "";
 
   const docs = [
-    { label: "photo", path: docPath(student.photoPath) },
-    { label: "aadhaar", path: docPath(student.aadhaarDocPath) },
-    { label: "income", path: docPath(student.incomeCertPath) },
-    { label: "caste", path: docPath(student.casteCertPath) },
-    { label: "10th", path: docPath(student.marksheet10Path) },
-    { label: "12th", path: docPath(student.marksheet12Path) },
-    { label: "bank", path: docPath(student.bankPassbookPath) },
-    { label: "fee", path: docPath(student.feeReceiptPath) },
+    { label: "photo", path: docPath("photo", student.photoPath) },
+    { label: "aadhaar", path: docPath("aadhaar", student.aadhaarDocPath) },
+    { label: "income", path: docPath("income", student.incomeCertPath) },
+    { label: "caste", path: docPath("caste", student.casteCertPath) },
+    { label: "10th", path: docPath("marksheet10", student.marksheet10Path) },
+    { label: "12th", path: docPath("marksheet12", student.marksheet12Path) },
+    {
+      label: "bank",
+      path: docPath("bankPassbook", student.bankPassbookPath),
+    },
+    { label: "fee", path: docPath("feeReceipt", student.feeReceiptPath) },
   ];
   const uploaded = await uploadDocuments(page, docs, log);
   log(`Filled ${textFilled} text, ${dropdownFilled} dropdowns, ${uploaded} docs`);
@@ -154,21 +163,46 @@ async function runStudentFlow(
   const fillFn = () => fillCurrentPage(page, student as unknown as Record<string, unknown>, studentId);
   await fillFn();
 
-  const pagesDone = await autoFillAllPages(page, fillFn, log, 8);
+  const formFlow = await autoFillAllPages(page, fillFn, log, 8);
+  let submitClicked = false;
 
-  if (pagesDone < 2) {
+  if (formFlow.readyToSubmit) {
+    if (reporter) {
+      reporter.updateStudent(studentId, {
+        step: "Preview ready — waiting for final approval",
+        percent: 90,
+      });
+      await reporter.flush({ currentStep: `${name} — Preview & approve final submit` });
+    }
     await waitForUserAction(
       page,
-      `Verify karein → NEXT/SUBMIT portal pe dabayein → phir Continue`,
+      `${name} ka preview dhyan se verify karein. Sab sahi ho to green Continue dabayein; uske baad automation Final Submit karegi.`,
       log,
       600000,
-      { stepLabel: `${name} — Verify & Submit` }
+      {
+        stepLabel: `${name} — Preview & Final Submit Approval`,
+        requireVisibleApproval: true,
+      },
     );
-    await autoClickSubmit(page, log);
+    submitClicked = await autoClickSubmit(page, log);
+  } else {
+    await waitForUserAction(
+      page,
+      `${name} ka final Preview/Submit page kholein, details verify karein, phir green Continue dabayein.`,
+      log,
+      600000,
+      {
+        stepLabel: `${name} — Open Preview`,
+        requireVisibleApproval: true,
+      },
+    );
+    submitClicked = await autoClickSubmit(page, log);
   }
 
   const finalPortalStatus = await scrapePortalStatus(page);
-  const submitted = finalPortalStatus?.toLowerCase().includes("submit") || pagesDone >= 2;
+  const submitted =
+    finalPortalStatus?.toLowerCase().includes("submit") ||
+    (submitClicked && (await hasSubmissionConfirmation(page)));
 
   await prisma.student.update({
     where: { id: studentId },
@@ -176,7 +210,7 @@ async function runStudentFlow(
       status: submitted ? "submitted" : "ready",
       submissionDate: submitted ? new Date() : undefined,
       lastAutomationAt: new Date(),
-      lastAutomationLog: `[Auto Apply] ${name} — ${submitted ? "submitted" : "filled"} | ${pagesDone} pages | DG: ${finalPortalStatus || "—"}`,
+      lastAutomationLog: `[Auto Apply] ${name} — ${submitted ? "submitted" : "filled"} | ${formFlow.pagesDone} pages | DG: ${finalPortalStatus || "—"}`,
     },
   });
 
@@ -186,12 +220,14 @@ async function runStudentFlow(
       dgPortalStatus: finalPortalStatus || (submitted ? "submitted" : "filled"),
       step: submitted ? "Submitted on DG" : "Form filled — verify submit",
       percent: 100,
-      message: `${pagesDone} pages auto-processed`,
+      message: `${formFlow.pagesDone} pages auto-processed`,
     });
     await reporter.flush();
   }
 
-  log(`✅ ${name} — ${submitted ? "submitted" : "filled"} (${pagesDone} pages)`);
+  log(
+    `✅ ${name} — ${submitted ? "submitted" : "filled; confirmation not detected"} (${formFlow.pagesDone} pages)`,
+  );
 }
 
 function verifyPlaywrightChromium(log: LogFn): void {
@@ -307,9 +343,12 @@ async function main() {
   const { context, profileDir } = await launchBrowser(portal, firstStudent as unknown as Record<string, unknown>);
   const page = context.pages()[0] || (await context.newPage());
 
-  log(`Opening Digital Gujarat browser → ${portal.loginUrl}`);
-  if (reporter) await reporter.flush({ currentStep: "Digital Gujarat browser khul raha hai..." });
-  await page.goto(portal.loginUrl, { waitUntil: "domcontentloaded", timeout: 90000 }).catch(() => {});
+  log(`Digital Gujarat browser ready → ${portal.label}`);
+  if (reporter) {
+    await reporter.flush({
+      currentStep: "Digital Gujarat browser ready — checking saved session",
+    });
+  }
   await page.bringToFront().catch(() => {});
   log(`Browser URL: ${page.url()}`);
 
@@ -328,12 +367,49 @@ async function main() {
       );
     }
 
+    let failedStudents = 0;
     for (let i = 0; i < studentIds.length; i++) {
-      await runStudentFlow(page, studentIds[i], i, studentIds.length, actionMode, profileDir, portal);
+      try {
+        await runStudentFlow(
+          page,
+          studentIds[i],
+          i,
+          studentIds.length,
+          actionMode,
+          profileDir,
+          portal,
+        );
+      } catch (studentError) {
+        failedStudents++;
+        const message =
+          studentError instanceof Error
+            ? studentError.message
+            : String(studentError);
+        log(`❌ Student failed: ${message}`);
+        if (reporter) {
+          reporter.updateStudent(studentIds[i], {
+            status: "failed",
+            step: "Failed",
+            message,
+            percent: 0,
+          });
+          await reporter.flush();
+        }
+      }
     }
 
-    log(`🎉 Done — ${studentIds.length} student(s) processed`);
-    if (reporter) await reporter.complete("completed");
+    log(
+      `🎉 Done — ${studentIds.length - failedStudents} completed, ${failedStudents} failed`,
+    );
+    if (reporter) {
+      await reporter.complete(
+        failedStudents === 0
+          ? "completed"
+          : failedStudents === studentIds.length
+            ? "failed"
+            : "partial",
+      );
+    }
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     log(`❌ Error: ${errMsg}`);
@@ -353,7 +429,22 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(err);
+  const message = err instanceof Error ? err.message : String(err);
+  if (jobId) {
+    await prisma.automationJob
+      .update({
+        where: { id: jobId },
+        data: {
+          status: "failed",
+          currentStep: "Automation worker failed",
+          errorMessage: message,
+          finishedAt: new Date(),
+        },
+      })
+      .catch(() => {});
+  }
+  await prisma.$disconnect().catch(() => {});
   process.exit(1);
 });

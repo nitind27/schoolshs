@@ -6,8 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SCHOOL_STANDARDS, SENIOR_STREAMS } from "@/lib/constants";
 import { buildClassName, nextAvailableSection } from "@/lib/class-structure";
+import {
+  CLASS_TEACHER_STAFF_QUERY,
+  buildTeacherClassMap,
+  formatClassTeacherOptionLabel,
+  getTeacherBusyClass,
+  pickClassTeacherOptions,
+  sortClassTeacherOptionsForClass,
+} from "@/lib/class-teacher-staff";
 import { Save } from "lucide-react";
-import type { SchoolClass } from "@/generated/prisma/client";
+import type { SchoolClass, Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 
 type ClassFormData = Partial<SchoolClass>;
@@ -29,10 +37,12 @@ export function ClassForm({
   const isEdit = Boolean(initialData?.id);
   const [loading, setLoading] = useState(false);
   const [existingClasses, setExistingClasses] = useState<SchoolClass[]>([]);
+  const [teachers, setTeachers] = useState<Staff[]>([]);
   const [sectionTouched, setSectionTouched] = useState(isEdit);
   const [form, setForm] = useState<ClassFormData>({
     section: "A",
     stream: "",
+    classTeacherId: null,
     ...initialData,
   });
 
@@ -47,6 +57,12 @@ export function ClassForm({
       .then((r) => r.json())
       .then((d) => setExistingClasses(d.classes || []))
       .catch(() => setExistingClasses([]));
+    fetch(`/api/staff?${CLASS_TEACHER_STAFF_QUERY}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setTeachers(pickClassTeacherOptions((d.staff || []) as Staff[]));
+      })
+      .catch(() => setTeachers([]));
   }, []);
 
   const siblingSections = useMemo(() => {
@@ -102,11 +118,38 @@ export function ClassForm({
         section,
         stream: resolvedStream,
         name: buildClassName(standard, section, resolvedStream || undefined),
+        classTeacherId: form.classTeacherId || null,
       });
     } finally {
       setLoading(false);
     }
   };
+
+  const teacherAssignments = useMemo(
+    () => buildTeacherClassMap(existingClasses),
+    [existingClasses],
+  );
+
+  const teacherOptions = useMemo(() => {
+    const sorted = sortClassTeacherOptionsForClass(
+      teachers,
+      initialData.id,
+      teacherAssignments,
+    );
+    return sorted.map((s) => {
+      const busy = getTeacherBusyClass(s.id, initialData.id, teacherAssignments);
+      return {
+        value: s.id,
+        disabled: Boolean(busy),
+        label: formatClassTeacherOptionLabel({
+          firstName: s.firstName,
+          lastName: s.lastName,
+          designation: s.designation,
+          busyClassName: busy?.className,
+        }),
+      };
+    });
+  }, [teachers, teacherAssignments, initialData.id]);
 
   const classAlreadyExists = Boolean(
     standard &&
@@ -197,9 +240,19 @@ export function ClassForm({
       {previewName && (
         <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-600">
           <span className="font-medium text-slate-900">{previewName}</span>
-          <span className="text-slate-400"> · {t("classes.teacherAssignLater")}</span>
+          {!form.classTeacherId ? (
+            <span className="text-slate-400"> · {t("classes.teacherAssignLater")}</span>
+          ) : null}
         </p>
       )}
+
+      <Select
+        label={t("classes.classTeacher")}
+        options={teacherOptions}
+        value={String(form.classTeacherId || "")}
+        onChange={(e) => update("classTeacherId", e.target.value || null)}
+        emptyLabel={t("classes.noClassTeacher")}
+      />
 
       <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
         {onCancel && (

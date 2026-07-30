@@ -84,7 +84,7 @@ export function ConfirmModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-[200] flex items-end justify-center p-2 sm:items-center sm:p-6"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
@@ -101,13 +101,13 @@ export function ConfirmModal({
       <div
         ref={modalRef}
         className={cn(
-          "relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl animate-fade-in",
+          "relative z-10 max-h-[calc(100dvh-1rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl animate-fade-in",
           locale === "gu" && "font-gujarati"
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 pt-6 pb-2">
-          <div className="flex items-start gap-4">
+        <div className="px-4 pb-2 pt-4 sm:px-6 sm:pt-6">
+          <div className="flex items-start gap-3 sm:gap-4">
             <div
               className={cn(
                 "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
@@ -119,13 +119,13 @@ export function ConfirmModal({
             <div className="min-w-0 flex-1 pt-0.5">
               <h2
                 id="confirm-modal-title"
-                className="text-lg font-semibold text-slate-900"
+              className="break-words text-base font-semibold text-slate-900 sm:text-lg"
               >
                 {title}
               </h2>
               <p
                 id="confirm-modal-message"
-                className="mt-2 text-sm leading-relaxed text-slate-600"
+                className="mt-2 break-words text-sm leading-relaxed text-slate-600"
               >
                 {message}
               </p>
@@ -142,13 +142,13 @@ export function ConfirmModal({
           </div>
         </div>
 
-        <div className="flex flex-col-reverse gap-2 px-6 py-5 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-2 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
           <Button
             type="button"
             variant="outline"
             onClick={onClose}
             disabled={loading}
-            className="sm:min-w-[96px]"
+            className="w-full sm:w-auto sm:min-w-[96px]"
           >
             {cancelLabel ?? t("common.cancel")}
           </Button>
@@ -163,7 +163,7 @@ export function ConfirmModal({
             }
             onClick={() => void onConfirm()}
             disabled={loading}
-            className="sm:min-w-[96px]"
+            className="w-full sm:w-auto sm:min-w-[96px]"
           >
             {loading ? t("common.loading") : (confirmLabel ?? t("common.confirm"))}
           </Button>

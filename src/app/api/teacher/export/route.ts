@@ -8,7 +8,10 @@ import {
   countMonthPresent,
   parseDaysJson,
 } from "@/lib/attendance";
-import { assertTeacherAttendanceAccess, teacherClassIds } from "@/lib/teacher-attendance";
+import {
+  assertTeacherAttendanceAccess,
+  teacherClassIds,
+} from "@/lib/teacher-attendance";
 import {
   buildSimpleTablePdf,
   buildTeacherExcelBuffer,
@@ -39,11 +42,21 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type") || "dashboard";
     const format = (searchParams.get("format") || "xlsx").toLowerCase();
     const classId = searchParams.get("classId");
-    const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1), 10);
-    const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()), 10);
+    const month = parseInt(
+      searchParams.get("month") || String(new Date().getMonth() + 1),
+      10,
+    );
+    const year = parseInt(
+      searchParams.get("year") || String(new Date().getFullYear()),
+      10,
+    );
 
     if (!session.staffId && session.role === "teacher") {
-      return mobileJson({ error: "Staff profile not linked" }, { status: 403 }, origin);
+      return mobileJson(
+        { error: "Staff profile not linked" },
+        { status: 403 },
+        origin,
+      );
     }
 
     if (classId) {
@@ -61,7 +74,11 @@ export async function GET(request: NextRequest) {
           ).map((c) => c.id);
 
     if (classId && !allowedClassIds.includes(classId)) {
-      return mobileJson({ error: "Class not assigned to you" }, { status: 403 }, origin);
+      return mobileJson(
+        { error: "Class not assigned to you" },
+        { status: 403 },
+        origin,
+      );
     }
 
     const scopeIds = classId ? [classId] : allowedClassIds;
@@ -84,6 +101,10 @@ export async function GET(request: NextRequest) {
             category: true,
             mobileNumber: true,
             status: true,
+            sscSeatPrefix: true,
+            sscSeatNumber: true,
+            hscSeatPrefix: true,
+            hscSeatNumber: true,
           },
         },
       },
@@ -93,16 +114,68 @@ export async function GET(request: NextRequest) {
       where: { id: session.schoolId },
       select: { name: true, settings: { select: { schoolName: true } } },
     });
-    const schoolName = school?.settings?.schoolName || school?.name || session.schoolName || "School";
+    const schoolName =
+      school?.settings?.schoolName ||
+      school?.name ||
+      session.schoolName ||
+      "School";
     const teacherName = session.name || "Teacher";
     const generatedAt = new Date().toISOString();
 
     let payload: TeacherExportPayload;
 
-    if (type === "roster") {
+    if (type === "schedule") {
+      const entries = session.staffId
+        ? await prisma.timetableEntry.findMany({
+            where: {
+              schoolId: session.schoolId,
+              teacherId: session.staffId,
+              dayOfWeek: new Date().getDay() === 0 ? 7 : new Date().getDay(),
+            },
+            include: {
+              class: {
+                select: { name: true, standard: true, section: true },
+              },
+            },
+            orderBy: [{ dayOfWeek: "asc" }, { periodIndex: "asc" }],
+          })
+        : [];
+      payload = {
+        type: "schedule",
+        title: "Teacher Today Schedule",
+        schoolName,
+        teacherName,
+        filterSummary: `${entries.length} period(s)`,
+        generatedAt,
+        sheets: [
+          {
+            name: "Today Schedule",
+            headers: ["Day", "Period", "Subject", "Class", "Room"],
+            rows: entries.map((entry) => [
+              entry.dayOfWeek,
+              entry.periodIndex,
+              entry.subject,
+              entry.class?.name ||
+                `${entry.class?.standard || ""}-${entry.class?.section || ""}`,
+              entry.room || "",
+            ]),
+          },
+        ],
+      };
+    } else if (type === "roster") {
       const sheets = classes.map((cls) => ({
         name: cls.name.slice(0, 31),
-        headers: ["#", "Roll", "GR", "Name", "Gender", "Category", "Mobile", "Status"],
+        headers: [
+          "#",
+          "Roll",
+          "GR",
+          "Name",
+          "Gender",
+          "Category",
+          "Mobile",
+          "Board Seat No.",
+          "Status",
+        ],
         rows: cls.students.map((s, i) => [
           i + 1,
           s.rollNumber || "",
@@ -111,6 +184,11 @@ export async function GET(request: NextRequest) {
           s.gender || "",
           s.category || "",
           s.mobileNumber || "",
+          cls.standard === "12"
+            ? [s.hscSeatPrefix, s.hscSeatNumber].filter(Boolean).join("")
+            : cls.standard === "10"
+              ? [s.sscSeatPrefix, s.sscSeatNumber].filter(Boolean).join("")
+              : "",
           s.status || "",
         ]),
       }));
@@ -131,7 +209,12 @@ export async function GET(request: NextRequest) {
       const studentIds = classes.flatMap((c) => c.students.map((s) => s.id));
       const records = studentIds.length
         ? await prisma.studentAttendanceMonth.findMany({
-            where: { schoolId: session.schoolId, month, year, studentId: { in: studentIds } },
+            where: {
+              schoolId: session.schoolId,
+              month,
+              year,
+              studentId: { in: studentIds },
+            },
           })
         : [];
       const byStudent = new Map(records.map((r) => [r.studentId, r]));
@@ -139,7 +222,17 @@ export async function GET(request: NextRequest) {
 
       const sheets = classes.map((cls) => ({
         name: cls.name.slice(0, 31),
-        headers: ["#", "Roll", "Name", ...dayHeaders, "P", "A", "H", "Marked", "%"],
+        headers: [
+          "#",
+          "Roll",
+          "Name",
+          ...dayHeaders,
+          "P",
+          "A",
+          "H",
+          "Marked",
+          "%",
+        ],
         rows: cls.students.map((s, i) => {
           const rec = byStudent.get(s.id);
           const days = parseDaysJson(rec?.daysJson);
@@ -176,8 +269,12 @@ export async function GET(request: NextRequest) {
     } else {
       // dashboard summary
       const rows = classes.map((cls) => {
-        const boys = cls.students.filter((s) => (s.gender || "").toLowerCase().startsWith("m")).length;
-        const girls = cls.students.filter((s) => (s.gender || "").toLowerCase().startsWith("f")).length;
+        const boys = cls.students.filter((s) =>
+          (s.gender || "").toLowerCase().startsWith("m"),
+        ).length;
+        const girls = cls.students.filter((s) =>
+          (s.gender || "").toLowerCase().startsWith("f"),
+        ).length;
         return [
           cls.name,
           cls.standard,
@@ -198,7 +295,15 @@ export async function GET(request: NextRequest) {
         sheets: [
           {
             name: "My Classes",
-            headers: ["Class", "Std", "Div", "Students", "Boys", "Girls", "Year"],
+            headers: [
+              "Class",
+              "Std",
+              "Div",
+              "Students",
+              "Boys",
+              "Girls",
+              "Year",
+            ],
             rows,
           },
         ],

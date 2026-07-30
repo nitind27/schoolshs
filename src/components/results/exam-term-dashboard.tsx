@@ -12,6 +12,7 @@ import {
   Send,
   Unlock,
   Calendar,
+  Printer,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,9 @@ export type TermStat = {
   key: ExamTermKey;
   labelEn: string;
   labelGu: string;
+  role: "component" | "final";
   maxMarks: number;
+  internalMax?: number;
   published: boolean;
   locked: boolean;
   examDate: string | null;
@@ -32,17 +35,26 @@ export type TermStat = {
   percent: number;
 };
 
-const TERM_COLORS: Record<ExamTermKey, string> = {
-  mid1: "from-violet-500 to-purple-600",
-  mid2: "from-blue-500 to-cyan-600",
-  final: "from-amber-500 to-orange-600",
-};
+const TERM_COLORS = [
+  "from-violet-500 to-purple-600",
+  "from-blue-500 to-cyan-600",
+  "from-sky-500 to-indigo-600",
+  "from-teal-500 to-emerald-600",
+  "from-rose-500 to-pink-600",
+  "from-amber-500 to-orange-600",
+];
+
+function colorForKey(key: string, index: number): string {
+  if (key === "final") return "from-amber-500 to-orange-600";
+  return TERM_COLORS[index % TERM_COLORS.length]!;
+}
 
 export function ExamTermDashboard({
   classId,
   examId,
+  standard,
   termStats,
-  midExamCount,
+  midExamCount: _midExamCount,
   isAdmin,
   onPublish,
   onUnpublish,
@@ -50,15 +62,16 @@ export function ExamTermDashboard({
 }: {
   classId: string;
   examId: string;
+  standard: string;
   termStats: TermStat[];
-  midExamCount: 1 | 2;
+  midExamCount?: number;
   isAdmin?: boolean;
   onPublish?: (term: ExamTermKey) => void;
   onUnpublish?: (term: ExamTermKey) => void;
   busyTerm?: ExamTermKey | null;
 }) {
   const t = useT();
-  const visible = termStats.filter((ts) => ts.key !== "mid2" || midExamCount === 2);
+  const visible = termStats;
 
   return (
     <div className="space-y-4">
@@ -68,15 +81,15 @@ export function ExamTermDashboard({
           <p className="text-sm text-slate-500">{t("examTerms.subtitle")}</p>
         </div>
         {isAdmin && (
-          <Link href={`/results/exams/settings?classId=${classId}`}>
+          <Link href="/exams">
             <Button variant="outline" size="sm">{t("examTerms.settings")}</Button>
           </Link>
         )}
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        {visible.map((ts) => {
-          const color = TERM_COLORS[ts.key];
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {visible.map((ts, index) => {
+          const color = colorForKey(ts.key, index);
           return (
             <Card key={ts.key} className="overflow-hidden border-slate-200">
               <div className={cn("h-1.5 bg-gradient-to-r", color)} />
@@ -84,7 +97,7 @@ export function ExamTermDashboard({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                      {t(`examTerms.${ts.key}`)}
+                      {ts.labelEn}
                     </p>
                     <h3 className="font-bold text-slate-900 mt-0.5">{ts.labelEn}</h3>
                     <p className="text-xs text-slate-400 gu-text">{ts.labelGu}</p>
@@ -105,7 +118,15 @@ export function ExamTermDashboard({
                 </div>
 
                 <div className="flex items-center gap-3 text-sm text-slate-600">
-                  <span>{t("examTerms.maxMarks", { marks: ts.maxMarks })}</span>
+                  <span>
+                    {(ts.internalMax ?? 0) > 0
+                      ? t("examsHub.paperTeacherTotal", {
+                          paper: ts.maxMarks,
+                          internal: ts.internalMax ?? 0,
+                          total: ts.maxMarks + (ts.internalMax ?? 0),
+                        })
+                      : t("examTerms.maxMarks", { marks: ts.maxMarks })}
+                  </span>
                   {ts.examDate && (
                     <span className="inline-flex items-center gap-1 text-xs">
                       <Calendar className="h-3 w-3" /> {ts.examDate}
@@ -138,6 +159,21 @@ export function ExamTermDashboard({
                       {ts.published ? t("examTerms.viewMarks") : t("examTerms.enterMarks")}
                     </Button>
                   </Link>
+                  {["11", "12"].includes(standard) &&
+                    ts.role === "component" && (
+                      <Link
+                        href={`/results/print?examId=${examId}&classId=${classId}&term=${ts.key}&mode=all`}
+                      >
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 border-violet-200 text-violet-700"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          પ્રિન્ટ
+                        </Button>
+                      </Link>
+                    )}
                   {!ts.published && onPublish && (
                     <Button
                       size="sm"

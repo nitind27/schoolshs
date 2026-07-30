@@ -5,10 +5,17 @@ import { fillStudentGuNames } from "@/lib/gujarati/transliterate-server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { applyDraftDefaults } from "@/lib/student-draft";
 import { findStudentByGrNumber, syncGrEntryForStudent } from "@/lib/gr-student-sync";
+import { genderDbMatchValues } from "@/lib/gender-utils";
+import { toStudentUncheckedCreate, toStudentUncheckedUpdate } from "@/lib/student-write";
+import {
+  assertStudentAccountEmailAvailable,
+  syncStudentPortalAccount,
+} from "@/lib/student-account";
 
 function studentDisplayName(s: { firstName?: string | null; surname?: string | null }) {
   return [s.firstName, s.surname].filter(Boolean).join(" ").trim() || "Student";
 }
+
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth();
@@ -23,8 +30,12 @@ export async function GET(request: NextRequest) {
     const institutionName = searchParams.get("institutionName");
     const scholarshipScheme = searchParams.get("scholarshipScheme");
     const idsParam = searchParams.get("ids");
+    const includeSummary = searchParams.get("summary") === "1";
+    const includeArchived = searchParams.get("includeArchived") === "1";
+    const noClass = searchParams.get("noClass") === "1";
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    // Auto-Apply and similar screens request up to 500 ready students.
+    const limit = Math.min(parseInt(searchParams.get("limit") || "25") || 25, 500);
 
     const where: Record<string, unknown> = { schoolId: session.schoolId };
     if (idsParam) {
@@ -32,12 +43,17 @@ export async function GET(request: NextRequest) {
       if (idList.length) where.id = { in: idList };
     }
     if (status) where.status = status;
+    else if (!includeArchived) where.status = { not: "archived" };
     if (category) where.category = category;
-    if (gender) where.gender = gender;
+    if (gender && gender !== "all") {
+      where.gender = { in: genderDbMatchValues(gender) };
+    }
     if (institutionName) where.institutionName = { contains: institutionName };
     if (scholarshipScheme) where.scholarshipScheme = scholarshipScheme;
 
-    if (classId) {
+    if (noClass) {
+      where.classId = null;
+    } else if (classId) {
       const cls = await prisma.schoolClass.findFirst({
         where: { id: classId, schoolId: session.schoolId },
         select: { standard: true, section: true },
@@ -48,7 +64,8 @@ export async function GET(request: NextRequest) {
           { classId: null, standard: cls.standard, section: cls.section },
         ];
       } else {
-        where.classId = classId;
+        // Unknown / other-school class — never match cross-tenant rows
+        where.id = "__no_such_class__";
       }
     } else {
       if (standard) where.standard = standard;
@@ -56,16 +73,37 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      const searchOr = [
-        { firstName: { contains: search } },
-        { surname: { contains: search } },
-        { aadhaarNumber: { contains: search } },
-        { mobileNumber: { contains: search } },
-        { institutionName: { contains: search } },
-        { rollNumber: { contains: search } },
-        { grNumber: { contains: search } },
-        { childUid: { contains: search } },
+      const q = search.trim();
+      const searchOr: Record<string, unknown>[] = [
+        { firstName: { contains: q } },
+        { middleName: { contains: q } },
+        { surname: { contains: q } },
+        { firstNameGu: { contains: q } },
+        { surnameGu: { contains: q } },
+        { fatherName: { contains: q } },
+        { fatherNameGu: { contains: q } },
+        { aadhaarNumber: { contains: q } },
+        { mobileNumber: { contains: q } },
+        { institutionName: { contains: q } },
+        { rollNumber: { contains: q } },
+        { rollNumber: q },
+        { grNumber: { contains: q } },
+        { grNumber: q },
+        { childUid: { contains: q } },
+        { apaarId: { contains: q } },
+        { panNumber: { contains: q } },
       ];
+      // Match padded GR (e.g. user types 45, DB has 0045)
+      const digits = q.replace(/\D/g, "");
+      if (digits && digits !== q) {
+        searchOr.push({ grNumber: digits }, { grNumber: { contains: digits } });
+      }
+      if (digits) {
+        const stripped = digits.replace(/^0+/, "") || "0";
+        if (stripped !== digits) {
+          searchOr.push({ grNumber: stripped }, { grNumber: { contains: stripped } });
+        }
+      }
       if (where.OR) {
         where.AND = [{ OR: where.OR }, { OR: searchOr }];
         delete where.OR;
@@ -77,23 +115,72 @@ export async function GET(request: NextRequest) {
     const [students, total] = await Promise.all([
       prisma.student.findMany({
         where,
-        orderBy: [{ standard: "asc" }, { section: "asc" }, { rollNumber: "asc" }, { updatedAt: "desc" }],
+        orderBy: [
+          { standard: "asc" },
+          { section: "asc" },
+          { rollNumber: "asc" },
+          { surname: "asc" },
+          { firstName: "asc" },
+        ],
         skip: (page - 1) * limit,
         take: limit,
         include: {
           schoolClass: {
-            select: { id: true, name: true, standard: true, section: true, academicYear: true },
+            select: {
+              id: true,
+              name: true,
+              standard: true,
+              section: true,
+              stream: true,
+              academicYear: true,
+            },
           },
         },
       }),
       prisma.student.count({ where }),
     ]);
 
-    return NextResponse.json({ students, total, page, limit });
+    let summary:
+      | {
+          total: number;
+          male: number;
+          female: number;
+          other: number;
+          noClass: number;
+        }
+      | undefined;
+
+    if (includeSummary) {
+      const base = {
+        schoolId: session.schoolId,
+        status: { not: "archived" },
+      } as const;
+      const [sumTotal, male, female, other, noClass] = await Promise.all([
+        prisma.student.count({ where: base }),
+        prisma.student.count({
+          where: { ...base, gender: { in: genderDbMatchValues("Male") } },
+        }),
+        prisma.student.count({
+          where: { ...base, gender: { in: genderDbMatchValues("Female") } },
+        }),
+        prisma.student.count({
+          where: { ...base, gender: { in: genderDbMatchValues("Other") } },
+        }),
+        prisma.student.count({
+          where: { ...base, classId: null },
+        }),
+      ]);
+      summary = { total: sumTotal, male, female, other, noClass };
+    }
+
+    return NextResponse.json({ students, total, page, limit, summary });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("GET /api/students error:", error);
-    return NextResponse.json({ error: "Failed to fetch students", students: [], total: 0, page: 1, limit: 50 }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch students", students: [], total: 0, page: 1, limit: 25 },
+      { status: 500 },
+    );
   }
 }
 
@@ -117,6 +204,9 @@ export async function POST(request: NextRequest) {
           data.institutionDistrict = assignedClass.institutionDistrict || data.institutionDistrict;
           data.financialYear = assignedClass.academicYear || data.financialYear;
           data.courseName = data.courseName || `Class ${assignedClass.standard}`;
+        } else {
+          // Never attach another school's classId
+          data.classId = null;
         }
       }
 
@@ -126,15 +216,16 @@ export async function POST(request: NextRequest) {
       if (gr) {
         const byGr = await findStudentByGrNumber(session.schoolId, gr);
         if (byGr) {
+          await assertStudentAccountEmailAvailable(data.email, byGr.id);
           const student = await prisma.student.update({
             where: { id: byGr.id },
-            data: {
-              ...data,
+            data: toStudentUncheckedUpdate(data as Record<string, unknown>, {
               schoolId: session.schoolId,
               status: "draft",
               validationErrors: errors.length > 0 ? JSON.stringify(errors) : null,
-            } as Parameters<typeof prisma.student.update>[0]["data"],
+            }),
           });
+          await syncStudentPortalAccount(student);
           await syncGrEntryForStudent(session.schoolId, student);
           return NextResponse.json(student);
         }
@@ -152,15 +243,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Draft conflict — please refresh the page" }, { status: 409 });
       }
 
+      await assertStudentAccountEmailAvailable(data.email);
       const student = await prisma.student.create({
-        data: {
-          ...data,
+        data: toStudentUncheckedCreate(data as Record<string, unknown>, {
           schoolId: session.schoolId,
           status: "draft",
           validationErrors: errors.length > 0 ? JSON.stringify(errors) : null,
-        } as Parameters<typeof prisma.student.create>[0]["data"],
+        }),
       });
 
+      await syncStudentPortalAccount(student);
       await syncGrEntryForStudent(session.schoolId, student);
       return NextResponse.json(student, { status: 201 });
     }
@@ -204,15 +296,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Student with this Aadhaar already exists in your school" }, { status: 409 });
     }
 
+    await assertStudentAccountEmailAvailable(data.email);
     const student = await prisma.student.create({
-      data: {
-        ...data,
+      data: toStudentUncheckedCreate(data as Record<string, unknown>, {
         schoolId: session.schoolId,
         status: errors.length === 0 ? "ready" : "draft",
         validationErrors: errors.length > 0 ? JSON.stringify(errors) : null,
-      } as Parameters<typeof prisma.student.create>[0]["data"],
+      }),
     });
 
+    await syncStudentPortalAccount(student);
     await syncGrEntryForStudent(session.schoolId, student);
 
     const name = studentDisplayName(student);

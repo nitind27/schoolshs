@@ -2,6 +2,7 @@
 
 import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -9,6 +10,7 @@ import { CategoryBadge } from "@/components/ui/badge";
 import { useT } from "@/i18n/locale-provider";
 import { Play, RefreshCw, CheckCircle, XCircle, Clock, Square, CheckSquare, Bot, LogIn, Shield, Save, ExternalLink, Users, BookOpen, Search, ChevronDown, Info, X } from "lucide-react";
 import type { Student } from "@/generated/prisma/client";
+import { normalizeCategory } from "@/lib/category-inference";
 
 interface StudentProgressItem {
   studentId: string;
@@ -49,6 +51,35 @@ interface RemoteBrowserConfig {
   label: string;
 }
 
+interface PreflightData {
+  students: Array<{
+    id: string;
+    name: string;
+    scheme: string;
+    portalType: "sjed" | "citizen";
+    ready: boolean;
+    missingFields: Array<{ field: string; message: string }>;
+    missingDocuments: string[];
+    invalidDocuments: string[];
+    documents: Array<{
+      type: string;
+      required: boolean;
+      available: boolean;
+      dgReady: boolean;
+      size: number | null;
+      maxKB: number;
+    }>;
+  }>;
+  summary: {
+    selected: number;
+    found: number;
+    ready: number;
+    blocked: number;
+    portalTypes: Array<"sjed" | "citizen">;
+    mixedPortals: boolean;
+  };
+}
+
 function statusColor(status: string) {
   switch (status) {
     case "submitted": case "filled":  return "bg-emerald-50 text-emerald-700";
@@ -59,24 +90,26 @@ function statusColor(status: string) {
   }
 }
 
-function groupByClass(students: Student[], unknownLabel: string): Map<string, Student[]> {
-  const map = new Map<string, Student[]>();
-  for (const s of students) {
-    const key = s.standard && s.section ? `${s.standard}-${s.section}` : s.standard ? `Std ${s.standard}` : unknownLabel;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(s);
+function isScholarshipEligibleStudent(student: Student): boolean {
+  return normalizeCategory(student.category) !== "Open";
+}
+
+function sortAcademicValues(a: string, b: string): number {
+  const numA = parseInt(a, 10);
+  const numB = parseInt(b, 10);
+  if (!Number.isNaN(numA) && !Number.isNaN(numB) && numA !== numB) {
+    return numA - numB;
   }
-  return new Map([...map.entries()].sort(([a], [b]) => {
-    if (a === unknownLabel) return 1;
-    if (b === unknownLabel) return -1;
-    const numA = parseInt(a), numB = parseInt(b);
-    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-    return a.localeCompare(b);
-  }));
+  return a.localeCompare(b, undefined, { numeric: true });
 }
 
 function AutoApplyContent() {
   const t = useT();
+  const searchParams = useSearchParams();
+  const preselectIds = useMemo(() => {
+    const raw = searchParams.get("ids") || "";
+    return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+  }, [searchParams]);
 
   const portalOptions = [
     { value: "sjed", label: t("autoApply.portalOptionSjed") },
@@ -128,41 +161,99 @@ function AutoApplyContent() {
   const [savingCreds, setSavingCreds] = useState(false);
   const [credsSaved, setCredsSaved] = useState(false);
   const [remoteBrowser, setRemoteBrowser] = useState<RemoteBrowserConfig | null>(null);
-  const [activeClassKey, setActiveClassKey] = useState("");
+  const [selectedStandard, setSelectedStandard] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [excludedOpenCount, setExcludedOpenCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [showLoginPanel, setShowLoginPanel] = useState(false);
   const [showJobDetail, setShowJobDetail] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [preflight, setPreflight] = useState<PreflightData | null>(null);
+  const [otpCode, setOtpCode] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
 
-  const allClassGroups = useMemo(
-    () => groupByClass(students, t("autoApply.unknownClass")),
-    [students, t]
-  );
+  const classOptions = useMemo(() => {
+    const standards = [...new Set(students.map((s) => s.standard?.trim()).filter(Boolean) as string[])]
+      .sort(sortAcademicValues);
+    return standards.map((standard) => ({
+      value: standard,
+      label: `${t("autoApply.classLabel", { name: standard })} (${
+        students.filter((s) => s.standard?.trim() === standard).length
+      })`,
+    }));
+  }, [students, t]);
 
-  const classOptions = useMemo(
-    () =>
-      [...allClassGroups.entries()].map(([key, list]) => ({
-        value: key,
-        label: `${t("autoApply.classLabel", { name: key })} (${list.length})`,
-      })),
-    [allClassGroups, t]
-  );
+  const divisionOptions = useMemo(() => {
+    if (!selectedStandard) return [];
+    const sections = [...new Set(
+      students
+        .filter((s) => s.standard?.trim() === selectedStandard)
+        .map((s) => s.section?.trim())
+        .filter(Boolean) as string[],
+    )].sort(sortAcademicValues);
+    return sections.map((section) => ({
+      value: section,
+      label: `${t("autoApply.divisionLabel", { name: section })} (${
+        students.filter(
+          (s) =>
+            s.standard?.trim() === selectedStandard &&
+            s.section?.trim() === section,
+        ).length
+      })`,
+    }));
+  }, [selectedStandard, students, t]);
 
-  const activeClassStudents = useMemo(() => {
-    if (!activeClassKey) return [];
-    const base = allClassGroups.get(activeClassKey) || [];
-    if (!searchTerm.trim()) return base;
+  const categoryOptions = useMemo(() => {
+    if (!selectedStandard || !selectedSection) return [];
+    const categories = [...new Set(
+      students
+        .filter(
+          (s) =>
+            s.standard?.trim() === selectedStandard &&
+            s.section?.trim() === selectedSection,
+        )
+        .map((s) => normalizeCategory(s.category))
+        .filter((category): category is NonNullable<typeof category> =>
+          Boolean(category && category !== "Open"),
+        ),
+    )].sort();
+    return categories.map((category) => ({
+      value: category,
+      label: `${category} (${
+        students.filter(
+          (s) =>
+            s.standard?.trim() === selectedStandard &&
+            s.section?.trim() === selectedSection &&
+            normalizeCategory(s.category) === category,
+        ).length
+      })`,
+    }));
+  }, [selectedSection, selectedStandard, students]);
+
+  const fullFilteredStudents = useMemo(() => {
+    if (!selectedStandard || !selectedSection || !selectedCategory) return [];
+    return students.filter(
+      (s) =>
+        s.standard?.trim() === selectedStandard &&
+        s.section?.trim() === selectedSection &&
+        normalizeCategory(s.category) === selectedCategory,
+    );
+  }, [selectedCategory, selectedSection, selectedStandard, students]);
+
+  const filteredStudents = useMemo(() => {
+    if (!searchTerm.trim()) return fullFilteredStudents;
     const q = searchTerm.toLowerCase();
-    return base.filter(
+    return fullFilteredStudents.filter(
       (s) =>
         s.firstName.toLowerCase().includes(q) ||
         s.surname.toLowerCase().includes(q) ||
         s.aadhaarNumber.includes(q) ||
         s.category.toLowerCase().includes(q)
     );
-  }, [activeClassKey, allClassGroups, searchTerm]);
+  }, [fullFilteredStudents, searchTerm]);
 
-  const activeClassTotal = activeClassKey ? (allClassGroups.get(activeClassKey)?.length || 0) : 0;
+  const activeFilterTotal = fullFilteredStudents.length;
 
   const loadSessionStatus = useCallback(() => {
     fetch("/api/automation/session-status")
@@ -187,14 +278,37 @@ function AutoApplyContent() {
 
   const loadStudents = useCallback(() => {
     setLoading(true);
-    fetch("/api/students?limit=500&status=ready")
-      .then((r) => r.json())
-      .then((d) => {
-        setStudents(d.students || []);
-        setSelected(new Set((d.students || []).map((s: Student) => s.id)));
+    const readyPromise = fetch("/api/students?limit=500&status=ready").then((r) => r.json());
+    const selectedPromise =
+      preselectIds.size > 0
+        ? fetch(`/api/students?ids=${[...preselectIds].join(",")}&limit=100`).then((r) => r.json())
+        : Promise.resolve({ students: [] });
+
+    Promise.all([readyPromise, selectedPromise])
+      .then(([readyData, selectedData]) => {
+        const map = new Map<string, Student>();
+        for (const s of (readyData.students || []) as Student[]) map.set(s.id, s);
+        for (const s of (selectedData.students || []) as Student[]) map.set(s.id, s);
+        const allStudents = [...map.values()];
+        const list = allStudents.filter(isScholarshipEligibleStudent);
+        setStudents(list);
+        setExcludedOpenCount(allStudents.length - list.length);
+
+        if (preselectIds.size > 0) {
+          const valid = new Set(list.filter((s) => preselectIds.has(s.id)).map((s) => s.id));
+          setSelected(valid);
+          const first = list.find((s) => valid.has(s.id));
+          if (first) {
+            setSelectedStandard(first.standard?.trim() || "");
+            setSelectedSection(first.section?.trim() || "");
+            setSelectedCategory(normalizeCategory(first.category) || "");
+          }
+        } else {
+          setSelected(new Set());
+        }
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [preselectIds, t]);
 
   useEffect(() => {
     loadStudents();
@@ -261,22 +375,61 @@ function AutoApplyContent() {
     }
   };
 
-  const portalConfigured = portalType === "sjed" ? sessionStatus?.sjed?.configured || dgForm.dgSjedUsername.trim() : sessionStatus?.citizen?.configured || dgForm.dgCitizenLoginId.trim();
   const portalSessionSaved = portalType === "sjed" ? sessionStatus?.sjed?.sessionSaved : sessionStatus?.citizen?.sessionSaved;
   const portalLastLogin = portalType === "sjed" ? sessionStatus?.sjed?.lastLoginAt : sessionStatus?.citizen?.lastLoginAt;
   const jobRunning = activeJob?.status === "running";
 
   const startJob = async () => {
-    if (!portalConfigured) { alert(portalType === "sjed" ? t("autoApply.setupSjedFirst") : t("autoApply.setupCitizenFirst")); return; }
-    if ((portalType === "sjed" && dgForm.dgSjedUsername.trim() && !sessionStatus?.sjed?.configured) || (portalType === "citizen" && dgForm.dgCitizenLoginId.trim() && !sessionStatus?.citizen?.configured)) {
-      await saveDgCredentials();
-    }
     if (selected.size === 0) { alert(t("autoApply.selectStudents")); return; }
+    setStarting(true);
+    const response = await fetch("/api/automation/preflight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentIds: Array.from(selected) }),
+    });
+    const data = await response.json();
+    setStarting(false);
+    if (!response.ok) {
+      alert(data.error || t("autoApply.automationStartFailed"));
+      return;
+    }
+    const next = data as PreflightData;
+    setPreflight(next);
+    if (next.summary.portalTypes.length === 1) {
+      setPortalType(next.summary.portalTypes[0]);
+    }
+  };
+
+  const launchPreflightJob = async () => {
+    if (!preflight || preflight.summary.blocked > 0 || preflight.summary.mixedPortals) {
+      return;
+    }
+    const resolvedPortal = preflight.summary.portalTypes[0];
+    if (!resolvedPortal) return;
+    const configured =
+      resolvedPortal === "sjed"
+        ? sessionStatus?.sjed?.configured
+        : sessionStatus?.citizen?.configured;
+    if (!configured) {
+      setPortalType(resolvedPortal);
+      setShowLoginPanel(true);
+      alert(
+        resolvedPortal === "sjed"
+          ? t("autoApply.setupSjedFirst")
+          : t("autoApply.setupCitizenFirst"),
+      );
+      return;
+    }
+
     setStarting(true);
     const res = await fetch("/api/automation/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentIds: Array.from(selected), mode: "auto", actionMode, portalType }),
+      body: JSON.stringify({
+        studentIds: preflight.students.map((student) => student.id),
+        mode: "auto",
+        actionMode,
+      }),
     });
     const data = await res.json();
     setStarting(false);
@@ -293,15 +446,44 @@ function AutoApplyContent() {
     const jobData = await jobRes.json();
     setActiveJob(jobData.job);
     setShowJobDetail(true);
+    setPreflight(null);
     loadSessionStatus();
   };
 
-  const fullClassStudents = activeClassKey ? allClassGroups.get(activeClassKey) || [] : [];
-  const activeClassSelected = fullClassStudents.filter((s) => selected.has(s.id)).length;
-  const allActiveClassSelected = fullClassStudents.length > 0 && fullClassStudents.every((s) => selected.has(s.id));
+  const sendJobOtp = async () => {
+    if (!activeJob || !/^\d{4,8}$/.test(otpCode.trim())) return;
+    setSendingOtp(true);
+    const response = await fetch(`/api/automation/jobs/${activeJob.id}/otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ otp: otpCode.trim() }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    setSendingOtp(false);
+    if (!response.ok) {
+      alert(payload.error || "OTP send failed");
+      return;
+    }
+    setOtpCode("");
+  };
+
+  const activeFilterSelected = fullFilteredStudents.filter((s) => selected.has(s.id)).length;
+  const allActiveFilterSelected =
+    fullFilteredStudents.length > 0 &&
+    fullFilteredStudents.every((s) => selected.has(s.id));
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5.5rem)] min-h-[520px] -m-1">
+    <div className="-m-1 flex min-h-0 flex-col lg:h-[calc(100dvh-5.5rem)] lg:min-h-[520px]">
+      {preselectIds.size > 0 && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          <span className="font-medium">
+            {t("autoApply.preselectedHint", { count: selected.size || preselectIds.size })}
+          </span>
+          <a href="/auto-apply" className="font-semibold underline underline-offset-2">
+            {t("autoApply.clearPreselect")}
+          </a>
+        </div>
+      )}
       {/* Compact top bar */}
       <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200/80">
         <div className="flex items-center gap-3 min-w-0">
@@ -322,7 +504,7 @@ function AutoApplyContent() {
             </div>
             <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white px-3 py-2 text-xs shadow-sm">
               <span className="text-slate-500">{t("autoApply.classesFound")}</span>
-              <span className="ml-1.5 text-lg font-bold text-violet-700">{allClassGroups.size}</span>
+              <span className="ml-1.5 text-lg font-bold text-violet-700">{classOptions.length}</span>
             </div>
           </div>
           <button
@@ -465,7 +647,7 @@ function AutoApplyContent() {
         </aside>
 
         {/* Right — class dropdown + student list */}
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg shadow-slate-200/40">
+        <section className="flex min-h-0 flex-1 flex-col overflow-visible rounded-2xl border border-slate-200/80 bg-white shadow-lg shadow-slate-200/40 lg:overflow-hidden">
           {/* Panel header */}
           <div className="shrink-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-4 py-4 text-white">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -475,13 +657,13 @@ function AutoApplyContent() {
                 </div>
                 <div>
                   <h2 className="text-sm font-bold">{t("autoApply.selectStudentsByClass")}</h2>
-                  <p className="text-[11px] text-white/80">{t("autoApply.readyStudentsSummary", { students: students.length, classes: allClassGroups.size })}</p>
+                  <p className="text-[11px] text-white/80">{t("autoApply.readyStudentsSummary", { students: students.length, classes: classOptions.length })}</p>
                 </div>
               </div>
-              {activeClassKey && (
+              {selectedStandard && selectedSection && selectedCategory && (
                 <div className="flex items-center gap-2 rounded-xl bg-white/15 px-3 py-1.5 text-xs backdrop-blur">
                   <Users className="h-3.5 w-3.5" />
-                  <span className="font-semibold">{activeClassSelected}/{activeClassTotal}</span>
+                  <span className="font-semibold">{activeFilterSelected}/{activeFilterTotal}</span>
                   <span className="text-white/70">{t("autoApply.selectedStudents").toLowerCase()}</span>
                 </div>
               )}
@@ -500,21 +682,56 @@ function AutoApplyContent() {
             </div>
           ) : (
             <>
-              {/* Class selector + search */}
+              {/* Class, division and scholarship-category filters */}
               <div className="shrink-0 space-y-3 border-b border-slate-100 bg-gradient-to-b from-violet-50/50 to-white px-4 py-4">
-                <Select
-                  label={t("autoApply.selectClassLabel")}
-                  options={classOptions}
-                  value={activeClassKey}
-                  onChange={(e) => {
-                    setActiveClassKey(e.target.value);
-                    setSearchTerm("");
-                  }}
-                  emptyLabel={t("autoApply.selectClassPlaceholder")}
-                  className="h-11 text-base font-medium border-violet-200 focus:border-violet-500 focus:ring-violet-500/20 bg-white shadow-sm"
-                />
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Select
+                    label={t("autoApply.selectClassLabel")}
+                    options={classOptions}
+                    value={selectedStandard}
+                    onChange={(e) => {
+                      setSelectedStandard(e.target.value);
+                      setSelectedSection("");
+                      setSelectedCategory("");
+                      setSearchTerm("");
+                    }}
+                    emptyLabel={t("autoApply.selectClassPlaceholder")}
+                    className="h-11 font-medium border-violet-200 focus:border-violet-500 focus:ring-violet-500/20 bg-white shadow-sm"
+                  />
+                  <Select
+                    label={t("autoApply.selectDivisionLabel")}
+                    options={divisionOptions}
+                    value={selectedSection}
+                    onChange={(e) => {
+                      setSelectedSection(e.target.value);
+                      setSelectedCategory("");
+                      setSearchTerm("");
+                    }}
+                    emptyLabel={t("autoApply.selectDivisionPlaceholder")}
+                    disabled={!selectedStandard}
+                    className="h-11 font-medium border-violet-200 focus:border-violet-500 focus:ring-violet-500/20 bg-white shadow-sm"
+                  />
+                  <Select
+                    label={t("autoApply.selectCategoryLabel")}
+                    options={categoryOptions}
+                    value={selectedCategory}
+                    onChange={(e) => {
+                      setSelectedCategory(e.target.value);
+                      setSearchTerm("");
+                    }}
+                    emptyLabel={t("autoApply.selectCategoryPlaceholder")}
+                    disabled={!selectedSection}
+                    className="h-11 font-medium border-violet-200 focus:border-violet-500 focus:ring-violet-500/20 bg-white shadow-sm"
+                  />
+                </div>
 
-                {activeClassKey ? (
+                {excludedOpenCount > 0 && (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                    {t("autoApply.openCategoryExcluded", { count: excludedOpenCount })}
+                  </p>
+                )}
+
+                {selectedStandard && selectedSection && selectedCategory ? (
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="relative min-w-[160px] flex-1">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -528,11 +745,11 @@ function AutoApplyContent() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => toggleClassSelection(fullClassStudents)}
+                      onClick={() => toggleClassSelection(fullFilteredStudents)}
                       className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
                     >
-                      {allActiveClassSelected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
-                      {t("autoApply.selectAllInClass")}
+                      {allActiveFilterSelected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+                      {t("autoApply.selectAllFiltered")}
                     </button>
                     <button
                       type="button"
@@ -546,16 +763,16 @@ function AutoApplyContent() {
               </div>
 
               {/* Student list or empty state */}
-              <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/30">
-                {!activeClassKey ? (
+              <div className="min-h-0 flex-1 overflow-visible bg-slate-50/30 lg:overflow-y-auto">
+                {!selectedStandard || !selectedSection || !selectedCategory ? (
                   <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-3 p-8 text-center">
                     <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-100 to-indigo-100 shadow-inner">
                       <BookOpen className="h-9 w-9 text-violet-500" />
                     </div>
-                    <p className="max-w-xs text-sm font-medium text-slate-600">{t("autoApply.selectClassFirst")}</p>
-                    <p className="text-xs text-slate-400">{t("autoApply.selectClassPlaceholder")}</p>
+                    <p className="max-w-xs text-sm font-medium text-slate-600">{t("autoApply.selectThreeFiltersFirst")}</p>
+                    <p className="text-xs text-slate-400">{t("autoApply.openCategoryNotEligible")}</p>
                   </div>
-                ) : activeClassStudents.length === 0 ? (
+                ) : filteredStudents.length === 0 ? (
                   <div className="flex h-full min-h-[160px] flex-col items-center justify-center gap-2 p-8 text-slate-400">
                     <Search className="h-8 w-8 opacity-30" />
                     <p className="text-sm">{t("autoApply.noSearchResults", { term: searchTerm })}</p>
@@ -563,10 +780,10 @@ function AutoApplyContent() {
                 ) : (
                   <div className="p-3 space-y-2">
                     <p className="px-1 text-xs font-medium text-slate-500">
-                      {t("autoApply.studentsInClass", { count: activeClassTotal })}
-                      {searchTerm.trim() ? ` · ${activeClassStudents.length} shown` : ""}
+                      {t("autoApply.studentsInFilter", { count: activeFilterTotal })}
+                      {searchTerm.trim() ? ` · ${filteredStudents.length} shown` : ""}
                     </p>
-                    {activeClassStudents.map((s, idx) => {
+                    {filteredStudents.map((s, idx) => {
                       const isSelected = selected.has(s.id);
                       return (
                         <button
@@ -642,6 +859,34 @@ function AutoApplyContent() {
 
           {showJobDetail && (
             <div className="border-t border-blue-100 bg-white/60 px-4 py-3 max-h-48 overflow-y-auto space-y-2">
+              {/otp|login|captcha/i.test(activeJob.currentStep || "") && (
+                <div className="mb-3 flex flex-wrap items-end gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <div className="min-w-[180px] flex-1">
+                    <label className="mb-1 block text-xs font-semibold text-amber-900">
+                      Digital Gujarat OTP
+                    </label>
+                    <input
+                      value={otpCode}
+                      onChange={(event) =>
+                        setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 8))
+                      }
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      placeholder="4–8 digit OTP"
+                      className="h-9 w-full rounded-lg border border-amber-300 bg-white px-3 font-mono text-sm outline-none focus:ring-2 focus:ring-amber-200"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => void sendJobOtp()}
+                    disabled={sendingOtp || !/^\d{4,8}$/.test(otpCode)}
+                  >
+                    {sendingOtp ? <Spinner size="sm" /> : null}
+                    Send OTP
+                  </Button>
+                </div>
+              )}
               {activeJob.studentProgress?.map((sp) => (
                 <div key={sp.studentId} className="flex items-center gap-3 text-xs">
                   <span className="font-medium text-slate-800 min-w-[100px] truncate">{sp.name}</span>
@@ -664,6 +909,186 @@ function AutoApplyContent() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {preflight && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="flex h-[100dvh] max-h-[100dvh] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl">
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b bg-gradient-to-r from-emerald-50 to-blue-50 px-4 py-3.5 sm:gap-4 sm:px-5 sm:py-4">
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-slate-900">
+                  Auto Apply Preflight Preview
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Form fields, exact scheme, portal and required documents verify
+                  karke hi browser start hoga.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreflight(null)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-white"
+                aria-label="Close preview"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid shrink-0 grid-cols-2 gap-2 border-b p-3 sm:grid-cols-4 sm:gap-3 sm:p-4">
+              {[
+                ["Selected", preflight.summary.selected, "text-slate-800"],
+                ["Ready", preflight.summary.ready, "text-emerald-700"],
+                ["Blocked", preflight.summary.blocked, "text-red-700"],
+                [
+                  "Portal",
+                  preflight.summary.mixedPortals
+                    ? "Mixed"
+                    : (preflight.summary.portalTypes[0] || "—").toUpperCase(),
+                  preflight.summary.mixedPortals
+                    ? "text-red-700"
+                    : "text-blue-700",
+                ],
+              ].map(([label, value, color]) => (
+                <div
+                  key={String(label)}
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                >
+                  <p className="text-xs font-medium text-slate-500">{label}</p>
+                  <p className={`mt-1 text-xl font-bold ${color}`}>{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {preflight.summary.mixedPortals && (
+              <div className="mx-4 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                Pre-Matric (SJED) aur Post-Matric (Citizen) students ko alag
+                batch me select karein.
+              </div>
+            )}
+
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 overscroll-contain sm:p-4">
+              {preflight.students.map((student) => (
+                <div
+                  key={student.id}
+                  className={`rounded-xl border p-3 ${
+                    student.ready
+                      ? "border-emerald-200 bg-emerald-50/50"
+                      : "border-red-200 bg-red-50/50"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {student.name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {student.scheme || "Scheme missing"} ·{" "}
+                        {student.portalType.toUpperCase()}
+                      </p>
+                    </div>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        student.ready
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {student.ready ? "Ready" : "Fix required"}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                    {student.documents
+                      .filter((document) => document.required)
+                      .map((document) => (
+                        <span
+                          key={`${student.id}-doc-${document.type}`}
+                          className={`rounded px-2 py-1 ${
+                            document.dgReady
+                              ? "bg-emerald-100 text-emerald-700"
+                              : document.available
+                                ? "bg-orange-100 text-orange-800"
+                                : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {document.dgReady ? "✓" : "!"} {document.type}
+                          {document.size != null
+                            ? ` · ${(document.size / 1024).toFixed(0)}KB`
+                            : ""}
+                        </span>
+                      ))}
+                  </div>
+
+                  {!student.ready && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      {student.missingFields.map((error) => (
+                        <span
+                          key={`${student.id}-${error.field}`}
+                          className="rounded bg-red-100 px-2 py-1 text-red-700"
+                          title={error.message}
+                        >
+                          {error.field}
+                        </span>
+                      ))}
+                      {student.missingDocuments.map((document) => (
+                        <span
+                          key={`${student.id}-missing-${document}`}
+                          className="rounded bg-amber-100 px-2 py-1 text-amber-800"
+                        >
+                          Missing: {document}
+                        </span>
+                      ))}
+                      {student.invalidDocuments.map((document) => (
+                        <span
+                          key={`${student.id}-invalid-${document}`}
+                          className="rounded bg-orange-100 px-2 py-1 text-orange-800"
+                        >
+                          Oversize: {document}
+                        </span>
+                      ))}
+                      <a
+                        href={`/students/${student.id}/auto-submit`}
+                        className="ml-auto font-semibold text-blue-700 underline"
+                      >
+                        Fix data/documents
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex shrink-0 flex-col gap-3 border-t bg-slate-50 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5 sm:py-4">
+              <p className="text-xs text-slate-500">
+                CAPTCHA/OTP manual rahega. Final submit se pehle portal preview
+                par approval li jayegi.
+              </p>
+              <div className="grid w-full grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex sm:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => setPreflight(null)}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button
+                  type="button"
+                  className="w-full sm:w-auto"
+                  onClick={() => void launchPreflightJob()}
+                  disabled={
+                    starting ||
+                    preflight.summary.blocked > 0 ||
+                    preflight.summary.mixedPortals
+                  }
+                >
+                  {starting ? <Spinner size="sm" /> : <Play className="h-4 w-4" />}
+                  Start verified Auto Apply
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

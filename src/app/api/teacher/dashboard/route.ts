@@ -45,6 +45,7 @@ export async function GET() {
           weeklyPeriods: 0,
         },
         classes: [],
+        students: [],
         todaySchedule: [],
         quickHints: { noStaffLink: true },
       });
@@ -59,10 +60,17 @@ export async function GET() {
             select: {
               id: true,
               firstName: true,
+              middleName: true,
               surname: true,
               rollNumber: true,
+              grNumber: true,
               gender: true,
+              category: true,
               status: true,
+              sscSeatPrefix: true,
+              sscSeatNumber: true,
+              hscSeatPrefix: true,
+              hscSeatNumber: true,
             },
             orderBy: [{ rollNumber: "asc" }, { surname: "asc" }],
           },
@@ -83,53 +91,68 @@ export async function GET() {
     ]);
 
     const academicYear =
-      school?.settings?.academicYear ||
-      classes[0]?.academicYear ||
-      "2025-26";
+      school?.settings?.academicYear || classes[0]?.academicYear || "2025-26";
     const classIds = classes.map((c) => c.id);
     const studentIds = classes.flatMap((c) => c.students.map((s) => s.id));
 
-    const [attendanceRows, exams, releasedClassIds, daysConfig, timetableEntries] =
-      await Promise.all([
-        studentIds.length
-          ? prisma.studentAttendanceMonth.findMany({
-              where: { schoolId, month, year, studentId: { in: studentIds } },
-              select: { studentId: true, classId: true, daysJson: true, monthTotal: true },
-            })
-          : Promise.resolve([]),
-        classIds.length
-          ? prisma.exam.findMany({
-              where: {
-                schoolId,
-                academicYear,
-                examType: "Annual",
-                OR: classes.map((c) => ({ standard: c.standard, section: c.section })),
+    const [
+      attendanceRows,
+      exams,
+      releasedClassIds,
+      daysConfig,
+      timetableEntries,
+    ] = await Promise.all([
+      studentIds.length
+        ? prisma.studentAttendanceMonth.findMany({
+            where: { schoolId, month, year, studentId: { in: studentIds } },
+            select: {
+              studentId: true,
+              classId: true,
+              daysJson: true,
+              monthTotal: true,
+            },
+          })
+        : Promise.resolve([]),
+      classIds.length
+        ? prisma.exam.findMany({
+            where: {
+              schoolId,
+              academicYear,
+              examType: "Annual",
+              OR: classes.map((c) => ({
+                standard: c.standard,
+                section: c.section,
+              })),
+            },
+            select: {
+              id: true,
+              standard: true,
+              section: true,
+              isPublished: true,
+              termMeta: true,
+            },
+          })
+        : Promise.resolve([]),
+      getReleasedClassIds(schoolId, academicYear).catch(
+        () => new Set<string>(),
+      ),
+      getOrCreateTimetableConfig(schoolId, academicYear).catch(() => null),
+      staffId
+        ? prisma.timetableEntry.findMany({
+            where: {
+              schoolId,
+              academicYear,
+              teacherId: staffId,
+            },
+            include: {
+              class: {
+                select: { id: true, name: true, standard: true, section: true },
               },
-              select: {
-                id: true,
-                standard: true,
-                section: true,
-                isPublished: true,
-                termMeta: true,
-              },
-            })
-          : Promise.resolve([]),
-        getReleasedClassIds(schoolId, academicYear).catch(() => new Set<string>()),
-        getOrCreateTimetableConfig(schoolId, academicYear).catch(() => null),
-        staffId
-          ? prisma.timetableEntry.findMany({
-              where: {
-                schoolId,
-                academicYear,
-                teacherId: staffId,
-              },
-              include: {
-                class: { select: { id: true, name: true, standard: true, section: true } },
-              },
-              orderBy: [{ dayOfWeek: "asc" }, { periodIndex: "asc" }],
-            })
-          : Promise.resolve([]),
-      ]);
+            },
+            orderBy: [{ dayOfWeek: "asc" }, { periodIndex: "asc" }],
+          })
+        : Promise.resolve([]),
+    ]);
 
     const attByStudent = new Map(attendanceRows.map((r) => [r.studentId, r]));
 
@@ -206,13 +229,15 @@ export async function GET() {
     });
 
     for (const c of classCards) {
-      if (c.studentCount > 0 && c.markedToday >= c.studentCount) markedTodayCount++;
+      if (c.studentCount > 0 && c.markedToday >= c.studentCount)
+        markedTodayCount++;
     }
     const attendancePendingToday = classCards.filter(
       (c) => c.studentCount > 0 && c.unmarkedToday > 0,
     ).length;
 
-    const releasedIds = releasedClassIds instanceof Set ? releasedClassIds : new Set<string>();
+    const releasedIds =
+      releasedClassIds instanceof Set ? releasedClassIds : new Set<string>();
     const filteredEntries = timetableEntries.filter(
       (e) => releasedIds.size === 0 || releasedIds.has(e.classId),
     );
@@ -220,13 +245,16 @@ export async function GET() {
     const todaySchedule = filteredEntries
       .filter((e) => e.dayOfWeek === dayOfWeek)
       .map((e) => {
-        const p = daysConfig ? periodForDay(daysConfig, e.dayOfWeek, e.periodIndex) : null;
+        const p = daysConfig
+          ? periodForDay(daysConfig, e.dayOfWeek, e.periodIndex)
+          : null;
         return {
           periodIndex: e.periodIndex,
           subject: e.subject,
           room: e.room,
           classId: e.classId,
-          className: e.class?.name || `${e.class?.standard}-${e.class?.section}`,
+          className:
+            e.class?.name || `${e.class?.standard}-${e.class?.section}`,
           startTime: p?.start || null,
           endTime: p?.end || null,
           label: p ? `P${p.index}` : `P${e.periodIndex}`,
@@ -234,13 +262,36 @@ export async function GET() {
       });
 
     const totalStudents = studentIds.length;
+    const students = classes.flatMap((cls) =>
+      cls.students.map((student) => ({
+        ...student,
+        classId: cls.id,
+        className: cls.name,
+        standard: cls.standard,
+        section: cls.section,
+        boardSeatNumber:
+          cls.standard === "12"
+            ? [student.hscSeatPrefix, student.hscSeatNumber]
+                .filter(Boolean)
+                .join("")
+            : cls.standard === "10"
+              ? [student.sscSeatPrefix, student.sscSeatNumber]
+                  .filter(Boolean)
+                  .join("")
+              : "",
+      })),
+    );
     const teacherName = staff
       ? `${staff.firstName} ${staff.lastName}`.trim()
       : session.name || "";
 
     return NextResponse.json({
       linked: true,
-      schoolName: school?.settings?.schoolName || school?.name || session.schoolName || "",
+      schoolName:
+        school?.settings?.schoolName ||
+        school?.name ||
+        session.schoolName ||
+        "",
       teacherName,
       designation: staff?.designation || "",
       academicYear,
@@ -263,6 +314,7 @@ export async function GET() {
         weeklyPeriods: filteredEntries.length,
       },
       classes: classCards,
+      students,
       todaySchedule,
       quickHints: {
         noStaffLink: false,
@@ -274,6 +326,9 @@ export async function GET() {
       return NextResponse.json({ error: e.message }, { status: e.status });
     }
     console.error("[teacher/dashboard]", e);
-    return NextResponse.json({ error: "Failed to load teacher dashboard" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to load teacher dashboard" },
+      { status: 500 },
+    );
   }
 }

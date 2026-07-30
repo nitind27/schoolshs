@@ -11,6 +11,7 @@ import {
   CATEGORIES,
   GENDERS,
   RELIGIONS,
+  PARENT_OCCUPATIONS,
   FINANCIAL_YEARS,
   CURRENT_YEARS,
   BOARDS,
@@ -19,7 +20,7 @@ import {
   standardToCurrentYear,
 } from "@/lib/constants";
 import { PRE_MATRIC_SCHEMES, POST_MATRIC_SCHEMES } from "@/lib/dg-portal";
-import { ChevronLeft, ChevronRight, Save, CheckCircle, Sparkles, Cloud, CloudOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, CheckCircle, Sparkles, Cloud, CloudOff, Search } from "lucide-react";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
 import { getDgPortalConfig } from "@/lib/dg-portal";
 import { SsgujaratFetch } from "@/components/forms/ssgujarat-fetch";
@@ -31,7 +32,7 @@ import { CategoryBadge } from "@/components/ui/badge";
 import { useT } from "@/i18n/locale-provider";
 import { StudentDocumentsSection } from "@/components/documents/student-documents-section";
 import { GrSetupPanel } from "@/components/forms/gr-setup-panel";
-import { hasDraftContent, isDraftDobPlaceholder } from "@/lib/student-draft";
+import { hasDraftContent, isDraftDobPlaceholder, stripDraftPlaceholdersForForm } from "@/lib/student-draft";
 import { getCompletionPercentage } from "@/lib/validation";
 import { DateField } from "@/components/ui/date-field";
 import {
@@ -50,6 +51,11 @@ import {
   previousEducationMode,
   scholarshipSchemesForCategory,
 } from "@/lib/student-academic-rules";
+import {
+  studentFormPreviewRows,
+  studentRecordToFormData,
+  type StudentFormFields,
+} from "@/lib/student-form-map";
 import "./student-form.css";
 
 type FormData = Partial<Student>;
@@ -107,6 +113,8 @@ export function StudentForm({
 }: StudentFormProps) {
   const t = useT();
   const isEditMode = Boolean(studentIdProp || initialData.id);
+  /** New student: class is assigned only at the final review step. Edit: class at GR panel. */
+  const deferClassAssignment = !isEditMode;
   const defaultSubmitLabel = submitLabel ?? t("studentForm.saveStudent");
 
   const STEPS = [
@@ -154,8 +162,12 @@ export function StudentForm({
     isOrphan: false,
     admissionType: "Regular",
     financialYear: "2025-26",
-    classId: initialClassId || initialData.classId || undefined,
+    classId: isEditMode
+      ? initialData.classId || initialClassId || undefined
+      : undefined,
     ...initialData,
+    // New student: never start with a class (assign on final step)
+    ...(isEditMode ? {} : { classId: undefined }),
     familySize:
       initialData.familySize !== undefined && initialData.familySize !== null
         ? Number(initialData.familySize)
@@ -164,6 +176,11 @@ export function StudentForm({
       const raw = initialData.dateOfBirth?.trim() || "";
       if (raw && !isDraftDobPlaceholder(raw)) return formatDobDisplay(raw);
       return todayDobDisplay();
+    })(),
+    parentOccupation: (() => {
+      const occ = String(initialData.parentOccupation || "").trim();
+      if (!occ || occ === "—" || occ === "-") return "";
+      return occ;
     })(),
   });
   const [guTouched, setGuTouched] = useState<Partial<Record<GuTouchKey, boolean>>>(() =>
@@ -177,6 +194,9 @@ export function StudentForm({
   const [pincodeStatus, setPincodeStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [permPincodeStatus, setPermPincodeStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [ifscStatus, setIfscStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [apaarFetchStatus, setApaarFetchStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [apaarFetchMsg, setApaarFetchMsg] = useState("");
+  const [apaarPreview, setApaarPreview] = useState<StudentFormFields | null>(null);
   const pincodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const permPincodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ifscTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -192,6 +212,15 @@ export function StudentForm({
     if (studentIdProp) setSavedStudentId(studentIdProp);
     else if (initialData.id) setSavedStudentId(initialData.id);
   }, [studentIdProp, initialData.id]);
+
+  // Prefill class from URL only on final assign step (new student)
+  useEffect(() => {
+    if (!deferClassAssignment || step !== 5) return;
+    if (form.classId || !initialClassId) return;
+    const exists = classes.some((c) => c.id === initialClassId);
+    if (exists) update("classId", initialClassId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, deferClassAssignment, initialClassId, classes, form.classId]);
 
   useEffect(() => {
     const year = form.financialYear || "2025-26";
@@ -233,6 +262,32 @@ export function StudentForm({
       : SCHOLARSHIP_SCHEME_OPTIONS;
   const courseTypeOptions = courseTypesForStandard(form.standard);
   const prevEduMode = previousEducationMode(form.standard);
+
+  const OCCUPATION_OTHER = "Other";
+  const isBlankOccupation = (raw: string | null | undefined) => {
+    const v = String(raw || "").trim();
+    return !v || v === "—" || v === "-" || v === "Other";
+  };
+  const [occupationOtherMode, setOccupationOtherMode] = useState(() => {
+    const v = String(initialData.parentOccupation || "").trim();
+    if (isBlankOccupation(v)) return false;
+    return !(PARENT_OCCUPATIONS as readonly string[]).includes(v);
+  });
+  const occupationSelectValue = (() => {
+    const v = String(form.parentOccupation || "").trim();
+    if (isBlankOccupation(v)) return occupationOtherMode ? OCCUPATION_OTHER : "";
+    if ((PARENT_OCCUPATIONS as readonly string[]).includes(v)) return v;
+    return OCCUPATION_OTHER;
+  })();
+  const isOccupationOther = occupationSelectValue === OCCUPATION_OTHER;
+
+  useEffect(() => {
+    const v = String(form.parentOccupation || "").trim();
+    if (isBlankOccupation(v)) return;
+    if (!(PARENT_OCCUPATIONS as readonly string[]).includes(v)) {
+      setOccupationOtherMode(true);
+    }
+  }, [form.parentOccupation]);
 
   const update = (field: string, value: unknown) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -365,12 +420,26 @@ export function StudentForm({
   }) => {
     skipAutoSave.current = true;
     setForm((prev) => {
-      const next = { ...prev, ...suggested };
-      // For brand-new GR draft (no existing student data), keep identity fields empty in UI.
+      let next = { ...prev, ...suggested } as FormData;
+
+      // New draft from DB has "—" / fake defaults — strip so UI + progress stay honest
       if (isNew) {
+        next = stripDraftPlaceholdersForForm(next as Record<string, unknown>, "all") as FormData;
         next.aadhaarNumber = "";
         next.mobileNumber = "";
+        if (deferClassAssignment) {
+          next.classId = null;
+        }
+        setOccupationOtherMode(false);
+      } else {
+        // Existing student: only clear em-dash leftovers
+        next = stripDraftPlaceholdersForForm(next as Record<string, unknown>, "placeholders") as FormData;
+        const occ = String(next.parentOccupation || "").trim();
+        if (!occ) setOccupationOtherMode(false);
+        else if (!(PARENT_OCCUPATIONS as readonly string[]).includes(occ)) setOccupationOtherMode(true);
+        else setOccupationOtherMode(false);
       }
+
       // Draft / empty DOB must not keep the old 01/01/2000 placeholder
       if (isDraftDobPlaceholder(String(next.dateOfBirth || ""))) {
         next.dateOfBirth = todayDobDisplay();
@@ -388,7 +457,9 @@ export function StudentForm({
 
   useEffect(() => {
     if (!grReady) return;
-    if (!form.grNumber?.trim() || !form.classId) return;
+    if (!form.grNumber?.trim()) return;
+    // New flow allows draft without class; edit still prefers class when present
+    if (!deferClassAssignment && !form.classId) return;
     if (skipAutoSave.current) {
       skipAutoSave.current = false;
       return;
@@ -444,25 +515,8 @@ export function StudentForm({
       if (data.notes) {
         merged.notes = [prev.notes, data.notes].filter(Boolean).join(" | ");
       }
-      const namePairs: [keyof FormData, keyof FormData][] = [
-        ["firstName", "firstNameGu"],
-        ["middleName", "middleNameGu"],
-        ["surname", "surnameGu"],
-        ["aadhaarName", "aadhaarNameGu"],
-        ["motherName", "motherNameGu"],
-        ["fatherName", "fatherNameGu"],
-        ["guardianName", "guardianNameGu"],
-      ];
-      for (const [enKey, guKey] of namePairs) {
-        const en = String(merged[enKey] || "").trim();
-        if (en) {
-          const pair = bilingualNamePair(en);
-          const rec = merged as Record<string, string | null | undefined>;
-          rec[String(enKey)] = pair.en;
-          rec[String(guKey)] = pair.gu;
-        }
-      }
-      return merged;
+      // Fill missing Gujarati only — never overwrite DB / pasted Gu names
+      return ensureGuNameFields(merged);
     });
     setGuTouched((prev) => ({
       ...prev,
@@ -474,6 +528,96 @@ export function StudentForm({
       fatherNameGu: true,
       guardianNameGu: true,
     }));
+  };
+
+  /** Full replace from school DB student (APAAR / UPPAR lookup). */
+  const applyLoadedStudentRecord = (raw: Record<string, unknown> & { id?: string }) => {
+    const mapped = studentRecordToFormData(raw);
+    const apaar = String(mapped.apaarId || form.apaarId || "")
+      .replace(/\s/g, "")
+      .trim()
+      .toUpperCase();
+    mapped.apaarId = apaar;
+
+    const occ = String(mapped.parentOccupation || "").trim();
+    if (!occ || occ === "—" || occ === "-") {
+      mapped.parentOccupation = "";
+      setOccupationOtherMode(false);
+    } else if (!(PARENT_OCCUPATIONS as readonly string[]).includes(occ)) {
+      setOccupationOtherMode(true);
+    } else {
+      setOccupationOtherMode(false);
+    }
+
+    skipAutoSave.current = true;
+    setForm((prev) => {
+      const { className: _className, ...formFields } = mapped;
+      void _className;
+      const next: FormData = {
+        maritalStatus: "Unmarried",
+        habitationType: "Own",
+        residentType: "Rural",
+        isHosteler: false,
+        isOrphan: false,
+        admissionType: "Regular",
+        financialYear: prev.financialYear || mapped.financialYear || "2025-26",
+        familySize: 0,
+        ...formFields,
+        apaarId: apaar,
+      };
+
+      if (deferClassAssignment && !mapped.classId) {
+        next.classId = undefined;
+      }
+
+      return next;
+    });
+
+    setGuTouched({
+      firstNameGu: true,
+      middleNameGu: true,
+      surnameGu: true,
+      aadhaarNameGu: true,
+      motherNameGu: true,
+      fatherNameGu: true,
+      guardianNameGu: true,
+    });
+
+    if (raw.id) setSavedStudentId(String(raw.id));
+    setGrReady(true);
+    setGrLocked(Boolean(mapped.grNumber));
+    setApaarPreview(mapped);
+    setStep(1);
+  };
+
+  const fetchByApaarId = async () => {
+    const apaar = String(form.apaarId || "").replace(/\s/g, "").trim().toUpperCase();
+    if (!apaar || apaar.length < 8) {
+      setApaarFetchStatus("error");
+      setApaarFetchMsg(t("studentForm.apaarPlaceholder"));
+      setApaarPreview(null);
+      return;
+    }
+    setApaarFetchStatus("loading");
+    setApaarFetchMsg("");
+    setApaarPreview(null);
+    try {
+      const res = await fetch(`/api/students/lookup-apaar?apaarId=${encodeURIComponent(apaar)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "fail");
+      if (!data.found || !data.student) {
+        setApaarFetchStatus("error");
+        setApaarFetchMsg(t("studentForm.apaarNotFound"));
+        return;
+      }
+      applyLoadedStudentRecord(data.student as Record<string, unknown> & { id?: string });
+      setApaarFetchStatus("ok");
+      setApaarFetchMsg(t("studentForm.apaarFound"));
+    } catch (e) {
+      setApaarFetchStatus("error");
+      setApaarFetchMsg(e instanceof Error ? e.message : t("studentForm.apaarNotFound"));
+      setApaarPreview(null);
+    }
   };
 
   const [categoryHint, setCategoryHint] = useState<ReturnType<typeof inferCategoryFromFields> | null>(null);
@@ -502,8 +646,8 @@ export function StudentForm({
 
   const handleSubmit = async (): Promise<string | void> => {
     if (!form.classId) {
-      alert("Please select a class first. Class setup is managed by admin.");
-      setStep(1);
+      alert(t("studentForm.assignClassRequired"));
+      setStep(deferClassAssignment ? 5 : 1);
       return;
     }
     setLoading(true);
@@ -560,17 +704,45 @@ export function StudentForm({
         grNumber={form.grNumber || ""}
         locked={grLocked}
         studentId={savedStudentId}
+        deferClassAssignment={deferClassAssignment}
         onAcademicYearChange={(year) => {
           setForm((prev) => ({
             ...prev,
             financialYear: year,
-            classId: null,
+            ...(deferClassAssignment ? {} : { classId: null }),
             grNumber: "",
           }));
         }}
         onClassChange={(id) => update("classId", id || null)}
         onGrNumberChange={(v) => update("grNumber", v)}
         onUnlockEdit={() => setGrLocked(false)}
+        onClearSelection={() => {
+          skipAutoSave.current = true;
+          setGrLocked(false);
+          setGrReady(false);
+          setStep(1);
+          // Dedicated edit page keeps the student id; /students/new resets pick
+          if (isEditMode && studentIdProp) {
+            setForm((prev) => ({ ...prev, grNumber: prev.grNumber || "" }));
+            return;
+          }
+          setSavedStudentId(undefined);
+          setForm((prev) => ({
+            maritalStatus: "Unmarried",
+            habitationType: "Own",
+            residentType: "Rural",
+            isHosteler: false,
+            isOrphan: false,
+            admissionType: "Regular",
+            financialYear: prev.financialYear || "2025-26",
+            classId: undefined,
+            grNumber: "",
+            familySize: 0,
+            dateOfBirth: todayDobDisplay(),
+          }));
+          setGuTouched({});
+          setAutoSaveStatus("idle");
+        }}
         onReady={handleGrReady}
       />
 
@@ -660,6 +832,129 @@ export function StudentForm({
         <div className="sf-card__body">
           {step === 1 && (
             <div className="sf-stack">
+              {/* ── Top: only online fetch sources ── */}
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">
+                    {t("studentForm.importFetchTitle")}
+                  </h4>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {t("studentForm.importFetchDesc")}
+                  </p>
+                </div>
+
+                <SsgujaratFetch
+                  aadhaarNumber={form.aadhaarNumber || ""}
+                  childUid={form.childUid || ""}
+                  onApply={applySsgujaratData}
+                />
+
+                <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 sm:p-4">
+                  <p className="text-sm font-semibold text-violet-900">
+                    {t("fields.apaarId")}
+                  </p>
+                  <p className="mt-0.5 text-xs text-violet-700">
+                    {t("studentForm.apaarFetchHint")}
+                  </p>
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                    <div className="min-w-0 w-full flex-1">
+                      <Input
+                        label={t("fields.apaarId")}
+                        maxLength={16}
+                        placeholder={t("studentForm.apaarPlaceholder")}
+                        value={form.apaarId || ""}
+                        onChange={(e) => {
+                          setApaarFetchStatus("idle");
+                          setApaarFetchMsg("");
+                          setApaarPreview(null);
+                          update(
+                            "apaarId",
+                            e.target.value
+                              .replace(/[^a-zA-Z0-9]/g, "")
+                              .toUpperCase()
+                              .slice(0, 16),
+                          );
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void fetchByApaarId();
+                          }
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      className="h-10 w-full cursor-pointer gap-1.5 bg-violet-700 hover:bg-violet-800 sm:w-auto"
+                      onClick={() => void fetchByApaarId()}
+                      disabled={
+                        apaarFetchStatus === "loading" ||
+                        !String(form.apaarId || "").trim()
+                      }
+                    >
+                      {apaarFetchStatus === "loading" ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <Search className="h-4 w-4" />
+                      )}
+                      {t("studentForm.apaarFetchBtn")}
+                    </Button>
+                  </div>
+                  {apaarFetchMsg && (
+                    <p
+                      className={`mt-2 text-xs font-medium ${
+                        apaarFetchStatus === "ok" ? "text-emerald-700" : "text-red-600"
+                      }`}
+                    >
+                      {apaarFetchMsg}
+                    </p>
+                  )}
+                  {apaarPreview && apaarFetchStatus === "ok" && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs font-semibold text-violet-900">
+                        {t("studentForm.apaarLoadedPreview")}
+                      </p>
+                      <div className="grid max-h-80 grid-cols-1 gap-x-4 gap-y-1 overflow-y-auto rounded-lg border border-violet-200 bg-white p-3 text-xs sm:grid-cols-2">
+                        {studentFormPreviewRows(apaarPreview, {
+                          name: t("common.name"),
+                          aadhaarName: t("fields.aadhaarName"),
+                          aadhaar: t("fields.aadhaar"),
+                          dob: t("fields.dob"),
+                          gender: t("fields.gender"),
+                          mobile: t("fields.mobile"),
+                          fatherMother: t("ssg.fatherMother"),
+                          category: t("fields.category"),
+                          caste: t("fields.caste"),
+                          religion: t("fields.religion"),
+                          address: t("common.address"),
+                          district: t("common.district"),
+                          pincode: t("fields.currentPincode"),
+                          gr: t("fields.grNumber"),
+                          classLabel: t("fields.class"),
+                          apaar: t("fields.apaarId"),
+                          bank: t("fields.bank"),
+                          account: t("fields.account"),
+                          ifsc: t("fields.ifscCode"),
+                          scholarship: t("common.scholarship"),
+                          childUid: t("fields.childUid"),
+                        }).map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="grid min-w-0 grid-cols-1 gap-0.5 py-1 min-[400px]:grid-cols-[6rem_minmax(0,1fr)]"
+                          >
+                            <span className="text-slate-500">{label}:</span>
+                            <span className="min-w-0 break-words font-medium text-slate-800 [overflow-wrap:anywhere]">
+                              {value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-violet-700">{t("studentForm.apaarLoadedHint")}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="sf-block sf-block--plain">
                 <div className="sf-grid">
               <BilingualNameField
@@ -699,7 +994,12 @@ export function StudentForm({
                     <span className="text-xs ml-1">({categoryHint.source}, {categoryHint.confidence})</span>
                   </span>
                   {form.category !== categoryHint.category && (
-                    <Button type="button" size="sm" variant="outline" onClick={applySuggestedCategory}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-auto min-h-11 w-full whitespace-normal sm:w-auto"
+                      onClick={applySuggestedCategory}
+                    >
                       {t("studentForm.applyCategory", { category: categoryHint.category })}
                     </Button>
                   )}
@@ -735,13 +1035,39 @@ export function StudentForm({
                 <p className="sf-hint">{t("studentForm.ageHint")}</p>
               </div>
               <Select label={t("fields.gender")} required options={genderOptions} value={form.gender || ""} onChange={(e) => update("gender", e.target.value)} />
-              <Input label={t("fields.aadhaarNumber")} required placeholder="123456789012" maxLength={12} value={form.aadhaarNumber || ""} onChange={(e) => update("aadhaarNumber", e.target.value)} />
-              <div className="sf-span-full">
-                <SsgujaratFetch
-                  aadhaarNumber={form.aadhaarNumber || ""}
-                  childUid={form.childUid || ""}
-                  onApply={applySsgujaratData}
+              <Input
+                label={t("fields.aadhaarNumber")}
+                required
+                placeholder="123456789012"
+                maxLength={12}
+                value={form.aadhaarNumber || ""}
+                onChange={(e) =>
+                  update("aadhaarNumber", e.target.value.replace(/\D/g, "").slice(0, 12))
+                }
+              />
+              <Input
+                label={t("fields.childUid")}
+                maxLength={18}
+                placeholder="242610044011910032"
+                value={form.childUid || ""}
+                onChange={(e) =>
+                  update("childUid", e.target.value.replace(/\s/g, "").replace(/\D/g, "").slice(0, 18))
+                }
+              />
+              <div>
+                <Input
+                  label={t("fields.panNumber")}
+                  maxLength={10}
+                  placeholder={t("studentForm.panPlaceholder")}
+                  value={form.panNumber || ""}
+                  onChange={(e) =>
+                    update(
+                      "panNumber",
+                      e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 10),
+                    )
+                  }
                 />
+                <p className="sf-hint">{t("studentForm.panHint")}</p>
               </div>
               <div>
                 <Input
@@ -783,8 +1109,7 @@ export function StudentForm({
                     disabled={grLocked}
                     onChange={(e) => update("grNumber", e.target.value)}
                   />
-                  <Input label={t("fields.childUid")} maxLength={18} placeholder="242610044011910032" value={form.childUid || ""} onChange={(e) => update("childUid", e.target.value.replace(/\s/g, ""))} />
-                  <Select label={t("fields.bloodGroup")} options={["", ...BLOOD_GROUPS]} value={form.bloodGroup || ""} onChange={(e) => update("bloodGroup", e.target.value || null)} />
+                  <Select label={t("fields.bloodGroup")} options={[...BLOOD_GROUPS]} emptyLabel={t("common.select")} value={form.bloodGroup || ""} onChange={(e) => update("bloodGroup", e.target.value || null)} />
                 </div>
                 {grLocked && (
                   <p className="sf-hint">{t("studentForm.grClassLockedHint")}</p>
@@ -834,7 +1159,47 @@ export function StudentForm({
                     guTouched={!!guTouched.guardianNameGu}
                     onGuTouched={() => markGuTouched("guardianNameGu")}
                   />
-                  <Input label={t("fields.parentOccupation")} required value={form.parentOccupation || ""} onChange={(e) => update("parentOccupation", e.target.value)} />
+                  <div>
+                    <Select
+                      label={t("fields.parentOccupation")}
+                      required
+                      emptyLabel={t("common.select")}
+                      options={(PARENT_OCCUPATIONS as readonly string[]).map((o) => ({
+                        value: o,
+                        label: o === "Other" ? t("common.other") : o,
+                      }))}
+                      value={occupationSelectValue}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        if (next === OCCUPATION_OTHER) {
+                          setOccupationOtherMode(true);
+                          const cur = String(form.parentOccupation || "").trim();
+                          const listed =
+                            (PARENT_OCCUPATIONS as readonly string[]).includes(cur) &&
+                            cur !== OCCUPATION_OTHER;
+                          if (listed || !cur) update("parentOccupation", "");
+                        } else {
+                          setOccupationOtherMode(false);
+                          update("parentOccupation", next || null);
+                        }
+                      }}
+                    />
+                    {isOccupationOther && (
+                      <div className="mt-2">
+                        <Input
+                          label={t("fields.parentOccupationOther")}
+                          required
+                          placeholder={t("fields.parentOccupationOtherPlaceholder")}
+                          value={
+                            isBlankOccupation(form.parentOccupation)
+                              ? ""
+                              : form.parentOccupation || ""
+                          }
+                          onChange={(e) => update("parentOccupation", e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
                   <Input label={t("fields.annualFamilyIncome")} required type="number" value={form.annualFamilyIncome || ""} onChange={(e) => update("annualFamilyIncome", parseFloat(e.target.value))} />
                   <Input
                     label={t("fields.familySize")}
@@ -895,7 +1260,12 @@ export function StudentForm({
               <div className="sf-block sf-block--address">
                 <div className="sf-block__head">
                   <h4 className="sf-block__title">{t("studentForm.permanentAddress")}</h4>
-                  <Button type="button" variant="outline" size="sm" onClick={copyCurrentToPermanent}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto min-h-11 w-full whitespace-normal sm:w-auto"
+                    onClick={copyCurrentToPermanent}
+                  >
                     {t("studentForm.sameAsCurrent")}
                   </Button>
                 </div>
@@ -1118,6 +1488,48 @@ export function StudentForm({
 
           {step === 5 && (
             <div className="sf-stack">
+              {deferClassAssignment && (
+                <div className="sf-block sf-block--academic">
+                  <div className="sf-block__head">
+                    <h4 className="sf-block__title">{t("studentForm.assignClassFinalTitle")}</h4>
+                    <p className="sf-hint" style={{ marginTop: "0.25rem" }}>
+                      {t("studentForm.assignClassFinalDesc")}
+                    </p>
+                  </div>
+                  <div className="sf-grid">
+                    <Select
+                      label={t("fields.financialYear")}
+                      required
+                      options={FINANCIAL_YEARS}
+                      value={form.financialYear || "2025-26"}
+                      onChange={(e) => {
+                        const year = e.target.value;
+                        setForm((prev) => ({
+                          ...prev,
+                          financialYear: year,
+                          classId: null,
+                        }));
+                      }}
+                    />
+                    <Select
+                      label={t("fields.assignClass")}
+                      required
+                      emptyLabel={t("common.selectClass")}
+                      options={classes
+                        .filter((c) => c.academicYear === (form.financialYear || "2025-26"))
+                        .map((c) => ({ value: c.id, label: c.name }))}
+                      value={form.classId || ""}
+                      onChange={(e) => update("classId", e.target.value || null)}
+                    />
+                  </div>
+                  {!form.classId && (
+                    <p className="sf-note sf-note--warn" style={{ marginTop: "0.75rem" }}>
+                      {t("studentForm.assignClassRequired")}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="sf-note sf-note--ok">
                 <h4 className="sf-block__title" style={{ color: "#065f46", marginBottom: "0.35rem" }}>{t("studentForm.reviewTitle")}</h4>
                 <p style={{ margin: 0 }}>{t("studentForm.reviewDesc")}</p>
@@ -1133,9 +1545,14 @@ export function StudentForm({
                   [t("fields.mobile"), form.mobileNumber],
                   [t("fields.category"), form.category],
                   [t("fields.dob"), form.dateOfBirth],
-                  [t("fields.class"), form.standard ? `Class ${form.standard}-${form.section || ""}` : "—"],
+                  [t("fields.class"), form.classId
+                    ? (classes.find((c) => c.id === form.classId)?.name ||
+                      (form.standard ? `Class ${form.standard}-${form.section || ""}` : "—"))
+                    : "—"],
                   [t("fields.roll"), form.rollNumber],
                   [t("fields.childUid"), form.childUid],
+                  [t("fields.apaarId"), form.apaarId],
+                  [t("fields.panNumber"), form.panNumber],
                 ]},
                 { title: t("studentForm.academic"), tone: "academic", fields: [
                   [t("fields.scheme"), form.scholarshipScheme],

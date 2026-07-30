@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   "/api/auth/verify-email",
   "/api/auth/verify-otp",
   "/api/auth/resend-verification",
+  "/api/auth/student-first-login",
   "/verify-email",
   "/api/auth/logout",
   "/api/health",
@@ -57,11 +58,19 @@ function getRouteRoles(pathname: string): UserRole[] | null {
 }
 
 function isSchoolAdminRoute(pathname: string): boolean {
-  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) return false;
-  if (pathname.startsWith("/teacher") || pathname.startsWith("/api/teacher")) return false;
-  if (pathname.startsWith("/clerk") || pathname.startsWith("/api/clerk")) return false;
-  if (pathname.startsWith("/ca") || pathname.startsWith("/api/ca")) return false;
-  if (pathname.startsWith("/student") || pathname.startsWith("/api/student-portal")) return false;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin"))
+    return false;
+  if (pathname.startsWith("/teacher") || pathname.startsWith("/api/teacher"))
+    return false;
+  if (pathname.startsWith("/clerk") || pathname.startsWith("/api/clerk"))
+    return false;
+  if (pathname.startsWith("/ca") || pathname.startsWith("/api/ca"))
+    return false;
+  if (
+    pathname.startsWith("/student") ||
+    pathname.startsWith("/api/student-portal")
+  )
+    return false;
   if (pathname.startsWith("/login") || pathname.startsWith("/m/")) return false;
   if (pathname.startsWith("/api/auth")) return false;
   if (pathname.startsWith("/api/automation/sms")) return false;
@@ -82,24 +91,37 @@ export async function middleware(request: NextRequest) {
   const origin = request.headers.get("origin");
 
   if (request.method === "OPTIONS" && pathname.startsWith("/api/")) {
-    return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
+    return new NextResponse(null, {
+      status: 204,
+      headers: corsHeaders(origin),
+    });
   }
 
   const token = resolveSessionToken(request);
   const session = token ? await parseSessionToken(token) : null;
 
-  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+  if (
+    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))
+  ) {
     if (session && pathname === "/login") {
-      return NextResponse.redirect(new URL(getRoleHome(session.role), request.url));
+      return NextResponse.redirect(
+        new URL(getRoleHome(session.role), request.url),
+      );
     }
     return NextResponse.next();
   }
 
-  if (process.env.NODE_ENV !== "production" && pathname.startsWith("/api/seed/")) {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    pathname.startsWith("/api/seed/")
+  ) {
     return NextResponse.next();
   }
 
-  if (process.env.NODE_ENV !== "production" && pathname.startsWith("/api/dev/")) {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    pathname.startsWith("/api/dev/")
+  ) {
     return NextResponse.next();
   }
 
@@ -108,12 +130,17 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/" && session) {
-    return NextResponse.redirect(new URL(getRoleHome(session.role), request.url));
+    return NextResponse.redirect(
+      new URL(getRoleHome(session.role), request.url),
+    );
   }
 
   if (!token || !session) {
     if (pathname.startsWith("/api/")) {
-      const res = NextResponse.json({ error: "Login required" }, { status: 401 });
+      const res = NextResponse.json(
+        { error: "Login required" },
+        { status: 401 },
+      );
       for (const [key, value] of Object.entries(corsHeaders(origin))) {
         res.headers.set(key, value);
       }
@@ -132,12 +159,21 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
-    return NextResponse.redirect(new URL(getRoleHome(session.role), request.url));
+    return NextResponse.redirect(
+      new URL(getRoleHome(session.role), request.url),
+    );
   }
 
-  if (session.role === "super_admin" && isSchoolAdminRoute(pathname) && !pathname.startsWith("/api/uploads")) {
+  if (
+    session.role === "super_admin" &&
+    isSchoolAdminRoute(pathname) &&
+    !pathname.startsWith("/api/uploads")
+  ) {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "School access required" }, { status: 403 });
+      return NextResponse.json(
+        { error: "School access required" },
+        { status: 403 },
+      );
     }
     return NextResponse.redirect(new URL("/admin", request.url));
   }
@@ -149,7 +185,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/student", request.url));
   }
 
-  if (session.role === "teacher" && (pathname === "/attendance" || pathname.startsWith("/attendance/"))) {
+  if (
+    session.role === "teacher" &&
+    (pathname === "/attendance" || pathname.startsWith("/attendance/"))
+  ) {
     const url = new URL("/teacher/attendance", request.url);
     url.search = request.nextUrl.search;
     return NextResponse.redirect(url);
@@ -164,75 +203,114 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (["teacher", "clerk", "ca"].includes(session.role) && isSchoolAdminRoute(pathname)) {
+  if (
+    ["teacher", "clerk", "ca"].includes(session.role) &&
+    isSchoolAdminRoute(pathname)
+  ) {
     const clerkRoutes = [
       "/dashboard",
-      "/students", "/api/students",
-      "/admissions", "/api/admissions",
-      "/accounting", "/api/accounting",
-      "/import", "/api/students/bulk-import",
-      "/bulk-submit", "/api/students/bulk-submit",
-      "/export", "/api/students/export", "/api/reports/export",
-      "/api/stats", "/api/stats/export", "/categories",
-      "/certificates", "/api/certificates", "/api/general-register",
-      "/api/board-records", "/students/board-records",
-      "/attendance", "/api/attendance",
-      "/attendance/reports", "/api/attendance/reports",
-      "/staff", "/api/staff",
-      "/staff/attendance", "/staff/payroll", "/api/staff-hr",
-      "/chat", "/api/chat",
+      "/students",
+      "/api/students",
+      "/admissions",
+      "/api/admissions",
+      "/accounting",
+      "/api/accounting",
+      "/import",
+      "/api/students/bulk-import",
+      "/bulk-submit",
+      "/api/students/bulk-submit",
+      "/export",
+      "/api/students/export",
+      "/api/reports/export",
+      "/api/stats",
+      "/api/stats/export",
+      "/categories",
+      "/certificates",
+      "/api/certificates",
+      "/api/general-register",
+      "/api/board-records",
+      "/students/board-records",
+      "/attendance",
+      "/api/attendance",
+      "/attendance/reports",
+      "/api/attendance/reports",
+      "/staff",
+      "/api/staff",
+      "/staff/attendance",
+      "/staff/payroll",
+      "/api/staff-hr",
+      "/chat",
+      "/api/chat",
       "/api/uploads/chat",
       "/api/notifications",
       "/api/help",
-      "/id-cards", "/api/id-cards",
-      "/classes", "/api/classes",
-      "/timetable", "/api/timetable",
-      "/results", "/api/results",
-      "/auto-apply", "/api/automation",
-      "/api/clerk", "/api/school",
-      "/profile", "/api/account",
+      "/id-cards",
+      "/api/id-cards",
+      "/classes",
+      "/api/classes",
+      "/subjects",
+      "/api/subjects",
+      "/exams",
+      "/api/exams",
+      "/exam-seat-numbers",
+      "/api/exam-seat-numbers",
+      "/timetable",
+      "/api/timetable",
+      "/results",
+      "/api/results",
+      "/auto-apply",
+      "/api/automation",
+      "/api/clerk",
+      "/api/school",
+      "/profile",
+      "/api/account",
       "/letterhead",
     ];
     const allowed =
-      (session.role === "teacher" && (
-        pathname.startsWith("/results") ||
-        pathname.startsWith("/api/results") ||
-        pathname.startsWith("/classes") ||
-        pathname.startsWith("/api/classes") ||
-        pathname.startsWith("/students/board-records") ||
-        pathname.startsWith("/api/board-records") ||
-        pathname.startsWith("/api/teacher") ||
-        pathname.startsWith("/teacher") ||
-        pathname.startsWith("/api/attendance") ||
-        pathname.startsWith("/api/timetable") ||
-        pathname.startsWith("/timetable") ||
-        pathname.startsWith("/certificates/class-register") ||
-        pathname.startsWith("/api/certificates") ||
-        pathname.startsWith("/chat") ||
-        pathname.startsWith("/api/chat") ||
-        pathname.startsWith("/api/uploads/chat") ||
-        pathname.startsWith("/api/notifications") ||
-        pathname.startsWith("/api/help") ||
-        pathname.startsWith("/profile") ||
-        pathname.startsWith("/api/account")
-      )) ||
-      (session.role === "clerk" && clerkRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"))) ||
-      (session.role === "ca" && (
-        pathname.startsWith("/accounting") ||
-        pathname.startsWith("/api/accounting") ||
-        pathname.startsWith("/ca") ||
-        pathname.startsWith("/api/ca") ||
-        pathname.startsWith("/api/notifications") ||
-        pathname.startsWith("/api/help") ||
-        pathname.startsWith("/profile") ||
-        pathname.startsWith("/api/account")
-      ));
+      (session.role === "teacher" &&
+        (pathname.startsWith("/results") ||
+          pathname.startsWith("/api/results") ||
+          pathname.startsWith("/classes") ||
+          pathname.startsWith("/api/classes") ||
+          pathname.startsWith("/students/board-records") ||
+          pathname.startsWith("/api/board-records") ||
+          pathname.startsWith("/api/teacher") ||
+          pathname.startsWith("/teacher") ||
+          pathname.startsWith("/api/roll-numbers") ||
+          pathname.startsWith("/api/exam-seat-numbers") ||
+          pathname.startsWith("/api/attendance") ||
+          pathname.startsWith("/api/timetable") ||
+          pathname.startsWith("/timetable") ||
+          pathname.startsWith("/certificates/class-register") ||
+          pathname.startsWith("/api/certificates") ||
+          pathname.startsWith("/chat") ||
+          pathname.startsWith("/api/chat") ||
+          pathname.startsWith("/api/uploads/chat") ||
+          pathname.startsWith("/api/notifications") ||
+          pathname.startsWith("/api/help") ||
+          pathname.startsWith("/profile") ||
+          pathname.startsWith("/api/account"))) ||
+      (session.role === "clerk" &&
+        clerkRoutes.some(
+          (r) => pathname === r || pathname.startsWith(r + "/"),
+        )) ||
+      (session.role === "ca" &&
+        (pathname.startsWith("/accounting") ||
+          pathname.startsWith("/api/accounting") ||
+          pathname.startsWith("/ca") ||
+          pathname.startsWith("/api/ca") ||
+          pathname.startsWith("/api/notifications") ||
+          pathname.startsWith("/api/help") ||
+          pathname.startsWith("/profile") ||
+          pathname.startsWith("/api/account")));
 
     if (!allowed) {
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
-      return NextResponse.redirect(new URL(getRoleHome(session.role), request.url));
+      return NextResponse.redirect(
+        new URL(getRoleHome(session.role), request.url),
+      );
     }
   }
 

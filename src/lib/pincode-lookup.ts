@@ -25,6 +25,7 @@ type RawPostOffice = {
   District?: string;
   Block?: string;
   Division?: string;
+  Region?: string;
   State?: string;
   Pincode?: string;
 };
@@ -34,6 +35,35 @@ type RawPincodeResponse = {
   Message?: string;
   PostOffice?: RawPostOffice[] | null;
 };
+
+/**
+ * India Post API still returns outdated parent districts for some areas
+ * carved out later (e.g. Tapi from Surat in 2007).
+ * Prefer Block/taluka + known pincodes over raw District.
+ */
+const PINCODE_DISTRICT_OVERRIDES: Record<string, string> = {
+  // Songadh / Fort Songadh / Uchchhal area — Dist. Tapi
+  "394670": "Tapi",
+  "394651": "Tapi",
+  "394650": "Tapi",
+  "394655": "Tapi",
+  "394640": "Tapi",
+  "394641": "Tapi",
+  "394635": "Tapi",
+  "394630": "Tapi",
+  "394633": "Tapi",
+};
+
+/** Taluka / Block names that belong to Tapi (API often still says Surat) */
+const TAPI_BLOCKS = new Set([
+  "songadh",
+  "vyara",
+  "uchchhal",
+  "uchhal",
+  "nizar",
+  "valod",
+  "dolvan",
+]);
 
 function normalizeDistrict(name: string): string {
   const trimmed = name.trim();
@@ -48,6 +78,38 @@ function normalizeDistrict(name: string): string {
       trimmed.toLowerCase().includes(d.toLowerCase()),
   );
   return fuzzy || trimmed;
+}
+
+function correctGujaratDistrict(opts: {
+  district: string;
+  taluka: string;
+  officeName: string;
+  pincode: string;
+}): string {
+  const pin = opts.pincode.trim();
+  if (PINCODE_DISTRICT_OVERRIDES[pin]) {
+    return PINCODE_DISTRICT_OVERRIDES[pin]!;
+  }
+
+  const district = normalizeDistrict(opts.district);
+  const block = opts.taluka.trim().toLowerCase();
+  const name = opts.officeName.trim().toLowerCase();
+
+  // Tapi was carved from Surat — postal DB often still lists District = Surat
+  if (district.toLowerCase() === "surat") {
+    if (
+      TAPI_BLOCKS.has(block) ||
+      name.includes("songadh") ||
+      name.includes("vyara") ||
+      name.includes("uchchhal") ||
+      name.includes("nizar") ||
+      name.includes("valod")
+    ) {
+      return "Tapi";
+    }
+  }
+
+  return district;
 }
 
 function pickTaluka(office: RawPostOffice): string {
@@ -74,11 +136,13 @@ export function buildAddressFromOffice(office: PincodeOffice): string {
 }
 
 export function officeToFill(office: PincodeOffice): Omit<PincodeLookupResult, "offices" | "pincode"> {
+  // Prefer taluka (Block) as city for school forms — more useful than PO name
+  const city = office.taluka || office.name;
   return {
     state: office.state,
     district: office.district,
     taluka: office.taluka,
-    city: office.name,
+    city,
     address: buildAddressFromOffice(office),
   };
 }
@@ -104,14 +168,25 @@ export async function lookupIndianPincode(pincode: string): Promise<PincodeLooku
     throw new Error("Pincode not found. Please check and try again.");
   }
 
-  const offices: PincodeOffice[] = payload.PostOffice.map((po) => ({
-    name: String(po.Name || "").trim(),
-    branchType: String(po.BranchType || "").trim(),
-    district: normalizeDistrict(String(po.District || "")),
-    taluka: pickTaluka(po),
-    state: String(po.State || "").trim(),
-    pincode: String(po.Pincode || code).trim(),
-  })).filter((o) => o.name);
+  const offices: PincodeOffice[] = payload.PostOffice.map((po) => {
+    const name = String(po.Name || "").trim();
+    const taluka = pickTaluka(po);
+    const pincodeVal = String(po.Pincode || code).trim();
+    const district = correctGujaratDistrict({
+      district: String(po.District || ""),
+      taluka,
+      officeName: name,
+      pincode: pincodeVal,
+    });
+    return {
+      name,
+      branchType: String(po.BranchType || "").trim(),
+      district,
+      taluka,
+      state: String(po.State || "").trim(),
+      pincode: pincodeVal,
+    };
+  }).filter((o) => o.name);
 
   if (!offices.length) {
     throw new Error("No location data found for this pincode");

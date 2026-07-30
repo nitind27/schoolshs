@@ -126,7 +126,13 @@ export function HelpChatbot() {
   }, [open, messages, loading]);
 
   // Hide on public pages
-  if (pathname === "/login" || pathname === "/" || pathname.startsWith("/m/")) {
+  if (
+    pathname === "/login" ||
+    pathname === "/" ||
+    pathname === "/chat" ||
+    pathname === "/letterhead" ||
+    pathname.startsWith("/m/")
+  ) {
     return null;
   }
 
@@ -206,6 +212,8 @@ export function HelpChatbot() {
           "flex min-h-[5.5rem] min-w-[2.25rem] flex-col items-center justify-center",
           "rounded-l-md border border-r-0 border-neutral-700 bg-neutral-900",
           "px-2 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.35)]",
+          "max-sm:bottom-4 max-sm:right-4 max-sm:top-auto max-sm:min-h-11 max-sm:min-w-11 max-sm:translate-y-0",
+          "max-sm:rounded-full max-sm:border-r max-sm:px-2 max-sm:py-2",
           "transition-colors duration-200 hover:bg-black active:bg-neutral-950",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
           open && "pointer-events-none translate-x-full opacity-0"
@@ -214,7 +222,7 @@ export function HelpChatbot() {
         title={t("helpBot.open")}
       >
         <span
-          className="select-none font-bold uppercase text-amber-400"
+          className="select-none font-bold uppercase text-amber-400 max-sm:hidden"
           style={{
             writingMode: "vertical-rl",
             textOrientation: "mixed",
@@ -224,6 +232,9 @@ export function HelpChatbot() {
         >
           HELP
         </span>
+        <span className="hidden select-none text-lg font-bold leading-none text-amber-400 max-sm:inline">
+          ?
+        </span>
       </button>
 
       {/* Old floating chatbot — bottom-right popup */}
@@ -231,7 +242,7 @@ export function HelpChatbot() {
         <div
           className={cn(
             "fixed bottom-5 right-5 z-[95] flex w-[min(100vw-1.25rem,400px)] flex-col overflow-hidden",
-            "h-[min(78vh,620px)] rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/20",
+            "h-[min(78dvh,620px)] rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/20",
             "help-bot-panel"
           )}
           role="dialog"

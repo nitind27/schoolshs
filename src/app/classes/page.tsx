@@ -10,7 +10,29 @@ import { InfoModal } from "@/components/ui/info-modal";
 import { ClassForm } from "@/components/forms/class-form";
 import { classGroupKey, classGroupLabel } from "@/lib/class-structure";
 import { canManageClasses } from "@/lib/roles";
-import { Plus, Users, BookOpen, ChevronRight, UserCog, Pencil, Trash2, Search, School, UserCheck, UserX } from "lucide-react";
+import {
+  CLASS_TEACHER_STAFF_QUERY,
+  buildTeacherClassMap,
+  formatClassTeacherOptionLabel,
+  getTeacherBusyClass,
+  pickClassTeacherOptions,
+  sortClassTeacherOptionsForClass,
+  type TeacherClassAssignment,
+} from "@/lib/class-teacher-staff";
+import {
+  Plus,
+  Users,
+  BookOpen,
+  ChevronRight,
+  UserCog,
+  Pencil,
+  Trash2,
+  Search,
+  School,
+  UserCheck,
+  UserX,
+  Hash,
+} from "lucide-react";
 import type { SchoolClass, Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 import { PageShell } from "@/components/layout/page-shell";
@@ -24,18 +46,25 @@ type ClassWithMeta = SchoolClass & {
 function ClassCard({
   c,
   teachers,
+  teacherAssignments,
   canManage,
   onTeacherChange,
   onDelete,
 }: {
   c: ClassWithMeta;
   teachers: Staff[];
+  teacherAssignments: Map<string, TeacherClassAssignment>;
   canManage: boolean;
   onTeacherChange: (classId: string, teacherId: string) => void;
   onDelete: (c: ClassWithMeta) => void;
 }) {
   const t = useT();
   const studentCount = c._count?.students ?? 0;
+  const teacherOptions = sortClassTeacherOptionsForClass(
+    teachers,
+    c.id,
+    teacherAssignments,
+  );
 
   return (
     <Card className="group relative h-full overflow-hidden border-slate-200/80 hover:border-blue-300 hover:shadow-lg transition-all duration-200">
@@ -44,7 +73,7 @@ function ClassCard({
         <Link href={`/classes/${c.id}`} className="block flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="font-bold text-slate-900 text-base truncate group-hover:text-blue-700 transition-colors">
+              <p className="line-clamp-2 break-words text-base font-bold text-slate-900 transition-colors group-hover:text-blue-700">
                 {c.name}
               </p>
               <p className="text-xs text-slate-500 mt-1">
@@ -57,7 +86,7 @@ function ClassCard({
         </Link>
 
         <div className="mt-3 flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 text-blue-700 px-2.5 py-1 text-xs font-semibold">
+          <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
             <Users className="h-3.5 w-3.5" />
             {t("classes.studentsCount", { count: studentCount })}
           </span>
@@ -78,11 +107,23 @@ function ClassCard({
                 className="w-full h-9 rounded-lg border border-slate-300 text-xs font-medium px-2 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
               >
                 <option value="">{t("classes.noClassTeacher")}</option>
-                {teachers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.firstName} {s.lastName}
-                  </option>
-                ))}
+                {teacherOptions.map((s) => {
+                  const busy = getTeacherBusyClass(
+                    s.id,
+                    c.id,
+                    teacherAssignments,
+                  );
+                  return (
+                    <option key={s.id} value={s.id} disabled={Boolean(busy)}>
+                      {formatClassTeacherOptionLabel({
+                        firstName: s.firstName,
+                        lastName: s.lastName,
+                        designation: s.designation,
+                        busyClassName: busy?.className,
+                      })}
+                    </option>
+                  );
+                })}
               </select>
             </div>
             <div className="flex gap-2">
@@ -92,7 +133,11 @@ function ClassCard({
                 </Button>
               </Link>
               <Link href={`/classes/${c.id}/edit`}>
-                <Button variant="secondary" size="icon-sm" title={t("classes.editClass")}>
+                <Button
+                  variant="secondary"
+                  size="icon-sm"
+                  title={t("classes.editClass")}
+                >
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
               </Link>
@@ -108,7 +153,7 @@ function ClassCard({
             </div>
           </div>
         ) : (
-          <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100 truncate">
+          <p className="mt-3 break-words border-t border-slate-100 pt-3 text-xs text-slate-500">
             {c.classTeacher
               ? `${c.classTeacher.firstName} ${c.classTeacher.lastName}`
               : t("classes.noClassTeacher")}
@@ -149,14 +194,10 @@ export default function ClassesPage() {
         setCanManage(!!role && canManageClasses(role));
         setHomeHref(role === "clerk" ? "/clerk" : "/dashboard");
       });
-    fetch("/api/staff?active=true")
+    fetch(`/api/staff?${CLASS_TEACHER_STAFF_QUERY}`)
       .then((r) => r.json())
       .then((d) =>
-        setTeachers(
-          (d.staff || []).filter((s: Staff) =>
-            ["Teacher", "Head Teacher", "Principal", "Class Teacher"].includes(s.designation)
-          )
-        )
+        setTeachers(pickClassTeacherOptions((d.staff || []) as Staff[])),
       );
   }, []);
 
@@ -223,7 +264,7 @@ export default function ClassesPage() {
         (c.stream || "").toLowerCase().includes(q) ||
         `${c.classTeacher?.firstName || ""} ${c.classTeacher?.lastName || ""}`
           .toLowerCase()
-          .includes(q)
+          .includes(q),
     );
   }, [classes, search]);
 
@@ -234,8 +275,13 @@ export default function ClassesPage() {
   }, [classes]);
 
   const stats = useMemo(() => {
-    const totalStudents = classes.reduce((sum, c) => sum + (c._count?.students ?? 0), 0);
-    const withTeacher = classes.filter((c) => c.classTeacherId || c.classTeacher?.id).length;
+    const totalStudents = classes.reduce(
+      (sum, c) => sum + (c._count?.students ?? 0),
+      0,
+    );
+    const withTeacher = classes.filter(
+      (c) => c.classTeacherId || c.classTeacher?.id,
+    ).length;
     return {
       total: classes.length,
       totalStudents,
@@ -244,12 +290,20 @@ export default function ClassesPage() {
     };
   }, [classes]);
 
+  const teacherAssignments = useMemo(
+    () => buildTeacherClassMap(classes),
+    [classes],
+  );
+
   const grouped = useMemo(() => {
     const map = new Map<string, { label: string; classes: ClassWithMeta[] }>();
     for (const c of filtered) {
       const key = classGroupKey(c.standard, c.stream);
       if (!map.has(key)) {
-        map.set(key, { label: classGroupLabel(c.standard, c.stream), classes: [] });
+        map.set(key, {
+          label: classGroupLabel(c.standard, c.stream),
+          classes: [],
+        });
       }
       map.get(key)!.classes.push(c);
     }
@@ -276,9 +330,22 @@ export default function ClassesPage() {
       ]}
       actions={
         canManage ? (
-          <Button onClick={() => setShowNewModal(true)}>
-            <Plus className="h-4 w-4" /> {t("classes.addClass")}
-          </Button>
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+            <Link href="/students/roll-numbers" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto">
+                <Hash className="h-4 w-4" /> {t("rollNumbers.title")}
+              </Button>
+            </Link>
+            <Link href="/classes/class-teachers" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto">
+                <UserCog className="h-4 w-4" />{" "}
+                {t("classes.assignClassTeachers")}
+              </Button>
+            </Link>
+            <Button className="w-full sm:w-auto" onClick={() => setShowNewModal(true)}>
+              <Plus className="h-4 w-4" /> {t("classes.addClass")}
+            </Button>
+          </div>
         ) : undefined
       }
     >
@@ -289,7 +356,9 @@ export default function ClassesPage() {
         onClose={() => setShowNewModal(false)}
         title={t("classes.addClass")}
       >
-        <p className="mb-4 text-sm text-slate-500">{t("classes.newClassSubtitle")}</p>
+        <p className="mb-4 text-sm text-slate-500">
+          {t("classes.newClassSubtitle")}
+        </p>
         <ClassForm
           onSubmit={handleCreate}
           onCancel={() => setShowNewModal(false)}
@@ -297,27 +366,67 @@ export default function ClassesPage() {
       </InfoModal>
 
       {canManage && (
-        <div className="rounded-xl bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-200/80 px-4 py-3 text-sm text-blue-900 mb-4 flex items-start gap-3">
-          <School className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-          <p>{t("classes.manageHint")}</p>
+        <div className="mb-4 flex flex-col gap-3 rounded-xl border border-teal-200/80 bg-gradient-to-r from-teal-50 to-emerald-50 px-4 py-3 text-sm text-teal-950 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <UserCog className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
+            <div>
+              <p className="font-semibold">{t("classes.classTeachersTitle")}</p>
+              <p className="mt-0.5 text-teal-900/80">
+                {t("classes.teacherAssignHint")}
+              </p>
+            </div>
+          </div>
+          <Link href="/classes/class-teachers" className="w-full sm:w-auto sm:shrink-0">
+            <Button
+              variant="outline"
+              className="w-full border-teal-300 bg-white text-teal-800 hover:bg-teal-50 sm:w-auto"
+            >
+              {t("classes.assignClassTeachers")}
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: t("classes.totalClasses"), value: stats.total, icon: School, color: "text-blue-600 bg-blue-50" },
-          { label: t("classes.totalStudents"), value: stats.totalStudents, icon: Users, color: "text-emerald-600 bg-emerald-50" },
-          { label: t("classes.withTeacher"), value: stats.withTeacher, icon: UserCheck, color: "text-indigo-600 bg-indigo-50" },
-          { label: t("classes.withoutTeacher"), value: stats.withoutTeacher, icon: UserX, color: "text-amber-600 bg-amber-50" },
+          {
+            label: t("classes.totalClasses"),
+            value: stats.total,
+            icon: School,
+            color: "text-blue-600 bg-blue-50",
+          },
+          {
+            label: t("classes.totalStudents"),
+            value: stats.totalStudents,
+            icon: Users,
+            color: "text-emerald-600 bg-emerald-50",
+          },
+          {
+            label: t("classes.withTeacher"),
+            value: stats.withTeacher,
+            icon: UserCheck,
+            color: "text-indigo-600 bg-indigo-50",
+          },
+          {
+            label: t("classes.withoutTeacher"),
+            value: stats.withoutTeacher,
+            icon: UserX,
+            color: "text-amber-600 bg-amber-50",
+          },
         ].map((s) => (
           <Card key={s.label} className="border-slate-200/80">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${s.color}`}>
+            <CardContent className="flex min-w-0 items-center gap-3 p-4">
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${s.color}`}
+              >
                 <s.icon className="h-5 w-5" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900 leading-none">{s.value}</p>
-                <p className="text-xs text-slate-500 mt-1">{s.label}</p>
+              <div className="min-w-0">
+                <p className="text-2xl font-bold text-slate-900 leading-none">
+                  {s.value}
+                </p>
+                <p className="mt-1 break-words text-xs text-slate-500">{s.label}</p>
               </div>
             </CardContent>
           </Card>
@@ -325,9 +434,11 @@ export default function ClassesPage() {
       </div>
 
       <Card className="mb-6">
-        <CardContent className="p-4 flex flex-wrap gap-3 items-end">
-          <div className="relative flex-1 min-w-[200px] space-y-1.5">
-            <label className="block text-sm font-medium text-slate-700">{t("common.search")}</label>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="relative w-full min-w-0 flex-1 space-y-1.5 sm:min-w-[200px]">
+            <label className="block text-sm font-medium text-slate-700">
+              {t("common.search")}
+            </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
               <input
@@ -344,7 +455,7 @@ export default function ClassesPage() {
             value={standard}
             onChange={(e) => setStandard(e.target.value)}
             emptyLabel={t("common.all")}
-            className="w-40"
+            className="w-full sm:w-40"
           />
         </CardContent>
       </Card>
@@ -366,7 +477,7 @@ export default function ClassesPage() {
       ) : (
         grouped.map(([key, group]) => (
           <div key={key}>
-            <h2 className="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <h2 className="mb-3 flex flex-wrap items-center gap-2 text-lg font-semibold text-slate-800">
               <span className="w-auto min-w-[2rem] h-8 px-2 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
                 {group.label.replace("Std ", "")}
               </span>
@@ -381,6 +492,7 @@ export default function ClassesPage() {
                   key={c.id}
                   c={c}
                   teachers={teachers}
+                  teacherAssignments={teacherAssignments}
                   canManage={canManage}
                   onTeacherChange={assignTeacher}
                   onDelete={handleDelete}

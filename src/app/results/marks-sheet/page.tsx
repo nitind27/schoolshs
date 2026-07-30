@@ -6,7 +6,10 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Printer, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CertificateFilters, type CertFilters } from "@/components/certificates/certificate-filters";
+import {
+  CertificateFilters,
+  type CertFilters,
+} from "@/components/certificates/certificate-filters";
 import {
   ClassMarksSheetView,
   type MarksSheetStudent,
@@ -64,7 +67,9 @@ function MarksSheetContent() {
     setError(null);
     setSaveOk(false);
     try {
-      const res = await fetch(`/api/results/marks-sheet?classId=${filters.classId}`);
+      const res = await fetch(
+        `/api/results/marks-sheet?classId=${filters.classId}`,
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to load");
       setData(json);
@@ -103,6 +108,9 @@ function MarksSheetContent() {
             subjectCode: s.subject.code,
             first: s.first,
             second: s.second,
+            third: s.third,
+            scores: s.scores,
+            internalScores: s.internalScores,
             internal: s.internal,
             annual: s.annual,
             achievement: s.achievement,
@@ -139,16 +147,29 @@ function MarksSheetContent() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-slate-900">{t("results.marksSheetTitle")}</h1>
-            <p className="text-sm text-slate-500">{t("results.marksSheetSubtitle")}</p>
+            <h1 className="text-xl font-bold text-slate-900">
+              {t("results.marksSheetTitle")}
+            </h1>
+            <p className="text-sm text-slate-500">
+              {t("results.marksSheetSubtitle")}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.print()} disabled={!students.length}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.print()}
+            disabled={!students.length}
+          >
             <Printer className="h-4 w-4" />
             {t("results.print")}
           </Button>
-          <Button size="sm" onClick={save} disabled={!students.length || saving || data?.exam?.isPublished}>
+          <Button
+            size="sm"
+            onClick={save}
+            disabled={!students.length || saving || data?.exam?.isPublished}
+          >
             {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
             {t("results.save")}
           </Button>
@@ -156,7 +177,11 @@ function MarksSheetContent() {
       </div>
 
       <div className="no-print">
-        <CertificateFilters value={filters} onChange={setFilters} onLoad={load} />
+        <CertificateFilters
+          value={filters}
+          onChange={setFilters}
+          onLoad={load}
+        />
       </div>
 
       {error && (
@@ -190,14 +215,21 @@ function MarksSheetContent() {
         </div>
       ) : (
         !loading && (
-          <p className="no-print text-center text-slate-500 py-16">{t("results.marksSheetEmpty")}</p>
+          <p className="no-print text-center text-slate-500 py-16">
+            {t("results.marksSheetEmpty")}
+          </p>
         )
       )}
 
       <style jsx global>{`
         @media print {
-          body * { visibility: hidden; }
-          .print-area, .print-area * { visibility: visible; }
+          body * {
+            visibility: hidden;
+          }
+          .print-area,
+          .print-area * {
+            visibility: visible;
+          }
           .print-area {
             position: absolute;
             left: 0;
@@ -207,14 +239,25 @@ function MarksSheetContent() {
             padding: 0 !important;
             margin: 0 !important;
           }
-          .no-print { display: none !important; }
-          aside, nav, header { display: none !important; }
-          main { padding: 0 !important; margin: 0 !important; }
-          .lg\\:pl-\\[260px\\] { padding-left: 0 !important; }
+          .no-print {
+            display: none !important;
+          }
+          aside,
+          nav,
+          header {
+            display: none !important;
+          }
+          main {
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .lg\\:pl-\\[260px\\] {
+            padding-left: 0 !important;
+          }
         }
         @page {
           size: A4 portrait;
-          margin: 8mm;
+          margin: 5mm;
         }
       `}</style>
     </div>

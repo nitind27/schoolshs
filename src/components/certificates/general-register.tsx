@@ -188,7 +188,7 @@ const GR_STYLES = `
     background: #e2e8f0;
     padding: 12px;
     border-radius: 12px;
-    max-height: calc(100vh - 280px);
+    max-height: calc(100dvh - 280px);
   }
   .gr-scale-wrap { width: fit-content; min-width: 100%; }
   .gr-book {

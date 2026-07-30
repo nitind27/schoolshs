@@ -21,6 +21,7 @@ import {
   type ActiveSessionInfo,
   type SessionAction,
 } from "@/lib/user-sessions";
+import { ensureStudentFirstLoginOtp } from "@/lib/student-first-login";
 
 type UserWithSchool = NonNullable<
   Awaited<ReturnType<typeof prisma.user.findUnique>> & {
@@ -47,7 +48,17 @@ export type AuthenticateDeviceChoice = {
   role: string;
 };
 
-export type AuthenticateResult = AuthenticateOk | AuthenticateDeviceChoice;
+export type AuthenticateStudentSetup = {
+  kind: "student_setup";
+  email: string;
+  name: string;
+  otpSent: boolean;
+};
+
+export type AuthenticateResult =
+  | AuthenticateOk
+  | AuthenticateDeviceChoice
+  | AuthenticateStudentSetup;
 
 async function assertUserCanLogin(user: UserWithSchool): Promise<void> {
   if (!user.isActive) {
@@ -250,6 +261,21 @@ export async function authenticateCredentials(
         : "Invalid email or password",
       401,
     );
+  }
+
+  if (
+    user.role === "student" &&
+    (user.mustChangePassword || !user.emailVerified)
+  ) {
+    await assertUserCanLogin(user);
+    await clearLoginFailures(user.email, ctx.ip);
+    const otpResult = await ensureStudentFirstLoginOtp(user);
+    return {
+      kind: "student_setup",
+      email: user.email,
+      name: user.name,
+      otpSent: otpResult.sent,
+    };
   }
 
   // Multi-device gate for web admin/clerk roles

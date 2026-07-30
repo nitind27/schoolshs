@@ -60,3 +60,11 @@ export const GENDER_FILTER_OPTIONS = [
   { value: "Female", label: "Girls (F)" },
   { value: "Other", label: "Other (O)" },
 ] as const;
+
+/** DB values that should match a gender filter (handles mixed casing / short forms). */
+export function genderDbMatchValues(filter: string): string[] {
+  const n = normalizeGender(filter);
+  if (n === "Male") return ["Male", "male", "M", "m", "Boy", "boy", "Boys", "1"];
+  if (n === "Female") return ["Female", "female", "F", "f", "Girl", "girl", "Girls", "2"];
+  return ["Other", "other", "O", "o", "Other (O)"];
+}

@@ -1540,3 +1540,64 @@
   font-weight: 850;
   letter-spacing: -0.02em;
 }
+
+@media (max-width: 639px) {
+  .admin-page {
+    min-width: 0;
+  }
+
+  .ad-revenue-grid,
+  .ad-finance-tiles,
+  .ad-attention-grid,
+  .ad-manage-grid,
+  .ad-flow-steps,
+  .ad-chart-grid,
+  .ad-split-2,
+  .ad-finance-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .ad-stat-grid,
+  .ad-stat-grid.is-four,
+  .ad-stat-grid.is-six {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .ad-page-head,
+  .ad-card-head,
+  .ad-toolbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 359px) {
+  .ad-stat-grid,
+  .ad-stat-grid.is-four,
+  .ad-stat-grid.is-six {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .ad-finance-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .ad-flow-steps,
+  .ad-chart-grid.is-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .ad-stat-grid.is-six {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+.ad-table {
+  min-width: 36rem;
+}
+
+.ad-ftile strong {
+  overflow-wrap: anywhere;
+}

@@ -38,7 +38,7 @@ export type DateFieldProps = {
   name?: string;
 };
 
-const PANEL_MIN_W = 280;
+const PANEL_MIN_W = 304;
 const PANEL_EST_H = 320;
 const PANEL_GAP = 6;
 const VIEWPORT_PAD = 8;
@@ -195,19 +195,21 @@ export function DateField({
     const el = controlRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const width = Math.min(
-      Math.max(rect.width, PANEL_MIN_W),
-      window.innerWidth - VIEWPORT_PAD * 2,
-    );
-    const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_PAD;
-    const spaceAbove = rect.top - VIEWPORT_PAD;
+    const vv = window.visualViewport;
+    const viewportWidth = vv?.width ?? window.innerWidth;
+    const viewportHeight = vv?.height ?? window.innerHeight;
+    const viewportTop = vv?.offsetTop ?? 0;
+    const viewportLeft = vv?.offsetLeft ?? 0;
+    const maxWidth = Math.max(0, viewportWidth - VIEWPORT_PAD * 2);
+    const width = Math.min(Math.max(rect.width, Math.min(PANEL_MIN_W, maxWidth)), maxWidth);
+    const spaceBelow = viewportTop + viewportHeight - rect.bottom - VIEWPORT_PAD;
+    const spaceAbove = rect.top - viewportTop - VIEWPORT_PAD;
     const placeTop = spaceBelow < PANEL_EST_H && spaceAbove > spaceBelow;
 
-    let left =
-      align === "right" ? rect.right - width : rect.left;
+    let left = align === "right" ? rect.right - width : rect.left;
     left = Math.max(
-      VIEWPORT_PAD,
-      Math.min(left, window.innerWidth - width - VIEWPORT_PAD),
+      viewportLeft + VIEWPORT_PAD,
+      Math.min(left, viewportLeft + viewportWidth - width - VIEWPORT_PAD),
     );
 
     const top = placeTop ? rect.top - PANEL_GAP : rect.bottom + PANEL_GAP;
@@ -229,9 +231,14 @@ export function DateField({
     window.addEventListener("resize", onReposition);
     // capture scroll from nested overflow containers (cards, main, sidebar)
     window.addEventListener("scroll", onReposition, true);
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", onReposition);
+    vv?.addEventListener("scroll", onReposition);
     return () => {
       window.removeEventListener("resize", onReposition);
       window.removeEventListener("scroll", onReposition, true);
+      vv?.removeEventListener("resize", onReposition);
+      vv?.removeEventListener("scroll", onReposition);
     };
   }, [open, updatePosition]);
 

@@ -1,3 +1,5 @@
+import { transliterateToGujarati } from "@/lib/gujarati/transliterate-core";
+
 export type StudentNameLike = {
   firstName?: string | null;
   middleName?: string | null;
@@ -19,6 +21,15 @@ function pickGu(gu: string | null | undefined, en: string | null | undefined): s
   const g = gu?.trim();
   if (g) return g;
   return en?.trim() || "";
+}
+
+function gujaratiNamePart(
+  gu: string | null | undefined,
+  fallback: string | null | undefined,
+): string {
+  const storedGujarati = gu?.trim();
+  if (storedGujarati) return storedGujarati;
+  return transliterateToGujarati(fallback?.trim() || "");
 }
 
 export function studentDisplayFirstName(s: StudentNameLike): string {
@@ -51,12 +62,30 @@ export function studentDisplayAadhaarName(s: StudentNameLike): string {
 
 /** Full name in Gujarati for lists, certificates, results. */
 export function studentFullNameGu(s: StudentNameLike): string {
-  return [studentDisplayFirstName(s), studentDisplayMiddleName(s), studentDisplaySurname(s)]
+  const hasGujaratiParts = Boolean(
+    s.firstNameGu?.trim() || s.middleNameGu?.trim() || s.surnameGu?.trim(),
+  );
+  const officialGujaratiName = s.aadhaarNameGu?.trim();
+
+  if (!hasGujaratiParts && officialGujaratiName) {
+    return officialGujaratiName;
+  }
+
+  return [
+    gujaratiNamePart(s.firstNameGu, s.firstName),
+    gujaratiNamePart(s.middleNameGu, s.middleName),
+    gujaratiNamePart(s.surnameGu, s.surname),
+  ]
     .filter(Boolean)
     .join(" ");
 }
 
 /** Short name: first + surname. */
 export function studentShortNameGu(s: StudentNameLike): string {
-  return [studentDisplayFirstName(s), studentDisplaySurname(s)].filter(Boolean).join(" ");
+  return [
+    gujaratiNamePart(s.firstNameGu, s.firstName),
+    gujaratiNamePart(s.surnameGu, s.surname),
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

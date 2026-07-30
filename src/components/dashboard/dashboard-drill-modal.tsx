@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { FileSpreadsheet, FileText, Search, X } from "lucide-react";
+import { FileSpreadsheet, FileText, RotateCcw, Search, X } from "lucide-react";
 import { InfoModal } from "@/components/ui/info-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -298,7 +298,14 @@ export function DashboardDrillModal({
                 </option>
               ))}
             </select>
-            <Button type="button" variant="ghost" size="sm" onClick={resetFilters}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="ops-drill-reset gap-1.5 border-slate-300 bg-slate-50 font-semibold text-slate-700 hover:bg-slate-100"
+              onClick={resetFilters}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
               {t("dashboard.resetFilters")}
             </Button>
           </div>

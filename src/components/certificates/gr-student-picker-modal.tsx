@@ -2,6 +2,7 @@
 
 import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronLeft, Users, BookOpen, Search } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { studentFullNameGu } from "@/lib/student-names";
@@ -130,10 +131,14 @@ export function GrStudentPickerModal({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white shrink-0">
+  return createPortal(
+    <div className="fixed inset-0 z-[240] flex items-end justify-center bg-black/60 p-2 backdrop-blur-sm sm:items-center sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-h-[92dvh]"
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex items-center gap-2 min-w-0">
             {step === "student" && (
               <button
@@ -151,7 +156,7 @@ export function GrStudentPickerModal({
               </button>
             )}
             <div className="min-w-0">
-              <h3 className="text-lg font-bold text-slate-900 truncate">
+              <h3 className="line-clamp-2 break-words text-base font-bold text-slate-900 sm:text-lg">
                 {step === "class" ? t("certificates.grSelectClass") : t("certificates.grSelectStudentStep")}
               </h3>
               {step === "student" && selectedClass && (
@@ -169,7 +174,7 @@ export function GrStudentPickerModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 overscroll-contain sm:p-5">
           {loading ? (
             <PageLoader />
           ) : step === "class" ? (
@@ -183,7 +188,7 @@ export function GrStudentPickerModal({
                       <BookOpen className="h-4 w-4 text-blue-600" />
                       {t("results.classLabel", { standard: std })}
                     </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:grid-cols-3">
                       {list.map((cls) => (
                         <button
                           key={cls.id}
@@ -225,17 +230,17 @@ export function GrStudentPickerModal({
                       key={s.id}
                       type="button"
                       onClick={() => handlePick(s)}
-                      className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-blue-50 transition-colors"
+                      className="flex w-full flex-col items-start gap-1 px-3 py-3 text-left transition-colors hover:bg-blue-50 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between min-[400px]:gap-3 sm:px-4"
                     >
                       <div className="min-w-0">
-                        <p className="font-medium text-sm text-slate-900 truncate">{name}</p>
+                        <p className="break-words text-sm font-medium text-slate-900">{name}</p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           {s.grNumber ? `GR ${s.grNumber}` : ""}
                           {s.grNumber && s.rollNumber ? " · " : ""}
                           {s.rollNumber ? `Roll ${s.rollNumber}` : ""}
                         </p>
                       </div>
-                      <span className="text-xs font-medium text-blue-600 shrink-0">
+                      <span className="shrink-0 text-xs font-medium text-blue-600">
                         Std {s.standard || "-"}-{s.section || "-"}
                       </span>
                     </button>
@@ -246,6 +251,7 @@ export function GrStudentPickerModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -113,6 +113,25 @@ export type { AccountingSession };
 export async function requireStudentAuth(): Promise<SessionUser & { schoolId: string; studentId: string }> {
   const session = await requireSchoolAuth(["student"]);
   if (!session.studentId) throw new AuthError("Student profile not linked", 403);
+  const { prisma } = await import("@/lib/db");
+  const account = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: {
+      isActive: true,
+      emailVerified: true,
+      mustChangePassword: true,
+      studentId: true,
+    },
+  });
+  if (!account?.isActive || account.studentId !== session.studentId) {
+    throw new AuthError("Student account is inactive", 403);
+  }
+  if (!account.emailVerified || account.mustChangePassword) {
+    throw new AuthError(
+      "Email verification and password change required before using the student portal",
+      403,
+    );
+  }
   return session as SessionUser & { schoolId: string; studentId: string };
 }
 

@@ -148,10 +148,14 @@ export async function GET(request: NextRequest) {
     }
 
     const where: Record<string, unknown> = { schoolId: session.schoolId, status: { not: "archived" } };
-    if (classId) where.classId = classId;
-    if (standard) where.standard = standard;
-    if (section) where.section = section;
-    if (studentId) where.id = studentId;
+    // Single-student mode: ignore class filters so analysis / deep-links never miss the student
+    if (studentId) {
+      where.id = studentId;
+    } else {
+      if (classId) where.classId = classId;
+      if (standard) where.standard = standard;
+      if (section) where.section = section;
+    }
 
     const students = await prisma.student.findMany({
       where,

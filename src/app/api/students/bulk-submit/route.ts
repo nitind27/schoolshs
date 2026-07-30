@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      // Local status only — this endpoint does NOT contact Digital Gujarat.
+      // Real portal automation lives under /auto-apply.
       await prisma.student.update({
         where: { id: student.id },
         data: { status: "submitted", submissionDate: new Date(), validationErrors: null },
@@ -61,7 +63,8 @@ export async function POST(request: NextRequest) {
         name,
         aadhaarNumber: student.aadhaarNumber,
         success: true,
-        message: "Successfully submitted to Digital Gujarat portal",
+        message:
+          "Marked as submitted in school records only (Digital Gujarat was not contacted). Use Auto-Apply for portal submission.",
       });
     }
 

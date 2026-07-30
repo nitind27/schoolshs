@@ -8,7 +8,7 @@ import { ChatApp } from "@/components/chat/chat-app";
  */
 export default function ChatPage() {
   return (
-    <div className="fixed inset-x-0 bottom-0 top-14 z-30 bg-white lg:left-[260px]">
+    <div className="chat-page-shell fixed inset-x-0 bottom-0 top-14 z-30 min-h-0 bg-white lg:left-[var(--shell-sidebar-w)]">
       <ChatApp variant="page" />
     </div>
   );

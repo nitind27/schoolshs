@@ -48,7 +48,7 @@ export function InfoModal({ isOpen, onClose, title, children, wide, size }: Info
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-5"
+      className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-5"
       role="dialog"
       aria-modal="true"
       aria-labelledby="info-modal-title"
@@ -63,23 +63,30 @@ export function InfoModal({ isOpen, onClose, title, children, wide, size }: Info
       <div
         ref={modalRef}
         className={cn(
-          "relative z-10 flex w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-fade-in",
+          "info-modal-panel relative z-10 flex w-full flex-col overflow-hidden bg-white shadow-2xl animate-fade-in",
           resolvedSize === "xl" && "max-w-6xl",
           resolvedSize === "wide" && "max-w-3xl",
           resolvedSize === "default" && "max-w-lg sm:max-w-2xl",
           locale === "gu" && "font-gujarati"
         )}
-        style={{ maxHeight: resolvedSize === "xl" ? "min(92dvh, 860px)" : "min(90dvh, 720px)" }}
+        style={
+          {
+            "--info-modal-max-height":
+              resolvedSize === "xl"
+                ? "min(92dvh, 860px)"
+                : "min(90dvh, 720px)",
+          } as React.CSSProperties
+        }
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
-          <h2 id="info-modal-title" className="text-lg font-bold text-slate-900 sm:text-xl">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-6 sm:py-4">
+          <h2 id="info-modal-title" className="min-w-0 break-words text-lg font-bold leading-tight text-slate-900 sm:text-xl">
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 transition-colors hover:bg-slate-100"
+            className="shrink-0 rounded-lg p-2 transition-colors hover:bg-slate-100"
             aria-label="Close"
           >
             <X className="h-5 w-5 text-slate-600" />

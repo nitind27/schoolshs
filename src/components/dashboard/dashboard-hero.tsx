@@ -79,14 +79,14 @@ export function DashboardHero({ schoolName }: DashboardHeroProps) {
           <h1 className="dashboard-hero-greeting">
             {t("dashboard.greetingUser", { greeting, name: displayName })}
           </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-blue-100/85">
-            <span>{t("dashboard.subtitle")}</span>
+          <div className="dashboard-hero-meta mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-blue-100/85">
+            <span className="dashboard-hero-subtitle">{t("dashboard.subtitle")}</span>
             {schoolName && (
               <>
                 <span className="hidden text-blue-300/50 sm:inline">·</span>
-                <span className="inline-flex items-center gap-1 font-medium text-blue-50">
+                <span className="dashboard-hero-school inline-flex min-w-0 items-center gap-1 font-medium text-blue-50">
                   <Sparkles className="h-3 w-3 shrink-0 text-amber-300" />
-                  <span className="truncate">{schoolName}</span>
+                  <span>{schoolName}</span>
                 </span>
               </>
             )}

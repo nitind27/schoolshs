@@ -18,8 +18,15 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
 
   useEffect(() => {
     fetch(`/api/students/${id}`)
-      .then((r) => r.json())
-      .then(setStudent)
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok || data?.error || !data?.id) {
+          setStudent(null);
+          return;
+        }
+        setStudent(data);
+      })
+      .catch(() => setStudent(null))
       .finally(() => setLoading(false));
   }, [id]);
 

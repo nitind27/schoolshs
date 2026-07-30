@@ -450,9 +450,12 @@
 .auth-portal-main-scroll {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 0.85rem 1rem 1rem;
 }
@@ -466,8 +469,9 @@
 .auth-portal-form-card {
   width: 100%;
   max-width: 480px;
-  max-height: 100%;
-  overflow: hidden;
+  max-height: none;
+  overflow: visible;
+  margin-block: auto;
   background: #ffffff;
   border: 1px solid rgb(212 223 217 / 0.95);
   border-radius: 1.25rem;
@@ -1506,6 +1510,447 @@
   .auth-book-progress-bar {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* ── Responsive login navigation and layout ─────────────────── */
+
+.auth-portal {
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100%;
+  max-width: 100vw;
+}
+
+.auth-portal *,
+.auth-portal *::before,
+.auth-portal *::after {
+  box-sizing: border-box;
+}
+
+.auth-login-navbar {
+  position: relative;
+  z-index: 60;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-width: 0;
+  border-bottom: 1px solid rgb(212 223 217 / 0.9);
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: 0 12px 32px -28px rgb(16 28 25 / 0.5);
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+}
+
+.auth-login-navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  max-width: 90rem;
+  min-height: 4.4rem;
+  margin-inline: auto;
+  padding: 0.55rem clamp(1rem, 3vw, 2.5rem);
+}
+
+.auth-login-navbar .auth-portal-logo {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.auth-login-navbar .auth-portal-logo-mark {
+  width: 2.45rem;
+  height: 2.45rem;
+  border-color: transparent;
+  background: linear-gradient(145deg, var(--auth-accent-soft), var(--auth-accent));
+  color: #fff;
+  box-shadow: 0 12px 24px -15px rgb(26 101 80 / 0.8);
+}
+
+.auth-login-navbar .auth-portal-logo-eyebrow {
+  color: var(--auth-accent);
+}
+
+.auth-login-navbar .auth-portal-logo-title {
+  color: var(--auth-ink);
+}
+
+.auth-login-brand-copy {
+  min-width: 0;
+}
+
+.auth-login-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1rem, 2.5vw, 2rem);
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.auth-login-nav a {
+  position: relative;
+  padding-block: 0.5rem;
+  color: var(--auth-muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.auth-login-nav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: 0.15rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--auth-accent);
+  transition: right 0.25s var(--auth-ease);
+}
+
+.auth-login-nav a:hover {
+  color: var(--auth-accent);
+}
+
+.auth-login-nav a:hover::after {
+  right: 0;
+}
+
+.auth-login-navbar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.auth-login-navbar-actions > div > p {
+  display: none;
+}
+
+.auth-login-navbar-actions > div {
+  margin: 0;
+}
+
+.auth-login-home-link {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding-inline: 0.9rem;
+  border-radius: 0.72rem;
+  background: var(--auth-ink);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.auth-login-home-link:hover {
+  background: var(--auth-ink-soft);
+  transform: translateY(-1px);
+}
+
+.auth-portal-brand,
+.auth-portal-main {
+  grid-row: 2;
+  min-height: 0;
+}
+
+.auth-portal-brand {
+  grid-column: 1;
+}
+
+.auth-portal-main {
+  grid-column: 1;
+  height: auto;
+}
+
+.auth-portal-form-header h2,
+.auth-portal-form-header p,
+.auth-portal-label,
+.auth-remember-title,
+.auth-remember-hint,
+.auth-portal-error,
+.auth-portal-footer,
+.auth-book-title,
+.auth-book-body,
+.auth-book-list-text,
+.auth-book-face-foot {
+  overflow-wrap: anywhere;
+}
+
+.auth-portal-label {
+  text-transform: none;
+  letter-spacing: 0.015em;
+  line-height: 1.35;
+}
+
+.auth-portal-form-header h2 {
+  font-size: clamp(1.55rem, 2.4vw, 1.9rem);
+  line-height: 1.15;
+}
+
+.auth-portal-form-header p {
+  max-width: 42ch;
+  line-height: 1.55;
+}
+
+.auth-portal-form-card {
+  max-width: 31rem;
+}
+
+.auth-portal-input,
+.auth-portal-submit {
+  min-height: 2.85rem;
+  height: auto;
+}
+
+.auth-portal-input {
+  padding-block: 0.65rem;
+  line-height: 1.35;
+}
+
+.auth-captcha-body > *,
+.auth-portal-input-wrap,
+.auth-remember-copy {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .auth-portal {
+    grid-template-columns: minmax(0, 1fr) minmax(30rem, 1fr);
+  }
+
+  .auth-portal-brand {
+    grid-column: 1;
+    min-height: 0;
+  }
+
+  .auth-portal-main {
+    grid-column: 2;
+  }
+
+  .auth-portal-brand-inner {
+    padding: 1.25rem clamp(1.5rem, 3vw, 2.75rem) 1.15rem;
+  }
+
+  .auth-portal-main-scroll {
+    padding: 1.5rem clamp(1.5rem, 3vw, 3rem);
+  }
+}
+
+@media (min-width: 1280px) {
+  .auth-portal {
+    grid-template-columns: minmax(34rem, 1.08fr) minmax(32rem, 0.92fr);
+  }
+}
+
+@media (max-width: 1023px) {
+  .auth-portal {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth-portal-brand {
+    display: none;
+  }
+
+  .auth-portal-main {
+    grid-column: 1;
+  }
+
+  .auth-login-navbar-inner {
+    min-height: 4.15rem;
+  }
+
+  .auth-login-nav {
+    gap: 1rem;
+  }
+
+  .auth-login-home-link span {
+    display: none;
+  }
+
+  .auth-login-home-link {
+    width: 2.5rem;
+    padding-inline: 0;
+  }
+
+  .auth-portal-main-scroll {
+    padding: 1.5rem clamp(1rem, 5vw, 2.5rem);
+  }
+
+  .auth-portal-form-card {
+    max-width: 34rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .auth-login-navbar-inner {
+    min-height: 4rem;
+    gap: 0.6rem;
+    padding: 0.5rem clamp(0.85rem, 4vw, 1.25rem);
+  }
+
+  .auth-login-nav {
+    display: none;
+  }
+
+  .auth-login-navbar .auth-portal-logo {
+    gap: 0.55rem;
+  }
+
+  .auth-login-navbar .auth-portal-logo-mark {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .auth-login-navbar .auth-portal-logo-title {
+    font-size: 0.9rem;
+  }
+
+  .auth-login-navbar .auth-portal-logo-eyebrow {
+    font-size: 0.55rem;
+    letter-spacing: 0.08em;
+  }
+
+  .auth-login-home-link {
+    display: none;
+  }
+
+  .auth-portal-main-scroll {
+    align-items: flex-start;
+    padding: 1rem clamp(0.8rem, 4vw, 1.2rem) max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  .auth-portal-form-card {
+    margin-block: 0;
+    padding: 1.25rem clamp(1rem, 4vw, 1.35rem) 1rem;
+    border-radius: 1rem;
+  }
+
+  .auth-portal-form-header {
+    margin-bottom: 0.9rem;
+  }
+
+  .auth-portal-form-header h2 {
+    font-size: clamp(1.45rem, 7vw, 1.75rem);
+  }
+
+  .auth-portal-form-header p {
+    font-size: 0.9rem;
+  }
+
+  .auth-portal-form {
+    gap: 0.8rem;
+  }
+
+  .auth-portal-input {
+    min-height: 3rem;
+    font-size: 1rem;
+  }
+
+  .auth-portal-submit {
+    min-height: 3.1rem;
+    border-radius: 0.8rem;
+  }
+
+  .auth-remember {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 479px) {
+  .auth-login-navbar .auth-portal-logo-title {
+    max-width: 9.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .auth-login-navbar-actions {
+    gap: 0.3rem;
+  }
+
+  .auth-portal-form-card {
+    border-radius: 0.9rem;
+    box-shadow: 0 20px 45px -34px rgb(16 28 25 / 0.45);
+  }
+
+  .auth-captcha {
+    padding: 0.75rem;
+  }
+
+  .auth-captcha-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.65rem;
+  }
+
+  .auth-captcha-image,
+  .auth-captcha-svg svg,
+  .auth-captcha-image-loading {
+    width: 100%;
+    height: 3rem;
+  }
+
+  .auth-captcha-svg svg {
+    object-fit: contain;
+  }
+
+  .auth-captcha-input {
+    width: 100%;
+  }
+
+  .auth-portal-school-chip {
+    width: 100%;
+    border-radius: 0.75rem;
+  }
+
+  .auth-portal-school-chip span {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 359px) {
+  .auth-login-navbar .auth-portal-logo-eyebrow {
+    display: none;
+  }
+
+  .auth-login-navbar .auth-portal-logo-title {
+    max-width: 7.25rem;
+    font-size: 0.8rem;
+  }
+
+  .auth-login-navbar .auth-portal-logo-mark {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .auth-portal-main-scroll {
+    padding-inline: 0.65rem;
+  }
+
+  .auth-portal-form-card {
+    padding-inline: 0.85rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 540px) {
+  .auth-login-navbar-inner {
+    min-height: 3.5rem;
+    padding-block: 0.35rem;
+  }
+
+  .auth-portal-main-scroll {
+    padding-block: 0.75rem;
+  }
+
+  .auth-portal-form-card {
+    margin-block: 0;
   }
 }
 

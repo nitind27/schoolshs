@@ -110,14 +110,17 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       )}
 
       <aside
-        data-collapsed={collapsed ? "true" : "false"}
+        data-collapsed={collapsed && !mobileOpen ? "true" : "false"}
         className={cn(
           "shell-aside fixed inset-y-0 left-0 z-50 flex h-screen flex-col overflow-hidden",
           "bg-gradient-to-b from-slate-950 via-slate-900 to-sky-950 text-white",
           "transform transition-transform duration-300 ease-in-out lg:translate-x-0",
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
         )}
-        style={{ width, borderRight: "1px solid rgba(255,255,255,.06)" }}
+        style={{
+          width: mobileOpen ? SIDEBAR_ADMIN_EXPANDED_W : width,
+          borderRight: "1px solid rgba(255,255,255,.06)",
+        }}
       >
         <div
           className="shell-brand flex shrink-0 items-center justify-between gap-2 px-3 py-3.5"
@@ -162,11 +165,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
-                      title={collapsed ? label : undefined}
+                      title={collapsed && !mobileOpen ? label : undefined}
                       className={cn(
                         "shell-nav-link group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                         active ? "bg-white/[.12] text-white shadow-sm" : "text-sky-100/80 hover:bg-white/[.07] hover:text-white",
-                        collapsed && "justify-center px-2",
+                        collapsed && !mobileOpen && "justify-center px-2",
                       )}
                     >
                       <span

@@ -4,7 +4,7 @@ import {
   type MarksSheetConfig,
   type MarksSheetSubjectDef,
 } from "@/lib/results/marks-sheet-config";
-import { defaultExamTermMeta, serializeExamTermMeta } from "@/lib/results/exam-terms";
+import { defaultExamTermMeta, serializeExamTermMeta, parseExamTermMeta, applyTermMetaToSheetConfig } from "@/lib/results/exam-terms";
 import { resultSessionName } from "@/lib/results/config";
 
 export type ClassSubjectRecord = {
@@ -216,7 +216,10 @@ export async function ensureClassExam(
 
   if (!exam) throw new Error("Failed to ensure class exam");
 
-  return { exam, sheetConfig };
+  const meta = parseExamTermMeta(exam.termMeta);
+  const sheetWithTerms = applyTermMetaToSheetConfig(sheetConfig, meta);
+
+  return { exam, sheetConfig: sheetWithTerms };
 }
 
 function normalizeCode(code: string): string {

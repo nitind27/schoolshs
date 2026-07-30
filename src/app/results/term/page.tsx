@@ -7,7 +7,13 @@ import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { ArrowLeft, Save, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  CheckCircle2,
+  AlertCircle,
+  Printer,
+} from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import type { ExamTermKey } from "@/lib/results/exam-terms";
@@ -46,8 +52,17 @@ export default function TermMarksPage() {
   const [data, setData] = useState<{
     class: { id: string; name: string; standard: string; section: string };
     exam: { id: string };
-    term: { key: ExamTermKey; labelEn: string; maxMarks: number; internalMax?: number; published: boolean; locked: boolean };
-    termMeta: { midExamCount: 1 | 2 };
+    term: {
+      key: ExamTermKey;
+      labelEn: string;
+      labelGu: string;
+      role: "component" | "final";
+      maxMarks: number;
+      internalMax?: number;
+      published: boolean;
+      locked: boolean;
+    };
+    termMeta: { midExamCount: 1 | 2 | 3 };
     students: StudentRow[];
     completion: { percent: number; complete: number; total: number };
     editable: boolean;
@@ -146,12 +161,17 @@ export default function TermMarksPage() {
   };
 
   const termOptions = useMemo(() => {
+    const list = (data?.termMeta as { terms?: Array<{ key: string; labelEn: string }> } | undefined)
+      ?.terms;
+    if (Array.isArray(list) && list.length) {
+      return list.map((term) => ({ value: term.key, label: term.labelEn }));
+    }
+    const count = data?.termMeta?.midExamCount ?? 2;
     const opts: { value: string; label: string }[] = [
       { value: "mid1", label: t("examTerms.mid1") },
     ];
-    if (data?.termMeta?.midExamCount === 2 || !data) {
-      opts.push({ value: "mid2", label: t("examTerms.mid2") });
-    }
+    if (count >= 2) opts.push({ value: "mid2", label: t("examTerms.mid2") });
+    if (count >= 3) opts.push({ value: "mid3", label: t("examTerms.mid3") });
     opts.push({ value: "final", label: t("examTerms.final") });
     return opts;
   }, [data, t]);
@@ -168,12 +188,26 @@ export default function TermMarksPage() {
             <p className="text-slate-500 text-sm mt-1">{t("examTerms.marksEntrySubtitle")}</p>
           </div>
         </div>
-        {data?.editable && (
-          <Button onClick={save} disabled={saving} size="lg" className="gap-2">
-            {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
-            {saving ? t("results.save") + "..." : t("results.save")}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {data &&
+            ["11", "12"].includes(data.class.standard) &&
+            data.term.role === "component" && (
+              <Link
+                href={`/results/print?examId=${data.exam.id}&classId=${data.class.id}&term=${data.term.key}&mode=all`}
+              >
+                <Button size="lg" variant="outline" className="gap-2">
+                  <Printer className="h-4 w-4" />
+                  પરિણામ પત્રક પ્રિન્ટ
+                </Button>
+              </Link>
+            )}
+          {data?.editable && (
+            <Button onClick={save} disabled={saving} size="lg" className="gap-2">
+              {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
+              {saving ? t("results.save") + "..." : t("results.save")}
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -226,8 +260,14 @@ export default function TermMarksPage() {
             <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
               {data.completion.complete}/{data.completion.total} {t("examTerms.complete")}
             </span>
-            {term === "final" && data.term.internalMax && (
-              <span className="text-slate-500">{t("examTerms.finalHint", { annual: data.term.maxMarks, internal: data.term.internalMax })}</span>
+            {(data.term.internalMax ?? 0) > 0 && (
+              <span className="text-slate-500">
+                {t("examsHub.paperTeacherTotal", {
+                  paper: data.term.maxMarks,
+                  internal: data.term.internalMax ?? 0,
+                  total: data.term.maxMarks + (data.term.internalMax ?? 0),
+                })}
+              </span>
             )}
           </div>
 
@@ -246,11 +286,13 @@ export default function TermMarksPage() {
                       {numericSubjects.map((s) => (
                         <th key={s.subjectCode} className="p-2 text-center min-w-[72px] text-xs font-medium text-slate-600">
                           <div>{s.subjectName}</div>
-                          <div className="text-[10px] text-slate-400 font-normal">
-                            /{term === "final" ? data.term.maxMarks : data.term.maxMarks}
+                          <div className="text-[10px] text-blue-500 font-normal">
+                            {t("examsHub.paperShort")} /{data.term.maxMarks}
                           </div>
-                          {term === "final" && (
-                            <div className="text-[10px] text-violet-500">+{t("examTerms.internal")}</div>
+                          {(data.term.internalMax ?? 0) > 0 && (
+                            <div className="text-[10px] text-violet-500">
+                              {t("examsHub.teacherShort")} /{data.term.internalMax}
+                            </div>
                           )}
                         </th>
                       ))}
@@ -277,7 +319,7 @@ export default function TermMarksPage() {
                                 onChange={(e) => updateCell(i, sub.subjectCode, "termValue", e.target.value)}
                                 className="w-16 h-8 text-center text-sm border border-slate-200 rounded-md focus:border-blue-400 focus:ring-1 focus:ring-blue-200 disabled:bg-slate-50"
                               />
-                              {term === "final" && (
+                              {(data.term.internalMax ?? 0) > 0 && (
                                 <input
                                   type="number"
                                   min={0}
@@ -287,7 +329,7 @@ export default function TermMarksPage() {
                                   value={sub.internalValue ?? ""}
                                   onChange={(e) => updateCell(i, sub.subjectCode, "internalValue", e.target.value)}
                                   className="w-16 h-7 text-center text-xs border border-violet-200 rounded-md focus:border-violet-400 disabled:bg-slate-50"
-                                  placeholder={t("examTerms.internal")}
+                                  placeholder={t("examsHub.teacherShort")}
                                 />
                               )}
                             </div>

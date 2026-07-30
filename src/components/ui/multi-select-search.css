@@ -189,6 +189,7 @@
   top: calc(100% + 0.35rem);
   left: 0;
   right: 0;
+  max-height: min(18rem, calc(100dvh - 1rem));
   border: 1px solid rgba(12, 25, 41, 0.1);
   border-radius: 1rem;
   background: #fff;

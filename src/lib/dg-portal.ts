@@ -88,6 +88,64 @@ export const POST_MATRIC_SCHEMES = [
   "Research Scholarship",
 ] as const;
 
+const SCHEME_SEARCH_ALIASES: Record<string, string[]> = {
+  "pre matric scholarship sc": [
+    "Pre Matric Scholarship for SC Students",
+    "Pre Matric Scholarship - SC",
+    "Pre Matric SC",
+  ],
+  "pre matric scholarship st": [
+    "Pre Matric Scholarship for ST Students",
+    "Pre Matric Scholarship - ST",
+    "Pre Matric ST",
+  ],
+  "post matric scholarship sc": [
+    "Post Matric Scholarship for SC Students",
+    "Post Matric Scholarship - SC",
+    "Post Matric SC",
+  ],
+  "post matric scholarship st": [
+    "Post Matric Scholarship for ST Students",
+    "Post Matric Scholarship - ST",
+    "Post Matric ST",
+  ],
+  "post matric scholarship obc": [
+    "Post Matric Scholarship for OBC Students",
+    "Post Matric Scholarship - OBC",
+    "Post Matric OBC",
+  ],
+  "post matric scholarship sebc": [
+    "Post Matric Scholarship for SEBC Students",
+    "Post Matric Scholarship - SEBC",
+    "Post Matric SEBC",
+  ],
+};
+
+export function normalizeScholarshipScheme(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Exact portal label first, then known aliases used by Digital Gujarat. */
+export function getSchemeSearchTerms(scholarshipScheme: string): string[] {
+  const scheme = scholarshipScheme.trim();
+  if (!scheme) return [];
+  const normalized = normalizeScholarshipScheme(scheme);
+  return [...new Set([scheme, ...(SCHEME_SEARCH_ALIASES[normalized] || [])])];
+}
+
+export function isSpecificScholarshipScheme(value: string | null | undefined): boolean {
+  const normalized = normalizeScholarshipScheme(String(value || ""));
+  return Boolean(
+    normalized &&
+      !["pre matric", "post matric", "scholarship", "other"].includes(normalized),
+  );
+}
+
 export function getSchemeGroup(scholarshipScheme: string): "Pre-Matric" | "Post-Matric" | "Other" {
   if (isPreMatricScheme(scholarshipScheme)) return "Pre-Matric";
   if (/post\s*matric/i.test(scholarshipScheme)) return "Post-Matric";

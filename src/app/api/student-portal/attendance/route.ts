@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
     const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1), 10);
     const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()), 10);
 
-    const student = await prisma.student.findUnique({
-      where: { id: session.studentId },
+    const student = await prisma.student.findFirst({
+      where: { id: session.studentId, schoolId: session.schoolId },
       select: {
         id: true,
         firstName: true,
@@ -43,13 +43,12 @@ export async function GET(request: NextRequest) {
       return mobileJson({ error: "Student not found" }, { status: 404 }, origin);
     }
 
-    const record = await prisma.studentAttendanceMonth.findUnique({
+    const record = await prisma.studentAttendanceMonth.findFirst({
       where: {
-        studentId_month_year: {
-          studentId: session.studentId,
-          month,
-          year,
-        },
+        schoolId: session.schoolId,
+        studentId: session.studentId,
+        month,
+        year,
       },
     });
 

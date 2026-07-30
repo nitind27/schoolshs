@@ -3,11 +3,30 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Users, UserPlus, Upload, Send, Download,
-  GraduationCap, Menu, X, BookOpen, Briefcase, CreditCard,
-  Bot, Calculator, ClipboardCheck, Award, FileSearch,
-  FileText, ClipboardList, IndianRupee,
+  LayoutDashboard,
+  Users,
+  UserPlus,
+  Upload,
+  Send,
+  Download,
+  GraduationCap,
+  Menu,
+  X,
+  BookOpen,
+  BookMarked,
+  Briefcase,
+  CreditCard,
+  Bot,
+  Calculator,
+  ClipboardCheck,
+  Award,
+  FileSearch,
+  FileText,
+  ClipboardList,
+  IndianRupee,
   CalendarClock,
+  Hash,
+  Armchair,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -27,17 +46,52 @@ import {
 } from "@/components/layout/sidebar-collapse";
 import "@/components/layout/sidebar-shell.css";
 
-const useNavGroups = (t: (k: string) => string): { group: string; items: NavEntry[] }[] => [
+const useNavGroups = (
+  t: (k: string) => string,
+): { group: string; items: NavEntry[] }[] => [
   {
     group: "Overview",
     items: [
-      { type: "link", href: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard, featureKey: "dashboard" },
+      {
+        type: "link",
+        href: "/dashboard",
+        label: t("nav.dashboard"),
+        icon: LayoutDashboard,
+        featureKey: "dashboard",
+      },
     ],
   },
   {
     group: "Academics",
     items: [
-      { type: "link", href: "/classes", label: t("nav.classes"), icon: BookOpen, featureKey: "classes" },
+      {
+        type: "link",
+        href: "/classes",
+        label: t("nav.classes"),
+        icon: BookOpen,
+        featureKey: "classes",
+      },
+      {
+        type: "link",
+        href: "/subjects",
+        label: t("nav.subjects"),
+        icon: BookMarked,
+        featureKey: "classes",
+      },
+      {
+        type: "link",
+        href: "/exams",
+        label: t("nav.exams"),
+        icon: Award,
+        featureKey: "results",
+      },
+      {
+        type: "link",
+        href: "/exam-seat-numbers",
+        label: t("examSeats.title"),
+        icon: Armchair,
+        featureKey: "results",
+      },
       {
         type: "submenu",
         id: "students",
@@ -45,8 +99,24 @@ const useNavGroups = (t: (k: string) => string): { group: string; items: NavEntr
         icon: Users,
         featureKey: "students",
         children: [
-          { href: "/students", label: t("nav.studentsAll"), icon: Users, featureKey: "students" },
-          { href: "/students/new", label: t("nav.addStudent"), icon: UserPlus, featureKey: "students" },
+          {
+            href: "/students",
+            label: t("nav.studentsAll"),
+            icon: Users,
+            featureKey: "students",
+          },
+          {
+            href: "/students/new",
+            label: t("nav.addStudent"),
+            icon: UserPlus,
+            featureKey: "students",
+          },
+          {
+            href: "/students/roll-numbers",
+            label: t("rollNumbers.title"),
+            icon: Hash,
+            featureKey: "students",
+          },
         ],
       },
       {
@@ -56,37 +126,142 @@ const useNavGroups = (t: (k: string) => string): { group: string; items: NavEntr
         icon: Briefcase,
         featureKey: "staff",
         children: [
-          { href: "/staff", label: t("nav.staffAll"), icon: Users, featureKey: "staff" },
-          { href: "/staff/new", label: t("nav.staffAdd"), icon: UserPlus, featureKey: "staff" },
-          { href: "/staff/attendance", label: t("nav.staffAttendance"), icon: ClipboardList, featureKey: "staff" },
-          { href: "/staff/payroll", label: t("nav.staffPayroll"), icon: IndianRupee, featureKey: "staff" },
-          { href: "/staff/register", label: t("staffRegister.title"), icon: FileText, featureKey: "staff" },
-          { href: "/staff/salary-statement", label: t("salaryStatement.title"), icon: Calculator, featureKey: "staff" },
-          { href: "/staff/salary-slip", label: t("salarySlip.title"), icon: CreditCard, featureKey: "staff" },
-          { href: "/staff/income-tax", label: t("incomeTax.title"), icon: Calculator, featureKey: "staff" },
-          { href: "/staff/salary-ledger", label: t("salaryLedger.title"), icon: BookOpen, featureKey: "staff" },
+          {
+            href: "/staff",
+            label: t("nav.staffAll"),
+            icon: Users,
+            featureKey: "staff",
+          },
+          {
+            href: "/staff/new",
+            label: t("nav.staffAdd"),
+            icon: UserPlus,
+            featureKey: "staff",
+          },
+          {
+            href: "/staff/attendance",
+            label: t("nav.staffAttendance"),
+            icon: ClipboardList,
+            featureKey: "staff",
+          },
+          {
+            href: "/staff/payroll",
+            label: t("nav.staffPayroll"),
+            icon: IndianRupee,
+            featureKey: "staff",
+          },
+          {
+            href: "/staff/register",
+            label: t("staffRegister.title"),
+            icon: FileText,
+            featureKey: "staff",
+          },
+          {
+            href: "/staff/salary-statement",
+            label: t("salaryStatement.title"),
+            icon: Calculator,
+            featureKey: "staff",
+          },
+          {
+            href: "/staff/salary-slip",
+            label: t("salarySlip.title"),
+            icon: CreditCard,
+            featureKey: "staff",
+          },
+          {
+            href: "/staff/income-tax",
+            label: t("incomeTax.title"),
+            icon: Calculator,
+            featureKey: "staff",
+          },
+          {
+            href: "/staff/salary-ledger",
+            label: t("salaryLedger.title"),
+            icon: BookOpen,
+            featureKey: "staff",
+          },
         ],
       },
-      { type: "link", href: "/admissions", label: t("navExt.admissions"), icon: ClipboardCheck, featureKey: "admissions" },
-      { type: "link", href: "/results", label: t("navExt.results"), icon: Award, featureKey: "results" },
-      { type: "link", href: "/attendance", label: t("navExt.studentAttendance"), icon: ClipboardList, featureKey: "attendance" },
-      { type: "link", href: "/timetable", label: t("navExt.timetable"), icon: CalendarClock, featureKey: "classes" },
+      {
+        type: "link",
+        href: "/admissions",
+        label: t("navExt.admissions"),
+        icon: ClipboardCheck,
+        featureKey: "admissions",
+      },
+      {
+        type: "link",
+        href: "/results",
+        label: t("navExt.results"),
+        icon: Award,
+        featureKey: "results",
+      },
+      {
+        type: "link",
+        href: "/attendance",
+        label: t("navExt.studentAttendance"),
+        icon: ClipboardList,
+        featureKey: "attendance",
+      },
+      {
+        type: "link",
+        href: "/timetable",
+        label: t("navExt.timetable"),
+        icon: CalendarClock,
+        featureKey: "classes",
+      },
     ],
   },
   {
     group: "Scholarship",
     items: [
-      { type: "link", href: "/import", label: t("nav.bulkImport"), icon: Upload, featureKey: "scholarship_import" },
-      { type: "link", href: "/bulk-submit", label: t("nav.bulkSubmit"), icon: Send, featureKey: "scholarship_bulk_submit" },
-      { type: "link", href: "/auto-apply", label: t("nav.autoApply"), icon: Bot, featureKey: "scholarship_auto_apply" },
-      { type: "link", href: "/export", label: t("nav.exportData"), icon: Download, featureKey: "scholarship_export" },
+      {
+        type: "link",
+        href: "/import",
+        label: t("nav.bulkImport"),
+        icon: Upload,
+        featureKey: "scholarship_import",
+      },
+      {
+        type: "link",
+        href: "/bulk-submit",
+        label: t("nav.bulkSubmit"),
+        icon: Send,
+        featureKey: "scholarship_bulk_submit",
+      },
+      {
+        type: "link",
+        href: "/auto-apply",
+        label: t("nav.autoApply"),
+        icon: Bot,
+        featureKey: "scholarship_auto_apply",
+      },
+      {
+        type: "link",
+        href: "/export",
+        label: t("nav.exportData"),
+        icon: Download,
+        featureKey: "scholarship_export",
+      },
     ],
   },
   {
     group: "Admin",
     items: [
-      { type: "link", href: "/accounting", label: t("navExt.accounting"), icon: Calculator, featureKey: "accounting" },
-      { type: "link", href: "/students/board-records", label: t("navExt.boardRecords"), icon: FileSearch, featureKey: "board_records" },
+      {
+        type: "link",
+        href: "/accounting",
+        label: t("navExt.accounting"),
+        icon: Calculator,
+        featureKey: "accounting",
+      },
+      {
+        type: "link",
+        href: "/students/board-records",
+        label: t("navExt.boardRecords"),
+        icon: FileSearch,
+        featureKey: "board_records",
+      },
       {
         type: "submenu",
         id: "reports-certs",
@@ -94,17 +269,87 @@ const useNavGroups = (t: (k: string) => string): { group: string; items: NavEntr
         icon: FileText,
         featureKey: "certificates",
         children: [
-          { href: "/certificates", label: t("megaMenu.allCertificates"), icon: FileText, featureKey: "certificates" },
-          { href: "/certificates/bonafide", label: t("megaMenu.bonafide"), icon: FileText, featureKey: "certificates" },
-          { href: "/certificates/lc", label: t("megaMenu.lc"), icon: FileText, featureKey: "certificates" },
-          { href: "/certificates/general-register", label: t("megaMenu.generalRegister"), icon: BookOpen, featureKey: "certificates" },
-          { href: "/export", label: t("megaMenu.reportsHub"), icon: Download, featureKey: "scholarship_export" },
-          { href: "/staff/payroll", label: t("megaMenu.payroll"), icon: IndianRupee, featureKey: "staff" },
-          { href: "/staff/salary-statement", label: t("megaMenu.salaryStatement"), icon: Calculator, featureKey: "staff" },
-          { href: "/id-cards", label: t("megaMenu.idCards"), icon: CreditCard, featureKey: "id_cards" },
+          {
+            href: "/certificates",
+            label: t("megaMenu.allCertificates"),
+            icon: FileText,
+            featureKey: "certificates",
+          },
+          {
+            href: "/certificates/bonafide",
+            label: t("megaMenu.bonafide"),
+            icon: FileText,
+            featureKey: "certificates",
+          },
+          {
+            href: "/certificates/lc",
+            label: t("megaMenu.lc"),
+            icon: FileText,
+            featureKey: "certificates",
+          },
+          {
+            href: "/certificates/general-register",
+            label: t("megaMenu.generalRegister"),
+            icon: BookOpen,
+            featureKey: "certificates",
+          },
+          {
+            href: "/students/board-records",
+            label: t("megaMenu.boardViewPrint"),
+            icon: GraduationCap,
+            featureKey: "board_records",
+          },
+          {
+            href: "/students/board-records/result-list",
+            label: t("megaMenu.boardResultList"),
+            icon: ClipboardList,
+            featureKey: "board_records",
+          },
+          {
+            href: "/students/board-records/exam-result-sheet",
+            label: t("megaMenu.boardExamSheet"),
+            icon: FileText,
+            featureKey: "board_records",
+          },
+          {
+            href: "/students/board-records/overall-analysis",
+            label: t("megaMenu.boardOverall"),
+            icon: FileSearch,
+            featureKey: "board_records",
+          },
+          {
+            href: "/export",
+            label: t("megaMenu.reportsHub"),
+            icon: Download,
+            featureKey: "scholarship_export",
+          },
+          {
+            href: "/staff/payroll",
+            label: t("megaMenu.payroll"),
+            icon: IndianRupee,
+            featureKey: "staff",
+          },
+          {
+            href: "/staff/salary-statement",
+            label: t("megaMenu.salaryStatement"),
+            icon: Calculator,
+            featureKey: "staff",
+          },
+          {
+            href: "/id-cards",
+            label: t("megaMenu.idCards"),
+            icon: CreditCard,
+            featureKey: "id_cards",
+          },
         ],
       },
-      { type: "link", href: "/id-cards", label: t("nav.idCards"), icon: CreditCard, featureKey: "id_cards" },
+      {
+        type: "link",
+        href: "/id-cards",
+        label: t("nav.idCards"),
+        icon: CreditCard,
+        featureKey: "id_cards",
+      },
     ],
   },
 ];
@@ -115,8 +360,14 @@ export function Sidebar() {
   const { collapsed, widthFor } = useSidebarCollapse();
   const width = widthFor(SIDEBAR_EXPANDED_W);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser] = useState<{ name: string; schoolName?: string | null; role: string } | null>(null);
-  const [enabledFeatures, setEnabledFeatures] = useState<SchoolFeatureKey[] | null>(null);
+  const [user, setUser] = useState<{
+    name: string;
+    schoolName?: string | null;
+    role: string;
+  } | null>(null);
+  const [enabledFeatures, setEnabledFeatures] = useState<
+    SchoolFeatureKey[] | null
+  >(null);
   const navGroups = useNavGroups(t);
 
   useEffect(() => {
@@ -130,7 +381,10 @@ export function Sidebar() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.style.setProperty("--shell-sidebar-w", `${width}px`);
+    document.documentElement.style.setProperty(
+      "--shell-sidebar-w",
+      `${width}px`,
+    );
   }, [width]);
 
   const filteredGroups = navGroups
@@ -177,10 +431,17 @@ export function Sidebar() {
           className="shell-brand flex shrink-0 items-center justify-between gap-2 px-3 py-3.5"
           style={{ borderBottom: "1px solid rgba(255,255,255,.08)" }}
         >
-          <Link href="/dashboard" className="flex min-w-0 items-center gap-3" title={user?.schoolName || t("common.scholarship")}>
+          <Link
+            href="/dashboard"
+            className="flex min-w-0 items-center gap-3"
+            title={user?.schoolName || t("common.scholarship")}
+          >
             <div
               className="shrink-0 rounded-xl p-2.5 flex items-center justify-center"
-              style={{ background: "rgba(59,130,246,.25)", border: "1px solid rgba(59,130,246,.4)" }}
+              style={{
+                background: "rgba(59,130,246,.25)",
+                border: "1px solid rgba(59,130,246,.4)",
+              }}
             >
               <GraduationCap className="h-5 w-5 text-white" />
             </div>
@@ -188,7 +449,9 @@ export function Sidebar() {
               <h1 className="truncate text-sm font-bold text-white leading-tight">
                 {user?.schoolName || t("common.scholarship")}
               </h1>
-              <p className="truncate text-xs text-blue-300 leading-tight mt-0.5">{t("common.digitalGujaratPortal")}</p>
+              <p className="truncate text-xs text-blue-300 leading-tight mt-0.5">
+                {t("common.digitalGujaratPortal")}
+              </p>
             </div>
           </Link>
           <div className="flex shrink-0 items-center gap-1">
@@ -221,7 +484,10 @@ export function Sidebar() {
           ))}
         </nav>
 
-        <div className="shell-footer shrink-0 px-2.5 py-2" style={{ borderTop: "1px solid rgba(255,255,255,.08)" }}>
+        <div
+          className="shell-footer shrink-0 px-2.5 py-2"
+          style={{ borderTop: "1px solid rgba(255,255,255,.08)" }}
+        >
           <SidebarCollapseToggle />
         </div>
       </aside>
@@ -234,7 +500,10 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const width = widthFor(SIDEBAR_EXPANDED_W);
 
   useEffect(() => {
-    document.documentElement.style.setProperty("--shell-sidebar-w", `${width}px`);
+    document.documentElement.style.setProperty(
+      "--shell-sidebar-w",
+      `${width}px`,
+    );
   }, [width]);
 
   return (
@@ -242,7 +511,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <TopNavbar profileHref="/profile" showProfile sidebarWidth={width} />
       <Sidebar />
       <main className="shell-main">
-        <div className="max-w-[1600px] px-4 pb-4 pt-[4.5rem] lg:px-6 lg:pb-6">{children}</div>
+        <div className="max-w-[1600px] px-4 pb-4 pt-[4.5rem] lg:px-6 lg:pb-6">
+          {children}
+        </div>
       </main>
     </div>
   );

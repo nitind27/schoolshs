@@ -5,6 +5,11 @@ import { fillStudentGuNames } from "@/lib/gujarati/transliterate-server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { applyDraftDefaults } from "@/lib/student-draft";
 import { syncGrEntryForStudent } from "@/lib/gr-student-sync";
+import { toStudentUncheckedUpdate } from "@/lib/student-write";
+import {
+  assertStudentAccountEmailAvailable,
+  syncStudentPortalAccount,
+} from "@/lib/student-account";
 
 async function getOwnedStudent(id: string, schoolId: string) {
   return prisma.student.findFirst({ where: { id, schoolId } });
@@ -64,16 +69,17 @@ export async function PUT(
 
     const errors = validateStudent(data);
 
+    await assertStudentAccountEmailAvailable(data.email, id);
     const student = await prisma.student.update({
       where: { id },
-      data: {
-        ...data,
+      data: toStudentUncheckedUpdate(data as Record<string, unknown>, {
         schoolId: session.schoolId,
         status: isDraft ? "draft" : body.status || (errors.length === 0 ? "ready" : "draft"),
         validationErrors: errors.length > 0 ? JSON.stringify(errors) : null,
-      } as Parameters<typeof prisma.student.update>[0]["data"],
+      }),
     });
 
+    await syncStudentPortalAccount(student);
     if (student.grNumber?.trim()) {
       await syncGrEntryForStudent(session.schoolId, student);
     }
@@ -94,7 +100,28 @@ export async function DELETE(
     const { id } = await params;
     const existing = await getOwnedStudent(id, session.schoolId);
     if (!existing) return NextResponse.json({ error: "Student not found" }, { status: 404 });
-    await prisma.student.delete({ where: { id } });
+    const account = await prisma.user.findUnique({
+      where: { studentId: id },
+      select: { id: true },
+    });
+    await prisma.$transaction([
+      ...(account
+        ? [
+            prisma.userSession.updateMany({
+              where: { userId: account.id, revokedAt: null },
+              data: {
+                revokedAt: new Date(),
+                revokeReason: "student_deleted",
+              },
+            }),
+            prisma.user.update({
+              where: { id: account.id },
+              data: { isActive: false },
+            }),
+          ]
+        : []),
+      prisma.student.delete({ where: { id } }),
+    ]);
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });

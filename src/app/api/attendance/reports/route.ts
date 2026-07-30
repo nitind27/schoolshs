@@ -46,7 +46,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "classId or standard or studentId required" }, { status: 400 });
     }
 
-    const students = await fetchStudents(session.schoolId, classId, standard, section, studentId);
+    // Single-student analysis / deep-link: ignore class filters
+    const students = await fetchStudents(
+      session.schoolId,
+      studentId ? null : classId,
+      studentId ? null : standard,
+      studentId ? null : section,
+      studentId,
+    );
     if (!students.length) {
       return NextResponse.json({
         summary: {

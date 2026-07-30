@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ChevronDown, LayoutGrid } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronDown, LayoutGrid, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/locale-provider";
 import { REPORTS_CERTS_MEGA_MENU } from "@/lib/nav-mega-menu";
@@ -29,6 +29,15 @@ export function NavbarMegaMenu() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!open || window.innerWidth >= 1024) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
   return (
     <div className="relative" ref={rootRef}>
       <button
@@ -37,6 +46,7 @@ export function NavbarMegaMenu() {
         className="tn-mega-trigger inline-flex items-center"
         aria-expanded={open}
         aria-haspopup="true"
+        aria-label={t("megaMenu.trigger")}
       >
         <span className="tn-mega-icon">
           <LayoutGrid className="h-3.5 w-3.5" />
@@ -53,22 +63,23 @@ export function NavbarMegaMenu() {
 
       {open && (
         <>
+          <button
+            type="button"
+            className="tn-mega-backdrop lg:hidden"
+            onClick={() => setOpen(false)}
+            aria-label={t("common.cancel")}
+          />
           <div
-            className={cn(
-              "fixed inset-x-0 top-[3.5rem] z-50 border-b border-slate-200 bg-white shadow-xl",
-              "max-h-[calc(100vh-3.5rem)] overflow-y-auto lg:hidden",
-            )}
+            className="tn-mega-mobile lg:hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("megaMenu.panelTitle")}
           >
-            <MegaPanel onNavigate={() => setOpen(false)} />
+            <MegaPanel onNavigate={() => setOpen(false)} showClose />
           </div>
 
-          <div
-            className={cn(
-              "absolute left-0 top-full z-50 mt-2.5 hidden lg:block",
-              "w-[min(920px,calc(100vw-var(--shell-sidebar-w,260px)-2rem))]",
-            )}
-          >
-            <div className="tn-mega-panel overflow-hidden rounded-2xl">
+          <div className="tn-mega-desktop hidden lg:block">
+            <div className="tn-mega-panel">
               <MegaPanel onNavigate={() => setOpen(false)} />
             </div>
           </div>
@@ -78,81 +89,101 @@ export function NavbarMegaMenu() {
   );
 }
 
-function MegaPanel({ onNavigate }: { onNavigate: () => void }) {
+function MegaPanel({
+  onNavigate,
+  showClose = false,
+}: {
+  onNavigate: () => void;
+  showClose?: boolean;
+}) {
   const t = useT();
 
   return (
-    <div>
-      <div className="tn-mega-head flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold tracking-tight text-white">
-            {t("megaMenu.panelTitle")}
-          </p>
-          <p className="mt-0.5 text-xs text-white/65">{t("megaMenu.panelSubtitle")}</p>
+    <div className="tn-mega-body">
+      <header className="tn-mega-head">
+        <div className="tn-mega-head-copy">
+          <p className="tn-mega-kicker">{t("megaMenu.triggerShort")}</p>
+          <p className="tn-mega-title">{t("megaMenu.panelTitle")}</p>
+          <p className="tn-mega-sub">{t("megaMenu.panelSubtitle")}</p>
         </div>
-        <Link
-          href="/certificates"
-          onClick={onNavigate}
-          className="hidden items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-white/20 sm:inline-flex"
-        >
-          {t("megaMenu.viewAll")}
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </Link>
-      </div>
-
-      <div className="grid gap-0 sm:grid-cols-2 lg:grid-cols-3">
-        {REPORTS_CERTS_MEGA_MENU.map((col, colIdx) => {
-          const ColIcon = col.icon;
-          return (
-            <div
-              key={col.id}
-              className={cn(
-                "border-b border-slate-100 p-3.5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0",
-                colIdx % 2 === 1 && "bg-slate-50/50",
-              )}
+        <div className="tn-mega-head-actions">
+          <Link
+            href="/certificates"
+            onClick={onNavigate}
+            className="tn-mega-all"
+          >
+            {t("megaMenu.viewAll")}
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+          {showClose ? (
+            <button
+              type="button"
+              onClick={onNavigate}
+              className="tn-mega-close"
+              aria-label={t("common.cancel")}
             >
-              <div className="mb-2 flex items-center gap-2 px-1">
-                <span
-                  className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded-lg",
-                    col.accent,
-                  )}
-                >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
+      </header>
+
+      <div className="tn-mega-cols">
+        {REPORTS_CERTS_MEGA_MENU.map((col) => {
+          const ColIcon = col.icon;
+          const [featured, ...rest] = col.links;
+          const FeatIcon = featured.icon;
+
+          return (
+            <section key={col.id} className="tn-mega-col" data-tone={col.id}>
+              <div className="tn-mega-col-head">
+                <span className={cn("tn-mega-col-ico", col.accent)}>
                   <ColIcon className="h-3.5 w-3.5" />
                 </span>
-                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                  {t(col.titleKey)}
-                </p>
+                <h3>{t(col.titleKey)}</h3>
               </div>
-              <ul className="space-y-0.5">
-                {col.links.map((link) => {
+
+              <Link
+                href={featured.href}
+                onClick={onNavigate}
+                className="tn-mega-featured"
+              >
+                <span className="tn-mega-featured-ico">
+                  <FeatIcon className="h-4 w-4" />
+                </span>
+                <span className="tn-mega-featured-copy">
+                  <strong>{t(featured.labelKey)}</strong>
+                  {featured.descKey ? <small>{t(featured.descKey)}</small> : null}
+                </span>
+                <ArrowRight className="tn-mega-featured-arrow h-3.5 w-3.5" />
+              </Link>
+
+              <ul className="tn-mega-list">
+                {rest.map((link) => {
                   const Icon = link.icon;
                   return (
                     <li key={link.href}>
                       <Link
                         href={link.href}
                         onClick={onNavigate}
-                        className="tn-mega-link group flex items-start gap-2.5 rounded-lg px-2 py-2"
+                        className="tn-mega-link"
+                        title={link.descKey ? t(link.descKey) : undefined}
                       >
-                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 group-hover:text-teal-700">
+                        <span className="tn-mega-link-ico">
                           <Icon className="h-3.5 w-3.5" />
                         </span>
-                        <span className="min-w-0">
-                          <span className="block text-[13px] font-medium text-slate-800 group-hover:text-slate-950">
-                            {t(link.labelKey)}
-                          </span>
-                          {link.descKey && (
-                            <span className="mt-0.5 block text-[11px] leading-snug text-slate-400">
-                              {t(link.descKey)}
-                            </span>
-                          )}
+                        <span className="tn-mega-link-text">
+                          <span>{t(link.labelKey)}</span>
+                          {link.descKey ? (
+                            <small>{t(link.descKey)}</small>
+                          ) : null}
                         </span>
                       </Link>
                     </li>
                   );
                 })}
               </ul>
-            </div>
+            </section>
           );
         })}
       </div>

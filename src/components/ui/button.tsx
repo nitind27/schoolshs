@@ -7,11 +7,11 @@ import { Spinner } from "@/components/ui/loader";
 
 const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 rounded-xl font-medium",
+    "inline-flex min-w-0 items-center justify-center gap-2 rounded-xl text-center font-medium leading-snug whitespace-normal",
     "transition-all duration-150",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-50",
-    "cursor-pointer select-none",
+    "cursor-pointer select-none [&_svg]:shrink-0",
   ].join(" "),
   {
     variants: {
@@ -26,10 +26,10 @@ const buttonVariants = cva(
         link:        "text-blue-600 underline-offset-4 hover:underline p-0 h-auto shadow-none",
       },
       size: {
-        default: "h-10 px-4 py-2 text-sm",
-        sm:      "h-8 px-3 text-xs",
-        lg:      "h-12 px-6 text-base",
-        xl:      "h-14 px-8 text-base font-semibold",
+        default: "min-h-10 h-auto px-3 py-2 text-sm sm:px-4",
+        sm:      "min-h-8 h-auto px-2.5 py-1.5 text-xs sm:px-3",
+        lg:      "min-h-12 h-auto px-4 py-2.5 text-sm sm:px-6 sm:text-base",
+        xl:      "min-h-14 h-auto px-5 py-3 text-sm font-semibold sm:px-8 sm:text-base",
         icon:    "h-10 w-10 p-0",
         "icon-sm": "h-8 w-8 p-0",
       },

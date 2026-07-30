@@ -1,12 +1,14 @@
-"use client";
+﻿"use client";
 
 import { PageLoader } from "@/components/ui/loader";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, StatCard } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatINR, StatusBadge } from "@/components/admin/admin-ui";
 import { CreditCard, IndianRupee, AlertCircle, ExternalLink } from "lucide-react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { GlobalDataTable } from "@/components/ui/global-data-table";
 
 interface SchoolPay {
   id: string;
@@ -29,13 +31,99 @@ export default function PaymentsPage() {
     Promise.all([
       fetch("/api/admin/stats").then((r) => r.json()),
       fetch("/api/admin/schools").then((r) => r.json()),
-    ]).then(([s, d]) => {
-      setStats(s);
-      setSchools(d.schools || []);
-    }).finally(() => setLoading(false));
+    ])
+      .then(([s, d]) => {
+        setStats(s);
+        setSchools(d.schools || []);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const pending = schools.filter((s) => ["pending", "partial", "overdue"].includes(s.subscription?.paymentStatus || ""));
+
+  const pendingColumns = useMemo<ColumnDef<SchoolPay>[]>(
+    () => [
+      {
+        header: "School",
+        accessorKey: "name",
+        cell: ({ row }) => (
+          <div>
+            <p className="font-medium text-slate-900">{row.original.name}</p>
+            <p className="font-mono text-[11px] text-violet-600">{row.original.code}</p>
+          </div>
+        ),
+      },
+      {
+        header: "Total",
+        accessorFn: (s) => Number(s.subscription?.totalAmount || 0),
+        cell: ({ row }) => <span className="text-right block">{formatINR(row.original.subscription?.totalAmount)}</span>,
+      },
+      {
+        header: "Paid",
+        accessorFn: (s) => Number(s.subscription?.paidAmount || 0),
+        cell: ({ row }) => <span className="text-right block text-emerald-700">{formatINR(row.original.subscription?.paidAmount)}</span>,
+      },
+      {
+        header: "Balance",
+        accessorFn: (s) => Number(s.subscription?.totalAmount || 0) - Number(s.subscription?.paidAmount || 0),
+        cell: ({ getValue }) => <span className="text-right block font-bold text-amber-700">{formatINR(Number(getValue()))}</span>,
+      },
+      {
+        header: "Due Date",
+        accessorFn: (s) => s.subscription?.nextDueDate || "",
+        cell: ({ row }) => (
+          <span className="text-xs">
+            {row.original.subscription?.nextDueDate
+              ? new Date(row.original.subscription?.nextDueDate).toLocaleDateString("en-IN")
+              : "—"}
+          </span>
+        ),
+      },
+      {
+        header: "",
+        id: "action",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <Link href={`/admin/schools/${row.original.id}`}>
+            <Button size="sm" variant="outline"><ExternalLink className="h-3 w-3" /></Button>
+          </Link>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const allColumns = useMemo<ColumnDef<SchoolPay>[]>(
+    () => [
+      { header: "School", accessorKey: "name", cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
+      {
+        header: "Total",
+        accessorFn: (s) => Number(s.subscription?.totalAmount || 0),
+        cell: ({ row }) => <span className="text-right block">{formatINR(row.original.subscription?.totalAmount)}</span>,
+      },
+      {
+        header: "Paid",
+        accessorFn: (s) => Number(s.subscription?.paidAmount || 0),
+        cell: ({ row }) => <span className="text-right block text-emerald-700">{formatINR(row.original.subscription?.paidAmount)}</span>,
+      },
+      {
+        header: "Status",
+        accessorFn: (s) => s.subscription?.paymentStatus || "none",
+        cell: ({ row }) => <StatusBadge status={row.original.subscription?.paymentStatus} />,
+      },
+      {
+        header: "",
+        id: "action",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <Link href={`/admin/schools/${row.original.id}`}>
+            <Button size="sm" variant="outline"><ExternalLink className="h-3 w-3" /></Button>
+          </Link>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="space-y-6">
@@ -57,34 +145,11 @@ export default function PaymentsPage() {
         <>
           {pending.length > 0 && (
             <Card className="border-amber-200">
-              <CardHeader><CardTitle className="text-amber-800 flex items-center gap-2"><AlertCircle className="h-5 w-5" /> Pending Payments ({pending.length})</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="text-amber-800 flex items-center gap-2"><AlertCircle className="h-5 w-5" /> Pending Payments ({pending.length})</CardTitle>
+              </CardHeader>
               <CardContent className="p-0">
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-amber-50/50">
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase">School</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Total</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Paid</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Balance</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Due Date</th>
-                    <th className="px-5 py-3" />
-                  </tr></thead>
-                  <tbody className="divide-y">
-                    {pending.map((s) => {
-                      const sub = s.subscription!;
-                      const balance = Number(sub.totalAmount || 0) - Number(sub.paidAmount || 0);
-                      return (
-                        <tr key={s.id} className="hover:bg-amber-50/30">
-                          <td className="px-5 py-3.5"><p className="font-medium">{s.name}</p><p className="font-mono text-[11px] text-violet-600">{s.code}</p></td>
-                          <td className="px-5 py-3.5 text-right">{formatINR(sub.totalAmount)}</td>
-                          <td className="px-5 py-3.5 text-right text-emerald-700">{formatINR(sub.paidAmount)}</td>
-                          <td className="px-5 py-3.5 text-right font-bold text-amber-700">{formatINR(balance)}</td>
-                          <td className="px-5 py-3.5 text-xs">{sub.nextDueDate ? new Date(sub.nextDueDate).toLocaleDateString("en-IN") : "—"}</td>
-                          <td className="px-5 py-3.5"><Link href={`/admin/schools/${s.id}`}><Button size="sm" variant="outline"><ExternalLink className="h-3 w-3" /></Button></Link></td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <GlobalDataTable data={pending} columns={pendingColumns} emptyText="No pending schools" pageSize={8} />
               </CardContent>
             </Card>
           )}
@@ -92,26 +157,7 @@ export default function PaymentsPage() {
           <Card>
             <CardHeader><CardTitle>All Schools — Payment Status</CardTitle></CardHeader>
             <CardContent className="p-0">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-slate-50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase">School</th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Total</th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Paid</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
-                  <th className="px-5 py-3" />
-                </tr></thead>
-                <tbody className="divide-y divide-slate-50">
-                  {schools.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50">
-                      <td className="px-5 py-3.5 font-medium">{s.name}</td>
-                      <td className="px-5 py-3.5 text-right">{formatINR(s.subscription?.totalAmount)}</td>
-                      <td className="px-5 py-3.5 text-right text-emerald-700">{formatINR(s.subscription?.paidAmount)}</td>
-                      <td className="px-5 py-3.5"><StatusBadge status={s.subscription?.paymentStatus} /></td>
-                      <td className="px-5 py-3.5"><Link href={`/admin/schools/${s.id}`}><Button size="sm" variant="outline"><ExternalLink className="h-3 w-3" /></Button></Link></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <GlobalDataTable data={schools} columns={allColumns} emptyText="No schools found" pageSize={12} />
             </CardContent>
           </Card>
         </>

@@ -64,6 +64,7 @@ export function DocumentScanner({
   const { locale } = useLocale();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const [mounted, setMounted] = useState(false);
 
   const [scanMode, setScanMode] = useState<ScanMode>("camera");
@@ -84,6 +85,24 @@ export function DocumentScanner({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    const timer = window.setTimeout(() => closeRef.current?.focus(), 0);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [onClose, open]);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -293,14 +312,17 @@ export function DocumentScanner({
   const showHardwareIdle = scanMode === "hardware" && !captured;
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4">
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${t("documents.scannerTitle")} — ${docLabel}`}
         className={cn(
-          "bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[95vh]",
+          "flex h-[100dvh] max-h-[100dvh] w-full max-w-2xl flex-col overflow-x-hidden overflow-y-auto bg-white shadow-2xl sm:h-auto sm:max-h-[95dvh] sm:rounded-2xl",
           locale === "gu" && "font-gujarati"
         )}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-900 to-slate-800 px-3 py-3 text-white sm:px-5 sm:py-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/10 rounded-lg">
               <ScanLine className="h-5 w-5" />
@@ -310,7 +332,13 @@ export function DocumentScanner({
               <p className="text-xs text-slate-300">{docLabel}</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            className="flex h-11 w-11 items-center justify-center rounded-xl transition-colors hover:bg-white/10"
+            aria-label={t("common.cancel")}
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -373,6 +401,7 @@ export function DocumentScanner({
                 onClick={() => void handleDeviceChange(selectedDevice)}
                 className="p-2 rounded-lg border border-slate-300 hover:bg-slate-50"
                 title={t("documents.scannerRefresh")}
+                aria-label={t("documents.scannerRefresh")}
               >
                 <SwitchCamera className="h-4 w-4 text-slate-600" />
               </button>
@@ -399,7 +428,7 @@ export function DocumentScanner({
           </div>
         )}
 
-        <div className="relative bg-black flex-1 min-h-[280px] flex items-center justify-center overflow-hidden">
+        <div className="relative flex min-h-[140px] flex-1 items-center justify-center overflow-hidden bg-black min-[480px]:min-h-[180px] sm:min-h-[240px]">
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white z-10">
               <Spinner size="sm" />
@@ -439,7 +468,7 @@ export function DocumentScanner({
 
           {captured ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={captured} alt="Scanned preview" className="max-w-full max-h-[50vh] object-contain" />
+            <img src={captured} alt="Scanned preview" className="max-h-[50dvh] max-w-full object-contain" />
           ) : showCameraPreview ? (
             <>
               <video
@@ -447,7 +476,7 @@ export function DocumentScanner({
                 autoPlay
                 playsInline
                 muted
-                className={cn("max-w-full max-h-[50vh] object-contain", loading && "opacity-0")}
+                className={cn("max-h-[50dvh] max-w-full object-contain", loading && "opacity-0")}
               />
               {!loading && !error && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-8">
@@ -491,7 +520,7 @@ export function DocumentScanner({
           ) : null}
         </div>
 
-        <div className="px-5 py-2 bg-slate-50 border-t border-slate-100">
+        <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-3 py-2 sm:px-5">
           <p className="text-xs text-slate-500 text-center">
             {captured
               ? t("documents.scannerPreviewHint")
@@ -501,7 +530,7 @@ export function DocumentScanner({
           </p>
         </div>
 
-        <div className="px-5 py-4 flex gap-3 border-t border-slate-100">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 px-3 py-3 min-[360px]:flex-row sm:gap-3 sm:px-5 sm:py-4">
           {captured ? (
             <>
               <Button variant="outline" className="flex-1" onClick={() => void handleRetake()} disabled={processing}>

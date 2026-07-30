@@ -762,13 +762,15 @@ export default function NewSchoolPage() {
             />
             <Select
               label="School Type"
-              options={["", ...SCHOOL_TYPES]}
+              options={[...SCHOOL_TYPES]}
+              emptyLabel="Select school type"
               value={form.schoolType}
               onChange={(e) => setField("schoolType", e.target.value)}
             />
             <Select
               label="Board Affiliation"
-              options={["", ...BOARDS]}
+              options={[...BOARDS]}
+              emptyLabel="Select board"
               value={form.boardAffiliation}
               onChange={(e) => setField("boardAffiliation", e.target.value)}
             />

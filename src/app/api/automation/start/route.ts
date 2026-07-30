@@ -4,7 +4,12 @@ import fs from "fs";
 import { chromium } from "playwright";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
-import { DG_PORTALS } from "@/lib/dg-portal";
+import {
+  DG_PORTALS,
+  getDgPortalConfig,
+  isSpecificScholarshipScheme,
+} from "@/lib/dg-portal";
+import { buildAutomationPreflight } from "@/lib/automation-preflight";
 import { spawnAutomationWorker } from "@/lib/spawn-automation";
 
 function assertPlaywrightReady(): void {
@@ -45,9 +50,12 @@ function getTsxRunner(): { command: string; args: string[] } {
 export async function POST(request: NextRequest) {
   try {
     const session = await requireSchoolAuth();
-    const { studentId, studentIds, mode = "auto", actionMode = "auto", portalType = "sjed" } = await request.json();
-
-    const validPortal = portalType === "citizen" ? "citizen" : "sjed";
+    const {
+      studentId,
+      studentIds,
+      mode = "auto",
+      actionMode = "auto",
+    } = await request.json();
 
     const ids: string[] = studentIds?.length ? studentIds : studentId ? [studentId] : [];
     if (ids.length === 0) {
@@ -56,11 +64,133 @@ export async function POST(request: NextRequest) {
 
     const students = await prisma.student.findMany({
       where: { id: { in: ids }, schoolId: session.schoolId },
-      select: { id: true, firstName: true, surname: true, aadhaarNumber: true },
     });
 
     if (students.length === 0) {
       return NextResponse.json({ error: "No valid students found" }, { status: 404 });
+    }
+    if (students.length !== new Set(ids).size) {
+      return NextResponse.json(
+        { error: "Some selected students were not found in this school." },
+        { status: 400 },
+      );
+    }
+
+    const missingScheme = students.filter(
+      (student) => !isSpecificScholarshipScheme(student.scholarshipScheme),
+    );
+    if (missingScheme.length) {
+      return NextResponse.json(
+        {
+          error:
+            "Scholarship scheme missing or generic. Select the exact scheme before Auto Apply.",
+          students: missingScheme.map((student) => ({
+            id: student.id,
+            name: `${student.firstName} ${student.surname}`,
+          })),
+        },
+        { status: 400 },
+      );
+    }
+
+    const preflight = students.map(buildAutomationPreflight);
+    const blocked = preflight.filter((student) => !student.ready);
+    if (blocked.length) {
+      return NextResponse.json(
+        {
+          error:
+            "Some students have missing fields or Digital Gujarat documents. Review the preflight preview first.",
+          preflight,
+        },
+        { status: 400 },
+      );
+    }
+
+    const portalTypes = new Set(
+      students.map(
+        (student) => getDgPortalConfig(student.scholarshipScheme).type,
+      ),
+    );
+    if (portalTypes.size !== 1) {
+      return NextResponse.json(
+        {
+          error:
+            "Selected students use different Digital Gujarat portals. Run Pre-Matric and Post-Matric students separately.",
+          groups: students.reduce<Record<string, number>>((groups, student) => {
+            const portal = getDgPortalConfig(student.scholarshipScheme).type;
+            groups[portal] = (groups[portal] || 0) + 1;
+            return groups;
+          }, {}),
+        },
+        { status: 400 },
+      );
+    }
+    const validPortal = [...portalTypes][0]!;
+
+    const staleBefore = new Date(
+      Date.now() -
+        Math.max(
+          1,
+          Number(process.env.AUTOMATION_STALE_MINUTES || "20"),
+        ) *
+          60_000,
+    );
+    await prisma.automationJob.updateMany({
+      where: {
+        schoolId: session.schoolId,
+        portalType: validPortal,
+        status: { in: ["pending", "running"] },
+        updatedAt: { lt: staleBefore },
+      },
+      data: {
+        status: "failed",
+        currentStep: "Stale worker replaced",
+        errorMessage: "Stale automation job closed before a new run.",
+        finishedAt: new Date(),
+      },
+    });
+    const existingJob = await prisma.automationJob.findFirst({
+      where: {
+        schoolId: session.schoolId,
+        portalType: validPortal,
+        status: { in: ["pending", "running"] },
+        updatedAt: { gte: staleBefore },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existingJob) {
+      return NextResponse.json(
+        {
+          error:
+            "An Auto Apply job is already using this portal. Open the running job or wait for it to finish.",
+          jobId: existingJob.id,
+        },
+        { status: 409 },
+      );
+    }
+
+    const settings = await prisma.schoolSettings.findUnique({
+      where: { schoolId: session.schoolId },
+      select: {
+        dgSjedUsername: true,
+        dgCitizenLoginId: true,
+      },
+    });
+    const loginConfigured =
+      validPortal === "sjed"
+        ? Boolean(settings?.dgSjedUsername?.trim())
+        : Boolean(settings?.dgCitizenLoginId?.trim());
+    if (!loginConfigured) {
+      return NextResponse.json(
+        {
+          error:
+            validPortal === "sjed"
+              ? "Save SJED login before starting this scholarship scheme."
+              : "Save Citizen login before starting this scholarship scheme.",
+          portalType: validPortal,
+        },
+        { status: 400 },
+      );
     }
 
     assertPlaywrightReady();

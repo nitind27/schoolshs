@@ -4,12 +4,19 @@ import { requireSchoolAuth, AuthError } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
+    const session = await requireSchoolAuth([
+      "school_admin",
+      "teacher",
+      "clerk",
+    ]);
 
     const where: Record<string, unknown> = { schoolId: session.schoolId };
-    if (session.role === "teacher" && session.staffId) {
+    if (session.role === "teacher") {
       const classes = await prisma.schoolClass.findMany({
-        where: { classTeacherId: session.staffId },
+        where: {
+          schoolId: session.schoolId,
+          classTeacherId: session.staffId || "__unlinked__",
+        },
         select: { id: true },
       });
       where.classId = { in: classes.map((c) => c.id) };
@@ -50,7 +57,8 @@ export async function GET() {
 
     return NextResponse.json({ students });
   } catch (e) {
-    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError)
+      return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

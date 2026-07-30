@@ -81,6 +81,7 @@ interface Stats {
 const STATUS_KEYS = ["draft", "ready", "pending", "submitted", "approved", "rejected"] as const;
 
 type InsightTab = "students" | "admission" | "staff" | "details";
+type MainTab = "students" | "staff";
 
 function buildQuery(filters: DashboardFilterValues): string {
   const p = new URLSearchParams();
@@ -124,6 +125,7 @@ export default function SchoolOpsDashboard() {
     genders: [],
   });
   const [insightTab, setInsightTab] = useState<InsightTab>("students");
+  const [mainTab, setMainTab] = useState<MainTab>("students");
   const [drillTarget, setDrillTarget] = useState<DrillTarget | null>(null);
   const [drillOpen, setDrillOpen] = useState(false);
   const [quickList, setQuickList] = useState<{
@@ -411,16 +413,59 @@ export default function SchoolOpsDashboard() {
         </div>
       )}
 
-      <div className="ops-desk">
+      <nav
+        className="ops-main-tabs"
+        data-active={mainTab}
+        aria-label={t("dashboard.mainTabsLabel")}
+        role="tablist"
+      >
+        <span className="ops-main-tabs-thumb" aria-hidden />
+        <button
+          type="button"
+          role="tab"
+          className={mainTab === "students" ? "is-active" : undefined}
+          aria-selected={mainTab === "students"}
+          onClick={() => {
+            setMainTab("students");
+            if (insightTab === "staff") setInsightTab("students");
+          }}
+        >
+          <span className="ops-main-tab-ico is-student"><Users className="h-4 w-4" /></span>
+          <span className="ops-main-tab-copy">
+            <strong>{t("dashboard.mainTabStudents")}</strong>
+            <small>{t("dashboard.mainTabStudentsShort")}</small>
+          </span>
+          <em>{(stats?.total || 0).toLocaleString("en-IN")}</em>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={mainTab === "staff" ? "is-active" : undefined}
+          aria-selected={mainTab === "staff"}
+          onClick={() => setMainTab("staff")}
+        >
+          <span className="ops-main-tab-ico is-staff"><Briefcase className="h-4 w-4" /></span>
+          <span className="ops-main-tab-copy">
+            <strong>{t("dashboard.mainTabStaff")}</strong>
+            <small>{t("dashboard.mainTabStaffShort")}</small>
+          </span>
+          <em>{(hrSummary?.totalStaff ?? stats?.totalStaff ?? 0).toLocaleString("en-IN")}</em>
+        </button>
+      </nav>
+
+      <div key={mainTab} className="ops-panel-view" data-panel={mainTab}>
+      {mainTab === "students" ? (
+      <>
+      <div className="ops-desk ops-desk-compact">
         <DashboardCommandCenter
           parts={["attention"]}
+          focus="students"
+          compact
           ops={opsOverview}
           hr={hrSummary}
           onOpenAdmissionPending={() =>
             openQuickList("admission", "pending", t("admissionStatus.pending"))
           }
-          onOpenStaffAttendance={() => setHrModal("attendanceUnmarked")}
-          onOpenPayrollPending={() => setHrModal("payrollPending")}
           onOpenDraftStudents={() =>
             openDrill("status", {
               id: "draft",
@@ -431,14 +476,7 @@ export default function SchoolOpsDashboard() {
           }
         />
 
-        <section className="ops-pulse" aria-label={t("dashboard.pulseTitle")}>
-          <header className="ops-pulse-head">
-            <div>
-              <p className="ops-eyebrow">{t("dashboard.pulseEyebrow")}</p>
-              <h2>{t("dashboard.pulseTitle")}</h2>
-              <p>{t("dashboard.pulseDesc")}</p>
-            </div>
-          </header>
+        <section className="ops-pulse ops-pulse-compact" aria-label={t("dashboard.pulseTitle")}>
           <div className="ops-pulse-grid">
             <button
               type="button"
@@ -500,10 +538,7 @@ export default function SchoolOpsDashboard() {
             <div className="ops-pulse-tile is-slate is-static">
               <span className="ops-pulse-rate">{stats?.completionRate || 0}%</span>
               <span>{t("dashboard.completionRate")}</span>
-              <span
-                className="ops-pulse-bar"
-                aria-hidden
-              >
+              <span className="ops-pulse-bar" aria-hidden>
                 <i style={{ width: `${Math.min(100, Math.max(0, stats?.completionRate || 0))}%` }} />
               </span>
             </div>
@@ -511,28 +546,30 @@ export default function SchoolOpsDashboard() {
         </section>
       </div>
 
-      <section className="ops-top ops-top-tools">
-        <DashboardFiltersBar
-          filters={filters}
-          meta={filterMeta}
-          onChange={setFilters}
-          onReset={() => setFilters(EMPTY_FILTERS)}
-          resultCount={stats?.total}
-        />
-        <DashboardToolbar
-          report={reportData}
-          filters={filters}
-          loading={loading}
-          onRefresh={() => loadStats(filters)}
-          onPrintReady={(rows, options) => {
-            setPrintStudents(rows);
-            setPrintOptions(options);
-          }}
-          lastUpdated={lastUpdated}
-        />
+      <section className="ops-control ops-control-compact" aria-label={t("dashboard.controlCenterTitle")}>
+        <div className="ops-top ops-top-tools">
+          <DashboardFiltersBar
+            filters={filters}
+            meta={filterMeta}
+            onChange={setFilters}
+            onReset={() => setFilters(EMPTY_FILTERS)}
+            resultCount={stats?.total}
+          />
+          <DashboardToolbar
+            report={reportData}
+            filters={filters}
+            loading={loading}
+            onRefresh={() => loadStats(filters)}
+            onPrintReady={(rows, options) => {
+              setPrintStudents(rows);
+              setPrintOptions(options);
+            }}
+            lastUpdated={lastUpdated}
+          />
+        </div>
       </section>
 
-      <section className="ops-insights">
+      <section className="ops-insights ops-insights-compact">
         <header className="ops-insights-head">
           <div>
             <p className="ops-eyebrow">{t("dashboard.insightsEyebrow")}</p>
@@ -544,7 +581,6 @@ export default function SchoolOpsDashboard() {
               [
                 ["students", t("dashboard.tabStudents")],
                 ["admission", t("dashboard.tabAdmission")],
-                ["staff", t("dashboard.tabStaff")],
                 ["details", t("dashboard.tabDetails")],
               ] as const
             ).map(([id, label]) => (
@@ -859,156 +895,6 @@ export default function SchoolOpsDashboard() {
             </div>
           )}
 
-          {insightTab === "staff" && (
-            <div className="ops-staff-panel">
-              <div className="ops-hr-month">
-                {t("dashboard.hrMonthLabel", {
-                  month: hrSummary?.month || new Date().getMonth() + 1,
-                  year: hrSummary?.year || new Date().getFullYear(),
-                })}
-              </div>
-
-              <div className="ops-admit-kpis ops-kpis-6">
-                <button
-                  type="button"
-                  className="ops-admit-kpi is-blue"
-                  onClick={() => openQuickList("staff", "", t("dashboard.staffActive"))}
-                >
-                  <span>{t("dashboard.staffActive")}</span>
-                  <strong>{(hrSummary?.totalStaff ?? stats?.totalStaff ?? 0).toLocaleString("en-IN")}</strong>
-                  <small>{t("dashboard.tapToOpenList")}</small>
-                </button>
-                <button type="button" className="ops-admit-kpi is-teal" onClick={() => setHrModal("attendance")}>
-                  <span>{t("dashboard.hrAttendanceMarked")}</span>
-                  <strong>
-                    {(hrSummary?.attendanceMarked || 0).toLocaleString("en-IN")}
-                    <em>/{(hrSummary?.totalStaff || stats?.totalStaff || 0).toLocaleString("en-IN")}</em>
-                  </strong>
-                  <small>{t("dashboard.tapToOpenList")}</small>
-                </button>
-                <button type="button" className="ops-admit-kpi is-amber" onClick={() => setHrModal("attendanceUnmarked")}>
-                  <span>{t("dashboard.hrAttendanceUnmarked")}</span>
-                  <strong>
-                    {(
-                      hrSummary?.attendanceUnmarked ??
-                      Math.max(
-                        0,
-                        (hrSummary?.totalStaff || stats?.totalStaff || 0) - (hrSummary?.attendanceMarked || 0),
-                      )
-                    ).toLocaleString("en-IN")}
-                  </strong>
-                  <small>{t("dashboard.tapToOpenList")}</small>
-                </button>
-                <div className="ops-admit-kpi is-slate">
-                  <span>{t("dashboard.hrWithSalary")}</span>
-                  <strong>{(hrSummary?.withSalary || 0).toLocaleString("en-IN")}</strong>
-                </div>
-                <button type="button" className="ops-admit-kpi is-green" onClick={() => setHrModal("payrollPaid")}>
-                  <span>{t("dashboard.hrPaid")}</span>
-                  <strong>{(hrSummary?.payrollPaid || 0).toLocaleString("en-IN")}</strong>
-                  <small>₹{(hrSummary?.totalNet || 0).toLocaleString("en-IN")}</small>
-                </button>
-                <button type="button" className="ops-admit-kpi is-rose" onClick={() => setHrModal("payrollPending")}>
-                  <span>{t("dashboard.hrPayPending")}</span>
-                  <strong>{(hrSummary?.payrollPending || 0).toLocaleString("en-IN")}</strong>
-                  <small>{t("dashboard.tapToOpenList")}</small>
-                </button>
-              </div>
-
-              <div className="ops-flow-more ops-staff-shortcuts">
-                <span className="ops-flow-more-label">{t("dashboard.staffShortcuts")}</span>
-                <div className="ops-flow-actions">
-                  {(
-                    [
-                      { href: "/staff/attendance", label: t("dashboard.shortcutAttendance"), icon: CalendarDays, tone: "teal" as const },
-                      { href: "/staff/payroll", label: t("dashboard.shortcutPayroll"), icon: Wallet, tone: "amber" as const },
-                      { href: "/staff/salary-slip", label: t("dashboard.shortcutSalarySlip"), icon: FileSpreadsheet, tone: "violet" as const },
-                      { href: "/staff/salary-statement", label: t("dashboard.shortcutStatement"), icon: Calculator, tone: "sky" as const },
-                      { href: "/staff/new", label: t("nav.staffAdd"), icon: UserPlus, tone: "indigo" as const },
-                      { href: "/staff", label: t("dashboard.shortcutAllStaff"), icon: Briefcase, tone: "sky" as const },
-                    ]
-                  ).map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link key={item.href} href={item.href} className="ops-flow-action" data-tone={item.tone}>
-                        <span className="ops-flow-action-ico"><Icon className="h-4 w-4" /></span>
-                        <span>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="ops-admit-grid ops-staff-charts">
-                <article className="ops-chart-card" data-tone="violet">
-                  <header>
-                    <h3>{t("dashboard.staffByDesignation")}</h3>
-                    <p>{t("dashboard.staffByDesignationDesc")}</p>
-                  </header>
-                  {staffSegments.length > 0 ? (
-                    <VerticalBarChart
-                      segments={staffSegments}
-                      onSegmentClick={(seg) =>
-                        openQuickList("staff", seg.id || seg.label, seg.label)
-                      }
-                    />
-                  ) : (
-                    <div className="ops-insights-empty-box">
-                      <p>{t("dashboard.noClassData")}</p>
-                    </div>
-                  )}
-                </article>
-
-                <article className="ops-chart-card" data-tone="teal">
-                  <header>
-                    <h3>{t("dashboard.hrModalAttendance")}</h3>
-                    <p>{t("dashboard.chartClickHint")}</p>
-                  </header>
-                  {staffAttnSegments.length > 0 ? (
-                    <DoughnutChart
-                      segments={staffAttnSegments}
-                      centerValue={hrSummary?.totalStaff || 0}
-                      centerLabel={t("dashboard.totalLabel")}
-                      size={140}
-                      onSegmentClick={(seg) =>
-                        setHrModal(seg.id === "unmarked" ? "attendanceUnmarked" : "attendance")
-                      }
-                    />
-                  ) : (
-                    <div className="ops-insights-empty-box">
-                      <p>{t("dashboard.noClassData")}</p>
-                    </div>
-                  )}
-                </article>
-
-                <article className="ops-chart-card" data-tone="blue">
-                  <header>
-                    <h3>{t("dashboard.hrPayrollChart")}</h3>
-                    <p>{t("dashboard.hrPayrollChartDesc")}</p>
-                  </header>
-                  {payrollSegments.length > 0 ? (
-                    <DoughnutChart
-                      segments={payrollSegments}
-                      centerValue={(hrSummary?.payrollPaid || 0) + (hrSummary?.payrollPending || 0)}
-                      centerLabel={t("dashboard.totalLabel")}
-                      size={140}
-                      onSegmentClick={(seg) =>
-                        setHrModal(seg.id === "paid" ? "payrollPaid" : "payrollPending")
-                      }
-                    />
-                  ) : (
-                    <div className="ops-insights-empty-box">
-                      <p>{t("dashboard.hrPayrollEmpty")}</p>
-                      <Link href="/staff/payroll" className="text-sm font-bold text-blue-700 hover:underline">
-                        {t("dashboard.shortcutPayroll")}
-                      </Link>
-                    </div>
-                  )}
-                </article>
-              </div>
-            </div>
-          )}
-
           {insightTab === "details" && (
             <div className="ops-details-stack">
               <DashboardSummaryTable
@@ -1059,18 +945,13 @@ export default function SchoolOpsDashboard() {
 
       <DashboardCommandCenter
         parts={["hubs"]}
+        focus="students"
+        compact
         ops={opsOverview}
         hr={hrSummary}
       />
 
-      <section className="ops-flow ops-flow-compact">
-        <div className="ops-flow-top">
-          <div>
-            <p className="ops-eyebrow">{t("dashboard.flowEyebrow")}</p>
-            <h2>{t("dashboard.flowTitle")}</h2>
-            <p>{t("dashboard.flowDesc")}</p>
-          </div>
-        </div>
+      <section className="ops-flow ops-flow-compact ops-flow-slim">
         <div className="ops-flow-steps">
           {setupFlow.map((step, i) => {
             const Icon = step.icon;
@@ -1082,7 +963,6 @@ export default function SchoolOpsDashboard() {
                   <span className="ops-flow-ico"><Icon className="h-4 w-4" /></span>
                   <span className="ops-flow-txt">
                     <strong>{step.title}</strong>
-                    <small>{step.desc}</small>
                   </span>
                 </Link>
               </div>
@@ -1090,6 +970,169 @@ export default function SchoolOpsDashboard() {
           })}
         </div>
       </section>
+      </>
+      ) : (
+      <>
+      <div className="ops-desk ops-desk-staff ops-desk-compact">
+        <DashboardCommandCenter
+          parts={["attention"]}
+          focus="staff"
+          compact
+          ops={opsOverview}
+          hr={hrSummary}
+          onOpenStaffAttendance={() => setHrModal("attendanceUnmarked")}
+          onOpenPayrollPending={() => setHrModal("payrollPending")}
+        />
+
+        <section className="ops-pulse ops-pulse-compact ops-pulse-staff" aria-label={t("dashboard.mainTabStaff")}>
+          <div className="ops-pulse-grid ops-pulse-grid-staff">
+            <button
+              type="button"
+              className="ops-pulse-tile is-blue"
+              onClick={() => openQuickList("staff", "", t("dashboard.staffActive"))}
+            >
+              <span className="ops-pulse-ico"><Briefcase className="h-4 w-4" /></span>
+              <strong>{(hrSummary?.totalStaff ?? stats?.totalStaff ?? 0).toLocaleString("en-IN")}</strong>
+              <span>{t("dashboard.staffActive")}</span>
+            </button>
+            <button type="button" className="ops-pulse-tile is-emerald" onClick={() => setHrModal("attendance")}>
+              <span className="ops-pulse-ico"><ClipboardCheck className="h-4 w-4" /></span>
+              <strong>
+                {(hrSummary?.attendanceMarked || 0).toLocaleString("en-IN")}
+                <small className="ops-pulse-of">/{(hrSummary?.totalStaff || stats?.totalStaff || 0).toLocaleString("en-IN")}</small>
+              </strong>
+              <span>{t("dashboard.hrAttendanceMarked")}</span>
+            </button>
+            <button type="button" className="ops-pulse-tile is-amber" onClick={() => setHrModal("attendanceUnmarked")}>
+              <span className="ops-pulse-ico"><Clock className="h-4 w-4" /></span>
+              <strong>
+                {(
+                  hrSummary?.attendanceUnmarked ??
+                  Math.max(
+                    0,
+                    (hrSummary?.totalStaff || stats?.totalStaff || 0) - (hrSummary?.attendanceMarked || 0),
+                  )
+                ).toLocaleString("en-IN")}
+              </strong>
+              <span>{t("dashboard.hrAttendanceUnmarked")}</span>
+            </button>
+            <button type="button" className="ops-pulse-tile is-violet" onClick={() => setHrModal("payrollPaid")}>
+              <span className="ops-pulse-ico"><Wallet className="h-4 w-4" /></span>
+              <strong>{(hrSummary?.payrollPaid || 0).toLocaleString("en-IN")}</strong>
+              <span>{t("dashboard.hrPaid")}</span>
+            </button>
+            <button type="button" className="ops-pulse-tile is-rose" onClick={() => setHrModal("payrollPending")}>
+              <span className="ops-pulse-ico"><AlertCircle className="h-4 w-4" /></span>
+              <strong>{(hrSummary?.payrollPending || 0).toLocaleString("en-IN")}</strong>
+              <span>{t("dashboard.hrPayPending")}</span>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <section className="ops-insights ops-insights-staff ops-insights-compact">
+        <div className="ops-insights-body">
+          <div className="ops-staff-panel">
+            <div className="ops-flow-more ops-staff-shortcuts">
+              <span className="ops-flow-more-label">{t("dashboard.staffShortcuts")}</span>
+              <div className="ops-flow-actions">
+                {(
+                  [
+                    { href: "/staff/attendance", label: t("dashboard.shortcutAttendance"), icon: CalendarDays, tone: "teal" as const },
+                    { href: "/staff/payroll", label: t("dashboard.shortcutPayroll"), icon: Wallet, tone: "amber" as const },
+                    { href: "/staff/salary-slip", label: t("dashboard.shortcutSalarySlip"), icon: FileSpreadsheet, tone: "violet" as const },
+                    { href: "/staff", label: t("dashboard.shortcutAllStaff"), icon: Briefcase, tone: "sky" as const },
+                  ]
+                ).map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link key={item.href} href={item.href} className="ops-flow-action" data-tone={item.tone}>
+                      <span className="ops-flow-action-ico"><Icon className="h-4 w-4" /></span>
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="ops-admit-grid ops-staff-charts">
+              <article className="ops-chart-card" data-tone="violet">
+                <header>
+                  <h3>{t("dashboard.staffByDesignation")}</h3>
+                </header>
+                {staffSegments.length > 0 ? (
+                  <VerticalBarChart
+                    segments={staffSegments}
+                    onSegmentClick={(seg) =>
+                      openQuickList("staff", seg.id || seg.label, seg.label)
+                    }
+                  />
+                ) : (
+                  <div className="ops-insights-empty-box">
+                    <p>{t("dashboard.noClassData")}</p>
+                  </div>
+                )}
+              </article>
+
+              <article className="ops-chart-card" data-tone="teal">
+                <header>
+                  <h3>{t("dashboard.hrModalAttendance")}</h3>
+                </header>
+                {staffAttnSegments.length > 0 ? (
+                  <DoughnutChart
+                    segments={staffAttnSegments}
+                    centerValue={hrSummary?.totalStaff || 0}
+                    centerLabel={t("dashboard.totalLabel")}
+                    size={140}
+                    onSegmentClick={(seg) =>
+                      setHrModal(seg.id === "unmarked" ? "attendanceUnmarked" : "attendance")
+                    }
+                  />
+                ) : (
+                  <div className="ops-insights-empty-box">
+                    <p>{t("dashboard.noClassData")}</p>
+                  </div>
+                )}
+              </article>
+
+              <article className="ops-chart-card" data-tone="blue">
+                <header>
+                  <h3>{t("dashboard.hrPayrollChart")}</h3>
+                </header>
+                {payrollSegments.length > 0 ? (
+                  <DoughnutChart
+                    segments={payrollSegments}
+                    centerValue={(hrSummary?.payrollPaid || 0) + (hrSummary?.payrollPending || 0)}
+                    centerLabel={t("dashboard.totalLabel")}
+                    size={140}
+                    onSegmentClick={(seg) =>
+                      setHrModal(seg.id === "paid" ? "payrollPaid" : "payrollPending")
+                    }
+                  />
+                ) : (
+                  <div className="ops-insights-empty-box">
+                    <p>{t("dashboard.hrPayrollEmpty")}</p>
+                    <Link href="/staff/payroll" className="text-sm font-bold text-blue-700 hover:underline">
+                      {t("dashboard.shortcutPayroll")}
+                    </Link>
+                  </div>
+                )}
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <DashboardCommandCenter
+        parts={["hubs"]}
+        focus="staff"
+        compact
+        ops={opsOverview}
+        hr={hrSummary}
+      />
+      </>
+      )}
+      </div>
 
       {loading && stats && (
         <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full border border-blue-200 bg-white px-4 py-2 text-xs font-medium text-blue-700 shadow-lg print:hidden">

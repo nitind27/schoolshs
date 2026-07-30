@@ -9,15 +9,103 @@ import {
   type SessionMeta,
 } from "./session";
 import { goToPortalEntry, navigateDg, needsLogin } from "./dg-nav";
-import { waitForContinueConfirm, waitForPortalLogin, type LogFn } from "./form-filler";
+import { waitForContinueConfirm, type LogFn } from "./form-filler";
 import { isAutomationHeadless } from "./headless";
 import type { JobReporter } from "./status-reporter";
+import {
+  DG_LOGIN_SELECTORS,
+  SJED_LOGIN_SELECTORS,
+} from "./selectors";
+import { waitForLoginWithOtpAutoFill } from "./otp-handler";
 
 export interface DgCredentials {
   loginId: string;
   password: string;
   loginMethod: "mobile" | "email";
   source: "school" | "student";
+}
+
+async function fillFirstVisible(
+  page: Page,
+  selectors: string[],
+  value: string,
+): Promise<boolean> {
+  if (!value) return false;
+  for (const selector of selectors) {
+    try {
+      const input = page.locator(selector).first();
+      if (!(await input.isVisible({ timeout: 500 }))) continue;
+      await input.fill(value);
+      return true;
+    } catch {
+      continue;
+    }
+  }
+  return false;
+}
+
+async function prefillLogin(
+  page: Page,
+  portal: DgPortalConfig,
+  credentials: DgCredentials,
+  log: LogFn,
+): Promise<void> {
+  const selectors =
+    portal.type === "sjed" ? SJED_LOGIN_SELECTORS : DG_LOGIN_SELECTORS;
+  if (portal.type === "citizen") {
+    for (const selector of DG_LOGIN_SELECTORS.loginMethodSelect) {
+      try {
+        const select = page.locator(selector).first();
+        if (await select.isVisible({ timeout: 400 })) {
+          await select
+            .selectOption({ label: "Mobile No" })
+            .catch(() => select.selectOption({ value: "3" }));
+          await page
+            .waitForLoadState("domcontentloaded", { timeout: 5000 })
+            .catch(() => {});
+          await page.waitForTimeout(500);
+          if (credentials.loginMethod === "email") {
+            log(
+              "⚠ Citizen portal currently Mobile No login expose kar raha hai; saved mobile login use hoga.",
+            );
+          }
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+    const radios =
+      credentials.loginMethod === "email"
+        ? DG_LOGIN_SELECTORS.emailRadio
+        : DG_LOGIN_SELECTORS.mobileRadio;
+    for (const selector of radios) {
+      try {
+        const radio = page.locator(selector).first();
+        if (await radio.isVisible({ timeout: 400 })) {
+          await radio.check({ force: true });
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+  const loginFilled = await fillFirstVisible(
+    page,
+    selectors.username,
+    credentials.loginId,
+  );
+  const passwordFilled = await fillFirstVisible(
+    page,
+    selectors.password,
+    credentials.password,
+  );
+  if (loginFilled || passwordFilled) {
+    log(
+      `✓ Login form pre-filled (${loginFilled ? "ID" : ""}${loginFilled && passwordFilled ? " + " : ""}${passwordFilled ? "password" : ""}) — CAPTCHA manually fill karein`,
+    );
+  }
 }
 
 export async function resolveDgCredentials(
@@ -88,32 +176,17 @@ export async function ensureDgLoggedIn(
 
   log(`Portal: ${portal.labelHi} (${portal.loginUrl.split("/").pop()})`);
 
-  // Pehle seedha Digital Gujarat login URL kholo
-  log(`Opening Digital Gujarat → ${portal.loginUrl}`);
+  // Saved persistent profile + last successful portal URL ko pehle probe karo.
+  log(`Restoring saved ${portal.label} session...`);
   if (reporter) {
-    await reporter.flush({ currentStep: "Digital Gujarat portal khul raha hai..." });
+    await reporter.flush({ currentStep: "Checking saved Digital Gujarat session..." });
   }
-  await navigateDg(page, portal.loginUrl, log, portal);
   await page.bringToFront().catch(() => {});
 
   if (!creds.loginId) {
     log("⚠ Login ID save nahi — browser me manually login karein");
   } else if (creds.source === "school") {
     log(`School login: ${creds.loginId.substring(0, 3)}*** (${portal.type.toUpperCase()})`);
-  }
-
-  if (isDgSessionActive(page.url(), portal.loginPagePattern)) {
-    log(`✓ ${portal.label} session active — seedha dashboard`);
-    const postLoginUrl = page.url();
-    const meta = readSessionMeta(profileDir);
-    writeSessionMeta(profileDir, {
-      loginId: creds.loginId || meta?.loginId || "",
-      portalType: portal.type,
-      lastLoginAt: meta?.lastLoginAt || new Date().toISOString(),
-      postLoginUrl,
-      source: creds.source,
-    });
-    return;
   }
 
   const sessionState = await probeDgSession(page, portal, log, profileDir);
@@ -159,10 +232,16 @@ export async function ensureDgLoggedIn(
     log("⚠ VPS headless mode — browser dikhega nahi. Install: sudo apt install -y xvfb");
   }
 
-  await waitForPortalLogin(
+  await prefillLogin(page, portal, creds, log);
+
+  await waitForLoginWithOtpAutoFill(
     page,
-    async () => isDgSessionActive(page.url(), portal.loginPagePattern),
-    log
+    portal,
+    prisma,
+    jobId,
+    schoolId || "",
+    log,
+    reporter,
   );
 
   await waitForContinueConfirm(

@@ -11,6 +11,7 @@ import { NotificationBell } from "@/components/layout/notification-bell";
 import { NavbarChatButton } from "@/components/layout/navbar-chat";
 import { NavbarLetterheadButton } from "@/components/layout/navbar-letterhead";
 import { NavbarMegaMenu } from "@/components/layout/navbar-mega-menu";
+import { NavbarGrSearch } from "@/components/layout/navbar-gr-search";
 import { toast } from "@/components/ui/toast";
 import { AUTH_CHANGED_EVENT, notifyAuthChanged } from "@/lib/auth-client";
 import "./top-navbar.css";
@@ -71,8 +72,10 @@ export function TopNavbar({
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (langRef.current && !langRef.current.contains(target)) setLangOpen(false);
-      if (profileRef.current && !profileRef.current.contains(target)) setProfileOpen(false);
+      if (langRef.current && !langRef.current.contains(target))
+        setLangOpen(false);
+      if (profileRef.current && !profileRef.current.contains(target))
+        setProfileOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -100,9 +103,18 @@ export function TopNavbar({
   const initial = (user?.name || "?").charAt(0).toUpperCase();
   const currentLang = LOCALES.find((l) => l.code === locale);
   const showNotifications = user?.role !== "student";
-  const showChat = Boolean(user?.role && ["school_admin", "teacher", "clerk"].includes(user.role));
-  const showLetterhead = Boolean(user?.role && ["school_admin", "clerk"].includes(user.role));
-  const showMegaMenu = Boolean(user?.role && ["school_admin", "clerk"].includes(user.role));
+  const showChat = Boolean(
+    user?.role && ["school_admin", "teacher", "clerk"].includes(user.role),
+  );
+  const showLetterhead = Boolean(
+    user?.role && ["school_admin", "clerk"].includes(user.role),
+  );
+  const showMegaMenu = Boolean(
+    user?.role && ["school_admin", "clerk"].includes(user.role),
+  );
+  const showGrSearch = Boolean(
+    user?.role && ["school_admin", "teacher", "clerk"].includes(user.role),
+  );
   const brandTitle = user?.schoolName || t("common.scholarship");
   const roleText = roleLabel(user?.role, t);
 
@@ -114,9 +126,10 @@ export function TopNavbar({
         "pl-16 lg:pl-5 left-0 lg:left-[var(--shell-sidebar-w)]",
       )}
       style={{ ["--shell-sidebar-w" as string]: `${sidebarWidth}px` }}
+      data-has-search={showGrSearch ? "true" : "false"}
     >
       {/* Brand first */}
-      <div className="mr-auto flex min-w-0 items-center gap-3">
+      <div className="mr-auto flex min-w-0 shrink-0 items-center gap-3">
         {!showMegaMenu && (
           <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--tn-ink)] text-white sm:inline-flex">
             <Sparkles className="h-3.5 w-3.5" />
@@ -143,7 +156,13 @@ export function TopNavbar({
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+      {showGrSearch && (
+        <NavbarGrSearch
+          scope={user?.role === "teacher" ? "teacher" : "school"}
+        />
+      )}
+
+      <div className="tn-actions flex shrink-0 items-center gap-1.5 sm:gap-2">
         <div className="tn-tools">
           {showLetterhead && <NavbarLetterheadButton role={user?.role} />}
           {showChat && <NavbarChatButton role={user?.role} />}
@@ -197,7 +216,9 @@ export function TopNavbar({
                   )}
                 >
                   <span>{l.nativeLabel}</span>
-                  <span className="text-[10px] font-bold uppercase text-slate-400">{l.code}</span>
+                  <span className="text-[10px] font-bold uppercase text-slate-400">
+                    {l.code}
+                  </span>
                 </button>
               ))}
             </div>
@@ -231,8 +252,12 @@ export function TopNavbar({
           {profileOpen && (
             <div className="tn-dropdown absolute right-0 z-50 mt-2 w-60 rounded-xl p-1.5">
               <div className="mb-1 rounded-lg bg-slate-50 px-3 py-2.5">
-                <p className="truncate text-sm font-semibold text-slate-900">{user?.name}</p>
-                <p className="truncate text-xs text-slate-500">{user?.email || user?.schoolName}</p>
+                <p className="truncate text-sm font-semibold text-slate-900">
+                  {user?.name}
+                </p>
+                <p className="truncate text-xs text-slate-500">
+                  {user?.email || user?.schoolName}
+                </p>
                 {roleText ? (
                   <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-teal-700">
                     {roleText}

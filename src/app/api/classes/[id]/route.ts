@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { normalizeClass } from "../route";
-import { assertStaffInSchool } from "@/lib/school-assertions";
+import { assertStaffInSchool, assertClassTeacherAvailable } from "@/lib/school-assertions";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -15,9 +15,10 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       include: {
         classTeacher: true,
         students: {
+          where: { schoolId: session.schoolId },
           orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
         },
-        _count: { select: { students: true } },
+        _count: { select: { students: { where: { schoolId: session.schoolId } } } },
       },
     });
     if (!schoolClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
@@ -43,6 +44,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const classTeacherId = body.classTeacherId ? String(body.classTeacherId) : null;
     if (classTeacherId) {
       await assertStaffInSchool(session.schoolId, [classTeacherId]);
+      await assertClassTeacherAvailable(session.schoolId, classTeacherId, id);
     }
 
     const schoolClass = await prisma.schoolClass.update({
@@ -94,15 +96,33 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const updateData: {
+      name: string;
+      standard: string;
+      section: string;
+      stream: string;
+      academicYear: string;
+      classTeacherId?: string | null;
+    } = {
+      name: data.name,
+      standard: data.standard,
+      section: data.section,
+      stream: data.stream,
+      academicYear: data.academicYear,
+    };
+
+    if (body.classTeacherId !== undefined) {
+      const classTeacherId = body.classTeacherId ? String(body.classTeacherId) : null;
+      if (classTeacherId) {
+        await assertStaffInSchool(session.schoolId, [classTeacherId]);
+        await assertClassTeacherAvailable(session.schoolId, classTeacherId, id);
+      }
+      updateData.classTeacherId = classTeacherId;
+    }
+
     const schoolClass = await prisma.schoolClass.update({
       where: { id },
-      data: {
-        name: data.name,
-        standard: data.standard,
-        section: data.section,
-        stream: data.stream,
-        academicYear: data.academicYear,
-      },
+      data: updateData,
       include: {
         classTeacher: { select: { id: true, firstName: true, lastName: true } },
         _count: { select: { students: true } },

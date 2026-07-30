@@ -71,13 +71,13 @@ export function StaffCredentialsModal({
     .join("\n");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/45 p-2 backdrop-blur-[2px] sm:items-center sm:p-4">
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20"
+        className="flex max-h-[calc(100dvh-1rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20 sm:max-h-[calc(100dvh-2rem)]"
       >
-        <div className="bg-gradient-to-r from-slate-900 to-teal-900 px-5 py-4 text-white">
+        <div className="shrink-0 bg-gradient-to-r from-slate-900 to-teal-900 px-4 py-3.5 text-white sm:px-5 sm:py-4">
           <div className="flex items-start gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
               <CheckCircle2 className="h-5 w-5" />
@@ -89,7 +89,7 @@ export function StaffCredentialsModal({
           </div>
         </div>
 
-        <div className="space-y-4 p-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 overscroll-contain sm:p-5">
           {(employeeId || designation) && (
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
               {employeeId && (
@@ -145,7 +145,7 @@ export function StaffCredentialsModal({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="mt-3"
+                  className="mt-3 w-full sm:w-auto"
                   onClick={() => copy("all", allText)}
                 >
                   <Copy className="h-3.5 w-3.5" />
@@ -191,7 +191,7 @@ export function StaffCredentialsModal({
           )}
 
           <div className="flex justify-end pt-1">
-            <Button type="button" onClick={onDone}>
+            <Button type="button" className="w-full sm:w-auto" onClick={onDone}>
               {t("staffPage.doneGoToStaff")}
             </Button>
           </div>
@@ -219,19 +219,19 @@ function CredRow({
   copiedLabel: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-teal-100 bg-white px-3 py-2">
+    <div className="flex flex-col items-stretch gap-2 rounded-lg border border-teal-100 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
         <p
           className={cn(
-            "truncate text-sm font-semibold text-slate-900",
+            "break-all text-sm font-semibold text-slate-900",
             mono && "font-mono text-base tracking-widest text-teal-800",
           )}
         >
           {value}
         </p>
       </div>
-      <Button type="button" variant="ghost" size="sm" className="shrink-0" onClick={onCopy}>
+      <Button type="button" variant="ghost" size="sm" className="w-full shrink-0 sm:w-auto" onClick={onCopy}>
         <Copy className="h-3.5 w-3.5" />
         {copied ? copiedLabel : copyLabel}
       </Button>

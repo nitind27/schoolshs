@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileSpreadsheet, FileText, RefreshCw } from "lucide-react";
+import { FileSpreadsheet, FileText, RefreshCw, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,19 @@ interface Props {
   className?: string;
 }
 
+function filterSummary(filters: DashboardFilterValues, t: (k: string, p?: Record<string, string | number>) => string) {
+  const parts: string[] = [];
+  if (filters.standard) parts.push(t("dashboard.stdLabel", { standard: filters.standard }));
+  if (filters.section) parts.push(t("dashboard.divLabel", { section: filters.section }));
+  if (filters.status) parts.push(t(`status.${filters.status}`));
+  if (filters.category) parts.push(filters.category);
+  if (filters.gender && filters.gender !== "all") {
+    const gl = t(`gender.${filters.gender}`);
+    parts.push(gl !== `gender.${filters.gender}` ? gl : filters.gender);
+  }
+  return parts;
+}
+
 export function DashboardToolbar({
   report,
   filters,
@@ -35,9 +48,8 @@ export function DashboardToolbar({
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
 
   const busy = loading;
-  const hasActiveFilters =
-    Boolean(filters.standard || filters.section || filters.status || filters.category) ||
-    (filters.gender && filters.gender !== "all");
+  const summary = filterSummary(filters, t);
+  const hasActiveFilters = summary.length > 0;
 
   return (
     <>
@@ -47,16 +59,24 @@ export function DashboardToolbar({
           <p className="text-xs text-slate-500">
             {lastUpdated
               ? t("dashboard.lastUpdated", {
-                  time: lastUpdated.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
+                  time: lastUpdated.toLocaleString("en-IN", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  }),
                 })
               : t("dashboard.reportSubtitle")}
           </p>
-          <p className="mt-0.5 text-[11px] text-slate-400">
-            {hasActiveFilters ? t("dashboard.exportFilteredHint") : t("dashboard.exportAllHint")}
+          <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-snug text-slate-500">
+            <Info className="mt-0.5 h-3 w-3 shrink-0 text-slate-400" />
+            <span>
+              {hasActiveFilters
+                ? t("dashboard.exportActiveSummary", { summary: summary.join(" · ") })
+                : t("dashboard.exportAllHint")}
+            </span>
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="dashboard-toolbar-actions">
           <Button
             variant="outline"
             size="sm"
@@ -73,9 +93,15 @@ export function DashboardToolbar({
             onClick={() => setExcelDialogOpen(true)}
             disabled={!report || busy}
             className="gap-1.5 border-emerald-200 bg-emerald-50 font-semibold text-emerald-800 hover:bg-emerald-100"
+            title={t("dashboard.exportExcelHint")}
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
-            {t("dashboard.exportExcel")}
+            <span className="flex flex-col items-start leading-tight">
+              <span>{t("dashboard.exportExcel")}</span>
+              <span className="text-[10px] font-medium text-emerald-700/80">
+                {t("dashboard.exportExcelSub")}
+              </span>
+            </span>
           </Button>
           <Button
             variant="outline"
@@ -83,9 +109,15 @@ export function DashboardToolbar({
             onClick={() => setPdfDialogOpen(true)}
             disabled={!report || busy}
             className="gap-1.5 border-red-200 bg-red-50 font-semibold text-red-800 hover:bg-red-100"
+            title={t("dashboard.exportPdfHint")}
           >
             <FileText className="h-3.5 w-3.5" />
-            {t("dashboard.exportPdf")}
+            <span className="flex flex-col items-start leading-tight">
+              <span>{t("dashboard.exportPdf")}</span>
+              <span className="text-[10px] font-medium text-red-700/80">
+                {t("dashboard.exportPdfSub")}
+              </span>
+            </span>
           </Button>
         </div>
       </div>

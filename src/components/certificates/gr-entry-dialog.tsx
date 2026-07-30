@@ -241,39 +241,46 @@ export function GrEntryDialog({
       onClose={onClose}
       title={form.id ? t("certificates.grEditEntry") : t("certificates.grAddEntry")}
     >
-      <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-        <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 space-y-3">
+      <div className="space-y-5">
+        <div className="space-y-3 rounded-xl border border-blue-100 bg-blue-50/50 p-3 sm:p-4">
           <label className="block text-sm font-medium text-slate-700">{t("certificates.grPickStudent")}</label>
           {pickedStudent ? (
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-white px-4 py-3">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <Users className="h-4 w-4 text-blue-600 shrink-0" />
+            <div className="flex flex-col gap-3 rounded-xl border border-blue-200 bg-white px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:px-4">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <Users className="h-4 w-4 shrink-0 text-blue-600" />
                 <div className="min-w-0">
-                  <p className="font-medium text-sm text-slate-900 truncate">{pickedStudent.name}</p>
+                  <p className="truncate text-sm font-medium text-slate-900">{pickedStudent.name}</p>
                   <p className="text-xs text-slate-500">
                     {pickedStudent.grNumber ? `GR ${pickedStudent.grNumber} · ` : ""}
                     Std {pickedStudent.standard || "-"}-{pickedStudent.section || "-"}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:shrink-0 sm:flex-row sm:items-center">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   disabled={loadingPrefill}
                   onClick={() => setPickerOpen(true)}
+                  className="w-full sm:w-auto"
                 >
                   {loadingPrefill ? t("common.loading") : t("certificates.grChangeStudent")}
                 </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={clearStudentPick}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearStudentPick}
+                  className="w-full sm:w-auto"
+                >
                   {t("certificates.grManualEntry")}
                 </Button>
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" onClick={() => setPickerOpen(true)} className="gap-1.5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <Button type="button" onClick={() => setPickerOpen(true)} className="w-full gap-1.5 sm:w-auto">
                 <Users className="h-3.5 w-3.5" />
                 {t("certificates.grSelectStudentBtn")}
               </Button>
@@ -282,7 +289,7 @@ export function GrEntryDialog({
           )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
           <Input
             label={t("certificates.grFilterRegNo")}
             value={form.grNumber}
@@ -350,7 +357,7 @@ export function GrEntryDialog({
           />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           <Input
             label={t("certificates.grChildUid")}
             value={form.childUidDigits}
@@ -410,11 +417,11 @@ export function GrEntryDialog({
           />
         </div>
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             {t("common.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="gap-1.5">
+          <Button onClick={handleSave} disabled={saving} className="w-full gap-1.5 sm:w-auto">
             <Save className="h-3.5 w-3.5" />
             {saving ? t("common.saving") : t("certificates.grSaveEntry")}
           </Button>

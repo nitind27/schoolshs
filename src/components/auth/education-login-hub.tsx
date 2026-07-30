@@ -1,7 +1,7 @@
 "use client";
 
 import { Spinner } from "@/components/ui/loader";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Lock, Mail, Building2, ArrowRight, ArrowLeft, Eye, EyeOff, Check, School } from "lucide-react";
@@ -35,6 +35,8 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useT();
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
   const isCaPortal = searchParams.get("portal") === "ca";
   const sessionRevoked = searchParams.get("reason") === "session_revoked";
 
@@ -57,6 +59,17 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
   const [verifyMsg, setVerifyMsg] = useState("");
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMsg, setResendMsg] = useState("");
+  const [studentSetupRequired, setStudentSetupRequired] = useState(false);
+  const [studentSetupOtp, setStudentSetupOtp] = useState("");
+  const [studentNewPassword, setStudentNewPassword] = useState("");
+  const [studentConfirmPassword, setStudentConfirmPassword] = useState("");
+  const [showStudentNewPassword, setShowStudentNewPassword] = useState(false);
+  const [showStudentConfirmPassword, setShowStudentConfirmPassword] = useState(false);
+  const [studentNewPasswordTouched, setStudentNewPasswordTouched] = useState(false);
+  const [studentConfirmPasswordTouched, setStudentConfirmPasswordTouched] = useState(false);
+  const [studentSetupLoading, setStudentSetupLoading] = useState(false);
+  const [studentSetupMsg, setStudentSetupMsg] = useState("");
+  const [studentSetupComplete, setStudentSetupComplete] = useState(false);
   const [deviceSessions, setDeviceSessions] = useState<DeviceSessionRow[] | null>(null);
   const [deviceUserName, setDeviceUserName] = useState("");
   const [deviceBusy, setDeviceBusy] = useState(false);
@@ -177,6 +190,8 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
     setError("");
     setCaptchaInvalid(false);
     setEmailNotVerified(false);
+    setStudentSetupRequired(false);
+    setStudentSetupComplete(false);
     setVerifyOtp("");
     setVerifyMsg("");
     setResendMsg("");
@@ -190,7 +205,19 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
       }
       if (!res.ok) {
         const errMsg = data.error || t("common.loginFailed");
-        if (data.emailNotVerified) {
+        if (data.studentSetupRequired) {
+          setStudentSetupRequired(true);
+          setStudentSetupMsg(
+            data.otpSent
+              ? t("login.studentSetupOtpSent")
+              : t("login.studentSetupOtpAlreadySent"),
+          );
+          setError("");
+          toast.warning(
+            t("login.studentSetupTitle"),
+            t("login.studentSetupRequired"),
+          );
+        } else if (data.emailNotVerified) {
           setEmailNotVerified(true);
           setError(data.error || t("login.emailNotVerified"));
           toast.warning(t("login.emailNotVerifiedTitle"), data.error || t("login.emailNotVerified"));
@@ -303,6 +330,139 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
     }
   };
 
+  const getStudentNewPasswordError = (value: string) => {
+    if (!value) return t("login.studentPasswordRequired");
+    if (value.length < 8) return t("login.studentPasswordTooShort");
+    if (!/[A-Za-z]/.test(value)) return t("login.studentPasswordLetterRequired");
+    if (!/\d/.test(value)) return t("login.studentPasswordNumberRequired");
+    if (value === "123456") return t("login.studentPasswordCannotBeTemporary");
+    return "";
+  };
+
+  const getStudentConfirmPasswordError = (value: string) => {
+    if (!value) return t("login.studentConfirmPasswordRequired");
+    if (value !== studentNewPassword) return t("login.studentPasswordMismatch");
+    return "";
+  };
+
+  const studentNewPasswordError = studentNewPasswordTouched
+    ? getStudentNewPasswordError(studentNewPassword)
+    : "";
+  const studentConfirmPasswordError = studentConfirmPasswordTouched
+    ? getStudentConfirmPasswordError(studentConfirmPassword)
+    : "";
+
+  const completeStudentSetup = async () => {
+    setStudentNewPasswordTouched(true);
+    setStudentConfirmPasswordTouched(true);
+    if (studentSetupOtp.replace(/\D/g, "").length !== 6) {
+      setStudentSetupMsg(t("login.otpInvalidLength"));
+      return;
+    }
+    const newPasswordError = getStudentNewPasswordError(studentNewPassword);
+    if (newPasswordError) {
+      setStudentSetupMsg(newPasswordError);
+      toast.warning(
+        t("login.studentSetupTitle"),
+        newPasswordError,
+      );
+      return;
+    }
+    const confirmPasswordError = getStudentConfirmPasswordError(
+      studentConfirmPassword,
+    );
+    if (confirmPasswordError) {
+      setStudentSetupMsg(confirmPasswordError);
+      toast.warning(
+        t("login.studentSetupTitle"),
+        confirmPasswordError,
+      );
+      return;
+    }
+
+    setStudentSetupLoading(true);
+    setStudentSetupMsg("");
+    try {
+      const res = await fetch("/api/auth/student-first-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          currentPassword: password,
+          otp: studentSetupOtp,
+          newPassword: studentNewPassword,
+          confirmPassword: studentConfirmPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const message = data.error || t("login.studentSetupFailed");
+        setStudentSetupMsg(message);
+        toast.error(t("login.studentSetupFailed"), message);
+        return;
+      }
+      setStudentSetupRequired(false);
+      setStudentSetupOtp("");
+      setStudentNewPassword("");
+      setStudentConfirmPassword("");
+      setStudentNewPasswordTouched(false);
+      setStudentConfirmPasswordTouched(false);
+      setShowStudentNewPassword(false);
+      setShowStudentConfirmPassword(false);
+      setPassword("");
+      setCaptchaAnswer("");
+      setCaptchaRefreshKey((key) => key + 1);
+      setStudentSetupMsg("");
+      setStudentSetupComplete(true);
+      requestAnimationFrame(() => {
+        mainScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+        passwordInputRef.current?.focus();
+      });
+      toast.success(
+        t("login.studentSetupCompleteTitle"),
+        t("login.studentSetupComplete"),
+      );
+    } catch {
+      setStudentSetupMsg(t("common.networkError"));
+    } finally {
+      setStudentSetupLoading(false);
+    }
+  };
+
+  const resendStudentSetupOtp = async () => {
+    setResendLoading(true);
+    setStudentSetupMsg("");
+    try {
+      const res = await fetch("/api/auth/student-first-login/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          currentPassword: password,
+        }),
+      });
+      const data = await res.json();
+      setStudentSetupMsg(
+        res.ok
+          ? data.message || t("login.resendSuccess")
+          : data.error || t("common.networkError"),
+      );
+    } catch {
+      setStudentSetupMsg(t("common.networkError"));
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleFormSubmit = (event: React.FormEvent) => {
+    if (studentSetupRequired) {
+      event.preventDefault();
+      void completeStudentSetup();
+      return;
+    }
+    void handleLogin(event);
+  };
+
   const headline = isCaPortal
     ? t("caNav.title")
     : branding?.name || t("erp.systemName");
@@ -329,6 +489,39 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
           }}
         />
       )}
+
+      <header className="auth-login-navbar">
+        <div className="auth-login-navbar-inner">
+          <Link href="/" className="auth-portal-logo">
+            <div className="auth-portal-logo-mark">
+              <School className="h-5 w-5" strokeWidth={1.75} />
+            </div>
+            <div className="auth-login-brand-copy">
+              <div className="auth-portal-logo-eyebrow">
+                {isCaPortal ? t("login.caLoginBadge") : t("loginHub.badge")}
+              </div>
+              <div className="auth-portal-logo-title">
+                {isCaPortal ? t("caNav.title") : t("landing.productName")}
+              </div>
+            </div>
+          </Link>
+
+          <nav className="auth-login-nav" aria-label="Login page navigation">
+            <Link href="/#modules">{t("landing.navModules")}</Link>
+            <Link href="/#portals">{t("landing.navPortals")}</Link>
+            <Link href="/#contact">{t("landing.navContact")}</Link>
+          </nav>
+
+          <div className="auth-login-navbar-actions">
+            <LanguageSwitcher variant="login" />
+            <Link href="/" className="auth-login-home-link">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>{t("landing.productName")}</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
       <aside className="auth-portal-brand">
         <div className="auth-brand-decor" aria-hidden>
           <div className="auth-brand-orb auth-brand-orb-1" />
@@ -339,23 +532,6 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
         </div>
 
         <div className="auth-portal-brand-inner">
-          <div className="auth-portal-topbar">
-            <Link href="/" className="auth-portal-logo">
-              <div className="auth-portal-logo-mark">
-                <School className="h-5 w-5" strokeWidth={1.75} />
-              </div>
-              <div>
-                <div className="auth-portal-logo-eyebrow">
-                  {isCaPortal ? t("login.caLoginBadge") : t("loginHub.badge")}
-                </div>
-                <div className="auth-portal-logo-title">
-                  {isCaPortal ? t("caNav.title") : t("landing.productName")}
-                </div>
-              </div>
-            </Link>
-            <LanguageSwitcher variant="hero" />
-          </div>
-
           <div className="auth-portal-hero auth-portal-hero-book">
             <LoginBrandBook
               branding={isCaPortal ? null : branding}
@@ -373,24 +549,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
       </aside>
 
       <main className="auth-portal-main">
-        <div className="auth-portal-mobile-header">
-          <Link href="/" className="auth-portal-logo">
-            <div className="auth-portal-logo-mark">
-              <School className="h-4 w-4" strokeWidth={1.75} />
-            </div>
-            <div>
-              <div className="auth-portal-logo-eyebrow">
-                {isCaPortal ? t("login.caLoginBadge") : t("loginHub.badge")}
-              </div>
-              <div className="auth-portal-logo-title">
-                {isCaPortal ? t("caNav.title") : t("landing.productName")}
-              </div>
-            </div>
-          </Link>
-          <LanguageSwitcher variant="login" />
-        </div>
-
-        <div className="auth-portal-main-scroll">
+        <div ref={mainScrollRef} className="auth-portal-main-scroll">
           <div className="auth-portal-form-card">
             <header className="auth-portal-form-header">
               <h2>{isCaPortal ? t("login.formTitleCa") : t("login.formTitle")}</h2>
@@ -400,6 +559,20 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
             {sessionRevoked && (
               <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-950">
                 {t("login.sessionRevokedBanner")}
+              </div>
+            )}
+
+            {studentSetupComplete && (
+              <div
+                className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-emerald-950"
+                role="status"
+              >
+                <p className="font-semibold">
+                  {t("login.studentSetupCompleteTitle")}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-emerald-800">
+                  {t("login.studentSetupComplete")}
+                </p>
               </div>
             )}
 
@@ -430,7 +603,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
               />
             )}
 
-            <form onSubmit={handleLogin} className="auth-portal-form">
+            <form onSubmit={handleFormSubmit} className="auth-portal-form">
               {!isCaPortal && (
                 <div className="auth-portal-field">
                   <label className="auth-portal-label" htmlFor="school-code">
@@ -468,7 +641,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={t("login.emailPlaceholder")}
                     className="auth-portal-input"
-                    disabled={isLocked}
+                    disabled={isLocked || studentSetupRequired}
                   />
                 </div>
               </div>
@@ -481,6 +654,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                   <Lock className="auth-portal-input-icon" strokeWidth={1.75} />
                   <input
                     id="password"
+                    ref={passwordInputRef}
                     type={showPassword ? "text" : "password"}
                     required
                     autoComplete="current-password"
@@ -489,7 +663,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                     placeholder={t("login.passwordPlaceholder")}
                     className="auth-portal-input"
                     style={{ paddingRight: "2.5rem" }}
-                    disabled={isLocked}
+                    disabled={isLocked || studentSetupRequired}
                   />
                   <button
                     type="button"
@@ -503,12 +677,12 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                 </div>
               </div>
 
-              <label className={`auth-remember${isLocked ? " is-disabled" : ""}`}>
+              <label className={`auth-remember${isLocked || studentSetupRequired ? " is-disabled" : ""}`}>
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  disabled={isLocked}
+                  disabled={isLocked || studentSetupRequired}
                 />
                 <span className="auth-remember-box" aria-hidden>
                   <Check className="h-3 w-3" strokeWidth={3} />
@@ -523,7 +697,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                 answer={captchaAnswer}
                 onAnswerChange={setCaptchaAnswer}
                 onTokenChange={setCaptchaToken}
-                disabled={isLocked}
+                disabled={isLocked || studentSetupRequired}
                 invalid={captchaInvalid}
                 refreshKey={captchaRefreshKey}
               />
@@ -566,7 +740,190 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
               </div>
             )}
 
-            <button type="submit" className="auth-portal-submit" disabled={loading || isLocked}>
+            {studentSetupRequired && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-950">
+                <p className="font-semibold">{t("login.studentSetupTitle")}</p>
+                <p className="mt-1 text-xs leading-relaxed text-blue-800">
+                  {t("login.studentSetupHint", { email: email.trim().toLowerCase() })}
+                </p>
+
+                <div className="mt-3">
+                  <label className="mb-2 block text-xs font-semibold">
+                    {t("login.otpLabel")}
+                  </label>
+                  <OtpInput
+                    value={studentSetupOtp}
+                    onChange={setStudentSetupOtp}
+                    disabled={studentSetupLoading}
+                    boxClassName="border-blue-300 focus:border-blue-500 focus:ring-blue-200"
+                  />
+                </div>
+
+                <div className="mt-3 grid gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold" htmlFor="student-new-password">
+                      {t("login.studentNewPassword")}
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="student-new-password"
+                        type={showStudentNewPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={studentNewPassword}
+                        onChange={(event) => {
+                          setStudentNewPassword(event.target.value);
+                        }}
+                        onBlur={() => setStudentNewPasswordTouched(true)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void completeStudentSetup();
+                          }
+                        }}
+                        placeholder={t("login.studentNewPasswordPlaceholder")}
+                        className={`h-10 w-full rounded-lg border bg-white px-3 pr-10 text-sm outline-none focus:ring-2 ${
+                          studentNewPasswordError
+                            ? "border-red-400 focus:border-red-500 focus:ring-red-100"
+                            : "border-blue-200 focus:border-blue-500 focus:ring-blue-100"
+                        }`}
+                        aria-invalid={Boolean(studentNewPasswordError)}
+                        aria-describedby={
+                          studentNewPasswordError
+                            ? "student-new-password-error"
+                            : "student-password-rules"
+                        }
+                        disabled={studentSetupLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowStudentNewPassword((value) => !value)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-blue-700 hover:text-blue-950"
+                        aria-label={
+                          showStudentNewPassword
+                            ? t("login.hidePassword")
+                            : t("login.showPassword")
+                        }
+                        disabled={studentSetupLoading}
+                      >
+                        {showStudentNewPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {studentNewPasswordError && (
+                      <p
+                        id="student-new-password-error"
+                        className="mt-1 text-xs font-medium text-red-600"
+                      >
+                        {studentNewPasswordError}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold" htmlFor="student-confirm-password">
+                      {t("login.studentConfirmPassword")}
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="student-confirm-password"
+                        type={showStudentConfirmPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={studentConfirmPassword}
+                        onChange={(event) =>
+                          setStudentConfirmPassword(event.target.value)
+                        }
+                        onBlur={() => setStudentConfirmPasswordTouched(true)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void completeStudentSetup();
+                          }
+                        }}
+                        placeholder={t("login.studentConfirmPasswordPlaceholder")}
+                        className={`h-10 w-full rounded-lg border bg-white px-3 pr-10 text-sm outline-none focus:ring-2 ${
+                          studentConfirmPasswordError
+                            ? "border-red-400 focus:border-red-500 focus:ring-red-100"
+                            : "border-blue-200 focus:border-blue-500 focus:ring-blue-100"
+                        }`}
+                        aria-invalid={Boolean(studentConfirmPasswordError)}
+                        aria-describedby={
+                          studentConfirmPasswordError
+                            ? "student-confirm-password-error"
+                            : undefined
+                        }
+                        disabled={studentSetupLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowStudentConfirmPassword((value) => !value)
+                        }
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-blue-700 hover:text-blue-950"
+                        aria-label={
+                          showStudentConfirmPassword
+                            ? t("login.hidePassword")
+                            : t("login.showPassword")
+                        }
+                        disabled={studentSetupLoading}
+                      >
+                        {showStudentConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {studentConfirmPasswordError && (
+                      <p
+                        id="student-confirm-password-error"
+                        className="mt-1 text-xs font-medium text-red-600"
+                      >
+                        {studentConfirmPasswordError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <p id="student-password-rules" className="mt-2 text-[11px] text-blue-700">
+                  {t("login.studentPasswordRules")}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={completeStudentSetup}
+                    disabled={
+                      studentSetupLoading ||
+                      studentSetupOtp.length !== 6 ||
+                      !studentNewPassword ||
+                      !studentConfirmPassword
+                    }
+                    className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+                  >
+                    {studentSetupLoading
+                      ? t("login.studentSetupSaving")
+                      : t("login.studentVerifyAndChange")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resendStudentSetupOtp}
+                    disabled={resendLoading || studentSetupLoading}
+                    className="text-xs font-semibold text-blue-800 underline hover:no-underline disabled:opacity-50"
+                  >
+                    {resendLoading
+                      ? t("login.resending")
+                      : t("login.resendVerification")}
+                  </button>
+                </div>
+                {studentSetupMsg && (
+                  <p className="mt-2 text-xs font-medium">{studentSetupMsg}</p>
+                )}
+              </div>
+            )}
+
+            {!studentSetupRequired && (
+              <button type="submit" className="auth-portal-submit" disabled={loading || isLocked}>
                 {loading ? (
                   <>
                     <Spinner size="sm" />
@@ -579,6 +936,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                   </>
                 )}
               </button>
+            )}
             </form>
 
             <div className="auth-portal-footer">

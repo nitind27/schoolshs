@@ -185,7 +185,7 @@ export function SidebarNavSubmenu({
                     )}
                   >
                     <ChildIcon className="h-4 w-4 shrink-0 opacity-80" />
-                    <span className="truncate">{child.label}</span>
+                    <span className="shell-subnav-label min-w-0 flex-1">{child.label}</span>
                   </Link>
                 );
               })}
@@ -242,7 +242,7 @@ export function SidebarNavSubmenu({
                 )}
               >
                 <ChildIcon className="h-4 w-4 shrink-0 opacity-80" />
-                <span className="truncate">{child.label}</span>
+                <span className="shell-subnav-label min-w-0 flex-1">{child.label}</span>
               </Link>
             );
           })}

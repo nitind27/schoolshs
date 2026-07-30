@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { PageLoader } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
+import type { ColumnDef } from "@tanstack/react-table";
+import { GlobalDataTable } from "@/components/ui/global-data-table";
 import "@/components/admin/admin-portal.css";
 
 type LoginEventRow = {
@@ -120,6 +122,135 @@ export default function AdminLoginActivityPage() {
 
   const uniqueUsers = useMemo(() => new Set(events.map((e) => e.user?.id || e.email)).size, [events]);
 
+  const columns = useMemo<ColumnDef<LoginEventRow>[]>(
+    () => [
+      {
+        header: "When",
+        accessorKey: "createdAt",
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-xs text-slate-500">
+            {new Date(row.original.createdAt).toLocaleString("en-IN", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+      },
+      {
+        header: "User",
+        accessorFn: (e) => e.user?.name || e.email,
+        cell: ({ row }) => {
+          const name = row.original.user?.name || row.original.email;
+          return (
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-800">
+                {name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
+                <p className="truncate font-mono text-[11px] text-slate-500">{row.original.email}</p>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Role",
+        accessorKey: "role",
+        cell: ({ row }) => (
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${roleBadgeClass(row.original.role)}`}
+          >
+            {ROLE_LABEL[row.original.role] || row.original.role}
+          </span>
+        ),
+      },
+      {
+        header: "School",
+        accessorFn: (e) => e.user?.school?.name || "",
+        cell: ({ row }) => {
+          const school = row.original.user?.school;
+          if (!school) return <span className="text-slate-400">—</span>;
+          return (
+            <div>
+              <p className="text-sm font-medium text-slate-800">{school.name}</p>
+              <p className="font-mono text-[11px] text-slate-500">{school.code}</p>
+            </div>
+          );
+        },
+      },
+      {
+        header: "IP",
+        accessorKey: "ip",
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-slate-600">{row.original.ip || "—"}</span>
+        ),
+      },
+      {
+        header: "Location",
+        id: "location",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const e = row.original;
+          return (
+            <div className="flex max-w-[14rem] items-start gap-1.5">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium leading-snug text-slate-800">{placeLabel(e)}</p>
+                <p className="mt-0.5 text-[10px] text-slate-400">
+                  via {e.geoSource || "unknown"}
+                  {e.accuracyM != null ? ` · ±${e.accuracyM}m` : ""}
+                </p>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Source",
+        accessorKey: "source",
+        cell: ({ row }) => (
+          <span className="text-xs font-semibold capitalize text-slate-600">{row.original.source}</span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const e = row.original;
+          const school = e.user?.school;
+          const hasCoords = e.latitude != null && e.longitude != null;
+          return (
+            <div className="flex items-center justify-end gap-1.5">
+              {hasCoords && (
+                <a
+                  href={mapsUrl(e.latitude!, e.longitude!)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  title="Open in Google Maps"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Map
+                </a>
+              )}
+              {school && (
+                <Link
+                  href={`/admin/schools/${school.id}`}
+                  className="inline-flex items-center rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  School
+                </Link>
+              )}
+            </div>
+          );
+        },
+      },
+    ],
+    [],
+  );
+
   return (
     <div className="ad-portal space-y-5">
       <header className="ad-hero">
@@ -214,114 +345,22 @@ export default function AdminLoginActivityPage() {
           </div>
         </div>
         <div className="ad-panel-body is-flush">
-          {loading ? (
+          {loading && events.length === 0 ? (
             <PageLoader />
-          ) : events.length === 0 ? (
+          ) : events.length === 0 && !loading ? (
             <div className="ad-empty">
               <MonitorSmartphone className="h-9 w-9 opacity-40" />
               <p>No login events yet. Ask users to sign in once.</p>
             </div>
           ) : (
-            <div className="ad-table-wrap">
-              <table className="ad-table">
-                <thead>
-                  <tr>
-                    <th>When</th>
-                    <th>User</th>
-                    <th>Role</th>
-                    <th>School</th>
-                    <th>IP</th>
-                    <th>Location</th>
-                    <th>Source</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map((e) => {
-                    const name = e.user?.name || e.email;
-                    const school = e.user?.school;
-                    const hasCoords = e.latitude != null && e.longitude != null;
-                    return (
-                      <tr key={e.id}>
-                        <td style={{ whiteSpace: "nowrap", fontSize: "0.78rem", color: "var(--ad-muted)" }}>
-                          {new Date(e.createdAt).toLocaleString("en-IN", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })}
-                        </td>
-                        <td>
-                          <div className="ad-school-cell">
-                            <div className="ad-avatar">{name.charAt(0).toUpperCase()}</div>
-                            <div className="min-w-0">
-                              <p className="ad-school-name">{name}</p>
-                              <p className="ad-mono">{e.email}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${roleBadgeClass(e.role)}`}
-                          >
-                            {ROLE_LABEL[e.role] || e.role}
-                          </span>
-                        </td>
-                        <td>
-                          {school ? (
-                            <div>
-                              <p className="ad-school-name" style={{ fontSize: "0.8rem" }}>
-                                {school.name}
-                              </p>
-                              <p className="ad-mono">{school.code}</p>
-                            </div>
-                          ) : (
-                            <span style={{ color: "var(--ad-muted)" }}>—</span>
-                          )}
-                        </td>
-                        <td className="ad-mono" style={{ fontSize: "0.75rem" }}>
-                          {e.ip || "—"}
-                        </td>
-                        <td>
-                          <div className="flex items-start gap-1.5 max-w-[14rem]">
-                            <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-sky-600" />
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium text-slate-800 leading-snug">{placeLabel(e)}</p>
-                              <p className="text-[10px] text-slate-400 mt-0.5">
-                                via {e.geoSource || "unknown"}
-                                {e.accuracyM != null ? ` · ±${e.accuracyM}m` : ""}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="text-xs font-semibold capitalize text-slate-600">{e.source}</span>
-                        </td>
-                        <td>
-                          <div className="flex items-center gap-1.5 justify-end">
-                            {hasCoords && (
-                              <a
-                                href={mapsUrl(e.latitude!, e.longitude!)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="ad-btn is-outline is-sm"
-                                title="Open in Google Maps"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                                Map
-                              </a>
-                            )}
-                            {school && (
-                              <Link href={`/admin/schools/${school.id}`} className="ad-btn is-outline is-sm">
-                                School
-                              </Link>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <GlobalDataTable
+              data={events}
+              columns={columns}
+              loading={loading}
+              emptyText="No login events yet. Ask users to sign in once."
+              pageSize={25}
+              className="rounded-none border-0 shadow-none"
+            />
           )}
         </div>
       </section>

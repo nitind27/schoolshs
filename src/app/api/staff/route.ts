@@ -47,35 +47,6 @@ function normalizeStaff(body: Record<string, unknown>) {
   };
 }
 
-async function generateEmployeeId(schoolId: string): Promise<string> {
-  const staffRows = await prisma.staff.findMany({
-    where: { schoolId, employeeId: { not: null } },
-    select: { employeeId: true },
-  });
-
-  const used = new Set(
-    staffRows
-      .map((s) => String(s.employeeId || "").trim().toUpperCase())
-      .filter(Boolean)
-  );
-
-  let maxSeq = 0;
-  for (const id of used) {
-    const match = /^EMP(\d+)$/.exec(id);
-    if (!match) continue;
-    const seq = Number.parseInt(match[1], 10);
-    if (!Number.isNaN(seq)) maxSeq = Math.max(maxSeq, seq);
-  }
-
-  let nextSeq = maxSeq + 1;
-  let candidate = `EMP${String(nextSeq).padStart(4, "0")}`;
-  while (used.has(candidate)) {
-    nextSeq += 1;
-    candidate = `EMP${String(nextSeq).padStart(4, "0")}`;
-  }
-  return candidate;
-}
-
 function roleLabel(role: string) {
   if (role === "clerk") return "Clerk";
   if (role === "teacher") return "Teacher";
@@ -133,6 +104,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name, designation and mobile are required" }, { status: 400 });
     }
 
+    if (!data.employeeId) {
+      return NextResponse.json({ error: "Teacher code is required" }, { status: 400 });
+    }
+
+    data.employeeId = data.employeeId.trim().toUpperCase();
+    if (!/^[A-Z0-9_-]{2,20}$/.test(data.employeeId)) {
+      return NextResponse.json(
+        { error: "Teacher code must be 2–20 characters (letters, numbers, - or _)" },
+        { status: 400 },
+      );
+    }
+
+    if (!/^[6-9]\d{9}$/.test(data.mobileNumber)) {
+      return NextResponse.json({ error: "Enter a valid 10-digit mobile number" }, { status: 400 });
+    }
+
     if (!data.email || !data.email.includes("@")) {
       return NextResponse.json(
         { error: "Email is required — it is used as the portal login username" },
@@ -140,15 +127,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!data.employeeId) {
-      data.employeeId = await generateEmployeeId(session.schoolId);
-    }
-
-    if (data.employeeId) {
-      const existing = await prisma.staff.findUnique({
-        where: { schoolId_employeeId: { schoolId: session.schoolId, employeeId: data.employeeId } },
-      });
-      if (existing) return NextResponse.json({ error: "Employee ID already exists" }, { status: 409 });
+    const existing = await prisma.staff.findUnique({
+      where: { schoolId_employeeId: { schoolId: session.schoolId, employeeId: data.employeeId } },
+    });
+    if (existing) {
+      return NextResponse.json({ error: "Teacher code already exists" }, { status: 409 });
     }
 
     const createPortal = shouldCreatePortalLogin(data.designation);

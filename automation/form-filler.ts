@@ -3,17 +3,48 @@ import { isAutomationHeadless } from "./headless";
 
 export type LogFn = (msg: string) => void;
 
+function normalizedOption(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\u0A80-\u0AFF]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+async function selectOptionSafely(
+  locator: Locator,
+  requested: string,
+): Promise<boolean> {
+  const wanted = normalizedOption(requested);
+  if (!wanted) return false;
+  const options = await locator.locator("option").evaluateAll((items) =>
+    items.map((item) => ({
+      label: (item.textContent || "").trim(),
+      value: (item as HTMLOptionElement).value,
+    })),
+  );
+  const match =
+    options.find(
+      (option) =>
+        normalizedOption(option.label) === wanted ||
+        normalizedOption(option.value) === wanted,
+    ) ||
+    options.find((option) => {
+      const label = normalizedOption(option.label);
+      return label.length > 2 && (label.includes(wanted) || wanted.includes(label));
+    });
+  if (!match) return false;
+  await locator.selectOption({ value: match.value });
+  return true;
+}
+
 async function tryFill(locator: Locator, value: string, log: LogFn): Promise<boolean> {
   if (!value.trim()) return false;
   try {
     if (!(await locator.isVisible({ timeout: 500 }))) return false;
     const tag = await locator.evaluate((el) => el.tagName.toLowerCase());
     if (tag === "select") {
-      await locator.selectOption({ label: value }).catch(async () => {
-        await locator.selectOption({ value }).catch(async () => {
-          await locator.selectOption({ index: 1 });
-        });
-      });
+      return selectOptionSafely(locator, value);
     } else {
       await locator.click({ timeout: 1000 });
       await locator.fill("");
@@ -113,19 +144,11 @@ export async function fillDropdowns(
 
         const matches = mapping.keywords.some((kw) => context.includes(kw.toLowerCase()));
         if (matches) {
-          await select.selectOption({ label: studentValue }).catch(async () => {
-            await select.selectOption({ value: studentValue }).catch(async () => {
-              const options = select.locator("option");
-              const optCount = await options.count();
-              for (let j = 0; j < optCount; j++) {
-                const text = await options.nth(j).textContent();
-                if (text?.toLowerCase().includes(studentValue.toLowerCase())) {
-                  await select.selectOption({ index: j });
-                  break;
-                }
-              }
-            });
-          });
+          const selected = await selectOptionSafely(select, studentValue);
+          if (!selected) {
+            log(`✗ Dropdown option not found: ${mapping.label} = ${studentValue}`);
+            continue;
+          }
           log(`✓ Dropdown: ${mapping.label} = ${studentValue}`);
           filled++;
           break;
@@ -168,6 +191,17 @@ export async function uploadDocuments(
 ): Promise<number> {
   let uploaded = 0;
   const fs = await import("fs");
+  const usedInputs = new Set<number>();
+  const aliases: Record<string, string[]> = {
+    photo: ["photo", "photograph", "passport"],
+    aadhaar: ["aadhaar", "aadhar", "uid"],
+    income: ["income", "aavak"],
+    caste: ["caste", "category certificate"],
+    "10th": ["10th", "ssc", "standard 10", "marksheet 10"],
+    "12th": ["12th", "hsc", "standard 12", "marksheet 12"],
+    bank: ["bank", "passbook", "cancelled cheque"],
+    fee: ["fee", "receipt"],
+  };
 
   for (const doc of docs) {
     if (!doc.path || !fs.existsSync(doc.path)) {
@@ -175,22 +209,30 @@ export async function uploadDocuments(
       continue;
     }
 
-    const fileInputs = page.locator('input[type="file"]:visible');
+    const fileInputs = page.locator('input[type="file"]');
     const count = await fileInputs.count();
 
     for (let i = 0; i < count; i++) {
+      if (usedInputs.has(i)) continue;
       const input = fileInputs.nth(i);
       try {
         const context = await input.evaluate((el) => {
-          const row = el.closest("tr");
+          const row = el.closest("tr, li, fieldset, .form-group, .row");
           const name = (el as HTMLInputElement).name?.toLowerCase() || "";
-          return row?.textContent?.toLowerCase() || name;
+          const id = (el as HTMLInputElement).id || "";
+          const label = id
+            ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.textContent
+            : "";
+          const parent = el.parentElement?.textContent || "";
+          return `${row?.textContent || ""} ${label || ""} ${parent} ${name} ${id}`.toLowerCase();
         });
 
-        if (context.includes(doc.label.toLowerCase()) || doc.label.toLowerCase().split(" ").some((w) => context.includes(w))) {
+        const terms = aliases[doc.label] || [doc.label.toLowerCase()];
+        if (terms.some((term) => context.includes(term))) {
           await input.setInputFiles(doc.path);
           log(`✓ Uploaded: ${doc.label}`);
           uploaded++;
+          usedInputs.add(i);
           break;
         }
       } catch {
@@ -358,7 +400,11 @@ export async function waitForUserAction(
   message: string,
   log: LogFn,
   timeoutMs = 300000,
-  options?: { stepLabel?: string; autoOnUrlLeave?: string }
+  options?: {
+    stepLabel?: string;
+    autoOnUrlLeave?: string;
+    requireVisibleApproval?: boolean;
+  }
 ): Promise<void> {
   log(`⏸ ${message}`);
 
@@ -366,6 +412,12 @@ export async function waitForUserAction(
   const startUrl = page.url();
 
   if (isAutomationHeadless()) {
+    if (options?.requireVisibleApproval) {
+      await removeOverlay(page);
+      throw new Error(
+        "Final submit approval required. Open the remote browser in visible mode, review the preview, then submit.",
+      );
+    }
     await autoContinueInHeadless(page, log);
     await removeOverlay(page);
     log("▶ Continuing automation...");

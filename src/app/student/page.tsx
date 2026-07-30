@@ -19,6 +19,7 @@ import {
   CalendarDays,
   BookOpen,
   ClipboardList,
+  Armchair,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 
@@ -31,10 +32,12 @@ export default function StudentDashboard() {
 
   const reportCards = (student.reportCards as unknown[]) || [];
   const examResults = (student.examResults as unknown[]) || [];
+  const examSeats = (student.examSeatAssignments as unknown[]) || [];
 
   const quickLinks = [
     { href: "/student/profile", icon: User, label: t("studentNav.myProfile"), desc: studentShortNameGu(student) },
     { href: "/student/results", icon: Award, label: t("studentNav.myResults"), desc: `${reportCards.length} ${t("studentPortal.reportCards")}` },
+    { href: "/student/exam-seat-numbers", icon: Armchair, label: t("examSeats.myTitle"), desc: `${examSeats.length} ${t("examSeats.assigned")}` },
     { href: "/student/board", icon: GraduationCap, label: t("studentNav.boardRecords"), desc: String(student.board10th || "GSEB") },
     { href: "/student/scholarship", icon: FileCheck, label: t("studentNav.scholarshipStatus"), desc: String(student.scholarshipScheme || "—") },
     { href: "/student/documents", icon: FileText, label: t("studentNav.documents"), desc: t("studentPortal.myDocuments") },

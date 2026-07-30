@@ -587,13 +587,15 @@ export default function SchoolDetailPage() {
               />
               <Select
                 label="School Type"
-                options={["", ...SCHOOL_TYPES]}
+                options={[...SCHOOL_TYPES]}
+                emptyLabel="Select school type"
                 value={editForm.schoolType}
                 onChange={(e) => setEdit("schoolType", e.target.value)}
               />
               <Select
                 label="Board Affiliation"
-                options={["", ...BOARDS]}
+                options={[...BOARDS]}
+                emptyLabel="Select board"
                 value={editForm.boardAffiliation}
                 onChange={(e) => setEdit("boardAffiliation", e.target.value)}
               />

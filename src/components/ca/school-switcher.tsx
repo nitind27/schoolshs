@@ -110,7 +110,7 @@ export function CaSchoolSwitcher({ className }: { className?: string }) {
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-amber-900/50 bg-stone-950 shadow-xl">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[min(20rem,calc(100dvh-1rem))] overflow-y-auto overscroll-contain rounded-xl border border-amber-900/50 bg-stone-950 shadow-xl">
           {schools.map((school) => (
             <button
               key={school.id}

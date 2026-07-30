@@ -483,7 +483,7 @@ export function GujaratiImeInput({
           onChange={handleFreeChange}
           onPaste={handlePaste}
           className={cn(
-            "flex h-10 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-base text-slate-900 placeholder:text-slate-400",
+            "flex h-10 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-base text-slate-900 placeholder:text-slate-400 max-sm:h-11",
             "focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20",
             "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60",
             "transition-colors duration-150 font-[family-name:var(--font-noto-gujarati)]",
@@ -497,7 +497,7 @@ export function GujaratiImeInput({
 
         {showSuggestions && (
           <ul
-            className="absolute left-0 right-0 top-full z-[60] max-h-48 overflow-y-auto rounded-b-xl border border-t-0 border-blue-200 bg-white shadow-lg"
+            className="absolute left-0 right-0 top-full z-[60] max-h-[min(12rem,calc(100dvh-1rem))] overflow-y-auto overscroll-contain rounded-b-xl border border-t-0 border-blue-200 bg-white shadow-lg"
             role="listbox"
             onMouseDown={(e) => e.preventDefault()}
           >
@@ -521,7 +521,7 @@ export function GujaratiImeInput({
                       pickSuggestion(i);
                     }}
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left transition-colors cursor-pointer",
+                      "flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left transition-colors cursor-pointer",
                       isActive
                         ? "bg-blue-50 text-blue-900 font-medium"
                         : "text-slate-800 hover:bg-slate-50",

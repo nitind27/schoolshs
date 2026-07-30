@@ -43,7 +43,7 @@ export const SCHOOL_FEATURES: SchoolFeatureDef[] = [
   { key: "attendance", label: "Attendance", group: "Academics", path: "/attendance", description: "Monthly attendance" },
   { key: "scholarship_add", label: "Add Student", group: "Scholarship", path: "/students/new", description: "New scholarship student" },
   { key: "scholarship_import", label: "Bulk Import", group: "Scholarship", path: "/import", description: "CSV/Excel import" },
-  { key: "scholarship_bulk_submit", label: "Bulk Submit", group: "Scholarship", path: "/bulk-submit", description: "Bulk DG submission" },
+  { key: "scholarship_bulk_submit", label: "Bulk Mark Submitted", group: "Scholarship", path: "/bulk-submit", description: "Mark students submitted in school records (not Digital Gujarat)" },
   { key: "scholarship_auto_apply", label: "Auto Apply DG", group: "Scholarship", path: "/auto-apply", description: "Playwright automation" },
   { key: "scholarship_export", label: "Reports & Export", group: "Scholarship", path: "/export", description: "Reports center — Excel, CSV and PDF for all modules" },
   { key: "accounting", label: "Accounting", group: "Administration", path: "/accounting", description: "Books of account" },
@@ -104,6 +104,8 @@ export function hrefToFeature(href: string): SchoolFeatureKey | null {
   const map: Record<string, SchoolFeatureKey> = {
     "/dashboard": "dashboard",
     "/classes": "classes",
+    "/subjects": "classes",
+    "/exams": "results",
     "/students": "students",
     "/staff": "staff",
     "/staff/attendance": "staff",

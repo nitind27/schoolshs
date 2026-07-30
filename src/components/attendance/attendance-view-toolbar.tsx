@@ -135,7 +135,7 @@ export function AttendanceViewToolbar({
           </button>
 
           {calOpen && (
-            <div className="absolute left-0 top-[calc(100%+6px)] z-40 w-[260px] rounded-xl border border-slate-200 bg-white p-1 shadow-lg sm:left-auto sm:right-0">
+            <div className="absolute left-0 top-[calc(100%+6px)] z-40 max-h-[min(22rem,calc(100dvh-1rem))] w-[min(260px,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1 shadow-lg sm:left-auto sm:right-0">
               <AttendanceDateRangeCalendar
                 month={month}
                 year={year}

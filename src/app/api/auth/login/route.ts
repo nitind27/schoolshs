@@ -37,6 +37,19 @@ export async function POST(request: NextRequest) {
     const ctx = await buildLoginContext(request, body, "web");
     const result = await authenticateCredentials(email, password, ctx, { sessionAction });
 
+    if (result.kind === "student_setup") {
+      return NextResponse.json(
+        {
+          error:
+            "Verify the OTP sent to your student email and choose a new password.",
+          studentSetupRequired: true,
+          otpSent: result.otpSent,
+          user: { name: result.name, email: result.email, role: "student" },
+        },
+        { status: 403 },
+      );
+    }
+
     if (result.kind === "device_choice") {
       return NextResponse.json(
         {

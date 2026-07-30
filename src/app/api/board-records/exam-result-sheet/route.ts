@@ -13,25 +13,39 @@ import { gsebGrade } from "@/lib/board-records/gseb";
 
 const BOARD_STANDARDS = ["10", "12"];
 
-async function assertClassAccess(schoolId: string, classId: string, role: string, staffId?: string | null) {
+async function assertClassAccess(
+  schoolId: string,
+  classId: string,
+  role: string,
+  staffId?: string | null,
+) {
   const cls = await prisma.schoolClass.findFirst({
     where: { id: classId, schoolId },
     include: {
-      school: { select: { name: true, city: true, district: true, udiseCode: true } },
+      school: {
+        select: { name: true, city: true, district: true, udiseCode: true },
+      },
     },
   });
   if (!cls) return null;
-  if (role === "teacher" && staffId && cls.classTeacherId !== staffId) {
+  if (role === "teacher" && (!staffId || cls.classTeacherId !== staffId)) {
     throw new AuthError("You can only edit your own class", 403);
   }
   if (!BOARD_STANDARDS.includes(cls.standard)) {
-    throw new AuthError("Exam result sheet is only for Class 10 and Class 12", 400);
+    throw new AuthError(
+      "Exam result sheet is only for Class 10 and Class 12",
+      400,
+    );
   }
   return cls;
 }
 
 function defaultExamCenter(cls: {
-  school: { city: string | null; district: string | null; udiseCode: string | null } | null;
+  school: {
+    city: string | null;
+    district: string | null;
+    udiseCode: string | null;
+  } | null;
 }): string {
   const s = cls.school;
   if (!s) return "";
@@ -53,13 +67,25 @@ function schoolAveragePct(
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
+    const session = await requireSchoolAuth([
+      "school_admin",
+      "teacher",
+      "clerk",
+    ]);
     const classId = request.nextUrl.searchParams.get("classId");
-    const sessionMonth = request.nextUrl.searchParams.get("session") === "July" ? "July" : "March";
-    if (!classId) return NextResponse.json({ error: "classId required" }, { status: 400 });
+    const sessionMonth =
+      request.nextUrl.searchParams.get("session") === "July" ? "July" : "March";
+    if (!classId)
+      return NextResponse.json({ error: "classId required" }, { status: 400 });
 
-    const cls = await assertClassAccess(session.schoolId, classId, session.role, session.staffId);
-    if (!cls) return NextResponse.json({ error: "Class not found" }, { status: 404 });
+    const cls = await assertClassAccess(
+      session.schoolId,
+      classId,
+      session.role,
+      session.staffId,
+    );
+    if (!cls)
+      return NextResponse.json({ error: "Class not found" }, { status: 404 });
 
     const stream = parseStreamFromClassName(cls.name, cls.standard, cls.stream);
     const standard = cls.standard as "10" | "12";
@@ -97,11 +123,17 @@ export async function GET(request: NextRequest) {
         hscSeatNumber: true,
         gsebResultJson: true,
       },
-      orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
+      orderBy: [
+        { rollNumber: "asc" },
+        { surname: "asc" },
+        { firstName: "asc" },
+      ],
     });
 
     const rows = padExamResultSheetRows(
-      students.map((s, i) => buildExamResultSheetRow(s, i + 1, standard, subjects, examCenter)),
+      students.map((s, i) =>
+        buildExamResultSheetRow(s, i + 1, standard, subjects, examCenter),
+      ),
       subjects,
     );
 
@@ -136,31 +168,49 @@ export async function GET(request: NextRequest) {
       rows,
     });
   } catch (e) {
-    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError)
+      return NextResponse.json({ error: e.message }, { status: e.status });
     console.error(e);
-    return NextResponse.json({ error: "Failed to load exam result sheet" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to load exam result sheet" },
+      { status: 500 },
+    );
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
+    const session = await requireSchoolAuth([
+      "school_admin",
+      "teacher",
+      "clerk",
+    ]);
     const body = await request.json();
     const classId = String(body.classId || "");
     const rows = Array.isArray(body.rows) ? body.rows : [];
     const metaPatch = body.meta || {};
     if (!classId || !rows.length) {
-      return NextResponse.json({ error: "classId and rows required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "classId and rows required" },
+        { status: 400 },
+      );
     }
 
-    const cls = await assertClassAccess(session.schoolId, classId, session.role, session.staffId);
-    if (!cls) return NextResponse.json({ error: "Class not found" }, { status: 404 });
+    const cls = await assertClassAccess(
+      session.schoolId,
+      classId,
+      session.role,
+      session.staffId,
+    );
+    if (!cls)
+      return NextResponse.json({ error: "Class not found" }, { status: 404 });
 
     const standard = cls.standard as "10" | "12";
     let updated = 0;
 
     for (const row of rows) {
-      if (!row.studentId || String(row.studentId).startsWith("empty-")) continue;
+      if (!row.studentId || String(row.studentId).startsWith("empty-"))
+        continue;
 
       const student = await prisma.student.findFirst({
         where: { id: row.studentId, schoolId: session.schoolId },
@@ -169,9 +219,27 @@ export async function PATCH(request: NextRequest) {
       if (!student) continue;
 
       const subjectsFlat: Record<string, number | null> = {};
-      const subjectsDetail: Record<string, { board?: number | null; school?: number | null; total?: number | null; grade?: string | null }> = {};
+      const subjectsDetail: Record<
+        string,
+        {
+          board?: number | null;
+          school?: number | null;
+          total?: number | null;
+          grade?: string | null;
+        }
+      > = {};
       if (row.subjects && typeof row.subjects === "object") {
-        for (const [key, val] of Object.entries(row.subjects as Record<string, { board?: number | null; school?: number | null; total?: number | null; grade?: string | null }>)) {
+        for (const [key, val] of Object.entries(
+          row.subjects as Record<
+            string,
+            {
+              board?: number | null;
+              school?: number | null;
+              total?: number | null;
+              grade?: string | null;
+            }
+          >,
+        )) {
           subjectsDetail[key] = val;
           if (val.total != null) subjectsFlat[key] = val.total;
         }
@@ -187,7 +255,9 @@ export async function PATCH(request: NextRequest) {
 
       const data: Record<string, unknown> = { gsebResultJson: gsebJson };
 
-      const seatPrefix = String(row.seatPrefix || "").trim().toUpperCase();
+      const seatPrefix = String(row.seatPrefix || "")
+        .trim()
+        .toUpperCase();
       const seatNumber = String(row.seatNumber || "")
         .replace(/\D/g, "")
         .slice(0, standard === "12" ? 6 : 7);
@@ -210,7 +280,8 @@ export async function PATCH(request: NextRequest) {
       meta: metaPatch,
     });
   } catch (e) {
-    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError)
+      return NextResponse.json({ error: e.message }, { status: e.status });
     console.error(e);
     return NextResponse.json({ error: "Save failed" }, { status: 500 });
   }

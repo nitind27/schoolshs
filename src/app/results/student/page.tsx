@@ -226,7 +226,8 @@ function StudentResultInner() {
           <CardTitle className="text-base">{t("results.subjectMarks")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
+          <div className="max-w-full overflow-x-auto">
+          <table className="min-w-[640px] w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b text-left text-slate-500">
                 <th className="p-3">{t("results.subject")}</th>
@@ -282,6 +283,7 @@ function StudentResultInner() {
               </tr>
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 

@@ -6,6 +6,7 @@ import crypto from "crypto";
 import type { Prisma } from "../src/generated/prisma/client";
 import { prisma } from "../src/lib/db";
 import { hashPassword } from "../src/lib/auth";
+import { STUDENT_TEMPORARY_PASSWORD } from "../src/lib/student-account";
 
 type StudentSeed = Prisma.StudentUncheckedCreateInput;
 type StudentSeedRow = Omit<StudentSeed, "schoolId" | "aadhaarNumber"> & {
@@ -535,13 +536,23 @@ async function main() {
     where: { email: "student@songadh.local" },
     create: {
       email: "student@songadh.local",
-      passwordHash: hashPassword("Student@123"),
+      passwordHash: hashPassword(STUDENT_TEMPORARY_PASSWORD),
       name: `${firstStudent.firstName} ${firstStudent.surname}`,
       role: "student",
       schoolId: school1.id,
       studentId: firstStudent.id,
+      emailVerified: false,
+      mustChangePassword: true,
     },
-    update: { studentId: firstStudent.id, role: "student" },
+    update: {
+      studentId: firstStudent.id,
+      role: "student",
+      passwordHash: hashPassword(STUDENT_TEMPORARY_PASSWORD),
+      emailVerified: false,
+      emailVerifiedAt: null,
+      mustChangePassword: true,
+      passwordChangedAt: null,
+    },
   });
 
   await prisma.student.update({
@@ -584,7 +595,9 @@ async function main() {
   console.log("   teacher@songadh.local / Teacher@123      (Teacher)");
   console.log("   clerk@songadh.local / Clerk@123        (Clerk)");
   console.log("   ca@songadh.local / CA@12345            (CA Portal)");
-  console.log("   student@songadh.local / Student@123    (Student Portal)");
+  console.log(
+    `   student@songadh.local / ${STUDENT_TEMPORARY_PASSWORD}         (Student Portal — first login OTP + password change)`,
+  );
   console.log(`✓ Staff: 4 | Classes: 3 | Students: ${savedStudents.length}`);
   console.log("✓ Financial Year 2025-26 + Chart of Accounts");
   console.log("✓ SMS messages, BulkSubmission, AutomationJobs");

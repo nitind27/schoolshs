@@ -1,11 +1,6 @@
-import "server-only";
-
 import path from "path";
 import { existsSync } from "fs";
-import {
-  DOC_TYPES,
-  type DocType,
-} from "@/lib/student-documents";
+import { type DocType } from "@/lib/student-documents";
 
 export function getStudentUploadRoot(studentId: string): string {
   return path.join(process.cwd(), "uploads", "students", studentId);
@@ -16,7 +11,11 @@ export function buildDocAbsolutePath(relativePath: string): string {
   return path.join(process.cwd(), "uploads", ...normalized.split("/"));
 }
 
-export function resolveDocAbsolutePath(studentId: string, stored: string | null): string | null {
+export function resolveDocAbsolutePath(
+  studentId: string,
+  stored: string | null,
+  docType?: DocType,
+): string | null {
   if (!stored) return null;
 
   const candidates: string[] = [];
@@ -28,10 +27,12 @@ export function resolveDocAbsolutePath(studentId: string, stored: string | null)
     candidates.push(path.join(process.cwd(), stored));
   }
 
-  // Legacy flat path: uploads/students/{id}/photo.jpg
-  for (const type of DOC_TYPES) {
-    candidates.push(path.join(getStudentUploadRoot(studentId), `${type}.jpg`));
-    candidates.push(path.join(getStudentUploadRoot(studentId), `${type}.pdf`));
+  // Legacy flat path: only the requested document type, never another file.
+  if (docType) {
+    candidates.push(path.join(getStudentUploadRoot(studentId), `${docType}.jpg`));
+    candidates.push(path.join(getStudentUploadRoot(studentId), `${docType}.jpeg`));
+    candidates.push(path.join(getStudentUploadRoot(studentId), `${docType}.png`));
+    candidates.push(path.join(getStudentUploadRoot(studentId), `${docType}.pdf`));
   }
 
   for (const c of candidates) {
@@ -50,7 +51,7 @@ export function relativePathFromAbsolute(absolutePath: string): string {
 }
 
 export function previewUrlForDoc(studentId: string, stored: string | null, docType: DocType): string | null {
-  const abs = resolveDocAbsolutePath(studentId, stored);
+  const abs = resolveDocAbsolutePath(studentId, stored, docType);
   if (!abs) return null;
   const rel = relativePathFromAbsolute(abs);
   return `/api/uploads/${rel}`;

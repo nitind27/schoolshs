@@ -1,10 +1,9 @@
-/* Add / Edit Staff form layout */
+/* Add / Edit Staff — full-width, dense grid */
 
 .staff-form-wrap {
   width: 100%;
-  max-width: 56rem;
-  margin-left: auto;
-  margin-right: auto;
+  max-width: none;
+  margin: 0;
 }
 
 .staff-form {
@@ -14,7 +13,6 @@
 }
 
 .staff-form__card {
-  /* visible so dropdowns/calendars aren’t clipped; radius still applies via bg */
   overflow: visible;
   border: 1px solid #e2e8f0;
   border-radius: 1.15rem;
@@ -30,7 +28,7 @@
 
 @media (min-width: 768px) {
   .staff-form__section {
-    padding: 1.5rem 1.75rem 1.65rem;
+    padding: 1.35rem 1.5rem 1.5rem;
   }
 }
 
@@ -90,6 +88,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem 1.15rem;
+  align-items: start;
 }
 
 @media (min-width: 640px) {
@@ -100,7 +99,7 @@
 
 @media (min-width: 1024px) {
   .staff-form__grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -118,21 +117,35 @@
   .staff-form__span-2 {
     grid-column: span 2;
   }
-
-  .staff-form__span-3 {
-    grid-column: 1 / -1;
-  }
 }
 
 .staff-form__span-full {
   grid-column: 1 / -1;
 }
 
+.staff-form__field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
 .staff-form__hint {
-  margin: -0.35rem 0 0;
+  margin: 0;
   font-size: 0.7rem;
   line-height: 1.4;
   color: #64748b;
+}
+
+.staff-form__banner-error {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .staff-form__role {
@@ -174,7 +187,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 1.15rem 1.75rem;
+    padding: 1.15rem 1.5rem;
   }
 }
 

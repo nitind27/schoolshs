@@ -47,7 +47,7 @@ export function NavbarChatButton({ role }: { role?: string | null }) {
   return (
     <Link
       href="/chat"
-      className={cn("tn-btn relative", isActive && "tn-btn--active")}
+      className={cn("tn-btn tn-chat relative", isActive && "tn-btn--active")}
       aria-label={t("nav.chat")}
       title={t("nav.chat")}
       aria-current={isActive ? "page" : undefined}

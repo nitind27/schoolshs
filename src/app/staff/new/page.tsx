@@ -57,7 +57,7 @@ export default function NewStaffPage() {
         { label: t("staffPage.addStaff") },
       ]}
     >
-      <div className="rounded-2xl bg-gradient-to-b from-slate-50/90 via-white to-slate-50/40 p-3 sm:p-4 md:p-5">
+      <div className="w-full rounded-2xl bg-gradient-to-b from-slate-50/90 via-white to-slate-50/40 p-2 sm:p-3 md:p-4">
         <StaffForm onSubmit={handleSubmit} />
       </div>
 

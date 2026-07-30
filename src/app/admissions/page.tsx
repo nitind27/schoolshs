@@ -3,7 +3,18 @@
 import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ClipboardCheck, CheckCircle, UserPlus, Search, X, RefreshCw, Clock, Users, Ban, Inbox } from "lucide-react";
+import {
+  ClipboardCheck,
+  CheckCircle,
+  UserPlus,
+  Search,
+  X,
+  RefreshCw,
+  Clock,
+  Users,
+  Ban,
+  Inbox,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -18,8 +29,19 @@ import { useConfirm } from "@/hooks/use-confirm";
 import "@/components/admissions/admissions.css";
 
 type AdmissionStudent = Parameters<typeof AdmissionStudentCard>[0]["student"];
-type ClassInfo = { id: string; name: string; standard: string; section: string; stream?: string | null };
-type ClassBreakdown = { standard: string; section: string; admissionStatus: string; count: number };
+type ClassInfo = {
+  id: string;
+  name: string;
+  standard: string;
+  section: string;
+  stream?: string | null;
+};
+type ClassBreakdown = {
+  standard: string;
+  section: string;
+  admissionStatus: string;
+  count: number;
+};
 
 type DialogState = {
   id: string;
@@ -34,7 +56,9 @@ export default function AdmissionsPage() {
   const [students, setStudents] = useState<AdmissionStudent[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [stats, setStats] = useState<{ admissionStatus: string; _count: number }[]>([]);
+  const [stats, setStats] = useState<
+    { admissionStatus: string; _count: number }[]
+  >([]);
   const [classBreakdown, setClassBreakdown] = useState<ClassBreakdown[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,16 +111,21 @@ export default function AdmissionsPage() {
     void load();
   }, [load]);
 
-  const pending = stats.find((s) => s.admissionStatus === "pending")?._count || 0;
-  const verified = stats.find((s) => s.admissionStatus === "verified")?._count || 0;
-  const rejected = stats.find((s) => s.admissionStatus === "rejected")?._count || 0;
+  const pending =
+    stats.find((s) => s.admissionStatus === "pending")?._count || 0;
+  const verified =
+    stats.find((s) => s.admissionStatus === "verified")?._count || 0;
+  const rejected =
+    stats.find((s) => s.admissionStatus === "rejected")?._count || 0;
   const totalAll = stats.reduce((s, x) => s + x._count, 0);
 
   const pendingByClassId = useMemo(() => {
     const map = new Map<string, number>();
     for (const row of classBreakdown) {
       if (row.admissionStatus !== "pending") continue;
-      const cls = classes.find((x) => x.standard === row.standard && x.section === row.section);
+      const cls = classes.find(
+        (x) => x.standard === row.standard && x.section === row.section,
+      );
       if (cls?.id) map.set(cls.id, (map.get(cls.id) || 0) + row.count);
     }
     return map;
@@ -104,7 +133,9 @@ export default function AdmissionsPage() {
 
   const classSelectOptions = useMemo(() => {
     const sorted = [...classes].sort(
-      (a, b) => Number(a.standard) - Number(b.standard) || a.section.localeCompare(b.section),
+      (a, b) =>
+        Number(a.standard) - Number(b.standard) ||
+        a.section.localeCompare(b.section),
     );
     return sorted.map((c) => {
       const name = c.name || classLabel(c.standard, c.section);
@@ -117,7 +148,11 @@ export default function AdmissionsPage() {
     });
   }, [classes, pendingByClassId, status, t]);
 
-  const patchStatus = async (studentIds: string[], admissionStatus: string, notes?: string) => {
+  const patchStatus = async (
+    studentIds: string[],
+    admissionStatus: string,
+    notes?: string,
+  ) => {
     const res = await fetch("/api/admissions", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -158,17 +193,37 @@ export default function AdmissionsPage() {
   };
 
   const statCards = [
-    { key: "pending", label: t("admissions.pending"), value: pending, icon: Clock },
-    { key: "verified", label: t("admissions.verified"), value: verified, icon: CheckCircle },
-    { key: "rejected", label: t("admissions.rejected"), value: rejected, icon: Ban },
-    { key: "total", label: t("admissions.total"), value: totalAll, icon: Users },
+    {
+      key: "pending",
+      label: t("admissions.pending"),
+      value: pending,
+      icon: Clock,
+    },
+    {
+      key: "verified",
+      label: t("admissions.verified"),
+      value: verified,
+      icon: CheckCircle,
+    },
+    {
+      key: "rejected",
+      label: t("admissions.rejected"),
+      value: rejected,
+      icon: Ban,
+    },
+    {
+      key: "total",
+      label: t("admissions.total"),
+      value: totalAll,
+      icon: Users,
+    },
   ] as const;
 
   return (
     <div className="admissions-page space-y-5 pb-8">
       {/* Hero */}
       <div className="adm-hero">
-        <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
@@ -178,8 +233,12 @@ export default function AdmissionsPage() {
                 {t("admissions.title")}
               </span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight">{t("admissions.heroTitle")}</h1>
-            <p className="text-blue-100 text-sm mt-1 max-w-xl">{t("admissions.subtitle")}</p>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight">
+              {t("admissions.heroTitle")}
+            </h1>
+            <p className="text-blue-100 text-sm mt-1 max-w-xl">
+              {t("admissions.subtitle")}
+            </p>
           </div>
           <Link href="/students/new">
             <Button className="relative z-10 gap-2 bg-white text-blue-700 hover:bg-blue-50 shadow-lg border-0 font-bold">
@@ -189,7 +248,7 @@ export default function AdmissionsPage() {
           </Link>
         </div>
 
-        <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+        <div className="relative z-10 grid grid-cols-2 gap-3 mt-5 md:grid-cols-4">
           {statCards.map(({ key, label, value, icon: Icon }) => (
             <button
               key={key}
@@ -201,15 +260,37 @@ export default function AdmissionsPage() {
                   setPage(1);
                 }
               }}
-              className={cn("adm-stat-pill text-left", status === key && key !== "total" && "active")}
+              className={cn(
+                "adm-stat-pill text-left",
+                status === key && key !== "total" && "active",
+              )}
             >
               <div className="flex items-center justify-between">
-                <Icon className={cn("h-4 w-4", status === key && key !== "total" ? "text-blue-600" : "text-blue-200")} />
-                <span className={cn("text-2xl font-black", status === key && key !== "total" ? "text-blue-700" : "")}>
+                <Icon
+                  className={cn(
+                    "h-4 w-4",
+                    status === key && key !== "total"
+                      ? "text-blue-600"
+                      : "text-blue-200",
+                  )}
+                />
+                <span
+                  className={cn(
+                    "text-2xl font-black",
+                    status === key && key !== "total" ? "text-blue-700" : "",
+                  )}
+                >
                   {value}
                 </span>
               </div>
-              <p className={cn("text-xs font-semibold mt-1", status === key && key !== "total" ? "text-blue-600" : "text-blue-100")}>
+              <p
+                className={cn(
+                  "text-xs font-semibold mt-1",
+                  status === key && key !== "total"
+                    ? "text-blue-600"
+                    : "text-blue-100",
+                )}
+              >
                 {label}
               </p>
             </button>
@@ -223,7 +304,10 @@ export default function AdmissionsPage() {
           <Select
             label={t("admissions.class")}
             value={classFilter}
-            onChange={(e) => { setClassFilter(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setClassFilter(e.target.value);
+              setPage(1);
+            }}
             options={classSelectOptions}
             emptyLabel={t("admissions.allClasses")}
             className="text-sm"
@@ -231,7 +315,10 @@ export default function AdmissionsPage() {
           <Select
             label={t("admissions.category")}
             value={categoryFilter}
-            onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              setPage(1);
+            }}
             options={[...CATEGORIES]}
             emptyLabel={t("admissions.allCategories")}
             className="text-sm"
@@ -254,7 +341,11 @@ export default function AdmissionsPage() {
             {searchInput && (
               <button
                 type="button"
-                onClick={() => { setSearchInput(""); setSearch(""); setPage(1); }}
+                onClick={() => {
+                  setSearchInput("");
+                  setSearch("");
+                  setPage(1);
+                }}
                 className="text-slate-400 hover:text-slate-600"
               >
                 <X className="h-4 w-4" />
@@ -263,7 +354,10 @@ export default function AdmissionsPage() {
             <Button
               size="sm"
               className="h-8 rounded-lg shrink-0"
-              onClick={() => { setSearch(searchInput.trim()); setPage(1); }}
+              onClick={() => {
+                setSearch(searchInput.trim());
+                setPage(1);
+              }}
             >
               {t("common.search")}
             </Button>
@@ -274,17 +368,24 @@ export default function AdmissionsPage() {
             onClick={() => void load()}
             className="h-10 w-full sm:w-10 p-0 rounded-xl shrink-0"
           >
-            <RefreshCw className={cn("h-4 w-4 mx-auto", loading && "animate-spin")} />
+            <RefreshCw
+              className={cn("h-4 w-4 mx-auto", loading && "animate-spin")}
+            />
           </Button>
         </div>
 
         {hasFilters && (
           <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
-            <span className="text-xs font-semibold text-slate-500">{t("admissions.activeFilters")}:</span>
+            <span className="text-xs font-semibold text-slate-500">
+              {t("admissions.activeFilters")}:
+            </span>
             {activeClassLabel && (
               <button
                 type="button"
-                onClick={() => { setClassFilter(""); setPage(1); }}
+                onClick={() => {
+                  setClassFilter("");
+                  setPage(1);
+                }}
                 className="adm-filter-tag"
               >
                 {t("admissions.class")}: {activeClassLabel}
@@ -294,7 +395,10 @@ export default function AdmissionsPage() {
             {categoryFilter && (
               <button
                 type="button"
-                onClick={() => { setCategoryFilter(""); setPage(1); }}
+                onClick={() => {
+                  setCategoryFilter("");
+                  setPage(1);
+                }}
                 className="adm-filter-tag"
               >
                 {t("admissions.category")}: {categoryFilter}
@@ -304,14 +408,22 @@ export default function AdmissionsPage() {
             {search && (
               <button
                 type="button"
-                onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}
+                onClick={() => {
+                  setSearch("");
+                  setSearchInput("");
+                  setPage(1);
+                }}
                 className="adm-filter-tag"
               >
                 {t("common.search")}: {search}
                 <X className="h-3 w-3" />
               </button>
             )}
-            <button type="button" onClick={clearFilters} className="text-xs font-bold text-blue-600 hover:underline ml-1">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-xs font-bold text-blue-600 hover:underline ml-1"
+            >
               {t("admissions.clearFilters")}
             </button>
           </div>
@@ -329,7 +441,9 @@ export default function AdmissionsPage() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </div>
       )}
 
       {/* Student cards */}
@@ -343,8 +457,12 @@ export default function AdmissionsPage() {
           <div className="adm-empty-icon">
             <Inbox className="h-8 w-8" />
           </div>
-          <p className="font-bold text-slate-800">{t("admissions.noApplications", { status: statusLabel(status) })}</p>
-          <p className="text-sm text-slate-500 mt-1">{t("admissions.emptyHint")}</p>
+          <p className="font-bold text-slate-800">
+            {t("admissions.noApplications", { status: statusLabel(status) })}
+          </p>
+          <p className="text-sm text-slate-500 mt-1">
+            {t("admissions.emptyHint")}
+          </p>
           <Link href="/students/new" className="inline-block mt-4">
             <Button className="gap-2 rounded-xl">
               <UserPlus className="h-4 w-4" />
@@ -360,16 +478,24 @@ export default function AdmissionsPage() {
               student={s}
               statusTab={status}
               selected={selected.has(s.id)}
-              onToggleSelect={status === "pending" ? () => {
-                setSelected((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(s.id)) next.delete(s.id);
-                  else next.add(s.id);
-                  return next;
-                });
-              } : undefined}
+              onToggleSelect={
+                status === "pending"
+                  ? () => {
+                      setSelected((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(s.id)) next.delete(s.id);
+                        else next.add(s.id);
+                        return next;
+                      });
+                    }
+                  : undefined
+              }
               onAction={(action) =>
-                setDialog({ id: s.id, name: `${s.firstName} ${s.surname}`, action })
+                setDialog({
+                  id: s.id,
+                  name: `${s.firstName} ${s.surname}`,
+                  action,
+                })
               }
               t={t}
             />
@@ -383,7 +509,9 @@ export default function AdmissionsPage() {
       {/* Sticky bulk bar */}
       {status === "pending" && selected.size > 0 && (
         <div className="adm-bulk-bar">
-          <span className="text-sm font-bold">{t("admissions.selected", { count: selected.size })}</span>
+          <span className="text-sm font-bold">
+            {t("admissions.selected", { count: selected.size })}
+          </span>
           <Button
             size="sm"
             onClick={() => void bulkVerify()}

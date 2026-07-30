@@ -46,7 +46,11 @@ function buildWhere(
 type AdmissionListStudent = Awaited<
   ReturnType<
     typeof prisma.student.findMany<{
-      include: { schoolClass: { select: { id: true; name: true; standard: true; section: true } } };
+      include: {
+        schoolClass: {
+          select: { id: true; name: true; standard: true; section: true };
+        };
+      };
     }>
   >
 >[number];
@@ -58,15 +62,38 @@ function mapStudent(s: AdmissionListStudent) {
     firstName: s.firstName,
     middleName: s.middleName,
     surname: s.surname,
+    aadhaarName: s.aadhaarName,
+    dateOfBirth: s.dateOfBirth,
     fatherName: s.fatherName,
+    motherName: s.motherName,
+    guardianName: s.guardianName,
+    parentOccupation: s.parentOccupation,
+    annualFamilyIncome: s.annualFamilyIncome,
     standard: s.standard,
     section: s.section,
     classId: s.classId,
     rollNumber: s.rollNumber,
     grNumber: s.grNumber,
     category: s.category,
+    caste: s.caste,
+    religion: s.religion,
     mobileNumber: s.mobileNumber,
+    email: s.email,
     gender: s.gender,
+    aadhaarNumber: s.aadhaarNumber,
+    apaarId: s.apaarId,
+    currentAddress: s.currentAddress,
+    currentCity: s.currentCity,
+    currentDistrict: s.currentDistrict,
+    currentPincode: s.currentPincode,
+    permanentAddress: s.permanentAddress,
+    permanentCity: s.permanentCity,
+    permanentDistrict: s.permanentDistrict,
+    permanentPincode: s.permanentPincode,
+    scholarshipScheme: s.scholarshipScheme,
+    financialYear: s.financialYear,
+    courseName: s.courseName,
+    institutionName: s.institutionName,
     admissionStatus: s.admissionStatus,
     admissionType: s.admissionType,
     verifiedAt: s.verifiedAt,
@@ -75,6 +102,21 @@ function mapStudent(s: AdmissionListStudent) {
     createdAt: s.createdAt,
     startDate: s.startDate,
     status: s.status,
+    bankName: s.bankName,
+    branchName: s.branchName,
+    accountNumber: s.accountNumber,
+    ifscCode: s.ifscCode,
+    accountHolderName: s.accountHolderName,
+    documents: {
+      photo: !!s.photoPath,
+      aadhaar: !!s.aadhaarDocPath,
+      income: !!s.incomeCertPath,
+      caste: !!s.casteCertPath,
+      marksheet10: !!s.marksheet10Path,
+      marksheet12: !!s.marksheet12Path,
+      bankPassbook: !!s.bankPassbookPath,
+      feeReceipt: !!s.feeReceiptPath,
+    },
     completeness,
     className: s.schoolClass?.name || null,
   };
@@ -107,7 +149,11 @@ export async function GET(request: NextRequest) {
     const [students, total, stats, classStats, classes] = await Promise.all([
       prisma.student.findMany({
         where,
-        include: { schoolClass: { select: { id: true, name: true, standard: true, section: true } } },
+        include: {
+          schoolClass: {
+            select: { id: true, name: true, standard: true, section: true },
+          },
+        },
         orderBy: [{ createdAt: "desc" }],
         skip: (page - 1) * limit,
         take: limit,
@@ -125,7 +171,13 @@ export async function GET(request: NextRequest) {
       }),
       prisma.schoolClass.findMany({
         where: { schoolId: session.schoolId },
-        select: { id: true, name: true, standard: true, section: true, stream: true },
+        select: {
+          id: true,
+          name: true,
+          standard: true,
+          section: true,
+          stream: true,
+        },
         orderBy: [{ standard: "asc" }, { section: "asc" }],
       }),
     ]);
@@ -149,9 +201,13 @@ export async function GET(request: NextRequest) {
       classes,
     });
   } catch (e) {
-    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError)
+      return NextResponse.json({ error: e.message }, { status: e.status });
     console.error(e);
-    return NextResponse.json({ error: "Failed to load admissions" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to load admissions" },
+      { status: 500 },
+    );
   }
 }
 
@@ -160,6 +216,7 @@ export async function PATCH(request: NextRequest) {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
     const body = await request.json();
     const { studentId, studentIds, admissionStatus, notes } = body;
+    const allowedStatuses = new Set(["pending", "verified", "rejected"]);
 
     const ids: string[] = Array.isArray(studentIds)
       ? studentIds
@@ -168,7 +225,22 @@ export async function PATCH(request: NextRequest) {
         : [];
 
     if (!ids.length || !admissionStatus) {
-      return NextResponse.json({ error: "studentId(s) and admissionStatus required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "studentId(s) and admissionStatus required" },
+        { status: 400 },
+      );
+    }
+    if (!allowedStatuses.has(admissionStatus)) {
+      return NextResponse.json(
+        { error: "Invalid admission status" },
+        { status: 400 },
+      );
+    }
+    if (admissionStatus === "rejected" && !String(notes || "").trim()) {
+      return NextResponse.json(
+        { error: "Rejection reason is required" },
+        { status: 400 },
+      );
     }
 
     const data = {
@@ -197,7 +269,8 @@ export async function PATCH(request: NextRequest) {
       })),
     });
   } catch (e) {
-    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError)
+      return NextResponse.json({ error: e.message }, { status: e.status });
     console.error(e);
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
