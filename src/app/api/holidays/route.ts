@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
-import type { Prisma } from "@/generated/prisma/client";
+import { loadSchoolHolidays } from "@/lib/holidays/load-school-holidays";
 import { mobileJson, mobileOptions } from "@/lib/mobile-api";
 
 /** Roles that may read the school holiday calendar (web + Flutter). */
@@ -21,34 +21,13 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth([...HOLIDAY_READ_ROLES]);
     const { searchParams } = new URL(request.url);
-    const year = searchParams.get("year") || String(new Date().getFullYear());
-    const month = searchParams.get("month") || "";
-    const type = searchParams.get("type") || "";
-
-    const where: Prisma.HolidayWhereInput = {
+    const payload = await loadSchoolHolidays({
       schoolId: session.schoolId,
-      date: month
-        ? { startsWith: `${year}-${String(month).padStart(2, "0")}-` }
-        : { startsWith: year + "-" },
-    };
-    if (type) {
-      where.type = type;
-    }
-
-    const holidays = await prisma.holiday.findMany({
-      where,
-      orderBy: { date: "asc" },
+      year: searchParams.get("year") || String(new Date().getFullYear()),
+      month: searchParams.get("month") || "",
+      type: searchParams.get("type") || "",
     });
-
-    return mobileJson(
-      {
-        year: Number(year),
-        month: month ? Number(month) : null,
-        holidays,
-      },
-      undefined,
-      origin,
-    );
+    return mobileJson(payload, undefined, origin);
   } catch (e) {
     if (e instanceof AuthError) {
       return mobileJson({ error: e.message }, { status: e.status }, origin);
