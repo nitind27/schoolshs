@@ -72,7 +72,7 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
       group: t("teacherNav.groupAcademics"),
     },
     {
-      href: "/staff/holidays",
+      href: "/teacher/holidays",
       label: t("nav.staffHolidays"),
       icon: CalendarDays,
       group: t("teacherNav.groupAcademics"),

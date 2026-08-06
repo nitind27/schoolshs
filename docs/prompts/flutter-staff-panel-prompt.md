@@ -478,13 +478,44 @@ GET /api/board-records/result-list?...
 
 ### 10. Holiday Calendar (read-only for teacher)
 
+**Preferred (Flutter staff panel):**
+
+```
+GET /api/teacher/holidays?year=2026&month=8
+Authorization: Bearer <token>
+```
+
+**Also accepted (aliases — same data):**
+
 ```
 GET /api/holidays?year=2026&month=8
+GET /api/staff/holidays?year=2026&month=8
+```
+
+Response:
+
+```json
+{
+  "year": 2026,
+  "month": 8,
+  "holidays": [
+    {
+      "id": "...",
+      "date": "2026-08-15",
+      "name": "Independence Day",
+      "nameGu": "સ્વતંત્રતા દિવસ",
+      "type": "public",
+      "academicYear": "2026-27",
+      "description": null
+    }
+  ]
+}
 ```
 
 - Month calendar heatmap or list.
 - Holiday name, date, type (public/school).
 - No create/edit (teacher = GET only).
+- If you see `Access denied`, use `/api/teacher/holidays` (not a write endpoint).
 
 ---
 
@@ -518,7 +549,9 @@ GET /api/holidays?year=2026&month=8
 | GET/POST | `/api/results/marks-sheet?classId=` | Marks sheet |
 | GET | `/api/results/print?...` | Print/PDF |
 | GET/PATCH | `/api/board-records/*` | Board records |
-| GET | `/api/holidays?year=&month=` | Holidays |
+| GET | `/api/teacher/holidays?year=&month=` | Holidays (preferred for Flutter) |
+| GET | `/api/holidays?year=&month=` | Holidays (shared) |
+| GET | `/api/staff/holidays?year=&month=` | Holidays (alias) |
 
 ---
 
@@ -636,7 +669,7 @@ Implement/refactor these screens with live APIs:
 6. Exam Seats — GET/PATCH /api/exam-seat-numbers, prefix generator
 7. Results — class-overview, term-marks GET/POST, marks-sheet, print
 8. Board Records — overview, entry, exam-result-sheet, result-list (teacher-scoped)
-9. Holidays — GET /api/holidays read-only
+9. Holidays — GET /api/teacher/holidays (or /api/holidays / /api/staff/holidays) read-only
 10. Profile — GET /api/auth/me, PATCH /api/account/password
 
 Use bottom nav (Dashboard, Attendance, Results, More) + drawer for full nav groups (Overview, My Work, Academics).

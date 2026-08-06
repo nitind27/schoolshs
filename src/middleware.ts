@@ -50,33 +50,53 @@ const ROLE_ROUTES: Record<string, UserRole[]> = {
   "/student/results/print": ["student"],
 };
 
+/** Exact segment match — avoids `/api/help` wrongly matching `/api/holidays`. */
+function pathMatches(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(prefix + "/");
+}
+
 function getRouteRoles(pathname: string): UserRole[] | null {
   for (const [prefix, roles] of Object.entries(ROLE_ROUTES)) {
-    if (pathname === prefix || pathname.startsWith(prefix + "/")) return roles;
+    if (pathMatches(pathname, prefix)) return roles;
   }
   return null;
 }
 
+/** Holiday calendar APIs + pages — read access for school staff and students. */
+function isHolidayRoute(pathname: string): boolean {
+  return (
+    pathMatches(pathname, "/staff/holidays") ||
+    pathMatches(pathname, "/teacher/holidays") ||
+    pathMatches(pathname, "/student/holidays") ||
+    pathMatches(pathname, "/api/holidays") ||
+    pathMatches(pathname, "/api/teacher/holidays") ||
+    pathMatches(pathname, "/api/staff/holidays") ||
+    pathMatches(pathname, "/api/student-portal/holidays")
+  );
+}
+
 function isSchoolAdminRoute(pathname: string): boolean {
-  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin"))
+  if (pathMatches(pathname, "/admin") || pathMatches(pathname, "/api/admin"))
     return false;
-  if (pathname.startsWith("/teacher") || pathname.startsWith("/api/teacher"))
+  if (pathMatches(pathname, "/teacher") || pathMatches(pathname, "/api/teacher"))
     return false;
-  if (pathname.startsWith("/clerk") || pathname.startsWith("/api/clerk"))
+  if (pathMatches(pathname, "/clerk") || pathMatches(pathname, "/api/clerk"))
     return false;
-  if (pathname.startsWith("/ca") || pathname.startsWith("/api/ca"))
+  if (pathMatches(pathname, "/ca") || pathMatches(pathname, "/api/ca"))
     return false;
   if (
-    pathname.startsWith("/student") ||
-    pathname.startsWith("/api/student-portal")
+    pathMatches(pathname, "/student") ||
+    pathMatches(pathname, "/api/student-portal")
   )
     return false;
-  if (pathname.startsWith("/login") || pathname.startsWith("/m/")) return false;
-  if (pathname.startsWith("/api/auth")) return false;
-  if (pathname.startsWith("/api/automation/sms")) return false;
-  if (pathname.startsWith("/api/health")) return false;
-  if (pathname.startsWith("/api/help")) return false;
-  if (pathname.startsWith("/api/notifications")) return false;
+  if (pathMatches(pathname, "/login") || pathMatches(pathname, "/m/"))
+    return false;
+  if (pathMatches(pathname, "/api/auth")) return false;
+  if (pathMatches(pathname, "/api/automation/sms")) return false;
+  if (pathMatches(pathname, "/api/health")) return false;
+  // Must use pathMatches — `startsWith("/api/help")` wrongly matches `/api/holidays`
+  if (pathMatches(pathname, "/api/help")) return false;
+  if (pathMatches(pathname, "/api/notifications")) return false;
   return pathname.startsWith("/api/") || !pathname.startsWith("/_next");
 }
 
@@ -155,6 +175,15 @@ export async function middleware(request: NextRequest) {
   }
 
   const routeRoles = getRouteRoles(pathname);
+  // Holiday calendar is shared read-access — bypass narrow role route tables
+  // (e.g. /api/teacher/* is teacher-only, but /api/teacher/holidays must work for staff apps).
+  if (
+    isHolidayRoute(pathname) &&
+    ["school_admin", "teacher", "clerk", "student"].includes(session.role)
+  ) {
+    return NextResponse.next();
+  }
+
   if (routeRoles && !routeRoles.includes(session.role)) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
@@ -179,6 +208,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (session.role === "student" && isSchoolAdminRoute(pathname)) {
+    // Students may view the school holiday calendar (read-only APIs)
+    if (isHolidayRoute(pathname)) {
+      return NextResponse.next();
+    }
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
@@ -291,7 +324,10 @@ export async function middleware(request: NextRequest) {
           pathname.startsWith("/api/notifications") ||
           pathname.startsWith("/api/help") ||
           pathname.startsWith("/staff/holidays") ||
+          pathname.startsWith("/teacher/holidays") ||
           pathname.startsWith("/api/holidays") ||
+          pathname.startsWith("/api/staff/holidays") ||
+          pathname.startsWith("/api/teacher/holidays") ||
           pathname.startsWith("/profile") ||
           pathname.startsWith("/api/account"))) ||
       (session.role === "clerk" &&

@@ -1,11 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import type { Prisma } from "@/generated/prisma/client";
+import { mobileJson, mobileOptions } from "@/lib/mobile-api";
+
+/** Roles that may read the school holiday calendar (web + Flutter). */
+const HOLIDAY_READ_ROLES = [
+  "school_admin",
+  "clerk",
+  "teacher",
+  "student",
+] as const;
+
+export async function OPTIONS(request: NextRequest) {
+  return mobileOptions(request.headers.get("origin"));
+}
 
 export async function GET(request: NextRequest) {
+  const origin = request.headers.get("origin");
   try {
-    const session = await requireSchoolAuth(["school_admin", "clerk", "teacher"]);
+    const session = await requireSchoolAuth([...HOLIDAY_READ_ROLES]);
     const { searchParams } = new URL(request.url);
     const year = searchParams.get("year") || String(new Date().getFullYear());
     const month = searchParams.get("month") || "";
@@ -26,18 +40,29 @@ export async function GET(request: NextRequest) {
       orderBy: { date: "asc" },
     });
 
-    return NextResponse.json({ holidays });
+    return mobileJson(
+      {
+        year: Number(year),
+        month: month ? Number(month) : null,
+        holidays,
+      },
+      undefined,
+      origin,
+    );
   } catch (e) {
-    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError) {
+      return mobileJson({ error: e.message }, { status: e.status }, origin);
+    }
     console.error(e);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return mobileJson({ error: "Failed" }, { status: 500 }, origin);
   }
 }
 
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get("origin");
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
-    const body = await request.json() as {
+    const body = (await request.json()) as {
       action?: string;
       id?: string;
       date?: string;
@@ -51,20 +76,34 @@ export async function POST(request: NextRequest) {
 
     if (action === "delete") {
       const id = String(body.id || "");
-      if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-      const existing = await prisma.holiday.findFirst({ where: { id, schoolId: session.schoolId } });
-      if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      if (!id) {
+        return mobileJson({ error: "id required" }, { status: 400 }, origin);
+      }
+      const existing = await prisma.holiday.findFirst({
+        where: { id, schoolId: session.schoolId },
+      });
+      if (!existing) {
+        return mobileJson({ error: "Not found" }, { status: 404 }, origin);
+      }
       await prisma.holiday.delete({ where: { id } });
-      return NextResponse.json({ success: true });
+      return mobileJson({ success: true }, undefined, origin);
     }
 
     const date = String(body.date || "").trim();
     const name = String(body.name || "").trim();
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return NextResponse.json({ error: "Valid date (YYYY-MM-DD) is required" }, { status: 400 });
+      return mobileJson(
+        { error: "Valid date (YYYY-MM-DD) is required" },
+        { status: 400 },
+        origin,
+      );
     }
     if (!name) {
-      return NextResponse.json({ error: "Holiday name is required" }, { status: 400 });
+      return mobileJson(
+        { error: "Holiday name is required" },
+        { status: 400 },
+        origin,
+      );
     }
 
     const payload = {
@@ -78,32 +117,53 @@ export async function POST(request: NextRequest) {
 
     if (action === "update") {
       const id = String(body.id || "");
-      if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-      const existing = await prisma.holiday.findFirst({ where: { id, schoolId: session.schoolId } });
-      if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-      // Check duplicate date (other than self)
+      if (!id) {
+        return mobileJson({ error: "id required" }, { status: 400 }, origin);
+      }
+      const existing = await prisma.holiday.findFirst({
+        where: { id, schoolId: session.schoolId },
+      });
+      if (!existing) {
+        return mobileJson({ error: "Not found" }, { status: 404 }, origin);
+      }
       const dup = await prisma.holiday.findFirst({
         where: { schoolId: session.schoolId, date, id: { not: id } },
       });
-      if (dup) return NextResponse.json({ error: "A holiday on this date already exists" }, { status: 409 });
-      const updated = await prisma.holiday.update({ where: { id }, data: payload });
-      return NextResponse.json({ holiday: updated });
+      if (dup) {
+        return mobileJson(
+          { error: "A holiday on this date already exists" },
+          { status: 409 },
+          origin,
+        );
+      }
+      const updated = await prisma.holiday.update({
+        where: { id },
+        data: payload,
+      });
+      return mobileJson({ holiday: updated }, undefined, origin);
     }
 
-    // create
     const dup = await prisma.holiday.findFirst({
       where: { schoolId: session.schoolId, date },
     });
-    if (dup) return NextResponse.json({ error: "A holiday on this date already exists" }, { status: 409 });
+    if (dup) {
+      return mobileJson(
+        { error: "A holiday on this date already exists" },
+        { status: 409 },
+        origin,
+      );
+    }
 
     const holiday = await prisma.holiday.create({
       data: { schoolId: session.schoolId, ...payload },
     });
-    return NextResponse.json({ holiday });
+    return mobileJson({ holiday }, undefined, origin);
   } catch (e) {
-    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError) {
+      return mobileJson({ error: e.message }, { status: e.status }, origin);
+    }
     console.error(e);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return mobileJson({ error: "Failed" }, { status: 500 }, origin);
   }
 }
 

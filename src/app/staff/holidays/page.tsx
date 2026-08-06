@@ -338,9 +338,37 @@ export default function HolidaysPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/holidays?year=${year}`);
-    const data = await res.json() as { holidays?: HolidayRow[] };
-    setHols(data.holidays || []);
+    // Try teacher-scoped path first (Flutter / teacher middleware), then shared API.
+    const endpoints = [
+      `/api/teacher/holidays?year=${year}`,
+      `/api/holidays?year=${year}`,
+      `/api/staff/holidays?year=${year}`,
+    ];
+
+    let loaded: HolidayRow[] = [];
+    let lastErr = "";
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url);
+        const data = (await res.json()) as {
+          holidays?: HolidayRow[];
+          error?: string;
+        };
+        if (res.ok) {
+          loaded = data.holidays || [];
+          lastErr = "";
+          break;
+        }
+        lastErr = data.error || `HTTP ${res.status}`;
+      } catch {
+        lastErr = "Network error";
+      }
+    }
+    if (lastErr && !loaded.length) {
+      setMsg({ text: lastErr, tone: "err" });
+      setTimeout(() => setMsg(null), 4000);
+    }
+    setHols(loaded);
     setLoading(false);
   }, [year]);
 
