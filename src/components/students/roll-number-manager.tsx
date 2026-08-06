@@ -214,7 +214,7 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
         { label: t("rollNumbers.title") },
       ]}
       actions={
-        <div className="grid w-full grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex sm:w-auto">
+        <div className="grid w-full grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex sm:w-auto sm:flex-wrap">
           <Button
             type="button"
             variant="outline"
@@ -237,9 +237,9 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
         </div>
       }
     >
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-[minmax(16rem,1fr)_minmax(14rem,1fr)]">
+      <div className="space-y-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Select
               label={t("rollNumbers.selectClass")}
               value={classId}
@@ -250,17 +250,17 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
               }))}
               emptyLabel={t("rollNumbers.chooseClass")}
             />
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700">
+            <div className="min-w-0 space-y-1.5">
+              <label className="block break-words text-sm font-medium leading-snug text-slate-700">
                 {t("common.search")}
               </label>
-              <div className="flex h-10 items-center gap-2 rounded-xl border border-slate-300 px-3">
-                <Search className="h-4 w-4 text-slate-400" />
+              <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-300 px-3 sm:h-10">
+                <Search className="h-4 w-4 shrink-0 text-slate-400" />
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={t("rollNumbers.searchPlaceholder")}
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                  className="min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm"
                 />
               </div>
             </div>
@@ -269,7 +269,7 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
 
         {message ? (
           <div
-            className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+            className={`rounded-xl border px-3 py-3 text-sm font-medium leading-snug sm:px-4 ${
               message.type === "ok"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                 : "border-red-200 bg-red-50 text-red-700"
@@ -280,121 +280,71 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
         ) : null}
 
         {duplicateIds.size ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm leading-snug text-red-700 sm:px-4">
             {t("rollNumbers.duplicateError")}
           </div>
         ) : null}
 
         {!classId ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-slate-500 sm:py-16">
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-12 text-center text-sm text-slate-500 sm:py-16">
             <Hash className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-            {t("rollNumbers.chooseClassHint")}
+            <p className="mx-auto max-w-sm break-words">{t("rollNumbers.chooseClassHint")}</p>
           </div>
         ) : studentsLoading ? (
           <PageLoader card />
         ) : students.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-slate-500 sm:py-16">
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-12 text-center text-sm text-slate-500 sm:py-16">
             <Users className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-            {t("rollNumbers.noStudents")}
+            <p className="break-words">{t("rollNumbers.noStudents")}</p>
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-slate-50 px-4 py-3">
+            <div className="flex flex-col gap-2 border-b bg-slate-50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
               <div className="min-w-0">
-                <p className="break-words font-bold text-slate-900">
+                <p className="break-words text-sm font-bold text-slate-900 sm:text-base">
                   {selectedClass?.name}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="mt-0.5 text-xs text-slate-500">
                   {filtered.length} / {students.length}{" "}
                   {t("rollNumbers.students")}
                 </p>
               </div>
-              <p className="max-w-full break-words text-xs text-slate-500 sm:text-right">
+              <p className="break-words text-xs leading-snug text-slate-500 sm:max-w-xs sm:text-right">
                 {t("rollNumbers.uniqueHint")}
               </p>
             </div>
-            <div className="divide-y divide-slate-100 md:hidden">
-              {filtered.map((student, index) => {
-                const boardSeat = getBoardSeat(student);
-                return (
-                  <div key={student.id} className="space-y-3 p-4">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-500">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="break-words text-sm font-semibold text-slate-900">
-                          {[student.firstName, student.middleName, student.surname]
-                            .filter(Boolean)
-                            .join(" ")}
-                        </p>
-                        <p className="mt-0.5 break-all font-mono text-xs text-slate-500">
-                          {t("fields.grNumber")}: {student.grNumber || "—"}
-                        </p>
-                      </div>
-                    </div>
-                    <label className="block space-y-1.5">
-                      <span className="text-xs font-semibold text-slate-600">
-                        {t("fields.roll")}
-                      </span>
-                      <input
-                        value={drafts[student.id] || ""}
-                        onChange={(event) =>
-                          setDrafts((current) => ({
-                            ...current,
-                            [student.id]: event.target.value,
-                          }))
-                        }
-                        placeholder={t("rollNumbers.rollPlaceholder")}
-                        className={`h-10 w-full rounded-lg border px-3 font-mono font-semibold outline-none focus:ring-2 ${
-                          duplicateIds.has(student.id)
-                            ? "border-red-400 bg-red-50 focus:ring-red-200"
-                            : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"
-                        }`}
-                      />
-                    </label>
-                    {boardSeat ? (
-                      <p className="break-all rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
-                        <span className="font-medium">{t("rollNumbers.boardSeat")}:</span>{" "}
-                        <span className="font-mono font-bold">{boardSeat}</span>
-                      </p>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-slate-100 text-left text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="w-20 px-4 py-3">#</th>
-                    <th className="px-4 py-3">{t("common.name")}</th>
-                    <th className="px-4 py-3">{t("fields.grNumber")}</th>
-                    <th className="w-56 px-4 py-3">{t("fields.roll")}</th>
-                    <th className="px-4 py-3">{t("rollNumbers.boardSeat")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
+
+            {!filtered.length ? (
+              <div className="px-4 py-10 text-center text-sm text-slate-500">
+                {t("common.noData")}
+              </div>
+            ) : (
+              <>
+                <div className="divide-y divide-slate-100 lg:hidden">
                   {filtered.map((student, index) => {
                     const boardSeat = getBoardSeat(student);
                     return (
-                      <tr key={student.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 text-slate-400">
-                          {index + 1}
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-slate-900">
-                          {[
-                            student.firstName,
-                            student.middleName,
-                            student.surname,
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs">
-                          {student.grNumber || "—"}
-                        </td>
-                        <td className="px-4 py-2">
+                      <article key={student.id} className="space-y-2.5 p-3 sm:p-3.5">
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-500">
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="break-words text-sm font-semibold leading-snug text-slate-900">
+                              {[student.firstName, student.middleName, student.surname]
+                                .filter(Boolean)
+                                .join(" ")}
+                            </p>
+                            <p className="mt-1 font-mono text-xs text-slate-500">
+                              {t("fields.grNumber")}:{" "}
+                              <span className="text-slate-700">{student.grNumber || "—"}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <label className="block space-y-1.5">
+                          <span className="text-xs font-semibold text-slate-600">
+                            {t("fields.roll")}
+                          </span>
                           <input
                             value={drafts[student.id] || ""}
                             onChange={(event) =>
@@ -404,22 +354,81 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
                               }))
                             }
                             placeholder={t("rollNumbers.rollPlaceholder")}
-                            className={`h-9 w-full rounded-lg border px-3 font-mono font-semibold outline-none focus:ring-2 ${
+                            className={`h-11 w-full rounded-xl border px-3 font-mono text-base font-semibold outline-none focus:ring-2 ${
                               duplicateIds.has(student.id)
                                 ? "border-red-400 bg-red-50 focus:ring-red-200"
                                 : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"
                             }`}
                           />
-                        </td>
-                        <td className="px-4 py-3 font-mono font-semibold text-indigo-700">
-                          {boardSeat || "—"}
-                        </td>
-                      </tr>
+                        </label>
+                        {boardSeat ? (
+                          <p className="break-all rounded-xl bg-indigo-50 px-3 py-2 text-xs leading-snug text-indigo-700">
+                            <span className="font-medium">{t("rollNumbers.boardSeat")}:</span>{" "}
+                            <span className="font-mono font-bold">{boardSeat}</span>
+                          </p>
+                        ) : null}
+                      </article>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
+                </div>
+
+                <div className="hidden overflow-x-auto lg:block">
+                  <table className="w-full min-w-[680px] text-sm">
+                    <thead className="bg-slate-100 text-left text-xs font-semibold text-slate-500">
+                      <tr>
+                        <th className="w-14 px-4 py-3">#</th>
+                        <th className="px-4 py-3">{t("common.name")}</th>
+                        <th className="px-4 py-3">{t("fields.grNumber")}</th>
+                        <th className="min-w-[10rem] px-4 py-3">{t("fields.roll")}</th>
+                        <th className="px-4 py-3">{t("rollNumbers.boardSeat")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filtered.map((student, index) => {
+                        const boardSeat = getBoardSeat(student);
+                        return (
+                          <tr key={student.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 text-slate-400">{index + 1}</td>
+                            <td className="max-w-[16rem] break-words px-4 py-3 font-semibold text-slate-900">
+                              {[
+                                student.firstName,
+                                student.middleName,
+                                student.surname,
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+                              {student.grNumber || "—"}
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                value={drafts[student.id] || ""}
+                                onChange={(event) =>
+                                  setDrafts((current) => ({
+                                    ...current,
+                                    [student.id]: event.target.value,
+                                  }))
+                                }
+                                placeholder={t("rollNumbers.rollPlaceholder")}
+                                className={`h-10 w-full min-w-0 rounded-lg border px-3 font-mono text-sm font-semibold outline-none focus:ring-2 ${
+                                  duplicateIds.has(student.id)
+                                    ? "border-red-400 bg-red-50 focus:ring-red-200"
+                                    : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"
+                                }`}
+                              />
+                            </td>
+                            <td className="break-all px-4 py-3 font-mono font-semibold text-indigo-700">
+                              {boardSeat || "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

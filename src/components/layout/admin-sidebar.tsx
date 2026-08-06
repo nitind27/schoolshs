@@ -100,7 +100,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         type="button"
         onClick={() => setMobileOpen(true)}
         aria-label="Open menu"
-        className="fixed top-2.5 left-3 z-50 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-md lg:hidden cursor-pointer"
+        className="shell-menu-btn fixed left-2.5 z-[45] flex items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm lg:hidden cursor-pointer"
       >
         <Menu className="h-5 w-5" />
       </button>

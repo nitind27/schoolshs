@@ -47,6 +47,9 @@ export interface MysqlConnectionConfig {
   minimumIdle?: number;
   resetAfterUse?: boolean;
   keepAliveDelay?: number;
+  /** Must match Prisma MySQL table collation or LIKE/contains fails. */
+  charset?: string;
+  collation?: string;
 }
 
 export function getMysqlConfig(): MysqlConnectionConfig {
@@ -69,6 +72,9 @@ export function getMysqlConfig(): MysqlConnectionConfig {
     minimumIdle,
     resetAfterUse: read("DB_RESET_AFTER_USE") !== "false",
     keepAliveDelay: Number(read("DB_KEEP_ALIVE_DELAY") || "10000"),
+    // Hostinger/MariaDB pool defaults to utf8mb4_bin; Prisma tables use unicode_ci
+    charset: read("DB_CHARSET") || "utf8mb4",
+    collation: read("DB_COLLATION") || "utf8mb4_unicode_ci",
   };
 }
 

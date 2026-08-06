@@ -1,0 +1,331 @@
+/* ==============================================
+   Feature Tour — in-page spotlight
+   Everything is position:fixed (viewport coords)
+   ============================================== */
+
+/* ── Trigger button in navbar ──────────────────── */
+.ft-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0 .45rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(139,92,246,.45);
+  background: linear-gradient(135deg,#1e1b4b,#4338ca);
+  color: #c7d2fe;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: box-shadow .18s, transform .12s;
+  box-shadow: 0 1px 6px rgba(99,102,241,.28);
+}
+
+@media (max-width: 767px) {
+  .ft-trigger {
+    height: 2rem;
+    min-width: 2rem;
+    padding: 0;
+    border-radius: 0.55rem;
+  }
+}
+.ft-trigger:hover  { box-shadow: 0 3px 14px rgba(99,102,241,.45); transform: translateY(-1px); }
+.ft-trigger:active { transform: none; }
+.ft-trigger-icon   { flex-shrink:0; animation: ft-spark 3s ease-in-out infinite; }
+@keyframes ft-spark {
+  0%,100%{ transform:scale(1) rotate(0deg);   opacity:1;   }
+  50%    { transform:scale(1.25) rotate(18deg); opacity:.75; }
+}
+.ft-trigger-text { display:none; }
+@media(min-width:680px){ .ft-trigger-text{ display:inline; } }
+
+
+/* ── Dark overlay strips ───────────────────────── */
+.ft-overlay-full {
+  position: fixed; inset: 0;
+  z-index: 9990;
+  background: rgba(2,6,23,.72);
+  backdrop-filter: blur(1px);
+  cursor: pointer;
+}
+.ft-strip {
+  position: fixed;
+  z-index: 9990;
+  background: rgba(2,6,23,.72);
+  cursor: pointer;
+  transition: top .25s cubic-bezier(.22,1,.36,1),
+              left .25s cubic-bezier(.22,1,.36,1),
+              width .25s cubic-bezier(.22,1,.36,1),
+              height .25s cubic-bezier(.22,1,.36,1);
+}
+
+
+/* ── Highlight border around target ───────────── */
+.ft-cutout-border {
+  position: fixed;
+  z-index: 9991;
+  border-radius: 10px;
+  border: 2px solid rgba(139,92,246,.9);
+  pointer-events: none;
+  box-shadow: 0 0 0 3px rgba(139,92,246,.18);
+  transition: top .25s cubic-bezier(.22,1,.36,1),
+              left .25s cubic-bezier(.22,1,.36,1),
+              width .25s cubic-bezier(.22,1,.36,1),
+              height .25s cubic-bezier(.22,1,.36,1);
+}
+.ft-cutout-pulse {
+  animation: ft-ring 1.7s ease-in-out infinite;
+}
+@keyframes ft-ring {
+  0%  { box-shadow: 0 0 0 3px rgba(139,92,246,.18), 0 0 0 0   rgba(139,92,246,.5); }
+  65% { box-shadow: 0 0 0 3px rgba(139,92,246,.18), 0 0 0 12px rgba(139,92,246,.0); }
+  100%{ box-shadow: 0 0 0 3px rgba(139,92,246,.18), 0 0 0 0   rgba(139,92,246,.5); }
+}
+
+
+/* ── Tooltip card ──────────────────────────────── */
+.ft-tooltip {
+  position: fixed;
+  z-index: 9995;
+  width: min(92vw, 320px);
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 56px rgba(2,6,23,.30), 0 0 0 1px rgba(99,102,241,.12);
+  transition: top .25s cubic-bezier(.22,1,.36,1), left .25s cubic-bezier(.22,1,.36,1), opacity .18s;
+  animation: ft-card-in .22s cubic-bezier(.22,1,.36,1);
+}
+@keyframes ft-card-in {
+  from{ opacity:0; transform:scale(.94) translateY(8px); }
+  to  { opacity:1; transform:scale(1)   translateY(0);   }
+}
+.ft-tooltip--hidden { opacity:0; pointer-events:none; }
+
+/* Arrow pointers */
+.ft-tooltip::before {
+  content:""; position:absolute;
+  width:0; height:0;
+  border:8px solid transparent;
+  pointer-events:none; z-index:1;
+}
+.ft-arrow-bottom::before { top:-16px;   left:50%; transform:translateX(-50%); border-bottom-color:#6366f1; }
+.ft-arrow-top::before    { bottom:-16px;left:50%; transform:translateX(-50%); border-top-color:#fff; }
+.ft-arrow-right::before  { left:-16px;  top:36px; border-right-color:#6366f1; }
+.ft-arrow-left::before   { right:-16px; top:36px; border-left-color:#fff; }
+.ft-arrow-none::before   { display:none; }
+
+
+/* ── Top colour stripe ─────────────────────────── */
+.ft-tt-stripe {
+  height: 4px;
+  background: linear-gradient(90deg,#6366f1,#8b5cf6,#06b6d4);
+  background-size: 200%;
+  animation: ft-stripe 2.5s linear infinite;
+}
+@keyframes ft-stripe { 0%{background-position:200%}100%{background-position:-200%} }
+
+/* ── Progress bar ──────────────────────────────── */
+.ft-tt-progress { height:2px; background:#f1f5f9; }
+.ft-tt-bar      { height:100%; background:#6366f1; transition:width .4s ease; }
+
+
+/* ── Header ────────────────────────────────────── */
+.ft-tt-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: .65rem .85rem .2rem;
+}
+.ft-tt-head-left {
+  display:flex; flex-direction:column; gap:.15rem; min-width:0;
+}
+.ft-tt-phase {
+  display:inline-flex; align-items:center; width:fit-content;
+  padding:.12rem .45rem; border-radius:999px;
+  background:#eef2ff; color:#4338ca;
+  font-size:.58rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+}
+.ft-tt-counter { font-size:.68rem; color:#94a3b8; font-weight:600; }
+.ft-tt-counter b { color:#6366f1; font-size:.78rem; }
+.ft-tt-ctrls { display:flex; align-items:center; gap:.2rem; }
+
+.ft-tt-icobtn {
+  display:flex; align-items:center; justify-content:center;
+  width:1.7rem; height:1.7rem;
+  border-radius:.5rem; border:none;
+  background:#f1f5f9; color:#6366f1;
+  cursor:pointer;
+  transition:background .14s, color .14s;
+}
+.ft-tt-icobtn:hover     { background:#e0e7ff; }
+.ft-tt-icobtn.is-playing{ background:#fef2f2; color:#ef4444; }
+.ft-tt-icobtn.is-playing:hover{ background:#fee2e2; }
+.ft-tt-icobtn.is-close  { background:transparent; color:#94a3b8; }
+.ft-tt-icobtn.is-close:hover{ background:#f1f5f9; color:#1e293b; }
+
+
+/* ── Body ──────────────────────────────────────── */
+.ft-tt-body { padding:.2rem .85rem .6rem; }
+.ft-tt-title {
+  font-size:.9rem; font-weight:800; color:#0f172a;
+  margin:0 0 .3rem; line-height:1.25;
+}
+.ft-tt-desc {
+  font-size:.775rem; color:#475569;
+  margin:0; line-height:1.6;
+}
+.ft-tt-wait {
+  display:flex; align-items:center; gap:.45rem;
+  margin:0; font-size:.775rem; color:#64748b;
+}
+
+/* GR badge */
+.ft-tt-gr {
+  display:flex; align-items:center; gap:.35rem; flex-wrap:wrap;
+  margin-top:.55rem;
+  padding:.38rem .6rem;
+  border-radius:.6rem;
+  background:#f0fdf4; border:1px solid #bbf7d0;
+  font-size:.73rem;
+}
+.ft-tt-gr span { font-weight:600; color:#166534; }
+.ft-tt-gr-code {
+  display:inline-flex; align-items:center;
+  padding:.08rem .45rem; border-radius:.35rem;
+  background:#dcfce7; border:1px solid #86efac;
+  font-family:ui-monospace,monospace; font-size:.78rem;
+  font-weight:800; color:#15803d; letter-spacing:.06em;
+  animation: ft-glow 1.5s ease-in-out infinite;
+}
+@keyframes ft-glow {
+  0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
+  50%    {box-shadow:0 0 0 4px rgba(34,197,94,.2)}
+}
+.ft-tt-gr-name { color:#374151; font-weight:600; }
+.ft-tt-gr--open{ background:#eff6ff; border-color:#bfdbfe; }
+.ft-tt-gr--open span{ color:#1d4ed8; }
+.ft-tt-gr--open strong{ color:#1d4ed8; }
+
+
+/* ── Dot track ─────────────────────────────────── */
+.ft-tt-dots {
+  display:flex; align-items:center; flex-wrap:nowrap;
+  gap:4px; padding:.1rem .85rem .45rem;
+  overflow-x:auto; overscroll-behavior-x:contain;
+  scrollbar-width:none;
+}
+.ft-tt-dots::-webkit-scrollbar { display:none; }
+.ft-tt-dot {
+  width:6px; height:6px; border-radius:9999px;
+  border:none; padding:0;
+  background:#e2e8f0; cursor:pointer;
+  transition:background .15s, width .2s, transform .15s;
+  flex-shrink:0;
+}
+.ft-tt-dot.is-active{ background:#6366f1; width:14px; border-radius:9999px; }
+.ft-tt-dot.is-done  { background:#a5b4fc; }
+.ft-tt-dot:hover:not(.is-active):not(.is-done){ background:#c7d2fe; }
+
+
+/* ── Navigation ────────────────────────────────── */
+.ft-tt-nav {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:.35rem; padding:.45rem .75rem .6rem;
+  border-top:1px solid #f1f5f9;
+}
+.ft-tt-btn {
+  display:inline-flex; align-items:center; gap:.2rem;
+  padding:.33rem .65rem; border-radius:.6rem;
+  font-size:.74rem; font-weight:700;
+  cursor:pointer; border:none; white-space:nowrap;
+  transition:background .14s, opacity .14s, transform .1s;
+}
+.ft-tt-btn:disabled{ opacity:.35; cursor:default; }
+
+.ft-tt-btn--ghost {
+  background:#f8fafc; color:#64748b;
+  border:1px solid #e2e8f0;
+}
+.ft-tt-btn--ghost:hover:not(:disabled){ background:#f1f5f9; border-color:#cbd5e1; color:#1e293b; }
+
+.ft-tt-btn--skip {
+  background:transparent; color:#94a3b8;
+  font-weight:600; font-size:.68rem;
+  text-decoration:underline; text-underline-offset:2px;
+  border:1px solid transparent; padding:.28rem .35rem;
+}
+.ft-tt-btn--skip:hover{ color:#ef4444; background:#fff1f2; border-color:#fecaca; text-decoration:none; }
+
+.ft-tt-btn--next {
+  background:#6366f1; color:#fff;
+  box-shadow:0 1px 6px rgba(99,102,241,.28);
+}
+.ft-tt-btn--next:hover{ background:#4f46e5; transform:translateY(-1px); }
+
+
+/* ── Mobile: pin to bottom ─────────────────────── */
+@media(max-width:560px){
+  .ft-tooltip{
+    position:fixed!important;
+    bottom:0!important; top:auto!important;
+    left:0!important; right:0!important;
+    width:100%!important;
+    max-height:min(72dvh, 520px);
+    overflow-y:auto;
+    border-radius:1rem 1rem 0 0!important;
+    box-shadow:0 -8px 40px rgba(2,6,23,.26)!important;
+    animation:ft-mob-in .22s cubic-bezier(.22,1,.36,1);
+    padding-bottom:max(.35rem, env(safe-area-inset-bottom));
+  }
+  @keyframes ft-mob-in{ from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1} }
+  .ft-tooltip::before{ display:none; }
+  .ft-tt-nav{
+    flex-wrap:wrap;
+    gap:.25rem;
+  }
+  .ft-tt-btn--skip{
+    order:3;
+    width:100%;
+    justify-content:center;
+    margin-top:.15rem;
+  }
+  .ft-cutout-border{
+    border-radius:12px;
+    border-width:2.5px;
+  }
+}
+
+body.ft-tour-active {
+  overflow:hidden;
+  touch-action:pan-x pan-y;
+}
+
+body.ft-tour-active.ft-tour-mega .tn-mega-backdrop,
+body.ft-tour-active.ft-tour-mega .tn-mega-mobile,
+body.ft-tour-active.ft-tour-mega .tn-mega-desktop,
+body.ft-tour-active.ft-tour-mega .tn-mega-panel {
+  z-index: 10000 !important;
+}
+
+html.locale-gu .ft-tt-phase {
+  letter-spacing:0 !important;
+  text-transform:none;
+  font-size:.68rem;
+}
+
+html.locale-gu .ft-tt-title {
+  font-size:1rem;
+  line-height:1.35;
+  letter-spacing:0;
+}
+
+html.locale-gu .ft-tt-desc,
+html.locale-gu .ft-tt-wait {
+  font-size:.86rem;
+  line-height:1.55;
+  letter-spacing:0;
+}

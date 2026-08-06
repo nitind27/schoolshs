@@ -174,7 +174,7 @@ export function StudentImportHub() {
   }));
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-5xl" data-ft-anchor="main">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{t("importPage.title")}</h1>

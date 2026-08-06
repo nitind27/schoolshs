@@ -184,7 +184,7 @@ export function DashboardDrillModal({
 
   return (
     <>
-      <InfoModal isOpen={open} onClose={onClose} title={title} size="xl">
+      <InfoModal isOpen={open} onClose={onClose} title={title} size="xl" eyebrow={t("dashboard.drillEyebrow")}>
         <div className="ops-drill">
           <div className="ops-drill-toolbar">
             <div className="ops-drill-search">
@@ -331,6 +331,7 @@ export function DashboardDrillModal({
               <table className="ops-drill-table">
                 <thead>
                   <tr>
+                    <th className="ops-drill-sr">{t("common.srNo")}</th>
                     <th>{t("dashboard.drillColRoll")}</th>
                     <th>{t("dashboard.drillColName")}</th>
                     <th>{t("dashboard.drillColClass")}</th>
@@ -341,8 +342,9 @@ export function DashboardDrillModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((s) => (
+                  {students.map((s, i) => (
                     <tr key={s.id}>
+                      <td className="ops-drill-sr">{(page - 1) * PAGE_SIZE + i + 1}</td>
                       <td>{s.rollNumber || "—"}</td>
                       <td>
                         <Link href={`/students/${s.id}`} className="ops-drill-name">

@@ -459,7 +459,7 @@ export function StaffForm({
                 {t("common.cancel")}
               </Button>
             </Link>
-            <Button type="submit" disabled={loading} className="min-w-[150px]">
+            <Button type="submit" disabled={loading} className="sm:min-w-[150px]">
               <Save className="h-4 w-4" />
               {loading ? t("common.saving") : resolvedSubmitLabel}
             </Button>

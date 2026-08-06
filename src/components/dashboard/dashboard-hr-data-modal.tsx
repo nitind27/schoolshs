@@ -160,7 +160,7 @@ export function DashboardHrDataModal({ open, onClose, kind, month, year }: Props
   const payTotalNet = payRows.reduce((s, r) => s + (r.netSalary || 0), 0);
 
   return (
-    <InfoModal isOpen={open} onClose={onClose} title={`${titleMap[kind]} · ${month}/${year}`} size="xl">
+    <InfoModal isOpen={open} onClose={onClose} title={`${titleMap[kind]} · ${month}/${year}`} size="xl" eyebrow={t("dashboard.hrEyebrow")}>
       <div className="ops-drill">
         <div className="ops-drill-toolbar">
           <div className="ops-drill-search">
@@ -233,6 +233,7 @@ export function DashboardHrDataModal({ open, onClose, kind, month, year }: Props
             <table className="ops-drill-table">
               <thead>
                 <tr>
+                  <th className="ops-drill-sr">{t("common.srNo")}</th>
                   <th>{t("dashboard.staffColId")}</th>
                   <th>{t("dashboard.drillColName")}</th>
                   <th>{t("dashboard.staffColDesignation")}</th>
@@ -245,8 +246,9 @@ export function DashboardHrDataModal({ open, onClose, kind, month, year }: Props
                 </tr>
               </thead>
               <tbody>
-                {(paged as AttnRow[]).map((r) => (
+                {(paged as AttnRow[]).map((r, i) => (
                   <tr key={r.staffId}>
+                    <td className="ops-drill-sr">{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td>{r.employeeId || "—"}</td>
                     <td>
                       <Link href={`/staff/${r.staffId}/edit`} className="ops-drill-name">{r.name}</Link>
@@ -270,6 +272,7 @@ export function DashboardHrDataModal({ open, onClose, kind, month, year }: Props
             <table className="ops-drill-table">
               <thead>
                 <tr>
+                  <th className="ops-drill-sr">{t("common.srNo")}</th>
                   <th>{t("dashboard.staffColId")}</th>
                   <th>{t("dashboard.drillColName")}</th>
                   <th>{t("dashboard.staffColDesignation")}</th>
@@ -281,8 +284,9 @@ export function DashboardHrDataModal({ open, onClose, kind, month, year }: Props
                 </tr>
               </thead>
               <tbody>
-                {(paged as PayRow[]).map((r) => (
+                {(paged as PayRow[]).map((r, i) => (
                   <tr key={r.staffId}>
+                    <td className="ops-drill-sr">{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td>{r.employeeId || "—"}</td>
                     <td>
                       <Link href={`/staff/${r.staffId}/edit`} className="ops-drill-name">{r.name}</Link>

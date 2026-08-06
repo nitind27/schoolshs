@@ -151,43 +151,51 @@ export default function IncomeTaxPage() {
         { label: t("incomeTax.title") },
       ]}
       actions={
-        <>
+        <div className="flex flex-wrap gap-2 print:hidden">
           <Select
             value={fy}
             onChange={(e) => setFy(e.target.value)}
             options={slipFyOptions().map((y) => ({ value: y, label: y }))}
-            className="w-32"
+            className="w-28"
           />
           <Button size="sm" variant="outline" onClick={downloadExcel} disabled={!staffId || loading || exporting}>
-            <Download className="h-4 w-4" />
-            {t("dashboard.exportExcel")}
+            {exporting ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <Download className="h-4 w-4" />}
+            <span className="hidden sm:inline">{t("dashboard.exportExcel")}</span>
           </Button>
           <Button size="sm" variant="outline" onClick={() => window.print()} disabled={!staffId || loading}>
             <Printer className="h-4 w-4" />
-            {t("certificates.print")}
+            <span className="hidden sm:inline">{t("certificates.print")}</span>
           </Button>
           <Button size="sm" variant="success" onClick={save} disabled={!staffId || loading || saving}>
             <Save className="h-4 w-4" />
             {saving ? t("common.saving") : t("common.save")}
           </Button>
-        </>
+        </div>
       }
     >
       <Card className="print:hidden">
-        <CardContent className="p-4">
-          <div className="w-full sm:w-96">
-            <Select
-              label={t("salarySlip.selectStaff")}
-              value={staffId}
-              onChange={(e) => setStaffId(e.target.value)}
-              options={[
-                { value: "", label: t("salarySlip.selectStaffPlaceholder") },
-                ...staffList.map((s) => ({
-                  value: s.id,
-                  label: `${s.employeeId ? s.employeeId + " — " : ""}${s.firstName} ${s.lastName} (${s.designation})`,
-                })),
-              ]}
-            />
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+            <div className="flex-1">
+              <Select
+                label={t("salarySlip.selectStaff")}
+                value={staffId}
+                onChange={(e) => setStaffId(e.target.value)}
+                options={[
+                  { value: "", label: t("salarySlip.selectStaffPlaceholder") },
+                  ...staffList.map((s) => ({
+                    value: s.id,
+                    label: `${s.employeeId ? s.employeeId + " — " : ""}${s.firstName} ${s.lastName} (${s.designation})`,
+                  })),
+                ]}
+              />
+            </div>
+            {staff && (
+              <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-800 sm:shrink-0">
+                <Landmark className="h-3.5 w-3.5 shrink-0" />
+                {t("incomeTax.title")} · {fy}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -206,15 +214,19 @@ export default function IncomeTaxPage() {
           <p className="text-slate-600 font-medium">{t("salarySlip.pickStaffHint")}</p>
         </div>
       ) : (
-        <Card>
-          <CardContent className="p-3 md:p-5">
-            <div className="max-w-full overflow-x-auto">
-            <div className="income-tax-area mx-auto min-w-[680px] max-w-4xl">
-              {/* ── Form title ── */}
-              <div className="it-form-title">
-                <p className="it-t1">આવકવેરાની ગણતરી દર્શાવતું પત્રક</p>
-                <p className="it-t2">નાણાંકીય વર્ષ {fy} · આકારણી વર્ષ {assessmentYear(fy)}</p>
-              </div>
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            {/* Mobile scroll hint */}
+            <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2 sm:hidden print:hidden">
+              <span className="text-xs text-slate-500">← {t("staffHr.scrollHint")} →</span>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="income-tax-area p-3 sm:p-5">
+                {/* ── Form title ── */}
+                <div className="it-form-title">
+                  <p className="it-t1">આવકવેરાની ગણતરી દર્શાવતું પત્રક</p>
+                  <p className="it-t2">નાણાંકીય વર્ષ {fy} · આકારણી વર્ષ {assessmentYear(fy)}</p>
+                </div>
 
               {/* ── Employee header — image jaisa grid ── */}
               <table className="it-head-tbl">
@@ -458,8 +470,8 @@ export default function IncomeTaxPage() {
                 <span>કર્મચારીની સહી</span>
                 <span>તારીખ: ____________</span>
               </div>
-            </div>
-            </div>
+              </div>{/* income-tax-area */}
+            </div>{/* overflow-x-auto */}
           </CardContent>
         </Card>
       )}

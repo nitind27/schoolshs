@@ -14,8 +14,12 @@ import {
   metaFromTemplateTerms,
   parseExamTermMeta,
   parseTermRemarks,
+  pickSubjectMarkField,
+  resolveTermInternalMax,
   serializeExamTermMeta,
   serializeTermRemarks,
+  TERM_INTERNAL_MARK_KEYS,
+  TERM_PAPER_MARK_KEYS,
   writeTermInternalScore,
   writeTermScore,
   type ExamTermKey,
@@ -247,7 +251,10 @@ export async function POST(request: NextRequest) {
 
       for (const st of body.students || []) {
         for (const sub of st.subjectMarks || []) {
-          const def = sheetConfig.subjects.find((s) => s.code === sub.subjectCode);
+          const markSub = sub as Record<string, unknown>;
+          const def = sheetConfig.subjects.find(
+            (s) => s.code === String(sub.subjectCode || markSub.subjectCode || ""),
+          );
           if (!def) continue;
           const examSub =
             exam.subjects.find((s) => s.code === def.code) ||
@@ -269,28 +276,37 @@ export async function POST(request: NextRequest) {
           let remarks: import("@/lib/results/marks-sheet-config").MarksSheetTermData = {
             ...termData,
             scores: { ...(termData.scores || {}) },
+            internalScores: { ...(termData.internalScores || {}) },
           };
+
+          const internalMax = resolveTermInternalMax(term);
+          const paperRaw = pickSubjectMarkField(markSub, TERM_PAPER_MARK_KEYS);
+          const internalRaw = pickSubjectMarkField(markSub, TERM_INTERNAL_MARK_KEYS);
 
           if (def.type === "grade") {
             if (sub.letterGrade != null) remarks.letterGrade = sub.letterGrade || null;
           } else if (term.role === "final") {
-            const annual = clampTermMarks(term, sub.termValue != null ? Number(sub.termValue) : null);
-            const internal = clampTermMarks(
-              { ...term, maxMarks: term.internalMax ?? 20 },
-              sub.internalValue != null ? Number(sub.internalValue) : null,
-            );
-            if (annual != null) marksObtained = annual;
-            if ((term.internalMax ?? 0) > 0) {
+            if (paperRaw !== undefined) {
+              const annual = clampTermMarks(term, paperRaw);
+              if (annual != null) marksObtained = annual;
+            }
+            if (internalRaw !== undefined && internalMax > 0) {
+              const internal = clampTermMarks(
+                { ...term, maxMarks: internalMax },
+                internalRaw,
+              );
               remarks = writeTermInternalScore(term, remarks, internal);
             }
           } else {
-            const val = clampTermMarks(term, sub.termValue != null ? Number(sub.termValue) : null);
-            const written = writeTermScore(term, remarks, val);
-            remarks = written.termData;
-            if ((term.internalMax ?? 0) > 0) {
+            if (paperRaw !== undefined) {
+              const val = clampTermMarks(term, paperRaw);
+              const written = writeTermScore(term, remarks, val);
+              remarks = written.termData;
+            }
+            if (internalRaw !== undefined && internalMax > 0) {
               const internal = clampTermMarks(
-                { ...term, maxMarks: term.internalMax ?? 0 },
-                sub.internalValue != null ? Number(sub.internalValue) : null,
+                { ...term, maxMarks: internalMax },
+                internalRaw,
               );
               remarks = writeTermInternalScore(term, remarks, internal);
             }

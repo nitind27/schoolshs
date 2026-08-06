@@ -242,7 +242,7 @@ export default function SalarySlipPage() {
                   <span className="ml-2 text-sm font-medium text-slate-500">{staff.designation}</span>
                 </h3>
               </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-3 lg:grid-cols-5 sl-details">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-3 xl:grid-cols-5 sl-details">
                 {detailItems.map(([label, value]) => (
                   <div key={label}>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>

@@ -473,7 +473,7 @@ function AutoApplyContent() {
     fullFilteredStudents.every((s) => selected.has(s.id));
 
   return (
-    <div className="-m-1 flex min-h-0 flex-col lg:h-[calc(100dvh-5.5rem)] lg:min-h-[520px]">
+    <div className="-m-1 flex min-h-0 flex-col lg:h-[calc(100dvh-5.5rem)] lg:min-h-[520px]" data-ft-anchor="main">
       {preselectIds.size > 0 && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           <span className="font-medium">

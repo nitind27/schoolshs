@@ -12,6 +12,7 @@ import { NavbarChatButton } from "@/components/layout/navbar-chat";
 import { NavbarLetterheadButton } from "@/components/layout/navbar-letterhead";
 import { NavbarMegaMenu } from "@/components/layout/navbar-mega-menu";
 import { NavbarGrSearch } from "@/components/layout/navbar-gr-search";
+import { FeatureTourTrigger } from "@/components/feature-tour/feature-tour-panel";
 import { toast } from "@/components/ui/toast";
 import { AUTH_CHANGED_EVENT, notifyAuthChanged } from "@/lib/auth-client";
 import "./top-navbar.css";
@@ -122,14 +123,15 @@ export function TopNavbar({
     <header
       className={cn(
         "tn-shell fixed top-0 right-0 z-40",
-        "flex items-center gap-3 px-3 sm:px-4",
-        "pl-16 lg:pl-5 left-0 lg:left-[var(--shell-sidebar-w)]",
+        "flex items-center gap-2 px-2 sm:gap-3 sm:px-4",
+        "pl-[3.25rem] lg:pl-5 left-0 lg:left-[var(--shell-sidebar-w)]",
       )}
       style={{ ["--shell-sidebar-w" as string]: `${sidebarWidth}px` }}
       data-has-search={showGrSearch ? "true" : "false"}
     >
+      <div className="tn-toolbar">
       {/* Brand first */}
-      <div className="mr-auto flex min-w-0 shrink-0 items-center gap-3">
+      <div className="tn-shell-left mr-auto flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
         {!showMegaMenu && (
           <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--tn-ink)] text-white sm:inline-flex">
             <Sparkles className="h-3.5 w-3.5" />
@@ -167,6 +169,7 @@ export function TopNavbar({
           {showLetterhead && <NavbarLetterheadButton role={user?.role} />}
           {showChat && <NavbarChatButton role={user?.role} />}
           {showNotifications && <NotificationBell />}
+          {showMegaMenu && <FeatureTourTrigger />}
         </div>
 
         <span className="tn-divider hidden sm:block" aria-hidden />
@@ -189,14 +192,14 @@ export function TopNavbar({
             </span>
             <ChevronDown
               className={cn(
-                "h-3 w-3 opacity-50 transition-transform",
+                "hidden sm:block h-3 w-3 opacity-50 transition-transform",
                 langOpen && "rotate-180",
               )}
             />
           </button>
 
           {langOpen && (
-            <div className="tn-dropdown absolute right-0 z-50 mt-2 w-44 rounded-xl p-1.5">
+            <div className="tn-dropdown tn-lang-menu absolute right-0 z-50 mt-2 w-44 rounded-xl p-1.5">
               <p className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 {t("lang.language")}
               </p>
@@ -250,7 +253,7 @@ export function TopNavbar({
           </button>
 
           {profileOpen && (
-            <div className="tn-dropdown absolute right-0 z-50 mt-2 w-60 rounded-xl p-1.5">
+            <div className="tn-dropdown tn-profile-menu absolute right-0 z-50 mt-2 w-60 rounded-xl p-1.5">
               <div className="mb-1 rounded-lg bg-slate-50 px-3 py-2.5">
                 <p className="truncate text-sm font-semibold text-slate-900">
                   {user?.name}
@@ -287,6 +290,7 @@ export function TopNavbar({
             </div>
           )}
         </div>
+      </div>
       </div>
     </header>
   );

@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { useLocale } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import "./modal.css";
 
 export type ConfirmVariant = "default" | "destructive" | "warning";
 
@@ -23,22 +24,19 @@ export interface ConfirmModalProps {
 
 const variantStyles: Record<
   ConfirmVariant,
-  { icon: typeof Trash2; iconBg: string; iconColor: string }
+  { icon: typeof Trash2; iconClass: string }
 > = {
   destructive: {
     icon: Trash2,
-    iconBg: "bg-red-100",
-    iconColor: "text-red-600",
+    iconClass: "is-destructive",
   },
   warning: {
     icon: AlertTriangle,
-    iconBg: "bg-amber-100",
-    iconColor: "text-amber-600",
+    iconClass: "is-warning",
   },
   default: {
     icon: AlertTriangle,
-    iconBg: "bg-blue-100",
-    iconColor: "text-blue-600",
+    iconClass: "is-default",
   },
 };
 
@@ -84,7 +82,7 @@ export function ConfirmModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-end justify-center p-2 sm:items-center sm:p-6"
+      className="info-modal-root fixed inset-0 z-[200] flex items-end justify-center p-2 sm:items-center sm:p-6"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
@@ -92,7 +90,7 @@ export function ConfirmModal({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+        className="info-modal-backdrop"
         onClick={loading ? undefined : onClose}
         disabled={loading}
         aria-label={cancelLabel ?? t("common.cancel")}
@@ -101,25 +99,21 @@ export function ConfirmModal({
       <div
         ref={modalRef}
         className={cn(
-          "relative z-10 max-h-[calc(100dvh-1rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl animate-fade-in",
-          locale === "gu" && "font-gujarati"
+          "confirm-modal-panel",
+          locale === "gu" && "font-gujarati",
         )}
+        data-variant={variant}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-4 pb-2 pt-4 sm:px-6 sm:pt-6">
+        <div className="px-4 pb-2 pt-5 sm:px-6 sm:pt-6">
           <div className="flex items-start gap-3 sm:gap-4">
-            <div
-              className={cn(
-                "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
-                styles.iconBg
-              )}
-            >
-              <Icon className={cn("h-5 w-5", styles.iconColor)} />
+            <div className={cn("confirm-modal-icon", styles.iconClass)}>
+              <Icon className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1 pt-0.5">
               <h2
                 id="confirm-modal-title"
-              className="break-words text-base font-semibold text-slate-900 sm:text-lg"
+                className="break-words text-base font-bold text-slate-900 sm:text-lg"
               >
                 {title}
               </h2>
@@ -134,15 +128,15 @@ export function ConfirmModal({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+              className="info-modal-close disabled:opacity-50"
               aria-label={cancelLabel ?? t("common.cancel")}
             >
-              <X className="h-4 w-4" />
+              <X className="h-[1.05rem] w-[1.05rem]" />
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col-reverse gap-2 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
+        <div className="confirm-modal-foot">
           <Button
             type="button"
             variant="outline"
@@ -170,6 +164,6 @@ export function ConfirmModal({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

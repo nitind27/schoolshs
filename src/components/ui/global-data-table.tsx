@@ -132,7 +132,7 @@ export function GlobalDataTable<TData>({
   return (
     <div className={cn("overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm", className)}>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[560px] text-sm sm:min-w-[640px] lg:min-w-[760px]">
           <thead className="bg-gradient-to-r from-slate-50 via-sky-50/70 to-indigo-50/50">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-sky-100/80">

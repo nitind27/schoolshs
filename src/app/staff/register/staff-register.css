@@ -6,6 +6,7 @@
 
 .sr-tbl {
   width: 100%;
+  min-width: 960px;
   border-collapse: collapse;
   font-size: 12px;
 }

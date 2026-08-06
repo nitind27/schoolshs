@@ -238,7 +238,9 @@ export async function middleware(request: NextRequest) {
       "/api/staff",
       "/staff/attendance",
       "/staff/payroll",
+      "/staff/holidays",
       "/api/staff-hr",
+      "/api/holidays",
       "/chat",
       "/api/chat",
       "/api/uploads/chat",
@@ -288,6 +290,8 @@ export async function middleware(request: NextRequest) {
           pathname.startsWith("/api/uploads/chat") ||
           pathname.startsWith("/api/notifications") ||
           pathname.startsWith("/api/help") ||
+          pathname.startsWith("/staff/holidays") ||
+          pathname.startsWith("/api/holidays") ||
           pathname.startsWith("/profile") ||
           pathname.startsWith("/api/account"))) ||
       (session.role === "clerk" &&

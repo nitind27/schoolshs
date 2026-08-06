@@ -27,6 +27,7 @@ import {
   CalendarClock,
   Hash,
   Armchair,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -178,6 +179,12 @@ const useNavGroups = (
             href: "/staff/salary-ledger",
             label: t("salaryLedger.title"),
             icon: BookOpen,
+            featureKey: "staff",
+          },
+          {
+            href: "/staff/holidays",
+            label: t("nav.staffHolidays"),
+            icon: CalendarDays,
             featureKey: "staff",
           },
         ],
@@ -402,9 +409,9 @@ export function Sidebar() {
         type="button"
         onClick={() => setMobileOpen(true)}
         aria-label="Open menu"
-        className="fixed top-2.5 left-3 z-50 lg:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-md text-slate-700 cursor-pointer"
+        className="shell-menu-btn fixed left-2.5 z-[45] lg:hidden flex items-center justify-center rounded-xl bg-white border border-slate-200 shadow-sm text-slate-700 cursor-pointer"
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-[1.15rem] w-[1.15rem]" />
       </button>
 
       {mobileOpen && (

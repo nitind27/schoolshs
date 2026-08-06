@@ -46,9 +46,10 @@ html.locale-gu .dashboard-page .font-mono {
 }
 
 html.locale-gu .ops-eyebrow {
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   text-transform: none;
   font-weight: 700;
+  font-size: 0.78rem;
 }
 
 .dashboard-hero {
@@ -3028,6 +3029,8 @@ button.ops-flow-action {
 html.locale-gu .ops-dash .dashboard-hero-greeting {
   letter-spacing: 0;
   font-weight: 700;
+  font-size: 1.45rem;
+  line-height: 1.25;
 }
 
 .ops-dash .dashboard-hero-time {
@@ -3083,6 +3086,9 @@ html.locale-gu .ops-dash .dashboard-hero-greeting {
 
 html.locale-gu .ops-glance-copy h2 {
   font-weight: 700;
+  font-size: 1.22rem;
+  letter-spacing: 0;
+  line-height: 1.3;
 }
 
 .ops-glance-copy > p:last-child {
@@ -3418,6 +3424,8 @@ html.locale-gu .ops-pulse-head h2,
 html.locale-gu .ops-command-head h2 {
   font-weight: 700 !important;
   letter-spacing: 0 !important;
+  font-size: 1.05rem !important;
+  line-height: 1.3 !important;
 }
 
 .ops-admit-kpi {
@@ -4798,4 +4806,569 @@ html.locale-gu .ops-main-tab-copy strong {
   .ops-drill-filters {
     grid-template-columns: minmax(0, 1fr) !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Color refresh — richer surfaces (less flat white)
+   School ops palette: navy · teal · sky · emerald · amber · rose
+   ═══════════════════════════════════════════════════════════ */
+
+.dashboard-page.ops-dash {
+  background:
+    radial-gradient(ellipse 90% 45% at 8% -8%, rgb(14 165 233 / 0.16), transparent 52%),
+    radial-gradient(ellipse 70% 40% at 96% 0%, rgb(13 148 136 / 0.14), transparent 48%),
+    radial-gradient(ellipse 50% 30% at 50% 100%, rgb(37 99 235 / 0.06), transparent 55%),
+    linear-gradient(180deg, #e8f4fc 0%, #eef6f4 38%, #eef2f7 100%);
+}
+
+/* Main Students / Staff switcher */
+.ops-dash .ops-main-tabs {
+  border-color: #b8d4ea;
+  background: linear-gradient(180deg, #dbeafe 0%, #e0f2fe 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.65);
+}
+
+.ops-dash .ops-main-tabs-thumb {
+  background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+  border: 1px solid rgb(147 197 253 / 0.55);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.9) inset,
+    0 8px 18px -10px rgb(37 99 235 / 0.35);
+}
+
+.ops-dash .ops-main-tabs[data-active="staff"] .ops-main-tabs-thumb {
+  background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%);
+  border-color: rgb(94 234 212 / 0.55);
+}
+
+/* Desk / priority shell */
+.ops-dash .ops-desk {
+  border-color: rgb(56 189 248 / 0.45);
+  background:
+    radial-gradient(ellipse 75% 55% at 0% 0%, rgb(251 146 60 / 0.18), transparent 52%),
+    radial-gradient(ellipse 65% 50% at 100% 8%, rgb(14 165 233 / 0.16), transparent 48%),
+    linear-gradient(165deg, #fff7ed 0%, #e0f2fe 42%, #f0f9ff 100%);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.85) inset,
+    0 18px 40px -28px rgb(14 116 144 / 0.35);
+}
+
+.ops-dash .ops-desk-staff {
+  border-color: rgb(45 212 191 / 0.5) !important;
+  background:
+    radial-gradient(ellipse 70% 50% at 0% 0%, rgb(45 212 191 / 0.2), transparent 52%),
+    radial-gradient(ellipse 60% 45% at 100% 10%, rgb(59 130 246 / 0.14), transparent 50%),
+    linear-gradient(165deg, #ccfbf1 0%, #e0f2fe 48%, #f0fdfa 100%) !important;
+}
+
+/* Live pulse strip + KPI tiles */
+.ops-dash .ops-pulse {
+  border-color: #7dd3fc;
+  background:
+    radial-gradient(circle at 0% 0%, rgb(59 130 246 / 0.2), transparent 42%),
+    radial-gradient(circle at 100% 100%, rgb(16 185 129 / 0.16), transparent 45%),
+    linear-gradient(180deg, #dbeafe 0%, #e0f2fe 45%, #f0f9ff 100%);
+}
+
+.ops-dash .ops-pulse-tile.is-blue {
+  background: linear-gradient(160deg, #bfdbfe 0%, #dbeafe 45%, #eff6ff 100%);
+  border-color: #60a5fa;
+  color: #1e40af;
+  box-shadow: 0 10px 22px -16px rgb(37 99 235 / 0.45);
+}
+
+.ops-dash .ops-pulse-tile.is-emerald {
+  background: linear-gradient(160deg, #a7f3d0 0%, #d1fae5 45%, #ecfdf5 100%);
+  border-color: #34d399;
+  color: #047857;
+  box-shadow: 0 10px 22px -16px rgb(5 150 105 / 0.4);
+}
+
+.ops-dash .ops-pulse-tile.is-amber {
+  background: linear-gradient(160deg, #fde68a 0%, #fef3c7 45%, #fffbeb 100%);
+  border-color: #fbbf24;
+  color: #b45309;
+  box-shadow: 0 10px 22px -16px rgb(217 119 6 / 0.4);
+}
+
+.ops-dash .ops-pulse-tile.is-violet {
+  background: linear-gradient(160deg, #bae6fd 0%, #e0f2fe 45%, #f0f9ff 100%);
+  border-color: #38bdf8;
+  color: #0369a1;
+  box-shadow: 0 10px 22px -16px rgb(2 132 199 / 0.4);
+}
+
+.ops-dash .ops-pulse-tile.is-rose {
+  background: linear-gradient(160deg, #fecdd3 0%, #ffe4e6 45%, #fff1f2 100%);
+  border-color: #fb7185;
+  color: #be123c;
+  box-shadow: 0 10px 22px -16px rgb(225 29 72 / 0.35);
+}
+
+.ops-dash .ops-pulse-tile.is-slate {
+  background: linear-gradient(160deg, #cbd5e1 0%, #e2e8f0 40%, #f1f5f9 100%);
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.ops-dash .ops-pulse-tile.is-blue .ops-pulse-ico {
+  background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  box-shadow: none;
+}
+
+.ops-dash .ops-pulse-tile.is-emerald .ops-pulse-ico {
+  background: linear-gradient(145deg, #34d399, #047857);
+  color: #fff;
+  box-shadow: none;
+}
+
+.ops-dash .ops-pulse-tile.is-amber .ops-pulse-ico {
+  background: linear-gradient(145deg, #fbbf24, #d97706);
+  color: #fff;
+  box-shadow: none;
+}
+
+.ops-dash .ops-pulse-tile.is-violet .ops-pulse-ico {
+  background: linear-gradient(145deg, #38bdf8, #0284c7);
+  color: #fff;
+  box-shadow: none;
+}
+
+.ops-dash .ops-pulse-tile.is-rose .ops-pulse-ico {
+  background: linear-gradient(145deg, #fb7185, #e11d48);
+  color: #fff;
+  box-shadow: none;
+}
+
+.ops-dash .ops-pulse-tile.is-slate .ops-pulse-ico {
+  background: linear-gradient(145deg, #64748b, #334155);
+  color: #fff;
+  box-shadow: none;
+}
+
+.ops-dash .ops-pulse-tile > span:last-child {
+  color: inherit;
+  opacity: 0.78;
+}
+
+.ops-dash .ops-pulse-bar {
+  background: rgb(15 23 42 / 0.08);
+}
+
+.ops-dash .ops-pulse-bar > i {
+  background: linear-gradient(90deg, #0d9488, #0284c7);
+}
+
+/* Command center */
+.ops-dash .ops-command {
+  border-color: #7dd3fc;
+  background:
+    radial-gradient(circle at 0% 0%, rgb(59 130 246 / 0.16), transparent 42%),
+    linear-gradient(180deg, #dbeafe 0%, #e0f2fe 40%, #f0f9ff 100%);
+}
+
+.ops-dash .ops-command-priority {
+  border-color: #fdba74;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(251 146 60 / 0.2), transparent 50%),
+    linear-gradient(135deg, #ffedd5 0%, #fff7ed 55%, #fffbeb 100%);
+}
+
+.ops-dash .ops-attention {
+  border-color: #fbbf24;
+  background: linear-gradient(135deg, #fef3c7, #fffbeb);
+}
+
+.ops-dash .ops-attention.is-clear {
+  border-color: #34d399;
+  background: linear-gradient(135deg, #a7f3d0, #ecfdf5);
+}
+
+.ops-dash .ops-attention-chip.is-amber {
+  border-color: #f59e0b;
+  background: linear-gradient(145deg, #fde68a, #fef3c7);
+  color: #92400e;
+}
+
+.ops-dash .ops-attention-chip.is-rose {
+  border-color: #f43f5e;
+  background: linear-gradient(145deg, #fecdd3, #ffe4e6);
+  color: #9f1239;
+}
+
+.ops-dash .ops-attention-chip.is-teal {
+  border-color: #14b8a6;
+  background: linear-gradient(145deg, #99f6e4, #ccfbf1);
+  color: #115e59;
+}
+
+.ops-dash .ops-attention-chip.is-violet {
+  border-color: #0ea5e9;
+  background: linear-gradient(145deg, #bae6fd, #e0f2fe);
+  color: #075985;
+}
+
+.ops-dash .ops-attention-chip.is-blue {
+  border-color: #3b82f6;
+  background: linear-gradient(145deg, #bfdbfe, #dbeafe);
+  color: #1e3a8a;
+}
+
+/* Hubs — keep color through the card */
+.ops-dash .ops-hub[data-tone="blue"] {
+  border-color: #38bdf8 !important;
+  background: linear-gradient(165deg, #bae6fd 0%, #e0f2fe 40%, #f0f9ff 100%) !important;
+}
+
+.ops-dash .ops-hub[data-tone="violet"] {
+  border-color: #38bdf8 !important;
+  background: linear-gradient(165deg, #bfdbfe 0%, #dbeafe 40%, #eff6ff 100%) !important;
+}
+
+.ops-dash .ops-hub[data-tone="teal"] {
+  border-color: #2dd4bf !important;
+  background: linear-gradient(165deg, #99f6e4 0%, #ccfbf1 40%, #f0fdfa 100%) !important;
+}
+
+.ops-dash .ops-hub[data-tone="amber"] {
+  border-color: #fbbf24 !important;
+  background: linear-gradient(165deg, #fde68a 0%, #fef3c7 40%, #fffbeb 100%) !important;
+}
+
+.ops-dash .ops-hub[data-tone="sky"] {
+  border-color: #0ea5e9 !important;
+  background: linear-gradient(165deg, #7dd3fc 0%, #bae6fd 35%, #e0f2fe 100%) !important;
+}
+
+.ops-dash .ops-hub-stats > div {
+  background: rgb(255 255 255 / 0.72);
+  border-color: rgb(255 255 255 / 0.55);
+  backdrop-filter: blur(4px);
+}
+
+/* Filters / control center */
+.ops-dash .ops-control {
+  border-color: #5eead4;
+  background:
+    radial-gradient(circle at 0% 0%, rgb(13 148 136 / 0.14), transparent 42%),
+    radial-gradient(circle at 100% 0%, rgb(37 99 235 / 0.1), transparent 45%),
+    linear-gradient(180deg, #ccfbf1 0%, #e0f2fe 48%, #f0fdfa 100%);
+}
+
+.ops-dash .dashboard-filters-card {
+  border-color: #99f6e4;
+  background: linear-gradient(180deg, #f0fdfa 0%, #ffffff 55%);
+  box-shadow: 0 12px 28px -16px rgb(13 148 136 / 0.28);
+}
+
+.ops-dash .dashboard-filters-head {
+  background: linear-gradient(90deg, #ccfbf1 0%, #e0f2fe 50%, #f0f9ff 100%);
+  border-bottom-color: #99f6e4;
+}
+
+.ops-dash .dashboard-filter-chips {
+  background: rgb(204 251 241 / 0.45);
+  border-bottom-color: #99f6e4;
+}
+
+.ops-dash .dashboard-filter-preset {
+  background: #fff;
+  border-color: #cbd5e1;
+}
+
+.ops-dash .dashboard-filter-preset.is-active {
+  background: linear-gradient(135deg, #0f766e, #0369a1);
+  box-shadow: 0 8px 18px -12px rgb(15 118 110 / 0.5);
+}
+
+.ops-dash .dashboard-toolbar {
+  border-color: #7dd3fc;
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 50%, #ecfeff 100%);
+}
+
+/* Insights + chart cards */
+.ops-dash .ops-insights {
+  border-color: #7dd3fc;
+  background:
+    radial-gradient(700px 180px at 0% 0%, rgb(14 165 233 / 0.16), transparent 55%),
+    radial-gradient(500px 140px at 100% 0%, rgb(13 148 136 / 0.12), transparent 50%),
+    linear-gradient(180deg, #e0f2fe 0%, #f0f9ff 55%, #f8fafc 100%);
+}
+
+.ops-dash .ops-insights-tabs button {
+  background: rgb(255 255 255 / 0.75);
+  border-color: #bae6fd;
+}
+
+.ops-dash .ops-insights-tabs button.is-active {
+  background: linear-gradient(135deg, #0f766e, #0369a1);
+  border-color: transparent;
+  box-shadow: 0 8px 16px -10px rgb(15 118 110 / 0.55);
+}
+
+.ops-dash .ops-chart-card {
+  border-width: 1.5px;
+  box-shadow: 0 12px 26px -18px rgb(15 23 42 / 0.28);
+}
+
+.ops-dash .ops-chart-card[data-tone="violet"] {
+  border-color: #7dd3fc;
+  background: linear-gradient(165deg, #bae6fd 0%, #e0f2fe 38%, #f0f9ff 100%);
+}
+
+.ops-dash .ops-chart-card[data-tone="blue"] {
+  border-color: #60a5fa;
+  background: linear-gradient(165deg, #bfdbfe 0%, #dbeafe 38%, #eff6ff 100%);
+}
+
+.ops-dash .ops-chart-card[data-tone="teal"] {
+  border-color: #2dd4bf;
+  background: linear-gradient(165deg, #99f6e4 0%, #ccfbf1 38%, #f0fdfa 100%);
+}
+
+.ops-dash .ops-chart-card[data-tone="pink"] {
+  border-color: #fb7185;
+  background: linear-gradient(165deg, #fecdd3 0%, #ffe4e6 38%, #fff1f2 100%);
+}
+
+.ops-dash .ops-chart-card::before {
+  height: 4px;
+}
+
+/* Admission KPIs */
+.ops-dash .ops-admit-hero {
+  border-color: #5eead4;
+  background: linear-gradient(135deg, #ccfbf1 0%, #e0f2fe 55%, #f0fdfa 100%);
+}
+
+.ops-dash .ops-admit-kpi.is-amber {
+  background: linear-gradient(160deg, #fde68a, #fef3c7);
+  border-color: #fbbf24;
+}
+
+.ops-dash .ops-admit-kpi.is-green {
+  background: linear-gradient(160deg, #a7f3d0, #d1fae5);
+  border-color: #34d399;
+}
+
+.ops-dash .ops-admit-kpi.is-rose {
+  background: linear-gradient(160deg, #fecdd3, #ffe4e6);
+  border-color: #fb7185;
+}
+
+.ops-dash .ops-admit-kpi.is-blue,
+.ops-dash .ops-admit-kpi.is-total {
+  background: linear-gradient(160deg, #bfdbfe, #dbeafe);
+  border-color: #60a5fa;
+}
+
+.ops-dash .ops-admit-kpi.is-violet {
+  background: linear-gradient(160deg, #bae6fd, #e0f2fe);
+  border-color: #38bdf8;
+}
+
+.ops-dash .ops-admit-kpi.is-teal {
+  background: linear-gradient(160deg, #99f6e4, #ccfbf1);
+  border-color: #2dd4bf;
+}
+
+/* Shortcut / flow actions */
+.ops-dash .ops-flow-action[data-tone="sky"] {
+  background: linear-gradient(145deg, #bae6fd, #e0f2fe);
+  border-color: #38bdf8;
+}
+
+.ops-dash .ops-flow-action[data-tone="indigo"] {
+  background: linear-gradient(145deg, #bfdbfe, #dbeafe);
+  border-color: #60a5fa;
+}
+
+.ops-dash .ops-flow-action[data-tone="violet"] {
+  background: linear-gradient(145deg, #a5f3fc, #cffafe);
+  border-color: #22d3ee;
+}
+
+.ops-dash .ops-flow-action[data-tone="teal"] {
+  background: linear-gradient(145deg, #99f6e4, #ccfbf1);
+  border-color: #2dd4bf;
+}
+
+.ops-dash .ops-flow-action[data-tone="amber"] {
+  background: linear-gradient(145deg, #fde68a, #fef3c7);
+  border-color: #fbbf24;
+}
+
+.ops-dash .ops-flow-more {
+  border-color: #7dd3fc;
+  background: linear-gradient(180deg, #e0f2fe, #f0f9ff);
+}
+
+.ops-dash .ops-flow-compact,
+.ops-dash .ops-flow {
+  border-color: #5eead4;
+  background: linear-gradient(180deg, #ccfbf1 0%, #e0f2fe 50%, #f0fdfa 100%);
+}
+
+.ops-dash .ops-flow-step {
+  background: rgb(255 255 255 / 0.72);
+  border-color: rgb(45 212 191 / 0.45);
+}
+
+/* Quick-add cards inside desk */
+.ops-dash .ops-quick-add-card {
+  border-color: #7dd3fc;
+  background: linear-gradient(145deg, #e0f2fe, #f0f9ff);
+}
+
+.ops-dash .ops-command-hubs {
+  border-color: #38bdf8 !important;
+  background:
+    radial-gradient(circle at 0% 0%, rgb(14 165 233 / 0.16), transparent 42%),
+    linear-gradient(180deg, #bae6fd 0%, #e0f2fe 45%, #f0f9ff 100%) !important;
+}
+
+.ops-dash .ops-quick-add-card.is-student {
+  background: linear-gradient(145deg, #bfdbfe 0%, #dbeafe 45%, #eff6ff 100%);
+  border-color: #60a5fa;
+}
+
+.ops-dash .ops-quick-add-card.is-staff {
+  background: linear-gradient(145deg, #99f6e4 0%, #ccfbf1 45%, #f0fdfa 100%);
+  border-color: #2dd4bf;
+}
+
+.ops-dash .dashboard-submission-item {
+  border-color: #bae6fd;
+  background: linear-gradient(90deg, #e0f2fe, #f0f9ff);
+}
+
+.ops-dash .dashboard-submission-item:hover {
+  border-color: #38bdf8;
+  background: linear-gradient(90deg, #bae6fd, #e0f2fe);
+}
+
+.ops-dash .dashboard-summary {
+  border-radius: 1rem;
+  border: 1.5px solid #7dd3fc;
+  background: linear-gradient(180deg, #e0f2fe 0%, #f0f9ff 100%);
+  padding: 0.65rem;
+}
+
+.ops-dash .dashboard-summary-table {
+  background: rgb(255 255 255 / 0.7);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.ops-dash .dashboard-summary-table th {
+  background: linear-gradient(180deg, #bae6fd, #e0f2fe);
+  color: #0c4a6e;
+}
+
+.ops-dash .dashboard-summary-tab-active {
+  background: linear-gradient(135deg, #0f766e, #0369a1);
+  color: #fff;
+}
+
+.ops-dash .ops-insights-empty-box {
+  border-color: #bae6fd;
+  background: linear-gradient(160deg, #e0f2fe, #f0f9ff);
+  color: #0369a1;
+}
+
+/* Drill / quick-list / HR modals — colored toolbars & tables */
+.ops-drill-search {
+  border-color: #7dd3fc !important;
+  background: linear-gradient(145deg, #e0f2fe, #f0f9ff) !important;
+}
+
+.ops-drill-filters select {
+  border-color: #bae6fd !important;
+  background: linear-gradient(180deg, #f0f9ff, #ffffff) !important;
+  color: #0c4a6e !important;
+}
+
+.ops-drill-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.85rem;
+  border: 1px solid #7dd3fc;
+  background: linear-gradient(135deg, #ccfbf1, #e0f2fe);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.ops-drill-chip {
+  border-color: #0d9488 !important;
+  background: linear-gradient(145deg, #99f6e4, #ccfbf1) !important;
+  color: #115e59 !important;
+}
+
+.ops-drill-table-wrap {
+  border: 1.5px solid #7dd3fc;
+  border-radius: 0.95rem;
+  background: linear-gradient(180deg, #e0f2fe 0%, #ffffff 28%);
+  overflow: auto;
+  box-shadow: 0 10px 24px -18px rgb(2 132 199 / 0.35);
+}
+
+.ops-drill-table th {
+  background: linear-gradient(180deg, #bae6fd, #e0f2fe) !important;
+  color: #0c4a6e !important;
+  border-bottom-color: #7dd3fc !important;
+}
+
+.ops-drill-table tbody tr:hover {
+  background: #f0f9ff !important;
+}
+
+.ops-drill-name {
+  color: #0f766e !important;
+  font-weight: 700;
+}
+
+.ops-drill-name:hover {
+  color: #0369a1 !important;
+}
+
+.ops-drill-loading,
+.ops-drill-empty {
+  border-color: #bae6fd;
+  background: linear-gradient(160deg, #e0f2fe, #f0f9ff);
+  color: #0369a1;
+}
+
+.ops-drill-error {
+  border-color: #fda4af;
+  background: linear-gradient(160deg, #ffe4e6, #fff1f2);
+  color: #be123c;
+}
+
+.ops-drill-sr {
+  width: 3rem;
+  min-width: 2.75rem;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  color: #0c4a6e;
+  white-space: nowrap;
+}
+
+.ops-drill-table th.ops-drill-sr {
+  color: #0c4a6e !important;
+}
+
+.ops-drill-exports button {
+  border-color: #7dd3fc !important;
+}
+
+.ops-drill-reset {
+  border-color: #5eead4 !important;
+  background: linear-gradient(145deg, #ccfbf1, #f0fdfa) !important;
+  color: #0f766e !important;
 }

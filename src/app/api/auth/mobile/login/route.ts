@@ -53,9 +53,10 @@ export async function POST(request: NextRequest) {
       return mobileJson(
         {
           error:
-            "First login setup required. Verify your email OTP and change the temporary password in the web portal.",
+            "Verify the OTP sent to your student email and choose a new password.",
           studentSetupRequired: true,
           otpSent: result.otpSent,
+          user: { name: result.name, email: result.email, role: "student" },
         },
         { status: 403 },
         origin,

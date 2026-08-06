@@ -1,13 +1,14 @@
 "use client";
 
-import { Spinner, PageLoader } from "@/components/ui/loader";
+import { PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { StudentForm } from "@/components/forms/student-form";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
 import type { Student } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
+import { PageShell } from "@/components/layout/page-shell";
 
 export default function EditStudentPage({ params }: { params: Promise<{ id: string }> }) {
   const t = useT();
@@ -15,6 +16,16 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
   const router = useRouter();
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dashHref, setDashHref] = useState("/dashboard");
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.user?.role === "clerk") setDashHref("/clerk");
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch(`/api/students/${id}`)
@@ -44,30 +55,37 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
   };
 
   if (loading) {
-    return (
-      <PageLoader />
-    );
+    return <PageLoader />;
   }
 
   if (!student) {
-    return <p className="text-center text-slate-500 py-16">{t("students.notFound")}</p>;
+    return <p className="py-16 text-center text-slate-500">{t("students.notFound")}</p>;
   }
 
+  const displayName = `${student.firstName || ""} ${student.surname || ""}`.trim() || t("students.editStudent");
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/students">
-          <button className="p-2 rounded-lg hover:bg-slate-100">
-            <ArrowLeft className="h-5 w-5" />
+    <PageShell
+      title={t("students.editTitle", { name: displayName })}
+      subtitle={t("students.editSubtitle")}
+      icon={<Pencil className="h-5 w-5 text-teal-700" />}
+      accentColor="border-teal-500"
+      breadcrumbs={[
+        { label: t("nav.dashboard"), href: dashHref },
+        { label: t("nav.students"), href: "/students" },
+        { label: t("students.editStudent") },
+      ]}
+      actions={(
+        <Link href={`/students/${id}`} className="w-full sm:w-auto">
+          <button
+            type="button"
+            className="inline-flex h-10 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 sm:w-auto"
+          >
+            <ArrowLeft className="h-4 w-4" /> {t("common.back")}
           </button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {t("students.editTitle", { name: `${student.firstName} ${student.surname}` })}
-          </h1>
-          <p className="text-slate-500 mt-1">{t("students.editSubtitle")}</p>
-        </div>
-      </div>
+      )}
+    >
       <StudentForm
         initialData={student}
         studentId={id}
@@ -75,6 +93,6 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
         onFinish={() => router.push(`/students/${id}`)}
         submitLabel={t("students.updateStudent")}
       />
-    </div>
+    </PageShell>
   );
 }

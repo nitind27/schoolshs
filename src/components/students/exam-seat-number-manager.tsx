@@ -335,13 +335,13 @@ export function ExamSeatNumberManager({
         { label: t("examSeats.title") },
       ]}
       actions={
-        <div className="grid w-full grid-cols-1 gap-2 min-[420px]:grid-cols-3 sm:flex sm:w-auto sm:flex-wrap">
+        <div className="grid w-full grid-cols-1 gap-2 min-[380px]:grid-cols-2 lg:flex lg:w-auto lg:flex-wrap">
           <Button
             type="button"
             variant="outline"
             disabled={!students.length}
             onClick={exportCsv}
-            className="w-full sm:w-auto"
+            className="w-full min-[380px]:col-span-2 lg:w-auto lg:col-span-1"
           >
             <Download className="h-4 w-4" />
             {t("examSeats.export")}
@@ -352,7 +352,7 @@ export function ExamSeatNumberManager({
               variant="outline"
               disabled={!assignedCount || publishing || saving}
               onClick={() => void setPublishState(false)}
-              className="w-full sm:w-auto"
+              className="w-full lg:w-auto"
             >
               {publishing ? <Spinner size="sm" /> : <EyeOff className="h-4 w-4" />}
               {t("examSeats.unpublish")}
@@ -363,7 +363,7 @@ export function ExamSeatNumberManager({
               variant="outline"
               disabled={!assignedCount || publishing || saving}
               onClick={() => void setPublishState(true)}
-              className="w-full sm:w-auto"
+              className="w-full lg:w-auto"
             >
               {publishing ? <Spinner size="sm" /> : <Eye className="h-4 w-4" />}
               {t("examSeats.publish")}
@@ -373,7 +373,7 @@ export function ExamSeatNumberManager({
             type="button"
             disabled={!students.length || saving || publishing || duplicateIds.size > 0}
             onClick={() => void save()}
-            className="w-full sm:w-auto"
+            className="w-full lg:w-auto"
           >
             {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
             {t("common.save")}
@@ -381,9 +381,9 @@ export function ExamSeatNumberManager({
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:space-y-4">
         <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Select
               label={t("examSeats.selectClass")}
               value={classId}
@@ -412,15 +412,15 @@ export function ExamSeatNumberManager({
             <div className="mb-3 flex items-start gap-2">
               <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" />
               <div className="min-w-0">
-                <h2 className="font-bold text-slate-900">
+                <h2 className="break-words text-sm font-bold text-slate-900 sm:text-base">
                   {t("examSeats.generatorTitle")}
                 </h2>
-                <p className="text-xs text-slate-600">
+                <p className="mt-0.5 break-words text-xs leading-snug text-slate-600">
                   {t("examSeats.generatorDesc")}
                 </p>
               </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-[minmax(12rem,1fr)_8rem_auto] sm:items-end">
+            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-[minmax(0,1fr)_7.5rem] sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-end">
               <Input
                 label={t("examSeats.prefix")}
                 value={prefix}
@@ -434,7 +434,12 @@ export function ExamSeatNumberManager({
                 value={startAt}
                 onChange={(event) => setStartAt(event.target.value)}
               />
-              <Button type="button" variant="outline" onClick={autoGenerate} className="w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={autoGenerate}
+                className="w-full min-[420px]:col-span-2 sm:col-span-1 sm:w-auto"
+              >
                 <Sparkles className="h-4 w-4" />
                 {t("examSeats.generate")}
               </Button>
@@ -443,7 +448,7 @@ export function ExamSeatNumberManager({
         ) : null}
 
         {duplicateIds.size ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-medium leading-snug text-red-700 sm:px-4">
             {t("examSeats.duplicateError")}
           </div>
         ) : null}
@@ -451,25 +456,25 @@ export function ExamSeatNumberManager({
         {!classId || !termKey ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-12 text-center text-sm text-slate-500 sm:py-16">
             <Armchair className="mx-auto mb-3 h-11 w-11 text-slate-300" />
-            {t("examSeats.chooseHint")}
+            <p className="mx-auto max-w-sm break-words">{t("examSeats.chooseHint")}</p>
           </div>
         ) : rowsLoading ? (
           <PageLoader card />
         ) : !students.length ? (
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-12 text-center text-sm text-slate-500 sm:py-16">
             <Users className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-            {t("examSeats.noStudents")}
+            <p className="break-words">{t("examSeats.noStudents")}</p>
           </div>
         ) : (
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-3 border-b bg-slate-50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="break-words text-sm font-semibold text-slate-700">
                   {students.filter((student) => drafts[student.id]?.trim()).length}{" "}
                   / {students.length} {t("examSeats.assigned")}
                 </p>
                 <p
-                  className={`mt-0.5 text-xs font-medium ${
+                  className={`mt-0.5 break-words text-xs font-medium leading-snug ${
                     isPublished ? "text-emerald-700" : "text-amber-700"
                   }`}
                 >
@@ -478,127 +483,137 @@ export function ExamSeatNumberManager({
                     : t("examSeats.draftHint")}
                 </p>
               </div>
-              <div className="flex h-10 w-full min-w-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 sm:h-9 sm:w-auto sm:min-w-60">
-                <Search className="h-4 w-4 text-slate-400" />
+              <div className="flex h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 sm:h-10 sm:max-w-xs sm:w-auto">
+                <Search className="h-4 w-4 shrink-0 text-slate-400" />
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={t("examSeats.search")}
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                  className="min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm"
                 />
               </div>
             </div>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-slate-100 text-left text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="w-16 px-4 py-3">#</th>
-                    <th className="px-4 py-3">{t("common.name")}</th>
-                    <th className="px-4 py-3">{t("fields.grNumber")}</th>
-                    <th className="px-4 py-3">{t("fields.roll")}</th>
-                    <th className="w-64 px-4 py-3">
-                      {t("examSeats.seatNumber")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filtered.map((student, index) => (
-                    <tr key={student.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-slate-400">{index + 1}</td>
-                      <td className="px-4 py-3 font-semibold text-slate-900">
-                        {[student.firstName, student.middleName, student.surname]
-                          .filter(Boolean)
-                          .join(" ")}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {student.grNumber || "—"}
-                      </td>
-                      <td className="px-4 py-3 font-mono">
-                        {student.rollNumber || "—"}
-                      </td>
-                      <td className="px-4 py-2">
-                        <input
-                          value={drafts[student.id] || ""}
-                          maxLength={40}
-                          onChange={(event) =>
-                            setDrafts((current) => ({
-                              ...current,
-                              [student.id]: event.target.value.toUpperCase(),
-                            }))
-                          }
-                          placeholder={t("examSeats.seatPlaceholder")}
-                          className={`h-9 w-full rounded-lg border px-3 font-mono font-bold uppercase outline-none focus:ring-2 ${
-                            duplicateIds.has(student.id)
-                              ? "border-red-400 bg-red-50 focus:ring-red-200"
-                              : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-100"
-                          }`}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="divide-y divide-slate-100 md:hidden">
-              {filtered.map((student, index) => {
-                const fullName = [
-                  student.firstName,
-                  student.middleName,
-                  student.surname,
-                ]
-                  .filter(Boolean)
-                  .join(" ");
-                return (
-                  <article key={student.id} className="space-y-3 p-3">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="break-words text-sm font-semibold text-slate-900">
-                          {fullName}
-                        </p>
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-                          <span>
-                            {t("fields.grNumber")}:{" "}
-                            <span className="font-mono text-slate-700">
-                              {student.grNumber || "—"}
-                            </span>
+
+            {!filtered.length ? (
+              <div className="px-4 py-10 text-center text-sm text-slate-500">
+                {t("common.noData")}
+              </div>
+            ) : (
+              <>
+                <div className="hidden overflow-x-auto lg:block">
+                  <table className="w-full min-w-[680px] text-sm">
+                    <thead className="bg-slate-100 text-left text-xs font-semibold text-slate-500">
+                      <tr>
+                        <th className="w-14 px-4 py-3">#</th>
+                        <th className="px-4 py-3">{t("common.name")}</th>
+                        <th className="px-4 py-3">{t("fields.grNumber")}</th>
+                        <th className="px-4 py-3">{t("fields.roll")}</th>
+                        <th className="min-w-[12rem] px-4 py-3">
+                          {t("examSeats.seatNumber")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filtered.map((student, index) => (
+                        <tr key={student.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 text-slate-400">{index + 1}</td>
+                          <td className="max-w-[16rem] break-words px-4 py-3 font-semibold text-slate-900">
+                            {[student.firstName, student.middleName, student.surname]
+                              .filter(Boolean)
+                              .join(" ")}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
+                            {student.grNumber || "—"}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 font-mono">
+                            {student.rollNumber || "—"}
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              value={drafts[student.id] || ""}
+                              maxLength={40}
+                              onChange={(event) =>
+                                setDrafts((current) => ({
+                                  ...current,
+                                  [student.id]: event.target.value.toUpperCase(),
+                                }))
+                              }
+                              placeholder={t("examSeats.seatPlaceholder")}
+                              className={`h-10 w-full min-w-0 rounded-lg border px-3 font-mono text-sm font-bold uppercase outline-none focus:ring-2 ${
+                                duplicateIds.has(student.id)
+                                  ? "border-red-400 bg-red-50 focus:ring-red-200"
+                                  : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-100"
+                              }`}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="divide-y divide-slate-100 lg:hidden">
+                  {filtered.map((student, index) => {
+                    const fullName = [
+                      student.firstName,
+                      student.middleName,
+                      student.surname,
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
+                    return (
+                      <article key={student.id} className="space-y-2.5 p-3 sm:p-3.5">
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">
+                            {index + 1}
                           </span>
-                          <span>
-                            {t("fields.roll")}:{" "}
-                            <span className="font-mono text-slate-700">
-                              {student.rollNumber || "—"}
-                            </span>
-                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="break-words text-sm font-semibold leading-snug text-slate-900">
+                              {fullName}
+                            </p>
+                            <div className="mt-1.5 grid grid-cols-2 gap-1.5 text-xs text-slate-500">
+                              <span className="min-w-0 truncate">
+                                {t("fields.grNumber")}:{" "}
+                                <span className="font-mono text-slate-700">
+                                  {student.grNumber || "—"}
+                                </span>
+                              </span>
+                              <span className="min-w-0 truncate">
+                                {t("fields.roll")}:{" "}
+                                <span className="font-mono text-slate-700">
+                                  {student.rollNumber || "—"}
+                                </span>
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <label className="block">
-                      <span className="mb-1.5 block text-xs font-semibold text-slate-600">
-                        {t("examSeats.seatNumber")}
-                      </span>
-                      <input
-                        value={drafts[student.id] || ""}
-                        maxLength={40}
-                        onChange={(event) =>
-                          setDrafts((current) => ({
-                            ...current,
-                            [student.id]: event.target.value.toUpperCase(),
-                          }))
-                        }
-                        placeholder={t("examSeats.seatPlaceholder")}
-                        className={`h-11 w-full rounded-xl border px-3 font-mono font-bold uppercase outline-none focus:ring-2 ${
-                          duplicateIds.has(student.id)
-                            ? "border-red-400 bg-red-50 focus:ring-red-200"
-                            : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-100"
-                        }`}
-                      />
-                    </label>
-                  </article>
-                );
-              })}
-            </div>
+                        <label className="block">
+                          <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+                            {t("examSeats.seatNumber")}
+                          </span>
+                          <input
+                            value={drafts[student.id] || ""}
+                            maxLength={40}
+                            onChange={(event) =>
+                              setDrafts((current) => ({
+                                ...current,
+                                [student.id]: event.target.value.toUpperCase(),
+                              }))
+                            }
+                            placeholder={t("examSeats.seatPlaceholder")}
+                            className={`h-11 w-full rounded-xl border px-3 font-mono text-base font-bold uppercase outline-none focus:ring-2 ${
+                              duplicateIds.has(student.id)
+                                ? "border-red-400 bg-red-50 focus:ring-red-200"
+                                : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-100"
+                            }`}
+                          />
+                        </label>
+                      </article>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </section>
         )}
       </div>

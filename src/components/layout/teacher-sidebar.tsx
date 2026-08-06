@@ -14,6 +14,7 @@ import {
   CalendarClock,
   Hash,
   Armchair,
+  CalendarDays,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import "@/components/teacher/teacher-portal.css";
@@ -68,6 +69,12 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
       href: "/teacher/board-records",
       label: t("teacherNav.boardRecords"),
       icon: FileText,
+      group: t("teacherNav.groupAcademics"),
+    },
+    {
+      href: "/staff/holidays",
+      label: t("nav.staffHolidays"),
+      icon: CalendarDays,
       group: t("teacherNav.groupAcademics"),
     },
   ];

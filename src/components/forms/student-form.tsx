@@ -153,6 +153,8 @@ export function StudentForm({
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [savedStudentId, setSavedStudentId] = useState<string | undefined>(studentIdProp || initialData.id);
+  /** Hero/copy: Update vs New — true for edit page or opened existing GR (not a brand-new draft). */
+  const [showUpdateHero, setShowUpdateHero] = useState(isEditMode);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [form, setForm] = useState<FormData>({
     maritalStatus: "Unmarried",
@@ -211,6 +213,7 @@ export function StudentForm({
   useEffect(() => {
     if (studentIdProp) setSavedStudentId(studentIdProp);
     else if (initialData.id) setSavedStudentId(initialData.id);
+    if (studentIdProp || initialData.id) setShowUpdateHero(true);
   }, [studentIdProp, initialData.id]);
 
   // Prefill class from URL only on final assign step (new student)
@@ -451,6 +454,8 @@ export function StudentForm({
     if (studentId) {
       setSavedStudentId(studentId);
     }
+    // Existing GR → Update labels; brand-new GR draft stays "New"
+    setShowUpdateHero(!isNew);
     setGrReady(true);
     setGrLocked(true);
   };
@@ -727,6 +732,7 @@ export function StudentForm({
             return;
           }
           setSavedStudentId(undefined);
+          setShowUpdateHero(false);
           setForm((prev) => ({
             maritalStatus: "Unmarried",
             habitationType: "Own",
@@ -756,10 +762,16 @@ export function StudentForm({
         <div className="sf-hero__glow sf-hero__glow--a" />
         <div className="sf-hero__glow sf-hero__glow--b" />
         <div className="sf-hero__row">
-          <div>
-            <p className="sf-hero__kicker">{t("studentForm.portalBadge")}</p>
-            <h2 className="sf-hero__title">{t("studentForm.portalTitle")}</h2>
-            <p className="sf-hero__sub">{t("studentForm.portalSubtitle")}</p>
+          <div className="min-w-0 flex-1">
+            <p className="sf-hero__kicker">
+              {showUpdateHero ? t("studentForm.portalEditBadge") : t("studentForm.portalBadge")}
+            </p>
+            <h2 className="sf-hero__title">
+              {showUpdateHero ? t("studentForm.portalEditTitle") : t("studentForm.portalTitle")}
+            </h2>
+            <p className="sf-hero__sub">
+              {showUpdateHero ? t("studentForm.portalEditSubtitle") : t("studentForm.portalSubtitle")}
+            </p>
           </div>
           <div className="sf-hero__meta">
             <div className="sf-hero__pct">
@@ -775,7 +787,9 @@ export function StudentForm({
                 {autoSaveStatus === "saving"
                   ? t("studentForm.autoSaving")
                   : autoSaveStatus === "saved"
-                    ? t("studentForm.autoSaved")
+                    ? showUpdateHero
+                      ? t("studentForm.autoSavedEdit")
+                      : t("studentForm.autoSaved")
                     : autoSaveStatus === "error"
                       ? t("studentForm.autoSaveError")
                       : t("studentForm.autoSaveIdle")}

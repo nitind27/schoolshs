@@ -6,6 +6,10 @@ import { ArrowRight, ArrowUpRight, ChevronDown, LayoutGrid, X } from "lucide-rea
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/locale-provider";
 import { REPORTS_CERTS_MEGA_MENU } from "@/lib/nav-mega-menu";
+import {
+  FT_MEGA_CLOSE_EVENT,
+  FT_MEGA_OPEN_EVENT,
+} from "@/components/feature-tour/feature-tour-panel";
 
 export function NavbarMegaMenu() {
   const t = useT();
@@ -21,11 +25,17 @@ export function NavbarMegaMenu() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
+    const onTourOpen = () => setOpen(true);
+    const onTourClose = () => setOpen(false);
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
+    window.addEventListener(FT_MEGA_OPEN_EVENT, onTourOpen);
+    window.addEventListener(FT_MEGA_CLOSE_EVENT, onTourClose);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener(FT_MEGA_OPEN_EVENT, onTourOpen);
+      window.removeEventListener(FT_MEGA_CLOSE_EVENT, onTourClose);
     };
   }, []);
 
@@ -51,11 +61,11 @@ export function NavbarMegaMenu() {
         <span className="tn-mega-icon">
           <LayoutGrid className="h-3.5 w-3.5" />
         </span>
-        <span className="hidden sm:inline">{t("megaMenu.trigger")}</span>
-        <span className="sm:hidden">{t("megaMenu.triggerShort")}</span>
+        <span className="hidden md:inline">{t("megaMenu.trigger")}</span>
+        <span className="hidden sm:inline md:hidden">{t("megaMenu.triggerShort")}</span>
         <ChevronDown
           className={cn(
-            "h-3.5 w-3.5 opacity-60 transition-transform duration-200",
+            "hidden sm:block h-3.5 w-3.5 opacity-60 transition-transform duration-200",
             open && "rotate-180",
           )}
         />

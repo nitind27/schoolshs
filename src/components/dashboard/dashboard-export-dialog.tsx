@@ -134,11 +134,11 @@ export function DashboardExportDialog({
   const ActionIcon = mode === "excel" ? FileSpreadsheet : FileText;
 
   return (
-    <InfoModal isOpen={open} onClose={onClose} title={modalTitle(mode, t)}>
+    <InfoModal isOpen={open} onClose={onClose} title={modalTitle(mode, t)} eyebrow={t("dashboard.exportEyebrow")}>
       <div className={cn("space-y-5", locale === "gu" && "font-gujarati")}>
         <p className="text-sm text-slate-600">{t("dashboard.exportChooseDesc")}</p>
 
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+        <div className="im-export-summary">
           <span className="font-semibold text-slate-800">{report?.filterSummary}</span>
           <span>·</span>
           <span>{t("dashboard.exportStudentCount", { count: studentCount })}</span>
@@ -165,21 +165,16 @@ export function DashboardExportDialog({
                 key={key}
                 type="button"
                 onClick={() => toggle(key)}
-                className={cn(
-                  "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors sm:p-4",
-                  checked
-                    ? "border-emerald-300 bg-emerald-50/80 shadow-sm"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                )}
+                className={cn("im-export-option", checked && "is-checked")}
               >
-                <span className="mt-0.5 shrink-0 text-emerald-700">
-                  {checked ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5 text-slate-400" />}
+                <span className={cn("mt-0.5 shrink-0", checked ? "text-teal-700" : "text-slate-400")}>
+                  {checked ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-bold text-slate-900">{t(meta.titleKey)}</span>
                   <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">{t(meta.descKey)}</span>
                   {hint && (
-                    <span className="mt-1 block text-[11px] font-medium text-emerald-700">{hint}</span>
+                    <span className="mt-1 block text-[11px] font-medium text-teal-700">{hint}</span>
                   )}
                 </span>
               </button>

@@ -61,6 +61,7 @@ model School {
   schoolSubjects         SchoolSubject[]
   standardSubjects       StandardSubject[]
   examSeatAssignments    ExamSeatAssignment[]
+  holidays               Holiday[]
 
   @@index([isActive])
   @@index([district])
@@ -1430,4 +1431,25 @@ model ContactSupportMessage {
   @@index([status, createdAt])
   @@index([createdAt])
   @@map("contactsupportmessage")
+}
+
+// ─── School Holidays ───
+model Holiday {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  schoolId     String
+  school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  /// ISO date string YYYY-MM-DD
+  date         String
+  name         String
+  nameGu       String?
+  /// public | school | optional
+  type         String   @default("public")
+  academicYear String   @default("2025-26")
+  description  String?  @db.Text
+
+  @@unique([schoolId, date])
+  @@index([schoolId, academicYear])
+  @@map("holiday")
 }

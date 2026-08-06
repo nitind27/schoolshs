@@ -24,6 +24,34 @@
   -webkit-font-smoothing: antialiased;
 }
 
+html.locale-gu .auth-portal {
+  font-family: var(--font-noto-gujarati), system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+html.locale-gu .auth-portal .auth-portal-logo-title,
+html.locale-gu .auth-portal .auth-portal-logo-eyebrow,
+html.locale-gu .auth-portal h1,
+html.locale-gu .auth-portal h2,
+html.locale-gu .auth-portal h3,
+html.locale-gu .auth-portal label,
+html.locale-gu .auth-portal button {
+  font-family: var(--font-noto-gujarati), system-ui, sans-serif;
+  letter-spacing: 0 !important;
+}
+
+html.locale-gu .auth-portal .auth-portal-logo-eyebrow {
+  text-transform: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+html.locale-gu .auth-portal .auth-portal-logo-title,
+html.locale-gu .auth-portal h1 {
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
 @media (min-width: 1024px) {
   .auth-portal {
     grid-template-columns: 1fr 1fr;

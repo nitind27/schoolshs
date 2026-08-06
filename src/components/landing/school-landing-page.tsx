@@ -29,6 +29,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { FooterHolidayCalendar } from "@/components/landing/footer-holiday-calendar";
 import { useT } from "@/i18n/locale-provider";
 import {
   CONTACT_LIMITS,
@@ -697,7 +698,7 @@ export function SchoolLandingPage() {
 
       <footer className="lp-footer">
         <div className="lp-shell">
-          <div className="lp-footer-grid">
+          <div className="lp-footer-main">
             <div className="lp-footer-brand">
               <Link href="/" className="lp-logo lp-footer-logo">
                 <span className="lp-brand-mark" aria-hidden>
@@ -709,6 +710,15 @@ export function SchoolLandingPage() {
                 </span>
               </Link>
               <p className="lp-footer-blurb">{t("landing.footerBlurb")}</p>
+              <div className="lp-footer-actions">
+                <Link href="/login" className="lp-footer-btn-primary">
+                  {t("landing.ctaPortal")}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                <a href="#contact" className="lp-footer-btn-ghost">
+                  {t("landing.navContact")}
+                </a>
+              </div>
               <p className="lp-footer-secure">
                 <Shield className="h-3.5 w-3.5" aria-hidden />
                 {t("landing.footerSecureNote")}
@@ -731,18 +741,8 @@ export function SchoolLandingPage() {
               ))}
             </nav>
 
-            <div className="lp-footer-col lp-footer-cta-col">
-              <h3>{t("landing.footerSupport")}</h3>
-              <p className="lp-footer-cta-copy">{t("landing.supportDesc")}</p>
-              <div className="lp-footer-actions">
-                <Link href="/login" className="lp-footer-btn-primary">
-                  {t("landing.ctaPortal")}
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-                <a href="#contact" className="lp-footer-btn-ghost">
-                  {t("landing.navContact")}
-                </a>
-              </div>
+            <div className="lp-footer-cal-wrap" aria-label={t("landing.calTitle")}>
+              <FooterHolidayCalendar />
             </div>
           </div>
 

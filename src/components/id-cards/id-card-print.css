@@ -1,4 +1,5 @@
-/* ID card print — one card per A4 page, CR-80 size centered */
+/* ID card print — CR-80 front only, one card per A4 sheet */
+
 @page {
   size: A4 portrait;
   margin: 10mm;
@@ -12,8 +13,28 @@
   }
 
   .print\:hidden,
-  .id-card-share-page > .sticky {
+  .id-card-share-page > .sticky,
+  .id-cards-toolbar,
+  .id-cards-filters,
+  .id-cards-preview-note {
     display: none !important;
+  }
+
+  aside,
+  nav,
+  header.tn-shell {
+    display: none !important;
+  }
+
+  main,
+  .shell-main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .lg\:pl-64,
+  .shell-main > div {
+    padding-left: 0 !important;
   }
 
   .id-card-print-bundle {
@@ -29,6 +50,9 @@
     align-items: center;
     justify-content: center;
     padding: 0;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
   }
 
   .id-card-print-sheet:last-child {
@@ -43,23 +67,33 @@
     justify-content: center;
   }
 
-  .id-card-print-size {
-    width: 85.6mm !important;
-    max-width: 85.6mm !important;
-    transform-origin: center center;
-    box-shadow: none !important;
-    border: 0.3mm solid #ccc !important;
+  .id-card-preview-scale {
+    transform: none !important;
+    width: 54mm !important;
+    height: 85.6mm !important;
   }
 
-  .id-card-print-label {
+  .id-card,
+  .id-card-print-size {
+    width: 54mm !important;
+    height: 85.6mm !important;
+    max-width: 54mm !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border: 0.3mm solid #cbd5e1 !important;
+    border-radius: 2.4mm !important;
+  }
+
+  .id-card-print-label,
+  .id-cards-stage-label {
     display: none !important;
   }
 }
 
 @media screen {
   .id-card-print-sheet {
-    margin-bottom: 2rem;
-    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
     border-radius: 1rem;
     border: 1px solid rgb(226 232 240);
     background: white;
@@ -70,5 +104,55 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+  }
+
+  .id-cards-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    gap: 2rem 1.5rem;
+    justify-items: center;
+    align-items: start;
+    padding-bottom: 2.5rem;
+  }
+
+  .id-cards-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    max-width: 20rem;
+  }
+
+  .id-cards-stage-inner {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding: 1rem 0.5rem 1.5rem;
+    border-radius: 1rem;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(236, 72, 153, 0.08), transparent 55%),
+      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+    border: 1px solid #e2e8f0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .id-cards-stage-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+
+  .id-cards-stage-name {
+    max-width: 100%;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

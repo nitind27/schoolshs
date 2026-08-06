@@ -40,7 +40,7 @@ export function PageShell({
       : accentColor;
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in" data-ft-anchor="main">
       <div className={cn(heroClass, "p-4 md:p-5")}>
         {breadcrumbs.length > 0 && (
           <nav className="mb-2 flex flex-wrap items-center gap-1 text-xs text-slate-500" aria-label="Breadcrumb">
@@ -76,7 +76,9 @@ export function PageShell({
             </div>
           </div>
           {actions && (
-            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">{actions}</div>
+            <div className="flex w-full min-w-0 flex-wrap items-stretch gap-2 sm:w-auto sm:shrink-0 sm:items-center [&_a]:min-w-0 [&_button]:min-w-0 sm:[&_a]:w-auto sm:[&_button]:w-auto">
+              {actions}
+            </div>
           )}
         </div>
       </div>

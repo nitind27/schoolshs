@@ -132,7 +132,7 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
       : t("dashboard.staffListTitle", { label });
 
   return (
-    <InfoModal isOpen={open} onClose={onClose} title={title} size="xl">
+    <InfoModal isOpen={open} onClose={onClose} title={title} size="xl" eyebrow={label}>
       <div className="ops-drill">
         <div className="ops-drill-toolbar">
           <div className="ops-drill-search">
@@ -188,6 +188,7 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
               <table className="ops-drill-table">
                 <thead>
                   <tr>
+                    <th className="ops-drill-sr">{t("common.srNo")}</th>
                     <th>{t("dashboard.drillColName")}</th>
                     <th>{t("dashboard.drillColClass")}</th>
                     <th>{t("dashboard.drillColCategory")}</th>
@@ -197,8 +198,9 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
                   </tr>
                 </thead>
                 <tbody>
-                  {admissionRows.map((s) => (
+                  {admissionRows.map((s, i) => (
                     <tr key={s.id}>
+                      <td className="ops-drill-sr">{(page - 1) * PAGE_SIZE + i + 1}</td>
                       <td>
                         <Link href={`/students/${s.id}`} className="ops-drill-name">
                           {studentShortNameGu(s)}
@@ -233,6 +235,7 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
             <table className="ops-drill-table">
               <thead>
                 <tr>
+                  <th className="ops-drill-sr">{t("common.srNo")}</th>
                   <th>{t("dashboard.staffColId")}</th>
                   <th>{t("dashboard.drillColName")}</th>
                   <th>{t("dashboard.staffColDesignation")}</th>
@@ -242,8 +245,9 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
                 </tr>
               </thead>
               <tbody>
-                {staffRows.map((s) => (
+                {staffRows.map((s, i) => (
                   <tr key={s.id}>
+                    <td className="ops-drill-sr">{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td>{s.employeeId || "—"}</td>
                     <td>
                       <Link href={`/staff/${s.id}/edit`} className="ops-drill-name">

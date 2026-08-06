@@ -20,6 +20,20 @@
   font-family: var(--sp-body);
 }
 
+html.locale-gu .student-portal-shell {
+  --sp-display: var(--font-noto-gujarati), system-ui, sans-serif;
+  --sp-body: var(--font-noto-gujarati), system-ui, sans-serif;
+  font-family: var(--sp-body);
+  letter-spacing: 0;
+}
+
+html.locale-gu .student-portal-shell h1,
+html.locale-gu .student-portal-shell h2,
+html.locale-gu .student-portal-shell h3 {
+  font-family: var(--sp-display);
+  letter-spacing: 0;
+}
+
 .student-portal-pages {
   animation: sp-page-in 0.4s ease both;
 }

@@ -81,7 +81,7 @@ export default function EditStaffPage() {
         </Link>
       )}
 
-      <div className="w-full rounded-2xl bg-gradient-to-b from-slate-50/90 via-white to-slate-50/40 p-2 sm:p-3 md:p-4">
+      <div className="w-full">
         <StaffForm
           initialData={staff}
           onSubmit={handleSubmit}

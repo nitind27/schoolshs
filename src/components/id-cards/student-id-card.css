@@ -1,0 +1,337 @@
+/* CR-80 portrait — ISO/IEC 7810 ID-1 (54 × 85.6 mm) — front only */
+
+.id-card {
+  --id-w: 54mm;
+  --id-h: 85.6mm;
+  --id-primary: var(--id-card-primary, #0b3a6e);
+  --id-accent: var(--id-card-accent, #14508f);
+  --id-name: var(--id-card-name, #c4121a);
+  --id-line: #e2e8f0;
+  --id-muted: #64748b;
+
+  box-sizing: border-box;
+  width: var(--id-w);
+  height: var(--id-h);
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 2.4mm;
+  background: #fff;
+  border: 0.25mm solid rgba(8, 42, 82, 0.12);
+  box-shadow:
+    0 2mm 6mm rgba(8, 42, 82, 0.14),
+    0 0 0 0.15mm rgba(8, 42, 82, 0.06);
+  font-family:
+    "Noto Sans Gujarati",
+    "Shruti",
+    "Lohit Gujarati",
+    "Arial Unicode MS",
+    sans-serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.id-card__head {
+  flex-shrink: 0;
+  padding: 1.6mm 2mm 1.4mm;
+  color: #fff;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--id-primary) 88%, #000) 0%,
+    var(--id-primary) 52%,
+    var(--id-accent) 100%
+  );
+}
+
+.id-card__head-row {
+  display: flex;
+  align-items: center;
+  gap: 1.6mm;
+  min-width: 0;
+}
+
+.id-card__logo {
+  width: 9mm;
+  height: 9mm;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 0.35mm solid rgba(255, 255, 255, 0.85);
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 0.6mm 1.6mm rgba(0, 0, 0, 0.22);
+}
+
+.id-card__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.id-card__school {
+  min-width: 0;
+  flex: 1;
+}
+
+.id-card__tagline {
+  margin: 0;
+  font-size: 1.55mm;
+  font-weight: 650;
+  line-height: 1.2;
+  opacity: 0.92;
+}
+
+.id-card__title {
+  margin: 0.3mm 0 0;
+  font-size: 2.65mm;
+  font-weight: 900;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+}
+
+.id-card__meta {
+  margin-top: 0.8mm;
+  display: flex;
+  align-items: center;
+  gap: 1mm;
+  flex-wrap: wrap;
+}
+
+.id-card__badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+  padding: 0.35mm 1.2mm;
+  font-size: 1.45mm;
+  font-weight: 800;
+}
+
+.id-card__location {
+  font-size: 1.45mm;
+  font-weight: 650;
+  line-height: 1.15;
+  opacity: 0.95;
+}
+
+.id-card__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1.6mm 2mm 1mm;
+  background: #fff;
+}
+
+.id-card__photo-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2mm;
+  margin-bottom: 1.2mm;
+}
+
+.id-card__photo {
+  width: 16mm;
+  height: 19mm;
+  flex-shrink: 0;
+  border-radius: 1mm;
+  border: 0.25mm solid var(--id-line);
+  overflow: hidden;
+  background: #f1f5f9;
+  box-shadow: 0 0.4mm 1mm rgba(15, 23, 42, 0.08);
+}
+
+.id-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.id-card__photo-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 1.5mm;
+  font-weight: 700;
+}
+
+.id-card__class {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5mm;
+  padding-top: 1mm;
+  min-width: 11mm;
+}
+
+.id-card__class-label {
+  font-size: 1.35mm;
+  font-weight: 800;
+  color: var(--id-muted);
+}
+
+.id-card__class-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 9mm;
+  padding: 0.6mm 1.2mm;
+  border-radius: 0.8mm;
+  border: 0.25mm solid var(--id-line);
+  background: #fff;
+  font-size: 2.4mm;
+  font-weight: 900;
+  color: #0f172a;
+  font-family: system-ui, "Segoe UI", Arial, sans-serif;
+  box-shadow: 0 0.2mm 0.6mm rgba(15, 23, 42, 0.05);
+}
+
+.id-card__name {
+  margin: 0 0 1mm;
+  text-align: center;
+  font-size: 2.85mm;
+  font-weight: 900;
+  color: var(--id-name);
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+}
+
+.id-card__fields {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45mm;
+  overflow: hidden;
+}
+
+.id-card__field {
+  display: grid;
+  grid-template-columns: 7.5mm 1fr;
+  gap: 0.8mm;
+  align-items: start;
+  line-height: 1.25;
+  border-bottom: 0.15mm solid var(--id-line);
+  padding-bottom: 0.45mm;
+}
+
+.id-card__field:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.id-card__field-label {
+  font-size: 1.35mm;
+  font-weight: 800;
+  color: var(--id-muted);
+}
+
+.id-card__field-value {
+  font-size: 1.55mm;
+  font-weight: 700;
+  color: #0f172a;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.id-card__field-value.is-emphasis {
+  font-weight: 900;
+  color: var(--id-name);
+  text-decoration: underline;
+  text-underline-offset: 0.3mm;
+}
+
+.id-card__foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1mm;
+  padding: 1mm 2mm 1.4mm;
+  border-top: 0.2mm solid var(--id-line);
+  background: #f8fafc;
+}
+
+.id-card__meta-chips {
+  display: flex;
+  gap: 0.8mm;
+  min-width: 0;
+}
+
+.id-card__chip {
+  border-radius: 0.8mm;
+  border: 0.2mm solid var(--id-line);
+  background: #fff;
+  padding: 0.55mm 0.9mm;
+  min-width: 10mm;
+}
+
+.id-card__chip-label {
+  display: block;
+  font-size: 1.15mm;
+  font-weight: 750;
+  color: var(--id-muted);
+  line-height: 1.1;
+}
+
+.id-card__chip-value {
+  display: block;
+  margin-top: 0.25mm;
+  font-size: 1.75mm;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1.05;
+}
+
+.id-card__sign {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35mm;
+  min-width: 14mm;
+}
+
+.id-card__sign img {
+  height: 4mm;
+  max-width: 14mm;
+  object-fit: contain;
+}
+
+.id-card__sign svg {
+  width: 14mm;
+  height: 3.5mm;
+}
+
+.id-card__sign-text {
+  font-size: 1.25mm;
+  font-weight: 800;
+  color: var(--id-primary);
+  white-space: nowrap;
+}
+
+/* Screen preview scale — keeps real mm ratio, easier to read */
+.id-card-preview-scale {
+  width: 54mm;
+  height: 85.6mm;
+}
+
+@media (min-width: 640px) {
+  .id-card-preview-scale {
+    transform: scale(1.42);
+    transform-origin: top center;
+  }
+}
+
+@media (min-width: 1024px) {
+  .id-card-preview-scale {
+    transform: scale(1.55);
+    transform-origin: top center;
+  }
+}

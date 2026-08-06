@@ -363,7 +363,10 @@ async function main() {
   }
 
   await prisma.smsInboxMessage.deleteMany({
-    where: { schoolId: school1.id, body: { contains: "DG OTP" } },
+    where: { schoolId: school1.id, otpCode: { in: ["482916", "739204"] } },
+  });
+  await prisma.smsInboxMessage.deleteMany({
+    where: { schoolId: school2.id, otpCode: "551203" },
   });
 
   await prisma.smsInboxMessage.createMany({

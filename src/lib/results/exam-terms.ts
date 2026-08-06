@@ -608,6 +608,55 @@ export function computeTermCompletion(
   };
 }
 
+/** Paper / external mark field names accepted from web + mobile clients */
+export const TERM_PAPER_MARK_KEYS = [
+  "termValue",
+  "externalValue",
+  "external",
+  "paperValue",
+  "paperMarks",
+  "paper",
+  "marks",
+  "value",
+] as const;
+
+/** Teacher / internal mark field names accepted from web + mobile clients */
+export const TERM_INTERNAL_MARK_KEYS = [
+  "internalValue",
+  "internal",
+  "internalMarks",
+  "teacherMarks",
+  "teacherValue",
+  "teacher",
+] as const;
+
+/**
+ * Read an optional numeric mark from a subject payload.
+ * `undefined` = field omitted (leave existing DB value unchanged).
+ * `null` = explicit clear.
+ */
+export function pickSubjectMarkField(
+  sub: Record<string, unknown>,
+  keys: readonly string[],
+): number | null | undefined {
+  for (const key of keys) {
+    if (!Object.prototype.hasOwnProperty.call(sub, key)) continue;
+    const raw = sub[key];
+    if (raw === null || raw === "") return null;
+    if (raw === undefined) continue;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  }
+  return undefined;
+}
+
+export function resolveTermInternalMax(term: ExamTermDef): number {
+  if ((term.internalMax ?? 0) > 0) return term.internalMax ?? 0;
+  const derived = Math.max(0, (term.totalMax ?? 0) - (term.maxMarks ?? 0));
+  if (derived > 0) return derived;
+  return term.role === "final" ? 20 : 0;
+}
+
 export function clampTermMarks(
   term: ExamTermDef,
   value: number | null,
@@ -662,16 +711,22 @@ export function buildStudentTermRows(
       );
       const internalValue = readTermInternalScore(term, termData);
 
+      const internalMax = resolveTermInternalMax(term);
+      const showInternal = internalMax > 0 && def.type === "numeric";
+
       return {
         subjectCode: def.code,
         subjectName: def.name,
         subjectType: def.type,
         examSubjectId: examSub?.id ?? null,
         termValue: def.type === "grade" ? null : termValue,
-        internalValue:
-          (term.internalMax ?? 0) > 0 && def.type === "numeric"
-            ? internalValue
-            : null,
+        /** Alias for mobile clients */
+        externalValue: def.type === "grade" ? null : termValue,
+        internalValue: showInternal ? internalValue : null,
+        /** Alias for mobile clients */
+        internal: showInternal ? internalValue : null,
+        internalMax: showInternal ? internalMax : 0,
+        paperMax: term.maxMarks,
         letterGrade: def.type === "grade" ? termData.letterGrade : null,
       };
     });

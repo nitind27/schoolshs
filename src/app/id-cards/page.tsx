@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { StudentIdCard } from "@/components/id-cards/student-id-card";
 import { IdCardShareLinkManager } from "@/components/id-cards/id-card-share-link-manager";
+import "@/components/id-cards/id-card-print.css";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import { useT } from "@/i18n/locale-provider";
@@ -119,8 +120,8 @@ function IdCardsContent() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+    <div className="space-y-6" data-ft-anchor="main">
+      <div className="id-cards-toolbar flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <CreditCard className="h-7 w-7 text-pink-600" />
@@ -230,7 +231,7 @@ function IdCardsContent() {
       )}
 
       {!singleStudentMode && (
-        <Card className="print:hidden">
+        <Card className="id-cards-filters print:hidden">
           <CardContent className="p-4 flex flex-wrap gap-3">
             <Select label={t("fields.class")} options={classOptions} value={classId} onChange={(e) => setClassId(e.target.value)} className="w-56" />
             <Select label={t("idCards.year")} options={FINANCIAL_YEARS} value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="w-32" />
@@ -258,49 +259,64 @@ function IdCardsContent() {
         </Card>
       ) : (
         <>
-          <p className="text-sm text-slate-500 print:hidden">
-            {t("idCards.cardsReady", { count: students.length })}
-          </p>
-          <div className="id-cards-grid mx-auto flex max-w-4xl flex-wrap justify-center gap-8 pb-10 print:gap-4">
+          <div className="id-cards-preview-note flex flex-wrap items-center justify-between gap-2 print:hidden">
+            <p className="text-sm text-slate-600">
+              {t("idCards.cardsReady", { count: students.length })}
+            </p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {t("idCards.sizeHint")}
+            </p>
+          </div>
+
+          <div className="id-cards-preview-grid print:hidden">
             {settings &&
-              students.map((s) => (
-                <div key={s.id} className="id-card-wrap flex justify-center">
-                  <StudentIdCard
-                    student={s}
-                    settings={settings}
-                    photoUrl={photoUrl(s)}
-                    logoUrl={logoPreview || SCHOOL_LOGO_URL}
-                    signatureUrl={signaturePreview}
-                  />
+              students.map((s, index) => {
+                const studentName = [s.firstName, s.surname].filter(Boolean).join(" ").trim();
+                return (
+                  <div key={s.id} className="id-cards-stage">
+                    <div className="id-cards-stage-inner">
+                      <div className="id-card-preview-scale">
+                        <StudentIdCard
+                          student={s}
+                          settings={settings}
+                          photoUrl={photoUrl(s)}
+                          logoUrl={logoPreview || SCHOOL_LOGO_URL}
+                          signatureUrl={signaturePreview}
+                        />
+                      </div>
+                    </div>
+                    <p className="id-cards-stage-label">{t("idCards.frontOnly")}</p>
+                    <p className="id-cards-stage-name" title={studentName}>
+                      {studentName || s.grNumber || `#${index + 1}`}
+                    </p>
+                  </div>
+                );
+              })}
+          </div>
+
+          <div className="hidden print:block id-card-print-bundle">
+            {settings &&
+              students.map((s, index) => (
+                <div key={`print-${s.id}`} className="id-card-print-sheet">
+                  <div className="id-card-print-inner">
+                    <StudentIdCard
+                      student={s}
+                      settings={settings}
+                      photoUrl={photoUrl(s)}
+                      logoUrl={logoPreview || SCHOOL_LOGO_URL}
+                      signatureUrl={signaturePreview}
+                      className="id-card-print-size"
+                    />
+                    <p className="id-card-print-label print:hidden text-xs text-slate-400 mt-2 text-center">
+                      {index + 1} / {students.length}
+                    </p>
+                  </div>
                 </div>
               ))}
           </div>
         </>
       )}
 
-      <style jsx global>{`
-        @media print {
-          body { background: white !important; }
-          aside, nav, .print\\:hidden { display: none !important; }
-          main { padding: 0 !important; margin: 0 !important; }
-          .lg\\:pl-64 { padding-left: 0 !important; }
-          .id-cards-grid {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            justify-content: center !important;
-            gap: 8mm !important;
-            padding: 8mm !important;
-          }
-          .id-card-wrap {
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          .id-card {
-            box-shadow: none !important;
-            border: 1px solid #d1d5db;
-          }
-        }
-      `}</style>
     </div>
   );
 }

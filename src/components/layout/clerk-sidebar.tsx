@@ -31,6 +31,7 @@ import {
   FolderOpen,
   Hash,
   Armchair,
+  PartyPopper,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import "@/components/clerk/clerk-portal.css";
@@ -132,6 +133,11 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
           href: "/staff/salary-ledger",
           label: t("salaryLedger.title"),
           icon: BookOpen,
+        },
+        {
+          href: "/staff/holidays",
+          label: t("nav.staffHolidays"),
+          icon: PartyPopper,
         },
       ],
     },

@@ -145,40 +145,40 @@ export default function StaffPage() {
       ]}
       actions={(
         <>
-          <Link href="/staff/register">
-            <Button variant="outline"><ClipboardList className="h-4 w-4" /> {t("staffRegister.title")}</Button>
+          <Link href="/staff/register" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto"><ClipboardList className="h-4 w-4" /> {t("staffRegister.title")}</Button>
           </Link>
-          <Link href="/staff/new">
-            <Button><Plus className="h-4 w-4" /> {t("staffPage.addStaff")}</Button>
+          <Link href="/staff/new" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto"><Plus className="h-4 w-4" /> {t("staffPage.addStaff")}</Button>
           </Link>
         </>
       )}
     >
       <Card>
-        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="rounded-lg border border-slate-200 p-3"><p className="text-xs text-slate-500">Teacher</p><p className="text-2xl font-bold text-slate-900">{teacherCount}</p></div>
-          <div className="rounded-lg border border-slate-200 p-3"><p className="text-xs text-slate-500">Peon</p><p className="text-2xl font-bold text-slate-900">{peonCount}</p></div>
-          <div className="rounded-lg border border-slate-200 p-3"><p className="text-xs text-slate-500">Supervisor</p><p className="text-2xl font-bold text-slate-900">{supervisorCount}</p></div>
+        <CardContent className="p-4 grid grid-cols-3 gap-3">
+          <div className="rounded-lg border border-slate-200 p-3"><p className="text-xs text-slate-500">Teacher</p><p className="text-xl sm:text-2xl font-bold text-slate-900">{teacherCount}</p></div>
+          <div className="rounded-lg border border-slate-200 p-3"><p className="text-xs text-slate-500">Peon</p><p className="text-xl sm:text-2xl font-bold text-slate-900">{peonCount}</p></div>
+          <div className="rounded-lg border border-slate-200 p-3"><p className="text-xs text-slate-500">Supervisor</p><p className="text-xl sm:text-2xl font-bold text-slate-900">{supervisorCount}</p></div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link href="/staff/attendance" className="rounded-2xl bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-200 p-5 hover:shadow-md transition-all">
-          <div className="flex items-start justify-between">
-            <div><ClipboardList className="h-8 w-8 text-violet-600 mb-2" /><p className="font-bold text-slate-900 text-lg">{t("staffHr.attendanceTitle")}</p><p className="text-sm text-slate-600 mt-1">{t("staffHr.attendanceCardDesc")}</p></div>
-            <span className="text-2xl font-black text-violet-600">{hrSummary?.attendanceMarked ?? 0}/{hrSummary?.totalStaff ?? 0}</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link href="/staff/attendance" className="rounded-2xl bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-200 p-4 sm:p-5 hover:shadow-md transition-all">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0"><ClipboardList className="h-7 w-7 sm:h-8 sm:w-8 text-violet-600 mb-2" /><p className="font-bold text-slate-900 text-base sm:text-lg">{t("staffHr.attendanceTitle")}</p><p className="text-sm text-slate-600 mt-1">{t("staffHr.attendanceCardDesc")}</p></div>
+            <span className="text-xl sm:text-2xl font-black text-violet-600 shrink-0">{hrSummary?.attendanceMarked ?? 0}/{hrSummary?.totalStaff ?? 0}</span>
           </div>
         </Link>
-        <Link href="/staff/payroll" className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 p-5 hover:shadow-md transition-all">
-          <div className="flex items-start justify-between">
-            <div><IndianRupee className="h-8 w-8 text-emerald-600 mb-2" /><p className="font-bold text-slate-900 text-lg">{t("staffHr.payrollTitle")}</p><p className="text-sm text-slate-600 mt-1">{t("staffHr.payrollCardDesc")}</p></div>
-            <div className="text-right"><p className="text-lg font-black text-emerald-700">₹{(hrSummary?.totalNet ?? 0).toLocaleString("en-IN")}</p><p className="text-xs text-amber-600">{hrSummary?.payrollPending ?? 0} {t("staffHr.pending")}</p></div>
+        <Link href="/staff/payroll" className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 p-4 sm:p-5 hover:shadow-md transition-all">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0"><IndianRupee className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-600 mb-2" /><p className="font-bold text-slate-900 text-base sm:text-lg">{t("staffHr.payrollTitle")}</p><p className="text-sm text-slate-600 mt-1">{t("staffHr.payrollCardDesc")}</p></div>
+            <div className="text-right shrink-0"><p className="text-base sm:text-lg font-black text-emerald-700">₹{(hrSummary?.totalNet ?? 0).toLocaleString("en-IN")}</p><p className="text-xs text-amber-600">{hrSummary?.payrollPending ?? 0} {t("staffHr.pending")}</p></div>
           </div>
         </Link>
       </div>
 
       <Card>
-        <CardContent className="p-4 flex flex-col sm:flex-row gap-3">
+        <CardContent className="p-4 flex flex-col gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input

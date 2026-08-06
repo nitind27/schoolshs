@@ -1,11 +1,22 @@
-/* Income tax computation form — official single-table format (screen + A4 portrait print) */
+/* Income tax computation form — official Gujarati format (screen + A4 portrait print) */
 
+/* ── Scroll container ───────────────────────────────────────
+   The form is fixed-layout ~640px wide. We set min-width here
+   so overflow-x-auto kicks in on narrow screens cleanly.
+──────────────────────────────────────────────────────────── */
+.income-tax-area {
+  min-width: 620px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ── Form title ─────────────────────────────────────────── */
 .it-form-title {
   text-align: center;
   border: 1px solid #94a3b8;
   border-bottom: none;
   background: #fff7ed;
-  padding: 6px 8px;
+  padding: 8px 10px;
 }
 
 .it-form-title .it-t1 {
@@ -16,78 +27,84 @@
 }
 
 .it-form-title .it-t2 {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   color: #7c2d12;
-  margin: 2px 0 0;
+  margin: 3px 0 0;
 }
 
-/* Employee header grid */
+/* ── Employee header table ──────────────────────────────── */
 .it-head-tbl {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
 .it-head-tbl td {
   border: 1px solid #94a3b8;
-  padding: 3px 8px;
+  padding: 4px 8px;
+  vertical-align: middle;
 }
 
 .it-head-tbl .it-hl {
-  width: 17%;
+  width: 16%;
   font-weight: 700;
   background: #f8fafc;
   white-space: nowrap;
+  color: #334155;
 }
 
 .it-head-tbl .it-hv {
-  width: 33%;
+  width: 34%;
 }
 
 .it-head-tbl .it-strong {
   font-weight: 700;
+  color: #0f172a;
 }
 
 .it-head-input {
   width: 100%;
   border: none;
   background: transparent;
-  font-size: 12.5px;
+  font-size: 12px;
   outline: none;
-  padding: 0;
+  padding: 1px 0;
+  color: #0f172a;
 }
 
 .it-head-input:focus {
   background: #eff6ff;
+  border-radius: 2px;
+  padding-left: 3px;
 }
 
-/* Main table */
+/* ── Main computation table ─────────────────────────────── */
 .it-tbl {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .it-tbl th {
   border: 1px solid #94a3b8;
-  background: #f1f5f9;
-  padding: 4px 8px;
-  font-weight: 800;
-  color: #0f172a;
+  background: linear-gradient(180deg, #1e293b, #0f172a);
+  color: #f1f5f9;
+  padding: 6px 8px;
+  font-weight: 700;
   text-align: center;
 }
 
 .it-tbl th.it-no,
 .it-tbl td.it-no {
-  width: 42px;
+  width: 38px;
   text-align: center;
   font-weight: 700;
-  color: #334155;
+  color: #475569;
 }
 
 .it-tbl th.it-amt-h {
-  width: 120px;
+  width: 110px;
 }
 
 .it-tbl td {
@@ -96,8 +113,9 @@
   color: #0f172a;
 }
 
+/* Amount cells */
 .it-tbl td.it-amt {
-  width: 120px;
+  width: 110px;
   text-align: right;
   padding: 0;
   font-variant-numeric: tabular-nums;
@@ -110,14 +128,18 @@
   background: #f8fafc;
 }
 
+/* Row variants */
 .it-tbl tr.it-sub td {
   background: #f8fafc;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 11.5px;
+  color: #475569;
 }
 
 .it-tbl tr.it-sum td {
   background: #f1f5f9;
   font-weight: 700;
+  border-top: 1.5px solid #94a3b8;
 }
 
 .it-tbl tr.it-sum td.it-amt,
@@ -132,66 +154,72 @@
   background: #ffedd5;
   font-weight: 800;
   color: #9a3412;
+  border-top: 2px solid #fb923c;
 }
 
 .it-tbl tr.it-grand td {
   background: #dbeafe;
   font-weight: 800;
   color: #1e40af;
+  border-top: 2px solid #3b82f6;
 }
 
 .it-tbl tr.it-refund td {
   background: #dcfce7;
   font-weight: 800;
   color: #15803d;
+  border-top: 2px solid #22c55e;
 }
 
 .it-tbl tr.it-due td {
   background: #fee2e2;
   font-weight: 800;
   color: #b91c1c;
+  border-top: 2px solid #ef4444;
 }
 
+/* Editable number inputs inside table */
 .it-input {
   width: 100%;
   border: none;
   background: transparent;
   padding: 3px 8px;
   text-align: right;
-  font-size: 13px;
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
   outline: none;
+  color: #0f172a;
 }
 
 .it-input:focus {
   background: #eff6ff;
   box-shadow: inset 0 0 0 2px #3b82f6;
+  border-radius: 2px;
 }
 
+/* Signature row */
 .it-sign {
   display: flex;
   justify-content: space-between;
   border: 1px solid #94a3b8;
   border-top: none;
-  padding: 18px 12px 6px;
-  font-size: 12.5px;
+  padding: 20px 14px 8px;
+  font-size: 12px;
   font-weight: 700;
+  color: #334155;
 }
 
+/* ── Print styles ────────────────────────────────────────── */
 @media print {
   @page {
     size: A4 portrait;
     margin: 8mm;
   }
 
-  body * {
-    visibility: hidden !important;
-  }
+  body * { visibility: hidden !important; }
 
   .income-tax-area,
-  .income-tax-area * {
-    visibility: visible !important;
-  }
+  .income-tax-area * { visibility: visible !important; }
 
   .income-tax-area {
     position: absolute !important;
@@ -199,40 +227,26 @@
     top: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: unset !important;
+    padding: 0 !important;
   }
 
-  .it-form-title .it-t1 {
-    font-size: 12pt;
-  }
+  .it-form-title .it-t1 { font-size: 12pt; }
+  .it-form-title .it-t2 { font-size: 9pt; }
 
-  .it-form-title .it-t2 {
-    font-size: 9pt;
-  }
+  .it-head-tbl { font-size: 8pt; }
+  .it-head-tbl td { border: 1px solid #334155 !important; padding: 2px 5px; }
 
-  .it-head-tbl {
-    font-size: 8pt;
-  }
-
-  .it-head-tbl td {
+  .it-tbl { font-size: 8pt; }
+  .it-tbl th {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
     border: 1px solid #334155 !important;
-    padding: 2px 5px;
+    padding: 2px 4px;
   }
+  .it-tbl td { border: 1px solid #334155 !important; padding: 1.5px 5px; }
 
-  .it-tbl {
-    font-size: 8pt;
-  }
-
-  .it-tbl th,
-  .it-tbl td {
-    border: 1px solid #334155 !important;
-    padding: 1.5px 5px;
-  }
-
-  .it-input,
-  .it-head-input {
-    font-size: 8pt;
-    padding: 1.5px 5px;
-  }
+  .it-input, .it-head-input { font-size: 8pt; padding: 1.5px 5px; }
 
   .it-form-title,
   .it-tbl tr.it-sub td,
@@ -246,8 +260,5 @@
     print-color-adjust: exact;
   }
 
-  .it-sign {
-    border: none;
-    padding-top: 28px;
-  }
+  .it-sign { border: none; padding-top: 28px; }
 }
