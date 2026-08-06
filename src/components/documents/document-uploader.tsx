@@ -7,8 +7,8 @@ import { compressForDigitalGujarat } from "@/lib/compress-document.client";
 import { DG_DOC_LIMITS, formatKB, isDGReady } from "@/lib/dg-document-limits";
 import { useT } from "@/i18n/locale-provider";
 import { Upload, X, FileText, ImageIcon, CheckCircle2, AlertCircle, Sparkles, ShieldCheck, ScanLine } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { DocumentScanner } from "@/components/documents/document-scanner";
+import "./document-uploader.css";
 
 import type { DocType } from "@/lib/student-documents";
 
@@ -207,32 +207,35 @@ function DocumentCard({
   };
 
   const busy = uploading || compressing;
+  const cardState = !hasFile ? "empty" : dgReady ? "ready" : "warn";
 
   return (
     <div
-      className={cn(
-        "group relative rounded-xl border-2 bg-white transition-all overflow-hidden",
-        dragOver ? "border-blue-500 bg-blue-50/50 scale-[1.01]" : "border-slate-200 hover:border-slate-300",
-        hasFile && dgReady && "border-emerald-300",
-        hasFile && !dgReady && "border-amber-300"
-      )}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      className="doc-card"
+      data-drag={dragOver ? "true" : "false"}
+      data-state={cardState}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
     >
-      <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center overflow-hidden">
+      <div className="doc-card__preview">
         {busy && (
-          <div className="absolute inset-0 z-10 bg-white/90 flex flex-col items-center justify-center gap-2">
+          <div className="doc-card__busy">
             {compressing ? (
               <>
-                <Sparkles className="h-8 w-8 text-blue-600 animate-pulse" />
-                <span className="text-sm font-medium text-slate-700">{t("documents.autoCompressing")}</span>
-                <span className="text-xs text-slate-500">{t("documents.dgLimitNote", { maxKB })}</span>
+                <Sparkles className="h-8 w-8 text-teal-600 animate-pulse" />
+                <span className="doc-card__busy-title">{t("documents.autoCompressing")}</span>
+                <span className="doc-card__busy-sub">
+                  {t("documents.dgLimitNote", { maxKB })}
+                </span>
               </>
             ) : (
               <>
                 <Spinner size="lg" />
-                <span className="text-sm text-slate-600">{t("documents.uploading")}</span>
+                <span className="doc-card__busy-title">{t("documents.uploading")}</span>
               </>
             )}
           </div>
@@ -243,54 +246,58 @@ function DocumentCard({
           <img
             src={localPreview || doc.previewUrl || ""}
             alt={doc.label}
-            className="w-full h-full object-contain p-2"
+            className="doc-card__img"
           />
         ) : hasFile ? (
-          <div className="flex flex-col items-center gap-2 text-slate-500 p-4">
-            <div className="p-4 bg-red-50 rounded-xl">
-              <FileText className="h-10 w-10 text-red-500" />
+          <div className="doc-card__file">
+            <div className="doc-card__file-ico">
+              <FileText className="h-9 w-9 text-rose-500" />
             </div>
-            <p className="text-xs font-medium text-center truncate max-w-full px-2">
-              {doc.fileName}
-            </p>
-            {doc.size && <p className="text-xs text-slate-400">{formatSize(doc.size)}</p>}
+            <p className="doc-card__file-name">{doc.fileName}</p>
+            {doc.size != null && (
+              <p className="text-xs text-slate-400">{formatSize(doc.size)}</p>
+            )}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 text-slate-400 p-4">
-            <div className="p-4 bg-slate-100 rounded-xl group-hover:bg-blue-50 transition-colors">
+          <div className="doc-card__empty">
+            <div className="doc-card__empty-ico">
               {doc.type === "photo" ? (
-                <ImageIcon className="h-10 w-10 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                <ImageIcon className="h-9 w-9" />
               ) : (
-                <Upload className="h-10 w-10 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                <Upload className="h-9 w-9" />
               )}
             </div>
-            <p className="text-xs text-center">{t("documents.chooseOrScan")}</p>
+            <p className="doc-card__empty-text">{t("documents.chooseOrScan")}</p>
           </div>
         )}
 
         {hasFile && !busy && (
-          <div className="absolute left-2 right-2 top-2 flex justify-end">
+          <span
+            className="doc-card__badge"
+            data-tone={dgReady ? "ok" : "warn"}
+          >
             {dgReady ? (
-              <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-500 px-2 py-1 text-right text-xs leading-tight text-white shadow-sm">
+              <>
                 <ShieldCheck className="h-3 w-3" /> {t("documents.dgReady")}
-              </span>
+              </>
             ) : (
-              <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-amber-500 px-2 py-1 text-right text-xs leading-tight text-white shadow-sm">
-                <AlertCircle className="h-3 w-3" /> {t("documents.overLimit", { maxKB })}
-              </span>
+              <>
+                <AlertCircle className="h-3 w-3" />{" "}
+                {t("documents.overLimit", { maxKB })}
+              </>
             )}
-          </div>
+          </span>
         )}
       </div>
 
-      <div className="p-3 border-t border-slate-100">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div>
-            <p className="text-sm font-medium text-slate-900">
+      <div className="doc-card__body">
+        <div className="doc-card__head">
+          <div className="min-w-0">
+            <p className="doc-card__title">
               {doc.label}
-              {doc.required && <span className="text-red-500 ml-0.5">*</span>}
+              {doc.required ? <span className="doc-card__req">*</span> : null}
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="doc-card__desc">
               {t("documents.autoMax", { maxKB, desc: doc.description })}
             </p>
           </div>
@@ -299,7 +306,7 @@ function DocumentCard({
               type="button"
               onClick={handleRemove}
               disabled={busy}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+              className="doc-card__remove"
               title={t("documents.remove")}
               aria-label={t("documents.remove")}
             >
@@ -309,16 +316,16 @@ function DocumentCard({
         </div>
 
         {(compressMsg || doc.compressMessage) && hasFile && (
-          <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 rounded-lg px-2 py-1.5 mb-2">
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-            {compressMsg || doc.compressMessage}
+          <div className="doc-card__msg" data-tone="ok">
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{compressMsg || doc.compressMessage}</span>
           </div>
         )}
 
         {error && (
-          <div className="flex items-center gap-1.5 text-xs text-red-600 mb-2">
-            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-            {error}
+          <div className="doc-card__msg" data-tone="err">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -334,27 +341,28 @@ function DocumentCard({
           }}
         />
 
-        <div className="flex flex-col gap-2 min-[360px]:flex-row">
-          <Button
+        <div className="doc-card__actions">
+          <button
             type="button"
-            variant={hasFile ? "outline" : "default"}
-            className="h-auto min-h-11 flex-1 whitespace-normal"
+            className={cn(
+              "doc-card__btn",
+              hasFile ? "doc-card__btn--outline" : "doc-card__btn--primary",
+            )}
             disabled={busy}
             onClick={() => inputRef.current?.click()}
           >
-            <Upload className="h-3.5 w-3.5" />
+            <Upload className="h-4 w-4" />
             {hasFile ? t("documents.change") : t("documents.chooseFile")}
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            variant="secondary"
-            className="h-auto min-h-11 flex-1 whitespace-normal"
+            className="doc-card__btn doc-card__btn--scan"
             disabled={busy}
             onClick={() => setScannerOpen(true)}
           >
-            <ScanLine className="h-3.5 w-3.5" />
+            <ScanLine className="h-4 w-4" />
             {t("documents.scan")}
-          </Button>
+          </button>
         </div>
 
         <DocumentScanner
@@ -366,14 +374,19 @@ function DocumentCard({
         />
 
         {hasFile && doc.size != null && (
-          <div className="mt-2 flex items-center justify-between text-xs">
-            <span className={cn("font-medium", dgReady ? "text-emerald-600" : "text-amber-600")}>
+          <div className="doc-card__meta">
+            <span
+              className="doc-card__meta-size"
+              data-tone={dgReady ? "ok" : "warn"}
+            >
               {formatSize(doc.size)}
             </span>
-            {doc.originalSize && doc.originalSize > doc.size && (
-              <span className="text-slate-400 line-through">{formatKB(doc.originalSize)}</span>
-            )}
-            <span className="text-slate-400">/ {maxKB} KB</span>
+            {doc.originalSize && doc.originalSize > doc.size ? (
+              <span className="doc-card__meta-old">
+                {formatKB(doc.originalSize)}
+              </span>
+            ) : null}
+            <span className="doc-card__meta-max">/ {maxKB} KB</span>
           </div>
         )}
       </div>
@@ -392,28 +405,38 @@ export function DocumentUploader({
   const dgReadyCount = documents.filter((d) => d.dgReady ?? (d.size ? isDGReady(d.size, d.type) : false)).length;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
-        <div className="flex items-center gap-2 text-sm text-blue-800">
-          <Sparkles className="h-4 w-4 shrink-0" />
+    <div className="doc-up">
+      <div className="doc-up__banner">
+        <div className="doc-up__banner-copy">
+          <span className="doc-up__banner-ico" aria-hidden>
+            <Sparkles className="h-4 w-4" />
+          </span>
           <span>
-            {t("documents.autoCompressBanner", { maxKB: DG_DOC_LIMITS.photo.maxKB })}
+            {t("documents.autoCompressBanner", {
+              maxKB: DG_DOC_LIMITS.photo.maxKB,
+            })}
           </span>
         </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
-          <span className="text-xs text-blue-700">
-            {t("documents.uploadedCount", { uploaded, total: documents.length, ready: dgReadyCount })}
+        <div className="doc-up__progress">
+          <span className="doc-up__progress-label">
+            {t("documents.uploadedCount", {
+              uploaded,
+              total: documents.length,
+              ready: dgReadyCount,
+            })}
           </span>
-          <div className="h-2 w-20 shrink-0 overflow-hidden rounded-full bg-blue-100 sm:w-24">
+          <div className="doc-up__progress-track" aria-hidden>
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all"
-              style={{ width: `${uploaded ? (dgReadyCount / documents.length) * 100 : 0}%` }}
+              className="doc-up__progress-fill"
+              style={{
+                width: `${uploaded ? (dgReadyCount / documents.length) * 100 : 0}%`,
+              }}
             />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div className="doc-up__grid">
         {documents.map((doc) => (
           <DocumentCard
             key={doc.type}

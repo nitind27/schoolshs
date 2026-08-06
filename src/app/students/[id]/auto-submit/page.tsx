@@ -2,8 +2,6 @@
 
 import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useEffect, useState, use, useCallback, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
@@ -13,15 +11,37 @@ import {
   type DocumentInfo,
 } from "@/components/documents/document-uploader";
 import { useT } from "@/i18n/locale-provider";
-import { ArrowLeft, Play, Save, Monitor, AlertTriangle, CheckCircle, LogIn, FileUp, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  Play,
+  Save,
+  Monitor,
+  AlertTriangle,
+  CheckCircle,
+  LogIn,
+  FileUp,
+  ExternalLink,
+  Info,
+} from "lucide-react";
 import Link from "next/link";
 import type { Student } from "@/generated/prisma/client";
 import { getDgPortalConfig, getSchemeGroup } from "@/lib/dg-portal";
+import "./auto-submit.css";
 
-const PATH_KEYS: Record<DocType, keyof Pick<Student,
-  "photoPath" | "aadhaarDocPath" | "incomeCertPath" | "casteCertPath" |
-  "marksheet10Path" | "marksheet12Path" | "bankPassbookPath" | "feeReceiptPath"
->> = {
+const PATH_KEYS: Record<
+  DocType,
+  keyof Pick<
+    Student,
+    | "photoPath"
+    | "aadhaarDocPath"
+    | "incomeCertPath"
+    | "casteCertPath"
+    | "marksheet10Path"
+    | "marksheet12Path"
+    | "bankPassbookPath"
+    | "feeReceiptPath"
+  >
+> = {
   photo: "photoPath",
   aadhaar: "aadhaarDocPath",
   income: "incomeCertPath",
@@ -32,7 +52,11 @@ const PATH_KEYS: Record<DocType, keyof Pick<Student,
   feeReceipt: "feeReceiptPath",
 };
 
-export default function AutoSubmitPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AutoSubmitPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const t = useT();
   const { id } = use(params);
   const defaultDocs = useMemo(() => getDefaultDocuments(t), [t]);
@@ -42,7 +66,7 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
   const [starting, setStarting] = useState(false);
   const [started, setStarted] = useState(false);
   const [documents, setDocuments] = useState<DocumentInfo[]>(() =>
-    defaultDocs.map((d) => ({ ...d }))
+    defaultDocs.map((d) => ({ ...d })),
   );
 
   const [form, setForm] = useState({
@@ -66,7 +90,9 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
 
     setDocuments(
       defaultDocs.map((def) => {
-        const saved = data.documents?.find((d: { type: DocType }) => d.type === def.type);
+        const saved = data.documents?.find(
+          (d: { type: DocType }) => d.type === def.type,
+        );
         return {
           ...def,
           previewUrl: saved?.previewUrl ?? null,
@@ -76,7 +102,7 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
           filePath: saved?.filePath ?? null,
           dgReady: saved?.dgReady ?? false,
         };
-      })
+      }),
     );
   }, [id, defaultDocs]);
 
@@ -84,29 +110,31 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
     Promise.all([
       fetch(`/api/students/${id}`).then((r) => r.json()),
       loadDocuments(),
-    ]).then(([data]) => {
-      if (data?.id) {
-        setStudent(data);
-        setForm({
-          dgLoginId: data.dgLoginId || data.mobileNumber || "",
-          dgPassword: data.dgPassword || "",
-          dgLoginMethod: data.dgLoginMethod || "mobile",
-          photoPath: data.photoPath || "",
-          aadhaarDocPath: data.aadhaarDocPath || "",
-          incomeCertPath: data.incomeCertPath || "",
-          casteCertPath: data.casteCertPath || "",
-          marksheet10Path: data.marksheet10Path || "",
-          marksheet12Path: data.marksheet12Path || "",
-          bankPassbookPath: data.bankPassbookPath || "",
-          feeReceiptPath: data.feeReceiptPath || "",
-        });
-      }
-    }).finally(() => setLoading(false));
+    ])
+      .then(([data]) => {
+        if (data?.id) {
+          setStudent(data);
+          setForm({
+            dgLoginId: data.dgLoginId || data.mobileNumber || "",
+            dgPassword: data.dgPassword || "",
+            dgLoginMethod: data.dgLoginMethod || "mobile",
+            photoPath: data.photoPath || "",
+            aadhaarDocPath: data.aadhaarDocPath || "",
+            incomeCertPath: data.incomeCertPath || "",
+            casteCertPath: data.casteCertPath || "",
+            marksheet10Path: data.marksheet10Path || "",
+            marksheet12Path: data.marksheet12Path || "",
+            bankPassbookPath: data.bankPassbookPath || "",
+            feeReceiptPath: data.feeReceiptPath || "",
+          });
+        }
+      })
+      .finally(() => setLoading(false));
   }, [id, loadDocuments]);
 
   const handleDocUpdate = (type: DocType, data: Partial<DocumentInfo>) => {
     setDocuments((prev) =>
-      prev.map((d) => (d.type === type ? { ...d, ...data } : d))
+      prev.map((d) => (d.type === type ? { ...d, ...data } : d)),
     );
     if (data.filePath) {
       const pathKey = PATH_KEYS[type];
@@ -118,9 +146,15 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
     setDocuments((prev) =>
       prev.map((d) =>
         d.type === type
-          ? { ...d, previewUrl: null, fileName: null, mimeType: null, size: null }
-          : d
-      )
+          ? {
+              ...d,
+              previewUrl: null,
+              fileName: null,
+              mimeType: null,
+              size: null,
+            }
+          : d,
+      ),
     );
     const pathKey = PATH_KEYS[type];
     setForm((prev) => ({ ...prev, [pathKey]: "" }));
@@ -190,7 +224,6 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
       const res = await fetch("/api/automation/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Portal is resolved server-side from scholarshipScheme — do not send a client portalType.
         body: JSON.stringify({ studentId: id, mode }),
       });
 
@@ -206,107 +239,117 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
   };
 
   if (loading) {
-    return (
-      <PageLoader />
-    );
+    return <PageLoader />;
   }
 
-  if (!student) return <p className="text-center py-16 text-slate-500">{t("students.notFound")}</p>;
+  if (!student) {
+    return (
+      <p className="py-16 text-center text-slate-500">{t("students.notFound")}</p>
+    );
+  }
 
   const portal = getDgPortalConfig(student.scholarshipScheme);
   const schemeGroup = getSchemeGroup(student.scholarshipScheme);
   const isSjed = portal.type === "sjed";
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center gap-4">
-        <Link href={`/students/${id}`}>
-          <button className="p-2 rounded-lg hover:bg-slate-100">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+    <div className="asub">
+      <div className="asub__hero">
+        <Link href={`/students/${id}`} className="asub__back" aria-label="Back">
+          <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {t("autoSubmit.pageTitle", { name: `${student.firstName} ${student.surname}` })}
+        <div className="asub__hero-copy">
+          <h1 className="asub__title">
+            {t("autoSubmit.pageTitle", {
+              name: `${student.firstName} ${student.surname}`,
+            })}
           </h1>
-          <p className="text-slate-500 mt-1">{t("autoSubmit.subtitle")}</p>
+          <p className="asub__sub">{t("autoSubmit.subtitle")}</p>
         </div>
       </div>
 
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="p-4 space-y-3">
-          <p className="font-semibold text-blue-900">{t("autoSubmit.otpTitle")}</p>
-          <div className="text-sm text-blue-800 space-y-2">
-            <p><strong>{t("autoSubmit.otpQ1")}</strong> {t("autoSubmit.otpA1")}</p>
-            <p><strong>{t("autoSubmit.otpQ2")}</strong> {t("autoSubmit.otpA2")}</p>
-            <p><strong>{t("autoSubmit.otpQ3")}</strong> {t("autoSubmit.otpA3")}</p>
-            <p className="text-blue-700 font-medium pt-1">{t("autoSubmit.otpTip")}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="asub__info asub__info--tip">
+        <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" />
+        <div className="space-y-1.5 text-sm">
+          <p className="font-semibold">{t("autoSubmit.otpTitle")}</p>
+          <p>
+            <strong>{t("autoSubmit.otpQ1")}</strong> {t("autoSubmit.otpA1")}
+          </p>
+          <p>
+            <strong>{t("autoSubmit.otpQ2")}</strong> {t("autoSubmit.otpA2")}
+          </p>
+          <p>
+            <strong>{t("autoSubmit.otpQ3")}</strong> {t("autoSubmit.otpA3")}
+          </p>
+          <p className="pt-0.5 font-medium text-sky-800">{t("autoSubmit.otpTip")}</p>
+        </div>
+      </div>
 
-      <Card className="border-amber-200 bg-amber-50">
-        <CardContent className="p-4 flex gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-800">
-            <p className="font-medium mb-1">{t("autoSubmit.howItWorks")}</p>
-            <ol className="list-decimal list-inside space-y-1">
-              <li>{t("autoSubmit.step1", { portal: portal.labelHi })}</li>
-              <li>{t("autoSubmit.step2")}</li>
-              <li><strong>{t("autoSubmit.step3")}</strong></li>
-              <li>{t("autoSubmit.step4")}</li>
-              <li><strong>{t("autoSubmit.step5")}</strong></li>
-            </ol>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="asub__info asub__info--warn">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+        <div className="text-sm">
+          <p className="mb-1 font-semibold">{t("autoSubmit.howItWorks")}</p>
+          <ol>
+            <li>{t("autoSubmit.step1", { portal: portal.labelHi })}</li>
+            <li>{t("autoSubmit.step2")}</li>
+            <li>
+              <strong>{t("autoSubmit.step3")}</strong>
+            </li>
+            <li>{t("autoSubmit.step4")}</li>
+            <li>
+              <strong>{t("autoSubmit.step5")}</strong>
+            </li>
+          </ol>
+        </div>
+      </div>
 
       {started && (
-        <Card className="border-emerald-200 bg-emerald-50">
-          <CardContent className="p-4 flex gap-3">
-            <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
-            <div className="text-sm text-emerald-800">
-              <p className="font-medium">{t("autoSubmit.browserOpened")}</p>
-              <p>{t("autoSubmit.browserOpenedDesc")}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="asub__info asub__info--ok">
+          <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+          <div className="text-sm">
+            <p className="font-semibold">{t("autoSubmit.browserOpened")}</p>
+            <p>{t("autoSubmit.browserOpenedDesc")}</p>
+          </div>
+        </div>
       )}
 
-      <Card className={isSjed ? "border-purple-200 bg-purple-50" : "border-blue-200 bg-blue-50"}>
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-              {t("autoSubmit.schemePortal", { scheme: schemeGroup })}
-            </p>
-            <p className="font-bold text-slate-900 text-lg">{portal.labelHi}</p>
-            <p className="text-sm text-slate-600 mt-0.5">{student.scholarshipScheme}</p>
-            <p className="text-xs text-slate-500 mt-1">{portal.description}</p>
-          </div>
-          <div className="text-right shrink-0">
-            <a
-              href={portal.loginUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:underline"
-            >
-              {portal.loginUrl.split("/").pop()}
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="asub__info asub__info--portal">
+        <div className="min-w-0">
+          <p className="mb-1 text-[0.7rem] font-bold uppercase tracking-wide text-teal-700/80">
+            {t("autoSubmit.schemePortal", { scheme: schemeGroup })}
+          </p>
+          <p className="text-lg font-bold text-slate-900">{portal.labelHi}</p>
+          <p className="mt-0.5 text-sm text-slate-600">{student.scholarshipScheme}</p>
+          <p className="mt-1 text-xs text-slate-500">{portal.description}</p>
+        </div>
+        <a
+          href={portal.loginUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-teal-700 hover:underline"
+        >
+          {portal.loginUrl.split("/").pop()}
+          <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <LogIn className="h-5 w-5" /> {t("autoSubmit.dgLogin")}
-          </CardTitle>
-          <CardDescription>
-            {isSjed ? t("autoSubmit.sjedLoginDesc") : t("autoSubmit.citizenLoginDesc")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <section className="asub__panel">
+        <header className="asub__panel-head">
+          <div>
+            <h2 className="asub__panel-title">
+              <span className="asub__panel-ico">
+                <LogIn className="h-4 w-4" />
+              </span>
+              {t("autoSubmit.dgLogin")}
+            </h2>
+            <p className="asub__panel-desc">
+              {isSjed
+                ? t("autoSubmit.sjedLoginDesc")
+                : t("autoSubmit.citizenLoginDesc")}
+            </p>
+          </div>
+        </header>
+        <div className="asub__panel-body space-y-4">
           {!isSjed && (
             <Select
               label={t("autoSubmit.loginMethod")}
@@ -315,14 +358,22 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
                 { value: "email", label: t("autoSubmit.emailId") },
               ]}
               value={form.dgLoginMethod}
-              onChange={(e) => setForm({ ...form, dgLoginMethod: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, dgLoginMethod: e.target.value })
+              }
             />
           )}
           <Input
-            label={isSjed ? t("autoSubmit.sjedUserId") : t("autoSubmit.loginId")}
+            label={
+              isSjed ? t("autoSubmit.sjedUserId") : t("autoSubmit.loginId")
+            }
             value={form.dgLoginId}
             onChange={(e) => setForm({ ...form, dgLoginId: e.target.value })}
-            placeholder={isSjed ? t("autoSubmit.sjedUsernamePlaceholder") : "9876543210"}
+            placeholder={
+              isSjed
+                ? t("autoSubmit.sjedUsernamePlaceholder")
+                : "9876543210"
+            }
           />
           <Input
             label={t("autoSubmit.password")}
@@ -331,82 +382,100 @@ export default function AutoSubmitPage({ params }: { params: Promise<{ id: strin
             onChange={(e) => setForm({ ...form, dgPassword: e.target.value })}
             placeholder={t("autoSubmit.dgPasswordPlaceholder")}
           />
-          <p className="text-xs text-slate-500">
-            {t("autoSubmit.passwordLocalNote")}
-          </p>
-        </CardContent>
-      </Card>
+          <p className="text-xs text-slate-500">{t("autoSubmit.passwordLocalNote")}</p>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileUp className="h-5 w-5" /> {t("autoSubmit.documentsTitle")}
-          </CardTitle>
-          <CardDescription>
-            {t("autoSubmit.documentsDesc")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <section className="asub__panel">
+        <header className="asub__panel-head">
+          <div>
+            <h2 className="asub__panel-title">
+              <span className="asub__panel-ico">
+                <FileUp className="h-4 w-4" />
+              </span>
+              {t("autoSubmit.documentsTitle")}
+            </h2>
+            <p className="asub__panel-desc">{t("autoSubmit.documentsDesc")}</p>
+          </div>
+        </header>
+        <div className="asub__panel-body">
           <DocumentUploader
             studentId={id}
             documents={documents}
             onUpdate={handleDocUpdate}
             onRemove={handleDocRemove}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Monitor className="h-5 w-5" /> {t("autoSubmit.startAutomation")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-3">
-            <Button
-              size="lg"
+      <section className="asub__panel">
+        <header className="asub__panel-head">
+          <div>
+            <h2 className="asub__panel-title">
+              <span className="asub__panel-ico">
+                <Monitor className="h-4 w-4" />
+              </span>
+              {t("autoSubmit.startAutomation")}
+            </h2>
+          </div>
+        </header>
+        <div className="asub__panel-body">
+          <div className="asub__actions">
+            <button
+              type="button"
+              className="asub__btn asub__btn--primary"
               onClick={() => startAutomation("full")}
               disabled={starting || !form.dgLoginId}
             >
-              <Play className="h-4 w-4" />
-              {starting ? t("autoSubmit.starting") : t("autoSubmit.loginAutoFill")}
-            </Button>
+              {starting ? (
+                <Spinner size="sm" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+              {starting
+                ? t("autoSubmit.starting")
+                : t("autoSubmit.loginAutoFill")}
+            </button>
 
-            <Button
-              variant="secondary"
-              size="lg"
+            <button
+              type="button"
+              className="asub__btn asub__btn--secondary"
               onClick={() => startAutomation("fill-only")}
               disabled={starting}
             >
               <Play className="h-4 w-4" />
               {t("autoSubmit.fillOnly")}
-            </Button>
+            </button>
 
-            <Button variant="outline" onClick={() => saveCredentials()} disabled={saving}>
-              <Save className="h-4 w-4" />
+            <button
+              type="button"
+              className="asub__btn asub__btn--ghost"
+              onClick={() => saveCredentials()}
+              disabled={saving}
+            >
+              {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
               {saving ? t("common.saving") : t("autoSubmit.saveCredentials")}
-            </Button>
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {student.lastAutomationLog && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("autoSubmit.lastLog")}</CardTitle>
-            {student.lastAutomationAt && (
-              <CardDescription>
-                {new Date(student.lastAutomationAt).toLocaleString("en-IN")}
-              </CardDescription>
-            )}
-          </CardHeader>
-          <CardContent>
-            <pre className="text-xs bg-slate-900 text-green-400 p-4 rounded-lg overflow-x-auto max-h-60 whitespace-pre-wrap">
-              {student.lastAutomationLog}
-            </pre>
-          </CardContent>
-        </Card>
+        <section className="asub__panel">
+          <header className="asub__panel-head">
+            <div>
+              <h2 className="asub__panel-title">{t("autoSubmit.lastLog")}</h2>
+              {student.lastAutomationAt ? (
+                <p className="asub__panel-desc">
+                  {new Date(student.lastAutomationAt).toLocaleString("en-IN")}
+                </p>
+              ) : null}
+            </div>
+          </header>
+          <div className="asub__panel-body">
+            <pre className="asub__log">{student.lastAutomationLog}</pre>
+          </div>
+        </section>
       )}
     </div>
   );

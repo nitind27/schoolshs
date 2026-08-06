@@ -1,0 +1,243 @@
+/* Auto-submit student page */
+
+.asub {
+  --as-teal: #0d9488;
+  --as-teal-deep: #0f766e;
+  max-width: 72rem;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.asub__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.85rem 1rem;
+}
+
+.asub__back {
+  display: inline-flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.85rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  transition: 0.15s ease;
+}
+
+.asub__back:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.asub__hero-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.asub__title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.4vw, 1.65rem);
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.asub__sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.asub__panel {
+  border-radius: 1.15rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.04);
+  overflow: hidden;
+}
+
+.asub__panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.15rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+}
+
+.asub__panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.asub__panel-ico {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  background: #0d9488;
+  color: #fff;
+  box-shadow: 0 6px 14px -8px rgb(13 148 136 / 0.7);
+}
+
+.asub__panel-desc {
+  margin: 0.3rem 0 0;
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.asub__panel-body {
+  padding: 1.05rem 1.15rem 1.2rem;
+}
+
+.asub__info {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.95rem 1.05rem;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+}
+
+.asub__info--tip {
+  border-color: rgb(14 165 233 / 0.25);
+  background: linear-gradient(135deg, #f0f9ff, #fff);
+  color: #0c4a6e;
+}
+
+.asub__info--warn {
+  border-color: rgb(245 158 11 / 0.3);
+  background: linear-gradient(135deg, #fffbeb, #fff);
+  color: #92400e;
+}
+
+.asub__info--ok {
+  border-color: rgb(16 185 129 / 0.3);
+  background: linear-gradient(135deg, #ecfdf5, #fff);
+  color: #065f46;
+}
+
+.asub__info--portal {
+  border-color: rgb(13 148 136 / 0.25);
+  background: linear-gradient(135deg, #f0fdfa, #fff);
+  color: #134e4a;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.asub__info strong {
+  font-weight: 700;
+}
+
+.asub__info ol {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.asub__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.asub__btn {
+  display: inline-flex;
+  width: 100%;
+  min-height: 3.15rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1.15rem;
+  border-radius: 0.95rem;
+  border: 1.5px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 750;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.asub__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.asub__btn--primary {
+  color: #fff;
+  background: linear-gradient(180deg, #14b8a6 0%, #0d9488 55%, #0f766e 100%);
+  box-shadow: 0 12px 24px -14px rgb(13 148 136 / 0.85);
+}
+
+.asub__btn--primary:hover:not(:disabled) {
+  filter: brightness(1.03);
+}
+
+.asub__btn--secondary {
+  color: #0f172a;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.asub__btn--secondary:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.asub__btn--ghost {
+  color: #0f766e;
+  background: #fff;
+  border-color: rgb(13 148 136 / 0.35);
+}
+
+.asub__btn--ghost:hover:not(:disabled) {
+  background: #f0fdfa;
+}
+
+@media (min-width: 720px) {
+  .asub__actions {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 0.9fr;
+    gap: 0.75rem;
+  }
+}
+
+.asub__log {
+  margin: 0;
+  max-height: 15rem;
+  overflow: auto;
+  padding: 1rem;
+  border-radius: 0.85rem;
+  background: #0f172a;
+  color: #4ade80;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+html.locale-gu .asub__title,
+html.locale-gu .asub__btn,
+html.locale-gu .asub__panel-title {
+  font-family: "Noto Sans Gujarati", "Noto Sans", system-ui, sans-serif;
+}
