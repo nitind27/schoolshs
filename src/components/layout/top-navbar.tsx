@@ -101,7 +101,14 @@ export function TopNavbar({
     router.refresh();
   };
 
-  const initial = (user?.name || "?").charAt(0).toUpperCase();
+  const initial = (
+    user?.schoolName ||
+    user?.name ||
+    "?"
+  )
+    .trim()
+    .charAt(0)
+    .toUpperCase() || "?";
   const currentLang = LOCALES.find((l) => l.code === locale);
   const showNotifications = user?.role !== "student";
   const showChat = Boolean(
@@ -239,17 +246,9 @@ export function TopNavbar({
             data-active={profileOpen ? "true" : "false"}
             aria-label={t("accountSettings.myProfile")}
             aria-expanded={profileOpen}
+            title={user?.name || user?.schoolName || undefined}
           >
             <span className="tn-avatar">{initial}</span>
-            <span className="hidden max-w-[120px] truncate text-xs font-semibold text-slate-800 lg:inline">
-              {user?.name || "…"}
-            </span>
-            <ChevronDown
-              className={cn(
-                "hidden h-3 w-3 text-slate-400 transition-transform sm:block",
-                profileOpen && "rotate-180",
-              )}
-            />
           </button>
 
           {profileOpen && (
