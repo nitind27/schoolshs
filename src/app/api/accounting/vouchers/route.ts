@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAccountingAuth, AuthError } from "@/lib/auth";
 import { getVoucherPrefix, VOUCHER_TYPES } from "@/lib/accounting";
 
-const ALLOWED_TYPES = new Set(VOUCHER_TYPES.map((v) => v.value));
+const ALLOWED_TYPES = new Set<string>(VOUCHER_TYPES.map((v) => v.value));
 
 export async function GET(request: NextRequest) {
   try {
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
               voucherNo,
               voucherType,
               voucherDate: vDate,
-              narration: String(narration || "").trim() || null,
+              narration: String(narration || "").trim(),
               totalAmount: totalDebit,
               referenceNo: referenceNo?.trim() || null,
               partyName: partyName?.trim() || null,
