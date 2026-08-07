@@ -22,7 +22,6 @@ import {
   MessageSquare,
   MapPin,
   ArrowRight,
-  ChevronDown,
   AlertTriangle,
   TrendingUp,
   Zap,
@@ -100,7 +99,7 @@ export default function AdminDashboardPage() {
   const [schools, setSchools] = useState<SchoolRow[]>([]);
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [mainTab, setMainTab] = useState<"overview" | "analytics">("overview");
 
   const loadStats = useCallback(() => {
     return fetch("/api/admin/stats")
@@ -204,12 +203,11 @@ export default function AdminDashboardPage() {
   const hasCritical = (stats?.pendingPayments ?? 0) > 0 || (stats?.openSupportTickets ?? 0) > 0 || (stats?.inactiveSchools ?? 0) > 0;
 
   return (
-    <div className="ad-portal ad-portal-v2 space-y-5">
+    <div className="ad-portal ad-portal-v2 ad-portal-polish space-y-4">
 
-      {/* ── HERO: Dark command bar with live KPIs embedded ── */}
+      {/* ── HERO ── */}
       <header className="ad-hero-v2">
-        <div className="ad-hero-v2-grid">
-          {/* Brand */}
+        <div className="ad-hero-v2-top">
           <div className="ad-hero-v2-brand">
             <div className="ad-hero-v2-mark">
               <Shield className="h-6 w-6" strokeWidth={1.75} />
@@ -220,44 +218,6 @@ export default function AdminDashboardPage() {
               <p className="ad-hero-v2-sub">{t("admin.homeSubtitle")}</p>
             </div>
           </div>
-
-          {/* Inline KPI tiles — the most important numbers at-a-glance */}
-          <div className="ad-hero-v2-kpis">
-            <div className="ad-hkpi">
-              <div className="ad-hkpi-ico ad-hkpi-ico--blue"><Building2 className="h-4 w-4" /></div>
-              <div>
-                <div className="ad-hkpi-val">{loading ? "—" : (stats?.schoolCount ?? 0).toLocaleString("en-IN")}</div>
-                <div className="ad-hkpi-lbl">{t("admin.schoolsLabel")}</div>
-                <div className="ad-hkpi-sub">{(stats?.activeSchools ?? 0)} {t("common.active")}</div>
-              </div>
-            </div>
-            <div className="ad-hkpi">
-              <div className="ad-hkpi-ico ad-hkpi-ico--emerald"><GraduationCap className="h-4 w-4" /></div>
-              <div>
-                <div className="ad-hkpi-val">{loading ? "—" : (stats?.studentCount ?? 0).toLocaleString("en-IN")}</div>
-                <div className="ad-hkpi-lbl">{t("admin.studentsLabel")}</div>
-                <div className="ad-hkpi-sub">{(stats?.classCount ?? 0)} {t("admin.classesLabel")}</div>
-              </div>
-            </div>
-            <div className="ad-hkpi">
-              <div className="ad-hkpi-ico ad-hkpi-ico--amber"><IndianRupee className="h-4 w-4" /></div>
-              <div>
-                <div className="ad-hkpi-val ad-hkpi-val--sm">{loading ? "—" : formatINR(stats?.totalPaid)}</div>
-                <div className="ad-hkpi-lbl">{t("admin.kpiCollected")}</div>
-                <div className="ad-hkpi-sub">{collectionRate}% {t("admin.collectedLabel")}</div>
-              </div>
-            </div>
-            <div className="ad-hkpi">
-              <div className="ad-hkpi-ico ad-hkpi-ico--violet"><Briefcase className="h-4 w-4" /></div>
-              <div>
-                <div className="ad-hkpi-val">{loading ? "—" : (stats?.staffCount ?? 0).toLocaleString("en-IN")}</div>
-                <div className="ad-hkpi-lbl">{t("admin.kpiStaff")}</div>
-                <div className="ad-hkpi-sub">{(stats?.adminCount ?? 0)} {t("admin.schoolAdmins")}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
           <div className="ad-hero-v2-actions">
             <Link href="/admin/schools/new" className="ad-btn is-primary">
               <Plus className="h-4 w-4" />
@@ -270,11 +230,72 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Decorative grid */}
+        <div className="ad-hero-v2-kpis" aria-label={t("admin.kpiTitle")}>
+          <div className="ad-hkpi">
+            <div className="ad-hkpi-ico ad-hkpi-ico--blue"><Building2 className="h-4 w-4" /></div>
+            <div className="ad-hkpi-copy">
+              <div className="ad-hkpi-val">{loading ? "—" : (stats?.schoolCount ?? 0).toLocaleString("en-IN")}</div>
+              <div className="ad-hkpi-lbl">{t("admin.schoolsLabel")}</div>
+              <div className="ad-hkpi-sub">{(stats?.activeSchools ?? 0)} {t("common.active")}</div>
+            </div>
+          </div>
+          <div className="ad-hkpi">
+            <div className="ad-hkpi-ico ad-hkpi-ico--emerald"><GraduationCap className="h-4 w-4" /></div>
+            <div className="ad-hkpi-copy">
+              <div className="ad-hkpi-val">{loading ? "—" : (stats?.studentCount ?? 0).toLocaleString("en-IN")}</div>
+              <div className="ad-hkpi-lbl">{t("admin.studentsLabel")}</div>
+              <div className="ad-hkpi-sub">{(stats?.classCount ?? 0)} {t("admin.classesLabel")}</div>
+            </div>
+          </div>
+          <div className="ad-hkpi">
+            <div className="ad-hkpi-ico ad-hkpi-ico--amber"><IndianRupee className="h-4 w-4" /></div>
+            <div className="ad-hkpi-copy">
+              <div className="ad-hkpi-val ad-hkpi-val--sm">{loading ? "—" : formatINR(stats?.totalPaid)}</div>
+              <div className="ad-hkpi-lbl">{t("admin.kpiCollected")}</div>
+              <div className="ad-hkpi-sub">{collectionRate}% {t("admin.collectedLabel")}</div>
+            </div>
+          </div>
+          <div className="ad-hkpi">
+            <div className="ad-hkpi-ico ad-hkpi-ico--violet"><Briefcase className="h-4 w-4" /></div>
+            <div className="ad-hkpi-copy">
+              <div className="ad-hkpi-val">{loading ? "—" : (stats?.staffCount ?? 0).toLocaleString("en-IN")}</div>
+              <div className="ad-hkpi-lbl">{t("admin.kpiStaff")}</div>
+              <div className="ad-hkpi-sub">{(stats?.adminCount ?? 0)} {t("admin.schoolAdmins")}</div>
+            </div>
+          </div>
+        </div>
+
         <div className="ad-hero-v2-grid-bg" aria-hidden />
       </header>
 
-      {/* ── ATTENTION: Critical items — only shown if there's something ── */}
+      {/* ── MAIN TABS ── */}
+      <nav className="ad-main-tabs" data-active={mainTab} role="tablist" aria-label={t("admin.homeTitle")}>
+        <span className="ad-main-tabs-thumb" aria-hidden />
+        <button
+          type="button"
+          role="tab"
+          className={mainTab === "overview" ? "is-active" : undefined}
+          aria-selected={mainTab === "overview"}
+          onClick={() => setMainTab("overview")}
+        >
+          <LayoutGrid className="h-4 w-4" />
+          <span>{t("admin.kpiTitle")}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={mainTab === "analytics" ? "is-active" : undefined}
+          aria-selected={mainTab === "analytics"}
+          onClick={() => setMainTab("analytics")}
+        >
+          <TrendingUp className="h-4 w-4" />
+          <span>{t("admin.analyticsTitle")}</span>
+        </button>
+      </nav>
+
+      {mainTab === "overview" ? (
+      <>
+      {/* ── ATTENTION ── */}
       {hasCritical && (
         <section className="ad-alert-strip">
           <div className="ad-alert-strip-label">
@@ -310,7 +331,7 @@ export default function AdminDashboardPage() {
         </section>
       )}
 
-      {/* ── QUICK-NAV: All daily tools in one compact row ── */}
+      {/* ── QUICK-NAV ── */}
       <section className="ad-quicknav">
         <div className="ad-quicknav-label">
           <Zap className="h-3.5 w-3.5" />
@@ -326,20 +347,23 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* ── REVENUE SPOTLIGHT + COLLECTION PROGRESS ── */}
+      {/* ── FINANCE ── */}
       <div className="ad-finance-row">
         <section className="ad-finance-card">
           <div className="ad-finance-card-head">
             <div className="ad-finance-card-ico"><TrendingUp className="h-4 w-4" /></div>
             <div>
               <h2>{t("admin.kpiTitle")}</h2>
-              <p>Revenue overview</p>
+              <p>{t("admin.kpiCollected")}</p>
             </div>
-            <Link href="/admin/payments" className="ad-panel-link ml-auto">→</Link>
+            <Link href="/admin/payments" className="ad-panel-link ml-auto">
+              {t("admin.managePayments")}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
           <div className="ad-finance-tiles">
             <div className="ad-ftile is-ink">
-              <span>Contract</span>
+              <span>{t("admin.manageContracts")}</span>
               <strong>{formatINR(stats?.totalContractValue)}</strong>
             </div>
             <div className="ad-ftile is-ok">
@@ -347,13 +371,13 @@ export default function AdminDashboardPage() {
               <strong>{formatINR(stats?.totalPaid)}</strong>
             </div>
             <div className="ad-ftile is-warn">
-              <span>Outstanding</span>
+              <span>{t("admin.attentionPayments")}</span>
               <strong>{formatINR(outstanding)}</strong>
             </div>
           </div>
           <div className="ad-finance-progress">
             <div className="ad-finance-progress-meta">
-              <span>Collection rate</span>
+              <span>{t("admin.collectedLabel")}</span>
               <strong className={collectionRate >= 75 ? "text-emerald-700" : collectionRate >= 40 ? "text-amber-700" : "text-red-700"}>
                 {collectionRate}%
               </strong>
@@ -365,29 +389,30 @@ export default function AdminDashboardPage() {
               />
             </div>
           </div>
-          <div className="ad-money-bars" style={{ marginTop: "1rem" }}>
-            {(stats?.monthlyPayments || []).map((m) => (
-              <div key={m.key} className="ad-money-bar-row">
-                <span>{m.label}</span>
-                <div className="ad-money-track">
-                  <div
-                    className="ad-money-fill"
-                    style={{ width: `${monthlyPeak > 0 ? (m.amount / monthlyPeak) * 100 : 0}%` }}
-                  />
+          {(stats?.monthlyPayments || []).length > 0 && (
+            <div className="ad-money-bars">
+              {(stats?.monthlyPayments || []).map((m) => (
+                <div key={m.key} className="ad-money-bar-row">
+                  <span>{m.label}</span>
+                  <div className="ad-money-track">
+                    <div
+                      className="ad-money-fill"
+                      style={{ width: `${monthlyPeak > 0 ? (m.amount / monthlyPeak) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <strong>{formatINR(m.amount)}</strong>
                 </div>
-                <strong>{formatINR(m.amount)}</strong>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* School status doughnut */}
         <section className="ad-finance-card ad-finance-card--center">
           <div className="ad-finance-card-head">
             <div className="ad-finance-card-ico"><CheckCircle2 className="h-4 w-4" /></div>
             <div>
-              <h2>Payment Status</h2>
-              <p>By school</p>
+              <h2>{t("admin.managePayments")}</h2>
+              <p>{t("admin.schoolsLabel")}</p>
             </div>
           </div>
           <DoughnutChart
@@ -410,7 +435,8 @@ export default function AdminDashboardPage() {
             <p>{t("admin.recentSchoolsDesc")}</p>
           </div>
           <Link href="/admin/schools" className="ad-panel-link">
-            {schools.length} →
+            {schools.length}
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
         <div className="ad-panel-body is-flush">
@@ -499,68 +525,60 @@ export default function AdminDashboardPage() {
           ))}
         </ol>
       </section>
-
-      {/* ── ANALYTICS (collapsed) ── */}
-      <section className="ad-section">
-        <button
-          type="button"
-          className="ad-analytics-toggle"
-          onClick={() => setShowAnalytics((v) => !v)}
-          aria-expanded={showAnalytics}
-        >
-          <span>
-            <strong>{t("admin.analyticsTitle")}</strong>
-            <small>{t("admin.analyticsHint")}</small>
-          </span>
-          <span className="ad-analytics-toggle-right">
-            {showAnalytics ? t("admin.hideAnalytics") : t("admin.showAnalytics")}
-            <ChevronDown className={`h-4 w-4 transition-transform ${showAnalytics ? "rotate-180" : ""}`} />
-          </span>
-        </button>
-
-        {showAnalytics && (
-          <div className="ad-analytics-body space-y-4">
-            <div className="ad-chart-grid is-3">
-              <section className="ad-panel">
-                <div className="ad-panel-head">
-                  <div><h2><LayoutGrid className="h-5 w-5 text-sky-700" />Plans</h2></div>
-                </div>
-                <div className="ad-panel-body">
-                  <DoughnutChart segments={planSegments} centerLabel="Plans" centerValue={planSegments.reduce((s, x) => s + x.value, 0)} size={140} />
-                </div>
-              </section>
-              <section className="ad-panel">
-                <div className="ad-panel-head">
-                  <div><h2><School className="h-5 w-5 text-sky-700" />Active vs Inactive</h2></div>
-                </div>
-                <div className="ad-panel-body">
-                  <DoughnutChart segments={activeSegments} centerLabel="Total" centerValue={(stats?.schoolCount ?? 0).toLocaleString("en-IN")} size={140} />
-                </div>
-              </section>
-              <section className="ad-panel">
-                <div className="ad-panel-head">
-                  <div><h2><MapPin className="h-5 w-5 text-sky-700" />District</h2></div>
-                </div>
-                <div className="ad-panel-body"><BarChart segments={districtSegments} /></div>
-              </section>
+      </>
+      ) : (
+      /* ── ANALYTICS TAB ── */
+      <div className="ad-analytics-body space-y-4">
+        <div className="ad-chart-grid is-3">
+          <section className="ad-panel">
+            <div className="ad-panel-head">
+              <div><h2><LayoutGrid className="h-5 w-5 text-sky-700" />{t("admin.manageTitle")}</h2></div>
             </div>
-            <div className="ad-split-2">
-              <section className="ad-panel">
-                <div className="ad-panel-head">
-                  <div><h2><Activity className="h-5 w-5 text-sky-700" />Growth</h2></div>
-                </div>
-                <div className="ad-panel-body"><VerticalBarChart segments={growthSegments} /></div>
-              </section>
-              <section className="ad-panel">
-                <div className="ad-panel-head">
-                  <div><h2><GraduationCap className="h-5 w-5 text-sky-700" />Top schools</h2></div>
-                </div>
-                <div className="ad-panel-body"><VerticalBarChart segments={topStudentSegments} /></div>
-              </section>
+            <div className="ad-panel-body">
+              <DoughnutChart
+                segments={planSegments}
+                centerLabel={t("admin.schoolsLabel")}
+                centerValue={planSegments.reduce((s, x) => s + x.value, 0)}
+                size={140}
+              />
             </div>
-          </div>
-        )}
-      </section>
+          </section>
+          <section className="ad-panel">
+            <div className="ad-panel-head">
+              <div><h2><School className="h-5 w-5 text-sky-700" />{t("common.status")}</h2></div>
+            </div>
+            <div className="ad-panel-body">
+              <DoughnutChart
+                segments={activeSegments}
+                centerLabel={t("admin.schoolsLabel")}
+                centerValue={(stats?.schoolCount ?? 0).toLocaleString("en-IN")}
+                size={140}
+              />
+            </div>
+          </section>
+          <section className="ad-panel">
+            <div className="ad-panel-head">
+              <div><h2><MapPin className="h-5 w-5 text-sky-700" />{t("admin.selectSchool")}</h2></div>
+            </div>
+            <div className="ad-panel-body"><BarChart segments={districtSegments} /></div>
+          </section>
+        </div>
+        <div className="ad-split-2">
+          <section className="ad-panel">
+            <div className="ad-panel-head">
+              <div><h2><Activity className="h-5 w-5 text-sky-700" />{t("admin.analyticsTitle")}</h2></div>
+            </div>
+            <div className="ad-panel-body"><VerticalBarChart segments={growthSegments} /></div>
+          </section>
+          <section className="ad-panel">
+            <div className="ad-panel-head">
+              <div><h2><GraduationCap className="h-5 w-5 text-sky-700" />{t("admin.studentsLabel")}</h2></div>
+            </div>
+            <div className="ad-panel-body"><VerticalBarChart segments={topStudentSegments} /></div>
+          </section>
+        </div>
+      </div>
+      )}
     </div>
   );
 }
