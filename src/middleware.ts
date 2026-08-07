@@ -48,6 +48,8 @@ const ROLE_ROUTES: Record<string, UserRole[]> = {
   "/api/results": ["school_admin", "teacher", "clerk"],
   "/api/results/print": ["school_admin", "teacher", "student", "clerk"],
   "/student/results/print": ["student"],
+  "/exam-id-cards": ["school_admin", "clerk"],
+  "/api/exam-id-cards": ["school_admin", "clerk"],
 };
 
 /** Exact segment match — avoids `/api/help` wrongly matching `/api/holidays`. */
@@ -272,8 +274,10 @@ export async function middleware(request: NextRequest) {
       "/staff/attendance",
       "/staff/payroll",
       "/staff/holidays",
+      "/activities",
       "/api/staff-hr",
       "/api/holidays",
+      "/api/activities",
       "/chat",
       "/api/chat",
       "/api/uploads/chat",
@@ -281,6 +285,8 @@ export async function middleware(request: NextRequest) {
       "/api/help",
       "/id-cards",
       "/api/id-cards",
+      "/exam-id-cards",
+      "/api/exam-id-cards",
       "/classes",
       "/api/classes",
       "/subjects",
@@ -325,15 +331,19 @@ export async function middleware(request: NextRequest) {
           pathname.startsWith("/api/help") ||
           pathname.startsWith("/staff/holidays") ||
           pathname.startsWith("/teacher/holidays") ||
+          pathname.startsWith("/teacher/activities") ||
+          pathname.startsWith("/api/activities") ||
           pathname.startsWith("/api/holidays") ||
           pathname.startsWith("/api/staff/holidays") ||
           pathname.startsWith("/api/teacher/holidays") ||
           pathname.startsWith("/profile") ||
           pathname.startsWith("/api/account"))) ||
       (session.role === "clerk" &&
-        clerkRoutes.some(
+        (clerkRoutes.some(
           (r) => pathname === r || pathname.startsWith(r + "/"),
-        )) ||
+        ) ||
+          pathname.startsWith("/activities") ||
+          pathname.startsWith("/api/activities"))) ||
       (session.role === "ca" &&
         (pathname.startsWith("/accounting") ||
           pathname.startsWith("/api/accounting") ||
@@ -358,5 +368,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|shs/).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|shs/|video/).*)",
+  ],
 };

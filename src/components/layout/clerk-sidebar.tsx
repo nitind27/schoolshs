@@ -32,6 +32,8 @@ import {
   Hash,
   Armchair,
   PartyPopper,
+  Trophy,
+  BadgeCheck,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import "@/components/clerk/clerk-portal.css";
@@ -46,6 +48,30 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
       href: "/clerk",
       label: t("clerkNav.dashboard"),
       icon: LayoutDashboard,
+    },
+    {
+      type: "link",
+      href: "/activities",
+      label: t("nav.activities"),
+      icon: Trophy,
+    },
+    {
+      type: "submenu",
+      id: "id-cards",
+      label: t("nav.idCards"),
+      icon: CreditCard,
+      children: [
+        {
+          href: "/id-cards",
+          label: t("idCards.title"),
+          icon: CreditCard,
+        },
+        {
+          href: "/exam-id-cards",
+          label: t("examIdCards.title"),
+          icon: BadgeCheck,
+        },
+      ],
     },
     {
       type: "submenu",
@@ -179,7 +205,6 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
           label: t("navExt.generalRegister"),
           icon: BookOpen,
         },
-        { href: "/id-cards", label: t("nav.idCards"), icon: CreditCard },
       ],
     },
     {
@@ -240,7 +265,6 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
           label: t("megaMenu.attendanceReports"),
           icon: CalendarDays,
         },
-        { href: "/id-cards", label: t("megaMenu.idCards"), icon: CreditCard },
       ],
     },
   ];

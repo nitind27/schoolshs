@@ -5,6 +5,7 @@ import { getReportById } from "@/lib/reports/catalog";
 import { fetchReportPayload } from "@/lib/reports/report-data";
 import { buildReportCsv, buildReportExcelBuffer, reportFilename } from "@/lib/reports/report-excel";
 import type { ReportQuery } from "@/lib/reports/types";
+import { CSV_HEADERS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -64,9 +65,26 @@ export async function GET(request: NextRequest) {
     }
 
     if (format === "csv") {
-      const csv = buildReportCsv(payload);
+      // DG portal upload expects raw field keys as header row
+      let csvPayload = payload;
+      if (q.type === "students_scholarship") {
+        const sheet = payload.sheets[0];
+        if (sheet) {
+          csvPayload = {
+            ...payload,
+            sheets: [
+              {
+                ...sheet,
+                headers: [...CSV_HEADERS],
+              },
+            ],
+          };
+        }
+      }
+      const csv = buildReportCsv(csvPayload);
       const filename = reportFilename(payload, "csv");
-      return new NextResponse(csv, {
+      // BOM so Excel opens UTF-8 correctly (Gujarati / special chars)
+      return new NextResponse(`\uFEFF${csv}`, {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
           "Content-Disposition": `attachment; filename="${filename}"`,

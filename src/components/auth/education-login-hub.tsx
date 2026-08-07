@@ -44,6 +44,8 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [schoolCode, setSchoolCode] = useState("");
+  const [schoolCodeTouched, setSchoolCodeTouched] = useState(false);
+  const [schoolLookupError, setSchoolLookupError] = useState("");
   const [branding, setBranding] = useState<SchoolBranding | null>(null);
   const [brandingLoading, setBrandingLoading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -99,32 +101,37 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
 
   useEffect(() => {
     if (isCaPortal) {
-      setBranding(null);
-      setBrandingLoading(false);
+      setSchoolLookupError("");
       return;
     }
     const code = schoolCode.trim().toUpperCase();
     if (!code || code.length < 3) {
       setBranding(null);
+      setSchoolLookupError("");
       return;
     }
 
     const timer = setTimeout(() => {
       setBrandingLoading(true);
+      setSchoolLookupError("");
       fetch(`/api/auth/school-branding?code=${encodeURIComponent(code)}`)
         .then(async (r) => {
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || "School not found");
           setBranding(data.school);
           localStorage.setItem(SCHOOL_CODE_KEY, code);
+          setSchoolLookupError("");
           setError("");
         })
-        .catch(() => setBranding(null))
+        .catch(() => {
+          setBranding(null);
+          setSchoolLookupError(t("login.schoolNotFound"));
+        })
         .finally(() => setBrandingLoading(false));
     }, 450);
 
     return () => clearTimeout(timer);
-  }, [schoolCode, isCaPortal]);
+  }, [schoolCode, isCaPortal, t]);
 
   const finishSuccessfulLogin = (data: {
     redirect?: string;
@@ -163,28 +170,54 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
 
   const postLogin = async (sessionAction?: "keep_all" | "logout_others") => {
     const geo = await getBrowserLoginGeo();
+    const payload: Record<string, unknown> = {
+      email: email.trim().toLowerCase(),
+      password,
+      captchaToken,
+      captchaAnswer,
+      rememberMe,
+      latitude: geo.latitude ?? null,
+      longitude: geo.longitude ?? null,
+      accuracyM: geo.accuracyM ?? null,
+      sessionAction: sessionAction || undefined,
+    };
+    if (!isCaPortal) {
+      payload.schoolCode = schoolCode.trim().toUpperCase();
+    }
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        password,
-        captchaToken,
-        captchaAnswer,
-        rememberMe,
-        latitude: geo.latitude ?? null,
-        longitude: geo.longitude ?? null,
-        accuracyM: geo.accuracyM ?? null,
-        sessionAction: sessionAction || undefined,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     return { res, data };
   };
 
+  const validateSchoolCode = (): boolean => {
+    if (isCaPortal) return true;
+    const code = schoolCode.trim().toUpperCase();
+    // Empty code allowed — Super Admin login (server rejects school accounts without code)
+    if (!code) return true;
+    setSchoolCodeTouched(true);
+    if (code.length < 3) {
+      setError(t("login.schoolCodeTooShort"));
+      return false;
+    }
+    if (brandingLoading) {
+      setError(t("login.schoolCodeVerifying"));
+      return false;
+    }
+    if (!branding || schoolLookupError) {
+      setError(t("login.schoolNotFound"));
+      return false;
+    }
+    return true;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (lockedUntil && new Date(lockedUntil) > new Date()) return;
+    if (!validateSchoolCode()) return;
 
     setLoading(true);
     setError("");
@@ -269,6 +302,21 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
   };
 
   const isLocked = Boolean(lockedUntil && new Date(lockedUntil) > new Date());
+  const schoolCodeTrimmed = schoolCode.trim();
+  const schoolCodeFieldError =
+    schoolCodeTouched && !isCaPortal && schoolCodeTrimmed
+      ? schoolCodeTrimmed.length < 3
+        ? t("login.schoolCodeTooShort")
+        : schoolLookupError
+      : schoolLookupError || "";
+  // Super Admin: empty school code OK. School staff: code must be verified first.
+  const canSubmitLogin =
+    !loading &&
+    !isLocked &&
+    !studentSetupRequired &&
+    (isCaPortal ||
+      !schoolCodeTrimmed ||
+      (Boolean(branding) && !brandingLoading && !schoolLookupError));
 
   const resendVerification = async () => {
     if (!email.trim() || !password) {
@@ -551,11 +599,6 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
       <main className="auth-portal-main">
         <div ref={mainScrollRef} className="auth-portal-main-scroll">
           <div className="auth-portal-form-card">
-            <header className="auth-portal-form-header">
-              <h2>{isCaPortal ? t("login.formTitleCa") : t("login.formTitle")}</h2>
-              <p>{isCaPortal ? t("login.formSubtitleCa") : t("login.formSubtitleNew")}</p>
-            </header>
-
             {sessionRevoked && (
               <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-950">
                 {t("login.sessionRevokedBanner")}
@@ -607,7 +650,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
               {!isCaPortal && (
                 <div className="auth-portal-field">
                   <label className="auth-portal-label" htmlFor="school-code">
-                    {t("login.schoolCodeOptional")}
+                    {t("login.schoolCode")}
                   </label>
                   <div className="auth-portal-input-wrap">
                     <Building2 className="auth-portal-input-icon" strokeWidth={1.75} />
@@ -615,14 +658,29 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                       id="school-code"
                       type="text"
                       value={schoolCode}
-                      onChange={(e) => setSchoolCode(e.target.value.toUpperCase())}
+                      onChange={(e) => {
+                        setSchoolCode(e.target.value.toUpperCase());
+                        setSchoolCodeTouched(true);
+                        setSchoolLookupError("");
+                        setError("");
+                      }}
+                      onBlur={() => setSchoolCodeTouched(true)}
                       placeholder={t("login.schoolCodePlaceholder")}
-                      className="auth-portal-input is-mono"
+                      className={`auth-portal-input is-mono${schoolCodeFieldError ? " is-invalid" : ""}`}
                       autoComplete="organization"
                       disabled={isLocked}
+                      maxLength={20}
                     />
                     {brandingLoading && <Spinner size="sm" className="auth-portal-spinner" />}
                   </div>
+                  {schoolCodeFieldError && (
+                    <p className="mt-1 text-xs font-medium text-red-600">{schoolCodeFieldError}</p>
+                  )}
+                  {branding && !schoolCodeFieldError && (
+                    <p className="mt-1 text-xs font-medium text-emerald-700">
+                      {t("login.schoolVerified")}: {branding.name}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -923,7 +981,11 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
             )}
 
             {!studentSetupRequired && (
-              <button type="submit" className="auth-portal-submit" disabled={loading || isLocked}>
+              <button
+                type="submit"
+                className="auth-portal-submit"
+                disabled={!canSubmitLogin}
+              >
                 {loading ? (
                   <>
                     <Spinner size="sm" />

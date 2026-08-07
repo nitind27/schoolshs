@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Award,
+  BadgeCheck,
   BookOpen,
   BookMarked,
   Calculator,
@@ -194,6 +195,11 @@ export const REPORTS_CERTS_MEGA_MENU: MegaMenuColumn[] = [
         href: "/id-cards",
         labelKey: "megaMenu.idCards",
         icon: CreditCard,
+      },
+      {
+        href: "/exam-id-cards",
+        labelKey: "megaMenu.examIdCards",
+        icon: BadgeCheck,
       },
       {
         href: "/results",

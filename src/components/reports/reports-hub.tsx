@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileSpreadsheet, FileText, Download, Search, BarChart3, Users, ClipboardCheck, CalendarCheck, CalendarRange, GraduationCap, Clock, Trophy, Briefcase, Wallet, School, Scale, Receipt, BookOpen, BookMarked, LayoutGrid, PieChart, UserCheck, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { InfoModal } from "@/components/ui/info-modal";
 import { ReportPrintView } from "@/components/reports/report-print-view";
@@ -50,11 +49,48 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 type ClassOption = { id: string; name: string; standard: string; section: string };
 type ExamOption = { id: string; name: string; standard: string };
 
+const MONTH_OPTIONS = [
+  { value: "1", label: "January" },
+  { value: "2", label: "February" },
+  { value: "3", label: "March" },
+  { value: "4", label: "April" },
+  { value: "5", label: "May" },
+  { value: "6", label: "June" },
+  { value: "7", label: "July" },
+  { value: "8", label: "August" },
+  { value: "9", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
+
+/** Reports that should default to current month date range when opened */
+const DATE_DEFAULT_REPORTS = new Set(["attendance_daily", "day_book"]);
+
 function monthStartISO(d = new Date()) {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), 1)).toISOString().slice(0, 10);
 }
 function monthEndISO(d = new Date()) {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth() + 1, 0)).toISOString().slice(0, 10);
+}
+
+function triggerPrint() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.print();
+    });
+  });
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function ReportsHub() {
@@ -81,17 +117,18 @@ export function ReportsHub() {
     academicYear: "2025-26",
     examId: "",
     standard10or12: "10",
-    dateFrom: monthStartISO(),
-    dateTo: monthEndISO(),
+    dateFrom: "",
+    dateTo: "",
     voucherType: "",
   });
 
   useEffect(() => {
-    fetch(`/api/classes?academicYear=${encodeURIComponent(filters.academicYear || "2025-26")}`)
+    // Load all classes for class picker (don't hide other academic years)
+    fetch("/api/classes")
       .then((r) => r.json())
       .then((d) => setClasses(d.classes || []))
       .catch(() => setClasses([]));
-  }, [filters.academicYear]);
+  }, []);
 
   useEffect(() => {
     fetch("/api/results")
@@ -101,6 +138,12 @@ export function ReportsHub() {
         if (Array.isArray(list)) setExams(list.map((e) => ({ id: e.id, name: e.name, standard: e.standard })));
       })
       .catch(() => setExams([]));
+  }, []);
+
+  useEffect(() => {
+    const onAfterPrint = () => setPrintData(null);
+    window.addEventListener("afterprint", onAfterPrint);
+    return () => window.removeEventListener("afterprint", onAfterPrint);
   }, []);
 
   const filteredReports = useMemo(() => {
@@ -138,8 +181,37 @@ export function ReportsHub() {
     return p;
   }, [selected, filters]);
 
+  const validateFilters = useCallback(() => {
+    if (!selected) return "No report selected";
+    const f = selected.filters;
+    if (f.includes("dateFrom") || f.includes("dateTo")) {
+      const from = filters.dateFrom;
+      const to = filters.dateTo;
+      if (DATE_DEFAULT_REPORTS.has(selected.id) && (!from || !to)) {
+        return t("reportsHub.dateRequired");
+      }
+      if (from && to && from > to) {
+        return t("reportsHub.dateRangeInvalid");
+      }
+      if (from && to) {
+        const a = new Date(`${from}T00:00:00Z`).getTime();
+        const b = new Date(`${to}T00:00:00Z`).getTime();
+        const days = Math.floor((b - a) / 86400000) + 1;
+        if (selected.id === "attendance_daily" && days > 62) {
+          return t("reportsHub.dateRangeTooLong");
+        }
+      }
+    }
+    return null;
+  }, [selected, filters.dateFrom, filters.dateTo, t]);
+
   const downloadExcel = async () => {
     if (!selected) return;
+    const invalid = validateFilters();
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setBusy("xlsx");
     setError(null);
     try {
@@ -167,12 +239,7 @@ export function ReportsHub() {
       const disposition = res.headers.get("Content-Disposition") || "";
       const match = disposition.match(/filename="([^"]+)"/);
       const filename = match?.[1] || `${selected.id}.xlsx`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, filename);
       closeModal();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Export failed");
@@ -183,13 +250,29 @@ export function ReportsHub() {
 
   const downloadCsv = async () => {
     if (!selected) return;
+    const invalid = validateFilters();
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setBusy("csv");
     setError(null);
     try {
       const p = buildParams();
       p.set("format", "csv");
-      window.open(`/api/reports/export?${p}`, "_blank");
+      const res = await fetch(`/api/reports/export?${p}`);
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "CSV export failed");
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename = match?.[1] || `${selected.id}.csv`;
+      downloadBlob(blob, filename);
       closeModal();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "CSV export failed");
     } finally {
       setBusy(null);
     }
@@ -197,6 +280,11 @@ export function ReportsHub() {
 
   const exportPdf = async () => {
     if (!selected) return;
+    const invalid = validateFilters();
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setBusy("pdf");
     setError(null);
     try {
@@ -218,38 +306,81 @@ export function ReportsHub() {
         const res = await fetch(`/api/stats/export?${q}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed");
+        const report = data.report || {};
+        const byStatus = report.byStatus || {};
+        const byCategory = (report.byCategory || []) as { category: string; count: number }[];
+        const byGender = report.byGender || {};
         setPrintData({
           type: "dashboard",
           title: t("reportsHub.reports.dashboard"),
-          schoolName: data.report.schoolName,
-          generatedAt: data.report.generatedAt,
-          filterSummary: data.report.filterSummary,
+          schoolName: report.schoolName || "",
+          generatedAt: report.generatedAt || new Date().toISOString(),
+          filterSummary: report.filterSummary || "All",
           sheets: [
             {
-              name: "Summary",
+              name: "Totals",
               headers: ["Metric", "Value"],
               rows: [
-                ["Total Students", data.report.total],
-                ["Classes", data.report.totalClasses],
-                ["Staff", data.report.totalStaff],
-                ["Completion %", data.report.completionRate],
+                ["Total Students", report.total ?? 0],
+                ["Classes", report.totalClasses ?? 0],
+                ["Staff", report.totalStaff ?? 0],
+                ["Completion %", report.completionRate ?? 0],
+                ["Male", byGender.male ?? 0],
+                ["Female", byGender.female ?? 0],
+                ["Other", byGender.other ?? 0],
               ],
             },
             {
+              name: "Status breakdown",
+              headers: ["Status", "Count"],
+              rows: [
+                ["Draft", byStatus.draft ?? 0],
+                ["Ready", byStatus.ready ?? 0],
+                ["Pending", byStatus.pending ?? 0],
+                ["Submitted", byStatus.submitted ?? 0],
+                ["Approved", byStatus.approved ?? 0],
+                ["Rejected", byStatus.rejected ?? 0],
+              ],
+            },
+            {
+              name: "Category breakdown",
+              headers: ["Category", "Count"],
+              rows: byCategory.length
+                ? byCategory.map((c) => [c.category || "Unknown", c.count ?? 0])
+                : [["—", 0]],
+            },
+            {
               name: "Students",
-              headers: ["Name", "Class", "Category", "Status", "Mobile"],
-              rows: (data.studentRows || []).slice(0, 500).map((s: { name: string; classLabel: string; category: string; status: string; mobile: string }) => [
-                s.name,
-                s.classLabel,
-                s.category,
-                s.status,
-                s.mobile,
-              ]),
+              headers: ["Sr", "Name", "Class", "Category", "Gender", "Status", "Mobile", "GR"],
+              rows: (
+                (data.studentRows || []) as {
+                  sr?: number;
+                  fullName?: string;
+                  standard?: string;
+                  section?: string;
+                  category?: string;
+                  gender?: string;
+                  status?: string;
+                  mobileNumber?: string;
+                  grNumber?: string;
+                }[]
+              )
+                .slice(0, 2000)
+                .map((s) => [
+                  s.sr ?? "",
+                  s.fullName || "",
+                  [s.standard, s.section].filter(Boolean).join("-") || "",
+                  s.category || "",
+                  s.gender || "",
+                  s.status || "",
+                  s.mobileNumber || "",
+                  s.grNumber || "",
+                ]),
             },
           ],
         });
         closeModal();
-        setTimeout(() => window.print(), 300);
+        triggerPrint();
         return;
       }
 
@@ -258,9 +389,12 @@ export function ReportsHub() {
       const res = await fetch(`/api/reports/export?${p}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
+      if (!data?.sheets?.length) {
+        throw new Error("No data returned for this report");
+      }
       setPrintData(data as ReportPayload);
       closeModal();
-      setTimeout(() => window.print(), 300);
+      triggerPrint();
     } catch (e) {
       setError(e instanceof Error ? e.message : "PDF export failed");
     } finally {
@@ -271,13 +405,15 @@ export function ReportsHub() {
   const openReport = (report: ReportDefinition) => {
     setSelected(report);
     setError(null);
-    // sensible date defaults when opening date-range reports
-    if (report.filters.includes("dateFrom") || report.filters.includes("dateTo")) {
+    if (DATE_DEFAULT_REPORTS.has(report.id)) {
       setFilters((prev) => ({
         ...prev,
         dateFrom: prev.dateFrom || monthStartISO(),
         dateTo: prev.dateTo || monthEndISO(),
       }));
+    } else if (report.filters.includes("dateFrom") || report.filters.includes("dateTo")) {
+      // Optional date range (admissions / vouchers) — leave blank unless user sets
+      setFilters((prev) => ({ ...prev, dateFrom: "", dateTo: "" }));
     }
   };
 
@@ -464,10 +600,22 @@ export function ReportsHub() {
                     />
                   )}
                   {showFilter("month") && (
-                    <Select label={t("reportsHub.filterMonth")} value={filters.month} onChange={(e) => setFilters({ ...filters, month: e.target.value })} options={Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))} />
+                    <Select
+                      label={t("reportsHub.filterMonth")}
+                      value={filters.month}
+                      onChange={(e) => setFilters({ ...filters, month: e.target.value })}
+                      options={MONTH_OPTIONS}
+                      hideEmptyOption
+                    />
                   )}
                   {showFilter("year") && (
-                    <Select label={t("reportsHub.filterYear")} value={filters.year} onChange={(e) => setFilters({ ...filters, year: e.target.value })} options={["2024", "2025", "2026", "2027"]} />
+                    <Select
+                      label={t("reportsHub.filterYear")}
+                      value={filters.year}
+                      onChange={(e) => setFilters({ ...filters, year: e.target.value })}
+                      options={["2024", "2025", "2026", "2027"]}
+                      hideEmptyOption
+                    />
                   )}
                   {showFilter("academicYear") && (
                     <Select label={t("reportsHub.filterAcademicYear")} value={filters.academicYear} onChange={(e) => setFilters({ ...filters, academicYear: e.target.value })} options={["2024-25", "2025-26", "2026-27"]} />

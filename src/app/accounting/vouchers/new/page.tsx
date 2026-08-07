@@ -14,14 +14,26 @@ import { VOUCHER_TYPES, PAYMENT_MODES } from "@/lib/accounting";
 import { useT } from "@/i18n/locale-provider";
 import { AddLedgerAccount } from "@/components/accounting/add-ledger-account";
 
-interface Account { id: string; code: string; name: string }
-interface Line { accountId: string; debit: number; credit: number; description: string }
+interface Account {
+  id: string;
+  code: string;
+  name: string;
+}
+interface Line {
+  accountId: string;
+  debit: number;
+  credit: number;
+  description: string;
+}
 
 export default function NewVoucherPage() {
   const t = useT();
   const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [fyLabel, setFyLabel] = useState("");
   const [form, setForm] = useState({
     voucherType: "receipt",
     voucherDate: new Date().toISOString().slice(0, 10),
@@ -42,10 +54,19 @@ export default function NewVoucherPage() {
 
   useEffect(() => {
     loadAccounts();
+    fetch("/api/accounting")
+      .then((r) => r.json())
+      .then((d) => {
+        setLocked(Boolean(d.financialYear?.isLocked));
+        setFyLabel(d.financialYear?.label || "");
+      })
+      .catch(() => {});
   }, []);
 
   const loadAccounts = () => {
-    fetch("/api/accounting/trial-balance").then((r) => r.json()).then((d) => setAccounts(d.accounts || []));
+    fetch("/api/accounting/accounts")
+      .then((r) => r.json())
+      .then((d) => setAccounts(d.accounts || []));
   };
 
   const paymentModeOptions = PAYMENT_MODES.map((mode) => {
@@ -73,39 +94,96 @@ export default function NewVoucherPage() {
   const totalDebit = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
   const totalCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
   const balanced = Math.abs(totalDebit - totalCredit) < 0.01 && totalDebit > 0;
+  const linesValid = lines.every(
+    (l) =>
+      l.accountId &&
+      ((l.debit > 0 && !l.credit) || (l.credit > 0 && !l.debit)),
+  );
+
+  const updateLine = (i: number, patch: Partial<Line>) => {
+    setLines((prev) => {
+      const n = [...prev];
+      n[i] = { ...n[i], ...patch };
+      if (patch.debit != null && patch.debit > 0) n[i].credit = 0;
+      if (patch.credit != null && patch.credit > 0) n[i].debit = 0;
+      return n;
+    });
+  };
 
   const submit = async () => {
-    if (!balanced) return;
+    setError(null);
+    if (locked) {
+      setError(t("accounting.fyLockedNoVoucher"));
+      return;
+    }
+    if (!balanced || !linesValid) {
+      setError(t("accounting.voucherValidation"));
+      return;
+    }
     setLoading(true);
-    const res = await fetch("/api/accounting/vouchers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, lines }),
-    });
-    if (res.ok) router.push("/accounting/vouchers");
-    else setLoading(false);
+    try {
+      const res = await fetch("/api/accounting/vouchers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, lines }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || t("accounting.voucherSaveFailed"));
+        return;
+      }
+      router.push("/accounting/vouchers");
+    } catch {
+      setError(t("accounting.voucherSaveFailed"));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-4">
-        <Link href="/accounting/vouchers"><Button variant="outline" size="sm"><ArrowLeft className="h-4 w-4" /></Button></Link>
+        <Link href="/accounting/vouchers">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
         <div>
           <h1 className="text-2xl font-bold">{t("accounting.createVoucherTitle")}</h1>
-          <p className="text-slate-500">{t("accounting.doubleEntryNote")}</p>
+          <p className="text-slate-500">
+            {t("accounting.doubleEntryNote")}
+            {fyLabel ? ` · FY ${fyLabel}` : ""}
+          </p>
         </div>
       </div>
 
+      {locked && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {t("accounting.fyLockedNoVoucher")}
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <Card>
-        <CardHeader><CardTitle>{t("accounting.voucherDetails")}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>{t("accounting.voucherDetails")}</CardTitle>
+        </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium">{t("accounting.voucherType")}</label>
             <Select
               value={form.voucherType}
               onChange={(e) => setForm({ ...form, voucherType: e.target.value })}
-              options={VOUCHER_TYPES.map((v) => ({ value: v.value, label: voucherTypeLabel(v.value) }))}
-              emptyLabel=""
+              options={VOUCHER_TYPES.map((v) => ({
+                value: v.value,
+                label: voucherTypeLabel(v.value),
+              }))}
+              hideEmptyOption
             />
           </div>
           <DateField
@@ -117,7 +195,11 @@ export default function NewVoucherPage() {
           />
           <div>
             <label className="text-sm font-medium">{t("accounting.partyName")}</label>
-            <Input value={form.partyName} onChange={(e) => setForm({ ...form, partyName: e.target.value })} placeholder={t("accounting.partyPlaceholder")} />
+            <Input
+              value={form.partyName}
+              onChange={(e) => setForm({ ...form, partyName: e.target.value })}
+              placeholder={t("accounting.partyPlaceholder")}
+            />
           </div>
           <div>
             <label className="text-sm font-medium">{t("accounting.paymentMode")}</label>
@@ -125,12 +207,15 @@ export default function NewVoucherPage() {
               value={form.paymentMode}
               onChange={(e) => setForm({ ...form, paymentMode: e.target.value })}
               options={paymentModeOptions}
-              emptyLabel=""
+              hideEmptyOption
             />
           </div>
           <div>
             <label className="text-sm font-medium">{t("accounting.billNo")}</label>
-            <Input value={form.billNo} onChange={(e) => setForm({ ...form, billNo: e.target.value })} />
+            <Input
+              value={form.billNo}
+              onChange={(e) => setForm({ ...form, billNo: e.target.value })}
+            />
           </div>
           <DateField
             label={t("accounting.billDate")}
@@ -141,15 +226,31 @@ export default function NewVoucherPage() {
           />
           <div>
             <label className="text-sm font-medium">{t("accounting.chequeRefNo")}</label>
-            <Input value={form.chequeNo || form.referenceNo} onChange={(e) => setForm({ ...form, chequeNo: e.target.value, referenceNo: e.target.value })} />
+            <Input
+              value={form.chequeNo || form.referenceNo}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  chequeNo: e.target.value,
+                  referenceNo: e.target.value,
+                })
+              }
+            />
           </div>
           <div>
             <label className="text-sm font-medium">{t("accounting.gstin")}</label>
-            <Input value={form.gstin} onChange={(e) => setForm({ ...form, gstin: e.target.value })} />
+            <Input
+              value={form.gstin}
+              onChange={(e) => setForm({ ...form, gstin: e.target.value })}
+            />
           </div>
           <div className="sm:col-span-2">
             <label className="text-sm font-medium">{t("accounting.narration")}</label>
-            <Textarea value={form.narration} onChange={(e) => setForm({ ...form, narration: e.target.value })} placeholder={t("accounting.narrationPlaceholder")} />
+            <Textarea
+              value={form.narration}
+              onChange={(e) => setForm({ ...form, narration: e.target.value })}
+              placeholder={t("accounting.narrationPlaceholder")}
+            />
           </div>
         </CardContent>
       </Card>
@@ -159,7 +260,16 @@ export default function NewVoucherPage() {
           <CardTitle>{t("accounting.ledgerEntries")}</CardTitle>
           <div className="flex gap-2">
             <AddLedgerAccount size="sm" onAdded={loadAccounts} />
-            <Button variant="outline" size="sm" onClick={() => setLines([...lines, { accountId: "", debit: 0, credit: 0, description: "" }])}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setLines([
+                  ...lines,
+                  { accountId: "", debit: 0, credit: 0, description: "" },
+                ])
+              }
+            >
               <Plus className="h-4 w-4" /> {t("accounting.addLine")}
             </Button>
           </div>
@@ -170,23 +280,50 @@ export default function NewVoucherPage() {
               <div className="col-span-5">
                 <Select
                   value={line.accountId}
-                  onChange={(e) => { const n = [...lines]; n[i].accountId = e.target.value; setLines(n); }}
-                  options={accounts.map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))}
+                  onChange={(e) => updateLine(i, { accountId: e.target.value })}
+                  options={accounts.map((a) => ({
+                    value: a.id,
+                    label: `${a.code} — ${a.name}`,
+                  }))}
                   emptyLabel={t("accounting.selectAccount")}
                 />
               </div>
               <div className="col-span-2">
-                <Input type="number" placeholder={t("accounting.debit")} value={line.debit || ""} onChange={(e) => { const n = [...lines]; n[i].debit = Number(e.target.value); setLines(n); }} />
+                <Input
+                  type="number"
+                  placeholder={t("accounting.debit")}
+                  value={line.debit || ""}
+                  onChange={(e) =>
+                    updateLine(i, { debit: Number(e.target.value) || 0 })
+                  }
+                />
               </div>
               <div className="col-span-2">
-                <Input type="number" placeholder={t("accounting.credit")} value={line.credit || ""} onChange={(e) => { const n = [...lines]; n[i].credit = Number(e.target.value); setLines(n); }} />
+                <Input
+                  type="number"
+                  placeholder={t("accounting.credit")}
+                  value={line.credit || ""}
+                  onChange={(e) =>
+                    updateLine(i, { credit: Number(e.target.value) || 0 })
+                  }
+                />
               </div>
               <div className="col-span-2">
-                <Input placeholder={t("accounting.desc")} value={line.description} onChange={(e) => { const n = [...lines]; n[i].description = e.target.value; setLines(n); }} />
+                <Input
+                  placeholder={t("accounting.desc")}
+                  value={line.description}
+                  onChange={(e) =>
+                    updateLine(i, { description: e.target.value })
+                  }
+                />
               </div>
               <div className="col-span-1">
                 {lines.length > 2 && (
-                  <Button variant="outline" size="sm" onClick={() => setLines(lines.filter((_, j) => j !== i))}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLines(lines.filter((_, j) => j !== i))}
+                  >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 )}
@@ -194,14 +331,26 @@ export default function NewVoucherPage() {
             </div>
           ))}
           <div className="flex justify-between pt-4 border-t font-semibold">
-            <span>{t("accounting.totalDebit")}: ₹{totalDebit.toFixed(2)}</span>
-            <span>{t("accounting.totalCredit")}: ₹{totalCredit.toFixed(2)}</span>
-            <span className={balanced ? "text-emerald-600" : "text-red-600"}>{balanced ? `✓ ${t("accounting.balanced")}` : `✗ ${t("accounting.notBalanced")}`}</span>
+            <span>
+              {t("accounting.totalDebit")}: ₹{totalDebit.toFixed(2)}
+            </span>
+            <span>
+              {t("accounting.totalCredit")}: ₹{totalCredit.toFixed(2)}
+            </span>
+            <span className={balanced ? "text-emerald-600" : "text-red-600"}>
+              {balanced
+                ? `✓ ${t("accounting.balanced")}`
+                : `✗ ${t("accounting.notBalanced")}`}
+            </span>
           </div>
         </CardContent>
       </Card>
 
-      <Button onClick={submit} disabled={!balanced || loading} className="w-full h-12">
+      <Button
+        onClick={() => void submit()}
+        disabled={!balanced || !linesValid || loading || locked}
+        className="w-full h-12"
+      >
         {loading ? t("accounting.saving") : t("accounting.postVoucher")}
       </Button>
     </div>

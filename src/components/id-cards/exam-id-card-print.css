@@ -1,0 +1,235 @@
+/* Exam ID cards — full A4 cut sheet (no blank bottom)
+   Overrides dashboard.css `body * { visibility: hidden }` print lock */
+
+.exam-id-print-bundle {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .exam-id-print-bundle,
+  .exam-id-print-bundle *,
+  #exam-id-print-root,
+  #exam-id-print-root * {
+    visibility: visible !important;
+  }
+
+  .exam-id-print-bundle,
+  #exam-id-print-root {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    z-index: 99999 !important;
+  }
+
+  .print\:hidden,
+  .exam-id-toolbar,
+  .exam-id-filters,
+  .exam-id-preview-note,
+  aside,
+  nav,
+  header.tn-shell,
+  .admin-page-footer,
+  .shell-aside,
+  .shell-menu-btn,
+  .page-hero {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  main,
+  .shell-main,
+  .shell-main > div {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  /* Full A4 sheet shell */
+  .exam-id-print-page {
+    position: relative;
+    box-sizing: border-box;
+    width: 198mm;
+    height: 285mm;
+    min-height: 285mm;
+    max-height: 285mm;
+    margin: 0 auto;
+    padding: 0;
+    page-break-after: always;
+    break-after: page;
+    page-break-inside: avoid;
+    overflow: hidden;
+  }
+
+  .exam-id-print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* Inner grid fills entire page — no blank bottom */
+  .exam-id-print-grid {
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    padding: 7mm 5mm 5mm;
+    display: grid !important;
+    justify-items: center;
+    align-items: center;
+    justify-content: space-evenly;
+    align-content: space-evenly;
+    column-gap: 5mm;
+    row-gap: 0;
+  }
+
+  .exam-id-print-page[data-layout="2"] .exam-id-print-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, 1fr);
+  }
+
+  .exam-id-print-page[data-layout="4"] .exam-id-print-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+  }
+
+  .exam-id-print-page[data-layout="6"] .exam-id-print-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+  }
+
+  .exam-id-print-page[data-layout="8"] .exam-id-print-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    padding: 4mm 4mm 3mm;
+  }
+
+  .exam-id-cut-slot {
+    position: relative;
+    box-sizing: border-box;
+    width: 85.6mm;
+    height: 54mm;
+    margin: 0 auto;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .exam-id-cut-slot__card {
+    position: relative;
+    z-index: 1;
+    width: 85.6mm;
+    height: 54mm;
+  }
+
+  .exam-id-print-bundle[data-cut-lines="1"] .exam-id-cut-slot {
+    outline: 0.3mm dashed #64748b;
+    outline-offset: 1mm;
+  }
+
+  .exam-id-cut-marks {
+    display: none;
+    pointer-events: none;
+  }
+
+  .exam-id-print-bundle[data-cut-lines="1"] .exam-id-cut-marks {
+    display: block !important;
+    position: absolute;
+    inset: -2.4mm;
+    z-index: 2;
+  }
+
+  .exam-id-cut-marks span {
+    position: absolute;
+    width: 2.8mm;
+    height: 2.8mm;
+    border-color: #334155;
+    border-style: solid;
+  }
+
+  .exam-id-cut-marks .tl {
+    top: 0;
+    left: 0;
+    border-width: 0.35mm 0 0 0.35mm;
+  }
+
+  .exam-id-cut-marks .tr {
+    top: 0;
+    right: 0;
+    border-width: 0.35mm 0.35mm 0 0;
+  }
+
+  .exam-id-cut-marks .bl {
+    bottom: 0;
+    left: 0;
+    border-width: 0 0 0.35mm 0.35mm;
+  }
+
+  .exam-id-cut-marks .br {
+    bottom: 0;
+    right: 0;
+    border-width: 0 0.35mm 0.35mm 0;
+  }
+
+  .exam-id-cut-hint {
+    display: none;
+  }
+
+  .exam-id-print-bundle[data-cut-lines="1"] .exam-id-cut-hint {
+    display: block !important;
+    position: absolute !important;
+    top: 1.2mm;
+    left: 0;
+    right: 0;
+    margin: 0;
+    text-align: center;
+    font-size: 2mm;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    z-index: 5;
+  }
+
+  .exam-id-preview-scale {
+    transform: none !important;
+  }
+
+  .exam-id-card {
+    display: block !important;
+    visibility: visible !important;
+    width: 85.6mm !important;
+    height: 54mm !important;
+    max-width: 85.6mm !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .exam-id-card img {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

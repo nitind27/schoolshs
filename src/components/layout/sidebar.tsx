@@ -28,6 +28,8 @@ import {
   Hash,
   Armchair,
   CalendarDays,
+  Trophy,
+  BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -212,6 +214,13 @@ const useNavGroups = (
       },
       {
         type: "link",
+        href: "/activities",
+        label: t("nav.activities"),
+        icon: Trophy,
+        featureKey: "activities",
+      },
+      {
+        type: "link",
         href: "/timetable",
         label: t("navExt.timetable"),
         icon: CalendarClock,
@@ -342,20 +351,28 @@ const useNavGroups = (
             icon: Calculator,
             featureKey: "staff",
           },
-          {
-            href: "/id-cards",
-            label: t("megaMenu.idCards"),
-            icon: CreditCard,
-            featureKey: "id_cards",
-          },
         ],
       },
       {
-        type: "link",
-        href: "/id-cards",
+        type: "submenu",
+        id: "id-cards",
         label: t("nav.idCards"),
         icon: CreditCard,
         featureKey: "id_cards",
+        children: [
+          {
+            href: "/id-cards",
+            label: t("idCards.title"),
+            icon: CreditCard,
+            featureKey: "id_cards",
+          },
+          {
+            href: "/exam-id-cards",
+            label: t("examIdCards.title"),
+            icon: BadgeCheck,
+            featureKey: "id_cards",
+          },
+        ],
       },
     ],
   },
@@ -441,7 +458,7 @@ export function Sidebar() {
           <Link
             href="/dashboard"
             className="flex min-w-0 items-center gap-3"
-            title={user?.schoolName || t("common.scholarship")}
+            title={user?.schoolName || t("landing.productName")}
           >
             <div
               className="shrink-0 rounded-xl p-2.5 flex items-center justify-center"
@@ -454,10 +471,12 @@ export function Sidebar() {
             </div>
             <div className="shell-brand-text min-w-0">
               <h1 className="truncate text-sm font-bold text-white leading-tight">
-                {user?.schoolName || t("common.scholarship")}
+                {user?.schoolName || t("landing.productName")}
               </h1>
               <p className="truncate text-xs text-blue-300 leading-tight mt-0.5">
-                {t("common.digitalGujaratPortal")}
+                {user?.schoolName
+                  ? t("landing.productName")
+                  : t("landing.productTag")}
               </p>
             </div>
           </Link>

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAccountingAuth, AuthError } from "@/lib/auth";
+import { AUDIT_STATUSES } from "@/lib/accounting";
+
+const ALLOWED = new Set(AUDIT_STATUSES.map((s) => s.value));
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -8,22 +11,45 @@ export async function PATCH(request: NextRequest) {
     const { voucherId, auditStatus, auditRemarks } = await request.json();
 
     if (!voucherId || !auditStatus) {
-      return NextResponse.json({ error: "voucherId and auditStatus required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "voucherId and auditStatus required" },
+        { status: 400 },
+      );
+    }
+    if (!ALLOWED.has(auditStatus)) {
+      return NextResponse.json(
+        { error: "Invalid auditStatus (pending/verified/flagged/query)" },
+        { status: 400 },
+      );
     }
 
     const existing = await prisma.voucher.findFirst({
       where: { id: voucherId, schoolId: session.accountingSchoolId },
     });
     if (!existing) {
-      return NextResponse.json({ error: "Voucher not found for this school" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Voucher not found for this school" },
+        { status: 404 },
+      );
     }
 
     const fy = await prisma.financialYear.findFirst({
-      where: { id: existing.financialYearId, schoolId: session.accountingSchoolId },
+      where: {
+        id: existing.financialYearId,
+        schoolId: session.accountingSchoolId,
+      },
     });
-    if (!fy || (fy.auditStatus !== "submitted" && fy.auditStatus !== "in_review" && fy.auditStatus !== "verified")) {
+    if (
+      !fy ||
+      (fy.auditStatus !== "submitted" &&
+        fy.auditStatus !== "in_review" &&
+        fy.auditStatus !== "verified")
+    ) {
       if (fy?.auditStatus === "open" || fy?.auditStatus === "pending") {
-        return NextResponse.json({ error: "School has not submitted books to CA yet" }, { status: 400 });
+        return NextResponse.json(
+          { error: "School has not submitted books to CA yet" },
+          { status: 400 },
+        );
       }
     }
 
@@ -31,7 +57,7 @@ export async function PATCH(request: NextRequest) {
       where: { id: voucherId },
       data: {
         auditStatus,
-        auditRemarks,
+        auditRemarks: auditRemarks?.trim() || null,
         auditedAt: new Date(),
         auditedBy: session.name,
       },
@@ -43,20 +69,36 @@ export async function PATCH(request: NextRequest) {
         data: { auditStatus: "in_review" },
       });
 
-      const pending = await prisma.voucher.count({
-        where: { schoolId: session.accountingSchoolId, financialYearId: fy.id, auditStatus: "pending" },
+      const openIssues = await prisma.voucher.count({
+        where: {
+          schoolId: session.accountingSchoolId,
+          financialYearId: fy.id,
+          auditStatus: { in: ["pending", "flagged", "query"] },
+        },
       });
-      if (pending === 0) {
-        await prisma.financialYear.update({
-          where: { id: fy.id, schoolId: session.accountingSchoolId },
-          data: { auditStatus: "verified" },
+
+      // Only mark FY verified when every voucher is verified (no pending/flag/query)
+      if (openIssues === 0) {
+        const total = await prisma.voucher.count({
+          where: {
+            schoolId: session.accountingSchoolId,
+            financialYearId: fy.id,
+          },
         });
+        if (total > 0) {
+          await prisma.financialYear.update({
+            where: { id: fy.id, schoolId: session.accountingSchoolId },
+            data: { auditStatus: "verified" },
+          });
+        }
       }
     }
 
     return NextResponse.json(voucher);
   } catch (e) {
-    if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

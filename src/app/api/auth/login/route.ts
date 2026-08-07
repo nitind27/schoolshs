@@ -35,7 +35,12 @@ export async function POST(request: NextRequest) {
     }
 
     const ctx = await buildLoginContext(request, body, "web");
-    const result = await authenticateCredentials(email, password, ctx, { sessionAction });
+    const schoolCode =
+      typeof body.schoolCode === "string" ? body.schoolCode.trim().toUpperCase() : "";
+    const result = await authenticateCredentials(email, password, ctx, {
+      sessionAction,
+      schoolCode: schoolCode || null,
+    });
 
     if (result.kind === "student_setup") {
       return NextResponse.json(

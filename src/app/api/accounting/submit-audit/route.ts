@@ -31,13 +31,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Financial year is locked" }, { status: 400 });
     }
 
-    const draftVouchers = await prisma.voucher.count({
-      where: { schoolId: session.schoolId, financialYearId: fy.id, auditStatus: "flagged" },
+    const blocked = await prisma.voucher.count({
+      where: {
+        schoolId: session.schoolId,
+        financialYearId: fy.id,
+        auditStatus: { in: ["flagged", "query"] },
+      },
     });
-    if (draftVouchers > 0) {
-      return NextResponse.json({
-        error: "Resolve flagged vouchers before submitting to CA",
-      }, { status: 400 });
+    if (blocked > 0) {
+      return NextResponse.json(
+        {
+          error: "Resolve flagged / query vouchers before submitting to CA",
+        },
+        { status: 400 },
+      );
     }
 
     const updated = await prisma.$transaction(async (tx) => {

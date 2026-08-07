@@ -431,11 +431,8 @@ export default function SchoolOpsDashboard() {
           }}
         >
           <span className="ops-main-tab-ico is-student"><Users className="h-4 w-4" /></span>
-          <span className="ops-main-tab-copy">
-            <strong>{t("dashboard.mainTabStudents")}</strong>
-            <small>{t("dashboard.mainTabStudentsShort")}</small>
-          </span>
-          <em>{(stats?.total || 0).toLocaleString("en-IN")}</em>
+          <span className="ops-main-tab-label">{t("dashboard.mainTabStudents")}</span>
+          <em className="ops-main-tab-count">{(stats?.total || 0).toLocaleString("en-IN")}</em>
         </button>
         <button
           type="button"
@@ -445,11 +442,10 @@ export default function SchoolOpsDashboard() {
           onClick={() => setMainTab("staff")}
         >
           <span className="ops-main-tab-ico is-staff"><Briefcase className="h-4 w-4" /></span>
-          <span className="ops-main-tab-copy">
-            <strong>{t("dashboard.mainTabStaff")}</strong>
-            <small>{t("dashboard.mainTabStaffShort")}</small>
-          </span>
-          <em>{(hrSummary?.totalStaff ?? stats?.totalStaff ?? 0).toLocaleString("en-IN")}</em>
+          <span className="ops-main-tab-label">{t("dashboard.mainTabStaff")}</span>
+          <em className="ops-main-tab-count">
+            {(hrSummary?.totalStaff ?? stats?.totalStaff ?? 0).toLocaleString("en-IN")}
+          </em>
         </button>
       </nav>
 
@@ -571,7 +567,7 @@ export default function SchoolOpsDashboard() {
 
       <section className="ops-insights ops-insights-compact">
         <header className="ops-insights-head">
-          <div>
+          <div className="ops-insights-intro">
             <p className="ops-eyebrow">{t("dashboard.insightsEyebrow")}</p>
             <h2>{t("dashboard.insightsTitle")}</h2>
             <p>{t("dashboard.insightsDesc")}</p>

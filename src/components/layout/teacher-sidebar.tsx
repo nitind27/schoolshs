@@ -15,6 +15,7 @@ import {
   Hash,
   Armchair,
   CalendarDays,
+  PartyPopper,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import "@/components/teacher/teacher-portal.css";
@@ -75,6 +76,12 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
       href: "/teacher/holidays",
       label: t("nav.staffHolidays"),
       icon: CalendarDays,
+      group: t("teacherNav.groupAcademics"),
+    },
+    {
+      href: "/teacher/activities",
+      label: t("teacherNav.activities"),
+      icon: PartyPopper,
       group: t("teacherNav.groupAcademics"),
     },
   ];

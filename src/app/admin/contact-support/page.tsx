@@ -15,11 +15,28 @@ interface SupportMsg {
   email: string;
   phone?: string | null;
   schoolCode?: string | null;
+  instituteName?: string | null;
+  roleType?: string | null;
+  source?: string;
   subject: string;
   message: string;
   status: MsgStatus;
   adminNote?: string | null;
 }
+
+const SOURCE_STYLE: Record<string, string> = {
+  landing_modal: "bg-teal-100 text-teal-800 border-teal-200",
+  contact_form: "bg-violet-100 text-violet-800 border-violet-200",
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  school_admin: "School Admin",
+  teacher: "Teacher",
+  clerk: "Clerk",
+  ca: "Chartered Accountant",
+  student: "Student",
+  other: "Other",
+};
 
 const STATUS_STYLE: Record<MsgStatus, string> = {
   new: "bg-amber-100 text-amber-800 border-amber-200",
@@ -31,6 +48,7 @@ export default function AdminContactSupportPage() {
   const [messages, setMessages] = useState<SupportMsg[]>([]);
   const [counts, setCounts] = useState({ new: 0, read: 0, resolved: 0, total: 0 });
   const [filter, setFilter] = useState<MsgStatus | "all">("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "landing_modal" | "contact_form">("all");
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<SupportMsg | null>(null);
   const [note, setNote] = useState("");
@@ -38,13 +56,16 @@ export default function AdminContactSupportPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const q = filter === "all" ? "" : `?status=${filter}`;
+    const params = new URLSearchParams();
+    if (filter !== "all") params.set("status", filter);
+    if (sourceFilter !== "all") params.set("source", sourceFilter);
+    const q = params.toString() ? `?${params.toString()}` : "";
     const res = await fetch(`/api/admin/contact-support${q}`);
     const data = await res.json();
     setMessages(data.messages || []);
     setCounts(data.counts || { new: 0, read: 0, resolved: 0, total: 0 });
     setLoading(false);
-  }, [filter]);
+  }, [filter, sourceFilter]);
 
   useEffect(() => {
     load();
@@ -92,7 +113,9 @@ export default function AdminContactSupportPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Contact Support</h1>
-        <p className="text-sm text-slate-500">Messages submitted from the public website contact form</p>
+        <p className="text-sm text-slate-500">
+          Messages from the website contact form and homepage expert popup
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -137,6 +160,27 @@ export default function AdminContactSupportPage() {
             {f}
           </button>
         ))}
+        <span className="mx-1 w-px self-stretch bg-slate-200" aria-hidden />
+        {(
+          [
+            ["all", "All sources"],
+            ["landing_modal", "Home popup"],
+            ["contact_form", "Contact form"],
+          ] as const
+        ).map(([f, label]) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setSourceFilter(f)}
+            className={`rounded-lg border px-3 py-1.5 text-sm font-semibold ${
+              sourceFilter === f
+                ? "border-teal-300 bg-teal-50 text-teal-800"
+                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
@@ -162,7 +206,18 @@ export default function AdminContactSupportPage() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate font-semibold text-slate-900">{m.subject}</p>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p className="truncate font-semibold text-slate-900">{m.subject}</p>
+                            {m.source && (
+                              <span
+                                className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${
+                                  SOURCE_STYLE[m.source] || "bg-slate-100 text-slate-700 border-slate-200"
+                                }`}
+                              >
+                                {m.source === "landing_modal" ? "Popup" : "Form"}
+                              </span>
+                            )}
+                          </div>
                           <p className="mt-0.5 truncate text-sm text-slate-600">
                             {m.name} · {m.email}
                           </p>
@@ -223,6 +278,22 @@ export default function AdminContactSupportPage() {
                       <a href={`tel:${selected.phone}`} className="font-semibold text-slate-900">
                         {selected.phone}
                       </a>
+                    </div>
+                  )}
+                  {selected.instituteName && (
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 flex items-center gap-1">
+                        <School className="h-3 w-3" /> Institute
+                      </p>
+                      <p className="font-semibold text-slate-900">{selected.instituteName}</p>
+                    </div>
+                  )}
+                  {selected.roleType && (
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Role</p>
+                      <p className="font-semibold text-slate-900">
+                        {ROLE_LABELS[selected.roleType] || selected.roleType}
+                      </p>
                     </div>
                   )}
                   {selected.schoolCode && (

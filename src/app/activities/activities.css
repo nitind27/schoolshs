@@ -1,0 +1,571 @@
+/* School Activities */
+
+.act-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.act-toast {
+  padding: 0.7rem 1rem;
+  border-radius: 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.act-toast--ok {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.act-toast--err {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.act-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.act-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 1.15rem;
+  border: none;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, #14b8a6, #0d9488);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 8px 18px -12px rgb(13 148 136 / 0.8);
+}
+
+.act-btn-primary:hover {
+  filter: brightness(1.04);
+}
+
+.act-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 3rem 1.25rem;
+  text-align: center;
+  border-radius: 1.15rem;
+  border: 1px dashed #cbd5e1;
+  background: linear-gradient(160deg, #f0fdfa, #fff);
+}
+
+.act-empty__title {
+  margin: 0.35rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.act-empty__sub {
+  margin: 0 0 0.75rem;
+  max-width: 26rem;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.act-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 720px) {
+  .act-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .act-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.act-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1rem 1.05rem 1.1rem;
+  border-radius: 1.1rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.04);
+}
+
+.act-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.act-card__top-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.act-badge {
+  display: inline-flex;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.act-badge--live {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.act-badge--draft {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.act-detail__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.act-print-wrap {
+  margin-bottom: 0.25rem;
+}
+
+.act-card__type {
+  display: inline-flex;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0f766e;
+  background: #ccfbf1;
+}
+
+.act-card[data-type="party"] .act-card__type {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.act-card[data-type="sports"] .act-card__type {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.act-card[data-type="cultural"] .act-card__type {
+  color: #7e22ce;
+  background: #f3e8ff;
+}
+
+.act-card[data-type="trip"] .act-card__type {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+.act-card__del {
+  display: inline-flex;
+  height: 2.1rem;
+  width: 2.1rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.act-card__del:hover:not(:disabled) {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.act-card__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.act-card__title a:hover {
+  color: #0d9488;
+}
+
+.act-card__gu {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.act-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.85rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.act-card__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.act-card__cta {
+  margin-top: 0.35rem;
+  display: inline-flex;
+  width: 100%;
+  min-height: 2.6rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.8rem;
+  background: linear-gradient(180deg, #14b8a6, #0d9488);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 8px 18px -12px rgb(13 148 136 / 0.8);
+}
+
+.act-card__cta:hover {
+  filter: brightness(1.03);
+}
+
+.act-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(15 23 42 / 0.45);
+}
+
+@media (min-width: 640px) {
+  .act-modal-backdrop {
+    align-items: center;
+  }
+}
+
+.act-modal {
+  width: min(32rem, 100%);
+  max-height: min(90dvh, 40rem);
+  overflow: auto;
+  border-radius: 1.15rem;
+  background: #fff;
+  box-shadow: 0 24px 60px -24px rgb(15 23 42 / 0.45);
+}
+
+.act-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.act-modal__kicker {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0d9488;
+}
+
+.act-modal__title {
+  margin: 0.15rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.act-modal__close {
+  display: inline-flex;
+  height: 2.2rem;
+  width: 2.2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+}
+
+.act-modal__body {
+  padding: 1rem 1.1rem;
+}
+
+.act-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  padding: 0.85rem 1.1rem 1.1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.act-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.act-detail__banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgb(13 148 136 / 0.2);
+  background: linear-gradient(135deg, #f0fdfa, #fff 60%);
+}
+
+.act-detail__title {
+  margin: 0.45rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.act-detail__desc {
+  margin: 0.35rem 0 0;
+  max-width: 40rem;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.act-detail__stat {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.95rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: #0f766e;
+}
+
+.act-detail__stat-val {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.act-detail__stat-lbl {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.act-detail__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 960px) {
+  .act-detail__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.act-panel {
+  border-radius: 1.1rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  overflow: hidden;
+  min-height: 22rem;
+}
+
+.act-panel__head {
+  padding: 0.95rem 1.05rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.act-panel__head h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.act-panel__head p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.act-panel__body {
+  padding: 0.95rem 1.05rem 1.1rem;
+}
+
+.act-hint {
+  margin: 0;
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.act-student-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 28rem;
+  overflow: auto;
+}
+
+.act-student-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.75rem;
+  min-height: 3.4rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.85rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.act-student-row:has(.act-student-row__sr) {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.act-student-row:hover {
+  border-color: rgb(13 148 136 / 0.35);
+  background: #f8fffd;
+}
+
+.act-student-row__sr {
+  display: inline-flex;
+  height: 1.85rem;
+  min-width: 1.85rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.act-student-row__info {
+  min-width: 0;
+}
+
+.act-student-row__name {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.act-student-row__meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.act-student-row__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  height: 2.25rem;
+  min-width: 5.25rem;
+  padding: 0 0.85rem;
+  border: none;
+  border-radius: 0.7rem;
+  background: #0d9488;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 4px 10px -6px rgb(13 148 136 / 0.65);
+}
+
+.act-student-row__add:hover:not(:disabled) {
+  background: #0f766e;
+}
+
+.act-student-row__add:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.act-student-row__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 2.25rem;
+  width: 2.25rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.7rem;
+  background: #fff;
+  color: #dc2626;
+  cursor: pointer;
+}
+
+.act-student-row__remove:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.act-student-row__remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+html.locale-gu .act-card__title,
+html.locale-gu .act-detail__title,
+html.locale-gu .act-student-row__name {
+  font-family: "Noto Sans Gujarati", "Noto Sans", system-ui, sans-serif;
+}

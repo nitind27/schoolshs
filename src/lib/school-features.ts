@@ -7,6 +7,7 @@ export const SCHOOL_FEATURE_KEYS = [
   "admissions",
   "results",
   "attendance",
+  "activities",
   "scholarship_add",
   "scholarship_import",
   "scholarship_bulk_submit",
@@ -41,6 +42,7 @@ export const SCHOOL_FEATURES: SchoolFeatureDef[] = [
   { key: "admissions", label: "Admissions", group: "Academics", path: "/admissions", description: "Admission verification" },
   { key: "results", label: "Results", group: "Academics", path: "/results", description: "Exam results & report cards" },
   { key: "attendance", label: "Attendance", group: "Academics", path: "/attendance", description: "Monthly attendance" },
+  { key: "activities", label: "Activities", group: "Academics", path: "/activities", description: "School activities & student participation" },
   { key: "scholarship_add", label: "Add Student", group: "Scholarship", path: "/students/new", description: "New scholarship student" },
   { key: "scholarship_import", label: "Bulk Import", group: "Scholarship", path: "/import", description: "CSV/Excel import" },
   { key: "scholarship_bulk_submit", label: "Bulk Mark Submitted", group: "Scholarship", path: "/bulk-submit", description: "Mark students submitted in school records (not Digital Gujarat)" },
@@ -49,7 +51,7 @@ export const SCHOOL_FEATURES: SchoolFeatureDef[] = [
   { key: "accounting", label: "Accounting", group: "Administration", path: "/accounting", description: "Books of account" },
   { key: "board_records", label: "Board Records", group: "Administration", path: "/students/board-records", description: "10th/12th records" },
   { key: "certificates", label: "Certificates", group: "Administration", path: "/certificates", description: "Bonafide & certificates" },
-  { key: "id_cards", label: "ID Cards", group: "Administration", path: "/id-cards", description: "Student ID cards" },
+  { key: "id_cards", label: "ID Cards", group: "Administration", path: "/id-cards", description: "Student & examination staff ID cards" },
   { key: "chat", label: "Staff Chat", group: "Communication", path: "/chat", description: "Real-time staff messaging" },
   { key: "portal_teacher", label: "Teacher Portal", group: "Role Portals", path: "/teacher", description: "Teacher login access" },
   { key: "portal_clerk", label: "Clerk Portal", group: "Role Portals", path: "/clerk", description: "Clerk login access" },
@@ -67,7 +69,7 @@ export const PLAN_PRESETS: Record<string, { label: string; features: SchoolFeatu
     label: "Standard",
     priceHint: "₹35,000/yr",
     features: [
-      "dashboard", "classes", "students", "staff", "admissions", "results", "attendance",
+      "dashboard", "classes", "students", "staff", "admissions", "results", "attendance", "activities",
       "scholarship_add", "scholarship_import", "scholarship_bulk_submit", "scholarship_export",
       "certificates", "id_cards", "portal_teacher", "portal_clerk", "portal_student", "chat",
     ],
@@ -90,9 +92,14 @@ export const PAYMENT_STATUSES = ["pending", "partial", "paid", "overdue"] as con
 
 export function normalizeFeatureList(features: unknown): SchoolFeatureKey[] {
   if (!Array.isArray(features)) return [...PLAN_PRESETS.standard.features];
-  return features.filter((f): f is SchoolFeatureKey =>
+  const list = features.filter((f): f is SchoolFeatureKey =>
     typeof f === "string" && SCHOOL_FEATURE_KEYS.includes(f as SchoolFeatureKey)
   );
+  // Legacy schools: enable Activities whenever Students module is already on
+  if (list.includes("students") && !list.includes("activities")) {
+    list.push("activities");
+  }
+  return list;
 }
 
 export function isFeatureEnabled(features: SchoolFeatureKey[], key: SchoolFeatureKey): boolean {
@@ -114,6 +121,7 @@ export function hrefToFeature(href: string): SchoolFeatureKey | null {
     "/admissions": "admissions",
     "/results": "results",
     "/attendance": "attendance",
+    "/activities": "activities",
     "/timetable": "classes",
     "/students/new": "students",
     "/import": "scholarship_import",
@@ -124,6 +132,7 @@ export function hrefToFeature(href: string): SchoolFeatureKey | null {
     "/students/board-records": "board_records",
     "/certificates": "certificates",
     "/id-cards": "id_cards",
+    "/exam-id-cards": "id_cards",
     "/chat": "chat",
   };
   if (map[href]) return map[href];

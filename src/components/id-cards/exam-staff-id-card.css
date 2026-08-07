@@ -1,0 +1,333 @@
+/* Examination staff ID — landscape CR-80 (85.6 × 54 mm) */
+
+.exam-id-card {
+  --exam-ink: #0b1f33;
+  --exam-navy: #123a5c;
+  --exam-gold: #c9a227;
+  --exam-cream: #f7f4ec;
+  --exam-line: rgba(18, 58, 92, 0.14);
+
+  position: relative;
+  width: 85.6mm;
+  height: 54mm;
+  overflow: hidden;
+  border-radius: 2.2mm;
+  background: linear-gradient(145deg, #ffffff 0%, var(--exam-cream) 100%);
+  color: var(--exam-ink);
+  box-shadow:
+    0 0 0 0.35mm rgba(11, 31, 51, 0.35),
+    0 2mm 6mm rgba(11, 31, 51, 0.12);
+  font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.exam-id-card__stripe {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2.2mm;
+  background: linear-gradient(180deg, var(--exam-gold), #8a6d12 45%, var(--exam-navy));
+}
+
+.exam-id-card__inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 2.2mm 2.6mm 1.8mm 3.6mm;
+}
+
+.exam-id-card__head {
+  display: grid;
+  grid-template-columns: 8.5mm 1fr auto;
+  gap: 2mm;
+  align-items: center;
+}
+
+.exam-id-card__logo {
+  width: 8.5mm;
+  height: 8.5mm;
+  border-radius: 1.2mm;
+  overflow: hidden;
+  background: #fff;
+  border: 0.25mm solid var(--exam-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exam-id-card__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.exam-id-card__school {
+  min-width: 0;
+}
+
+.exam-id-card__kicker {
+  margin: 0;
+  font-size: 1.7mm;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a6d12;
+}
+
+.exam-id-card__school-name {
+  margin: 0.3mm 0 0;
+  font-size: 2.7mm;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--exam-navy);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.exam-id-card__meta-line {
+  margin: 0.35mm 0 0;
+  font-size: 1.55mm;
+  color: #5b6b7c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exam-id-card__badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 10mm;
+  padding: 1mm 1.4mm;
+  border-radius: 1.2mm;
+  background: linear-gradient(145deg, var(--exam-navy), #0b1f33);
+  color: #fff;
+  line-height: 1;
+}
+
+.exam-id-card__badge span {
+  font-size: 1.5mm;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+.exam-id-card__badge strong {
+  margin-top: 0.4mm;
+  font-size: 2.6mm;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.exam-id-card__title-bar {
+  margin-top: 1.4mm;
+  padding: 0.7mm 1.6mm;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(201, 162, 39, 0.2), rgba(18, 58, 92, 0.08));
+  border: 0.2mm solid rgba(201, 162, 39, 0.45);
+  color: var(--exam-navy);
+  font-size: 1.85mm;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.exam-id-card__body {
+  display: grid;
+  grid-template-columns: 16mm 1fr;
+  gap: 2.2mm;
+  margin-top: 1.6mm;
+  flex: 1;
+  min-height: 0;
+}
+
+.exam-id-card__photo {
+  width: 16mm;
+  height: 19mm;
+  border-radius: 1.2mm;
+  overflow: hidden;
+  border: 0.3mm solid var(--exam-navy);
+  background: #e8eef4;
+  flex-shrink: 0;
+}
+
+.exam-id-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.exam-id-card__photo-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7mm;
+  font-weight: 800;
+  color: var(--exam-navy);
+  background: linear-gradient(145deg, #dbe7f2, #f4f7fa);
+}
+
+.exam-id-card__info {
+  min-width: 0;
+}
+
+.exam-id-card__name {
+  margin: 0;
+  font-size: 3.2mm;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--exam-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.exam-id-card__name-gu {
+  margin: 0.25mm 0 0;
+  font-size: 2mm;
+  color: #5b6b7c;
+  line-height: 1.2;
+}
+
+.exam-id-card__fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7mm 1.5mm;
+  margin: 1.2mm 0 0;
+}
+
+.exam-id-card__fields div {
+  min-width: 0;
+}
+
+.exam-id-card__fields dt {
+  margin: 0;
+  font-size: 1.35mm;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7a8794;
+}
+
+.exam-id-card__fields dd {
+  margin: 0.15mm 0 0;
+  font-size: 1.95mm;
+  font-weight: 700;
+  color: var(--exam-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exam-id-card__exam {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18mm, 1fr));
+  gap: 1.2mm;
+  margin-top: 1.2mm;
+  padding: 1mm 1.3mm;
+  border-radius: 1.2mm;
+  background: rgba(18, 58, 92, 0.06);
+  border: 0.2mm solid var(--exam-line);
+}
+
+.exam-id-card__exam span {
+  display: block;
+  font-size: 1.3mm;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #7a8794;
+}
+
+.exam-id-card__exam strong {
+  display: block;
+  margin-top: 0.2mm;
+  font-size: 1.85mm;
+  font-weight: 800;
+  color: var(--exam-navy);
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.exam-id-card__exam em {
+  display: block;
+  margin-top: 0.15mm;
+  font-style: normal;
+  font-size: 1.5mm;
+  color: #5b6b7c;
+}
+
+.exam-id-card__foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2mm;
+  margin-top: auto;
+  padding-top: 1mm;
+}
+
+.exam-id-card__sign {
+  min-width: 22mm;
+  text-align: center;
+}
+
+.exam-id-card__sign-line {
+  display: block;
+  width: 20mm;
+  height: 0.25mm;
+  margin: 3mm auto 0.6mm;
+  background: #94a3b8;
+}
+
+.exam-id-card__sign-img {
+  display: block;
+  height: 5mm;
+  max-width: 22mm;
+  margin: 0 auto 0.4mm;
+  object-fit: contain;
+}
+
+.exam-id-card__sign p {
+  margin: 0;
+  font-size: 1.45mm;
+  font-weight: 700;
+  color: #5b6b7c;
+}
+
+.exam-id-card__note {
+  margin: 0;
+  max-width: 42mm;
+  font-size: 1.35mm;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: #8a6d12;
+  text-align: right;
+  line-height: 1.25;
+}
+
+/* Screen preview scale */
+.exam-id-preview-scale {
+  width: 85.6mm;
+  height: 54mm;
+  transform-origin: top left;
+}
+
+@media (max-width: 640px) {
+  .exam-id-preview-wrap {
+    overflow-x: auto;
+  }
+}

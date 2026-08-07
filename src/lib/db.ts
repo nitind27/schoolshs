@@ -10,7 +10,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** Bump when schema changes — forces fresh client in dev HMR */
-const SCHEMA_VERSION = 33;
+const SCHEMA_VERSION = 35;
 
 function isClientFresh(client: PrismaClient): boolean {
   const hasLoginSecurity =
@@ -40,6 +40,8 @@ function isClientFresh(client: PrismaClient): boolean {
     "loginEvent" in client &&
     "userSession" in client &&
     "holiday" in client &&
+    "activity" in client &&
+    "activityParticipant" in client &&
     hasLoginSecurity &&
     hasEmailVerification &&
     hasStaffGuNames &&

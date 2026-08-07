@@ -6,8 +6,10 @@ export async function GET(req: NextRequest) {
   try {
     await requireAuth(["super_admin"]);
     const status = req.nextUrl.searchParams.get("status");
-    const where =
-      status && ["new", "read", "resolved"].includes(status) ? { status } : {};
+    const source = req.nextUrl.searchParams.get("source");
+    const where: { status?: string; source?: string } = {};
+    if (status && ["new", "read", "resolved"].includes(status)) where.status = status;
+    if (source && ["contact_form", "landing_modal"].includes(source)) where.source = source;
 
     const [messages, counts] = await Promise.all([
       prisma.contactSupportMessage.findMany({

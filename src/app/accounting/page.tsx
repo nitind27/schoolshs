@@ -115,6 +115,8 @@ export default function AccountingPage() {
 
   const fy = data?.financialYear;
   const fyLabel = fy?.label || t("accounting.fyNotSet");
+  const canWrite = userRole === "school_admin" || userRole === "clerk";
+  const fyLocked = Boolean(fy?.isLocked);
   const totalReceipts = data?.voucherStats?.filter((s) => s.auditStatus === "verified").reduce((a, s) => a + (s._sum.totalAmount || 0), 0) || 0;
   const pendingAudit = data?.voucherStats?.find((s) => s.auditStatus === "pending")?._count || 0;
 
@@ -131,23 +133,29 @@ export default function AccountingPage() {
           <Button variant="outline" size="sm" onClick={() => setShowHelp(true)}>
             <HelpCircle className="h-3.5 w-3.5" /> {t("accounting.howToUse")}
           </Button>
-          <select
-            value={newFy}
-            onChange={(e) => setNewFy(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-300 text-sm bg-white"
-          >
-            {FINANCIAL_YEARS.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          <Button variant="outline" size="sm" onClick={() => setFinancialYear(newFy)}>
-            {t("accounting.setActiveFy")}
-          </Button>
-          <Link href="/accounting/vouchers/new">
-            <Button size="sm">
-              <Plus className="h-3.5 w-3.5" /> {t("accounting.newVoucher")}
-            </Button>
-          </Link>
+          {canWrite && (
+            <>
+              <select
+                value={newFy}
+                onChange={(e) => setNewFy(e.target.value)}
+                className="h-9 px-3 rounded-xl border border-slate-300 text-sm bg-white"
+              >
+                {FINANCIAL_YEARS.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <Button variant="outline" size="sm" onClick={() => setFinancialYear(newFy)}>
+                {t("accounting.setActiveFy")}
+              </Button>
+              {!fyLocked && (
+                <Link href="/accounting/vouchers/new">
+                  <Button size="sm">
+                    <Plus className="h-3.5 w-3.5" /> {t("accounting.newVoucher")}
+                  </Button>
+                </Link>
+              )}
+            </>
+          )}
         </>
       }
     >
@@ -167,7 +175,7 @@ export default function AccountingPage() {
         </div>
       )}
 
-      {fy && fy._count.accounts === 0 && (
+      {fy && fy._count.accounts === 0 && canWrite && (
         <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -184,7 +192,7 @@ export default function AccountingPage() {
         </div>
       )}
 
-      {fy && fy._count.accounts > 0 && userRole !== "ca" && (
+      {fy && fy._count.accounts > 0 && canWrite && !fyLocked && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
           <div>
             <p className="text-sm font-semibold text-slate-800">{t("accounting.manageLedgers")}</p>
@@ -283,11 +291,12 @@ export default function AccountingPage() {
           </CardHeader>
           <CardContent className="grid sm:grid-cols-2 gap-4">
             {[
-              { href: "/accounting/vouchers",      label: t("accounting.voucherRegister"), desc: t("accounting.voucherRegisterDesc"),   icon: FileText,   color: "blue"   },
-              { href: "/accounting/vouchers/new",  label: t("accounting.createVoucher"),   desc: t("accounting.createVoucherDesc"),     icon: Plus,       color: "emerald" },
-              { href: "/accounting/trial-balance", label: t("accounting.trialBalance"),    desc: t("accounting.trialBalanceDesc"),      icon: TrendingUp, color: "violet" },
-              { href: "/accounting/reports",       label: t("accounting.financialReports"),desc: t("accounting.financialReportsDesc"),  icon: Calculator, color: "amber"  },
-            ].map((item) => {
+              { href: "/accounting/vouchers",      label: t("accounting.voucherRegister"), desc: t("accounting.voucherRegisterDesc"),   icon: FileText,   color: "blue",    writeOnly: false },
+              { href: "/accounting/day-book",      label: t("accounting.dayBook"),         desc: t("accounting.dayBookDesc"),           icon: BookOpen,   color: "amber",   writeOnly: false },
+              { href: "/accounting/vouchers/new",  label: t("accounting.createVoucher"),   desc: t("accounting.createVoucherDesc"),     icon: Plus,       color: "emerald", writeOnly: true },
+              { href: "/accounting/trial-balance", label: t("accounting.trialBalance"),    desc: t("accounting.trialBalanceDesc"),      icon: TrendingUp, color: "violet",  writeOnly: false },
+              { href: "/accounting/reports",       label: t("accounting.financialReports"),desc: t("accounting.financialReportsDesc"),  icon: Calculator, color: "amber",   writeOnly: false },
+            ].filter((item) => !(item.writeOnly && (!canWrite || fyLocked))).map((item) => {
               const colorMap: Record<string, { bg: string; icon: string; border: string }> = {
                 blue:    { bg: "bg-blue-50 hover:bg-blue-100 hover:border-blue-400",    icon: "bg-blue-100 text-blue-600",    border: "border-blue-200" },
                 emerald: { bg: "bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-400", icon: "bg-emerald-100 text-emerald-600", border: "border-emerald-200" },
@@ -348,7 +357,9 @@ export default function AccountingPage() {
                 <FileText className="h-8 w-8 mb-2 opacity-40" />
                 <p className="text-sm">{t("accounting.noVouchersYet")}</p>
                 <Link href="/accounting/vouchers/new" className="mt-3">
-                  <Button size="sm"><Plus className="h-3.5 w-3.5" /> {t("accounting.createFirstVoucher")}</Button>
+                  <Button size="sm" disabled={!canWrite || fyLocked}>
+                    <Plus className="h-3.5 w-3.5" /> {t("accounting.createFirstVoucher")}
+                  </Button>
                 </Link>
               </div>
             )}

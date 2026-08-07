@@ -22,9 +22,12 @@ const notoGujarati = Noto_Sans_Gujarati({
 });
 
 export const metadata: Metadata = {
-  title: "School ERP Portal",
+  title: {
+    default: "Codeat Education",
+    template: "%s · Codeat Education",
+  },
   description:
-    "Multi-school education platform for scholarship, results, accounting, certificates and role-based portals",
+    "Codeat Education — multi-school platform for scholarship, results, accounting, certificates and role-based portals",
 };
 
 export default function RootLayout({

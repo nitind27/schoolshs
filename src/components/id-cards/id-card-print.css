@@ -12,18 +12,42 @@
     print-color-adjust: exact;
   }
 
+  /* Override dashboard.css print lock */
+  .id-card-print-bundle,
+  .id-card-print-bundle * {
+    visibility: visible !important;
+  }
+
+  .id-card-print-bundle {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    background: #fff !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    z-index: 99999 !important;
+  }
+
   .print\:hidden,
   .id-card-share-page > .sticky,
   .id-cards-toolbar,
   .id-cards-filters,
   .id-cards-preview-note {
     display: none !important;
+    visibility: hidden !important;
   }
 
   aside,
   nav,
   header.tn-shell {
     display: none !important;
+    visibility: hidden !important;
   }
 
   main,
@@ -35,11 +59,6 @@
   .lg\:pl-64,
   .shell-main > div {
     padding-left: 0 !important;
-  }
-
-  .id-card-print-bundle {
-    padding: 0 !important;
-    max-width: none !important;
   }
 
   .id-card-print-sheet {

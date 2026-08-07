@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { genderDbMatchValues } from "@/lib/gender-utils";
 
 export interface DashboardFilters {
   standard?: string;
@@ -19,7 +20,7 @@ export function buildStudentWhere(
   if (filters.status) where.status = filters.status;
   if (filters.category) where.category = filters.category;
   if (filters.gender && filters.gender !== "all") {
-    where.gender = filters.gender;
+    where.gender = { in: genderDbMatchValues(filters.gender) };
   }
 
   return where;

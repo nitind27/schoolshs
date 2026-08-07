@@ -1,0 +1,200 @@
+"use client";
+
+import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
+import { cn } from "@/lib/utils";
+import "./exam-staff-id-card.css";
+
+export type ExamStaffCardPerson = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  firstNameGu?: string | null;
+  lastNameGu?: string | null;
+  employeeId?: string | null;
+  designation: string;
+  department?: string | null;
+  mobileNumber: string;
+  photoPath?: string | null;
+  qualification?: string | null;
+};
+
+export type ExamStaffCardSchool = {
+  name: string;
+  address?: string | null;
+  district?: string | null;
+  phone?: string | null;
+  principalName?: string | null;
+  code?: string | null;
+} | null;
+
+export type ExamStaffCardMeta = {
+  examTitle: string;
+  examSession?: string;
+  validFrom?: string;
+  validTo?: string;
+  roleLabel?: string;
+  academicYear?: string;
+};
+
+/** ISO ID-1 landscape (CR-80) — exam duty badge */
+export const EXAM_CARD_W_MM = 85.6;
+export const EXAM_CARD_H_MM = 54;
+
+function staffName(s: ExamStaffCardPerson, preferGu = false) {
+  if (preferGu && (s.firstNameGu || s.lastNameGu)) {
+    return [s.firstNameGu, s.lastNameGu].filter(Boolean).join(" ");
+  }
+  return [s.firstName, s.lastName].filter(Boolean).join(" ");
+}
+
+function formatMobile(v?: string | null) {
+  const d = String(v || "").replace(/\D/g, "");
+  if (d.length === 10) return `${d.slice(0, 5)} ${d.slice(5)}`;
+  return v || "—";
+}
+
+export function ExamStaffIdCard({
+  staff,
+  school,
+  settings,
+  meta,
+  photoUrl,
+  logoUrl = SCHOOL_LOGO_URL,
+  signatureUrl,
+  className,
+}: {
+  staff: ExamStaffCardPerson;
+  school?: ExamStaffCardSchool;
+  settings?: {
+    schoolName?: string | null;
+    schoolAddress?: string | null;
+    schoolPhone?: string | null;
+    tagline?: string | null;
+    academicYear?: string | null;
+  } | null;
+  meta: ExamStaffCardMeta;
+  photoUrl?: string;
+  logoUrl?: string;
+  signatureUrl?: string;
+  className?: string;
+}) {
+  const schoolName = settings?.schoolName || school?.name || "School";
+  const address =
+    settings?.schoolAddress ||
+    [school?.address, school?.district].filter(Boolean).join(", ") ||
+    "";
+  const phone = settings?.schoolPhone || school?.phone || "";
+  const name = staffName(staff);
+  const nameGu = staffName(staff, true);
+  const role = meta.roleLabel || "EXAMINER / INVIGILATOR";
+  const year = meta.academicYear || settings?.academicYear || "2025-26";
+
+  return (
+    <article
+      className={cn("exam-id-card", className)}
+      aria-label={`Exam ID — ${name}`}
+    >
+      <div className="exam-id-card__stripe" aria-hidden />
+      <div className="exam-id-card__inner">
+        <header className="exam-id-card__head">
+          <div className="exam-id-card__logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoUrl || SCHOOL_LOGO_URL} alt="" />
+          </div>
+          <div className="exam-id-card__school">
+            <p className="exam-id-card__kicker">
+              {settings?.tagline?.trim() || "Examination Cell"}
+            </p>
+            <h1 className="exam-id-card__school-name">{schoolName}</h1>
+            {(address || phone) && (
+              <p className="exam-id-card__meta-line">
+                {[address, phone].filter(Boolean).join(" · ")}
+              </p>
+            )}
+          </div>
+          <div className="exam-id-card__badge">
+            <span>EXAM</span>
+            <strong>ID</strong>
+          </div>
+        </header>
+
+        <div className="exam-id-card__title-bar">{role}</div>
+
+        <div className="exam-id-card__body">
+          <div className="exam-id-card__photo">
+            {photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoUrl} alt={name} />
+            ) : (
+              <div className="exam-id-card__photo-fallback">
+                {(name.charAt(0) || "?").toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          <div className="exam-id-card__info">
+            <p className="exam-id-card__name">{name}</p>
+            {nameGu && nameGu !== name ? (
+              <p className="exam-id-card__name-gu">{nameGu}</p>
+            ) : null}
+            <dl className="exam-id-card__fields">
+              <div>
+                <dt>Designation</dt>
+                <dd>{staff.designation || "—"}</dd>
+              </div>
+              <div>
+                <dt>Emp. ID</dt>
+                <dd>{staff.employeeId || "—"}</dd>
+              </div>
+              {staff.department ? (
+                <div>
+                  <dt>Department</dt>
+                  <dd>{staff.department}</dd>
+                </div>
+              ) : null}
+              <div>
+                <dt>Mobile</dt>
+                <dd>{formatMobile(staff.mobileNumber)}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <div className="exam-id-card__exam">
+          <div>
+            <span>Examination</span>
+            <strong>{meta.examTitle || "School Examination"}</strong>
+            {meta.examSession ? <em>{meta.examSession}</em> : null}
+          </div>
+          <div>
+            <span>Academic Year</span>
+            <strong>{year}</strong>
+          </div>
+          {(meta.validFrom || meta.validTo) && (
+            <div>
+              <span>Valid</span>
+              <strong>
+                {[meta.validFrom, meta.validTo].filter(Boolean).join(" → ")}
+              </strong>
+            </div>
+          )}
+        </div>
+
+        <footer className="exam-id-card__foot">
+          <div className="exam-id-card__sign">
+            {signatureUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={signatureUrl} alt="" className="exam-id-card__sign-img" />
+            ) : (
+              <span className="exam-id-card__sign-line" />
+            )}
+            <p>{school?.principalName || "Principal / Head"}</p>
+          </div>
+          <p className="exam-id-card__note">
+            For examination duty only · Return after exam
+          </p>
+        </footer>
+      </div>
+    </article>
+  );
+}

@@ -21,6 +21,7 @@ export function CaLayout({ children }: { children: React.ReactNode }) {
     { href: "/ca", label: t("caNav.dashboard"), icon: LayoutDashboard, group: "Overview" },
     { href: "/accounting", label: t("caNav.booksOfAccount"), icon: BookOpen, group: "Accounts" },
     { href: "/accounting/vouchers", label: t("caNav.voucherRegister"), icon: ClipboardList, group: "Accounts" },
+    { href: "/accounting/day-book", label: t("accounting.dayBook"), icon: BookOpen, group: "Accounts" },
     { href: "/accounting/trial-balance", label: t("caNav.trialBalance"), icon: BarChart3, group: "Reports" },
     { href: "/accounting/reports", label: t("caNav.financialReports"), icon: Calculator, group: "Reports" },
     { href: "/ca/audit", label: t("caNav.auditReview"), icon: FileSearch, group: "Audit" },

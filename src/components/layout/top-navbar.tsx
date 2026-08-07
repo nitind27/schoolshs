@@ -35,10 +35,13 @@ export function TopNavbar({
   profileHref,
   showProfile = true,
   sidebarWidth = 260,
+  variant = "default",
 }: {
   profileHref?: string;
   showProfile?: boolean;
   sidebarWidth?: number;
+  /** Admin control-center chrome (super_admin shell) */
+  variant?: "default" | "admin";
 }) {
   const t = useT();
   const router = useRouter();
@@ -123,31 +126,42 @@ export function TopNavbar({
   const showGrSearch = Boolean(
     user?.role && ["school_admin", "teacher", "clerk"].includes(user.role),
   );
-  const brandTitle = user?.schoolName || t("common.scholarship");
+  const brandTitle = user?.schoolName || t("landing.productName");
   const roleText = roleLabel(user?.role, t);
+
+  const isAdmin = variant === "admin";
 
   return (
     <header
       className={cn(
         "tn-shell fixed top-0 right-0 z-40",
+        isAdmin && "tn-shell--admin",
         "flex items-center gap-2 px-2 sm:gap-3 sm:px-4",
         "pl-[3.25rem] lg:pl-5 left-0 lg:left-[var(--shell-sidebar-w)]",
       )}
       style={{ ["--shell-sidebar-w" as string]: `${sidebarWidth}px` }}
       data-has-search={showGrSearch ? "true" : "false"}
+      data-variant={variant}
     >
       <div className="tn-toolbar">
       {/* Brand first */}
       <div className="tn-shell-left mr-auto flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
         {!showMegaMenu && (
-          <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--tn-ink)] text-white sm:inline-flex">
+          <span
+            className={cn(
+              "hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white sm:inline-flex",
+              isAdmin
+                ? "bg-gradient-to-br from-sky-500 to-sky-700 shadow-sm shadow-sky-500/30"
+                : "bg-[var(--tn-ink)]",
+            )}
+          >
             <Sparkles className="h-3.5 w-3.5" />
           </span>
         )}
 
         <div className="tn-brand hidden min-w-0 sm:flex">
           <p className="tn-brand-name" title={brandTitle}>
-            {brandTitle}
+            {isAdmin ? t("admin.shellBrand") : brandTitle}
           </p>
           {roleText ? (
             <p className="tn-brand-meta">
@@ -156,6 +170,13 @@ export function TopNavbar({
             </p>
           ) : null}
         </div>
+
+        {isAdmin && (
+          <span className="admin-tn-badge hidden md:inline-flex" title={t("admin.shellLiveHint")}>
+            <span className="admin-tn-badge__dot" aria-hidden />
+            {t("admin.shellLive")}
+          </span>
+        )}
 
         {showMegaMenu && (
           <>

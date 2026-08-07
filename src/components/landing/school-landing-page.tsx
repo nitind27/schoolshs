@@ -4,7 +4,6 @@ import { Spinner } from "@/components/ui/loader";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import Image from "next/image";
 import {
   GraduationCap,
   ArrowRight,
@@ -23,13 +22,12 @@ import {
   School,
   Send,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { FooterHolidayCalendar } from "@/components/landing/footer-holiday-calendar";
+import { LandingExpertModal } from "@/components/landing/landing-expert-modal";
 import { useT } from "@/i18n/locale-provider";
 import {
   CONTACT_LIMITS,
@@ -59,26 +57,7 @@ const SERVICES = [
   { icon: Users, key: "students" },
 ] as const;
 
-const HERO_SLIDES = [
-  {
-    src: "/shs/landing/school-campus-slide.webp",
-    tag: "landing.slide1Tag",
-    title: "landing.slide1Title",
-    sub: "landing.slide1Sub",
-  },
-  {
-    src: "/shs/landing/school-classroom-slide.webp",
-    tag: "landing.slide2Tag",
-    title: "landing.slide2Title",
-    sub: "landing.slide2Sub",
-  },
-  {
-    src: "/shs/landing/school-students-slide.webp",
-    tag: "landing.slide4Tag",
-    title: "landing.slide4Title",
-    sub: "landing.slide4Sub",
-  },
-] as const;
+const HERO_VIDEO_SRC = "/video/bgvideo.mp4";
 
 type ServiceKey = (typeof SERVICES)[number]["key"];
 
@@ -207,7 +186,7 @@ export function SchoolLandingPage() {
   const [formErr, setFormErr] = useState("");
   const [fieldErrors, setFieldErrors] = useState<ContactFieldErrors>({});
   const [activeModule, setActiveModule] = useState<{ key: ServiceKey; index: number } | null>(null);
-  const [activeSlide, setActiveSlide] = useState(0);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
 
   const errorForCode = (code?: ContactErrorCode, fallback?: string) => {
     if (!code) return fallback || t("landing.formError");
@@ -237,10 +216,15 @@ export function SchoolLandingPage() {
   }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActiveSlide((current) => (current + 1) % HERO_SLIDES.length);
-    }, 5500);
-    return () => window.clearInterval(timer);
+    const video = heroVideoRef.current;
+    if (!video) return;
+    video.muted = true;
+    const play = () => {
+      void video.play().catch(() => {});
+    };
+    play();
+    video.addEventListener("loadeddata", play);
+    return () => video.removeEventListener("loadeddata", play);
   }, []);
 
   async function onSubmit(e: FormEvent) {
@@ -320,107 +304,40 @@ export function SchoolLandingPage() {
         </div>
       </header>
 
-      <section className="lp-hero">
-        <div className="lp-shell lp-hero-layout">
-          <div className="lp-hero-copy landing-fade landing-fade--show">
-            <div className="lp-hero-badge">
-              <span className="lp-hero-dot" />
-              {t("landing.heroBadge")}
-            </div>
-            <h1 className="lp-brand-title">{t("landing.productName")}</h1>
-            <p className="lp-headline">{t("landing.heroHeadline")}</p>
-            <p className="lp-lede">{t("landing.heroDesc")}</p>
-            <div className="lp-cta-row">
-              <Link href="/login" className="lp-btn-primary">
-                <span>{t("landing.ctaPortal")}</span>
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a href="#modules" className="lp-btn-soft">
-                {t("landing.ctaExplore")}
-              </a>
-            </div>
-            <div className="lp-hero-trust">
-              <span><CheckCircle2 className="h-4 w-4" />{t("landing.module_students")}</span>
-              <span><CheckCircle2 className="h-4 w-4" />{t("landing.module_results")}</span>
-              <span><CheckCircle2 className="h-4 w-4" />{t("landing.module_accounting")}</span>
-            </div>
-          </div>
+      <section className="lp-hero lp-hero--v2" aria-label={t("landing.productName")}>
+        <div className="lp-hero-media">
+          <video
+            ref={heroVideoRef}
+            className="lp-hero-video"
+            src={HERO_VIDEO_SRC}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            disablePictureInPicture
+            aria-hidden
+          />
+          <div className="lp-hero-shade" aria-hidden />
+          <div className="lp-hero-grain" aria-hidden />
+        </div>
 
-          <div
-            className="lp-hero-slider landing-fade landing-fade--show"
-            role="region"
-            aria-label={t("landing.galleryTitle")}
-          >
-            <div className="lp-slider-viewport">
-              <div className="lp-slider-topbar" aria-hidden>
-                <span className="lp-slider-brand">
-                  <School className="h-3.5 w-3.5" />
-                  {t("landing.productName")}
-                </span>
-                <span className="lp-slider-count">
-                  {String(activeSlide + 1).padStart(2, "0")}
-                  <i />
-                  {String(HERO_SLIDES.length).padStart(2, "0")}
-                </span>
-              </div>
-              {HERO_SLIDES.map((slide, index) => (
-                <div
-                  key={slide.src}
-                  className={`lp-slide ${index === activeSlide ? "is-active" : ""}`}
-                  style={{ position: "absolute", inset: 0 }}
-                  aria-hidden={index !== activeSlide}
-                >
-                  <Image
-                    src={slide.src}
-                    alt={t(slide.title)}
-                    fill
-                    priority={index === 0}
-                    sizes="(max-width: 849px) 100vw, 48vw"
-                  />
-                  <div className="lp-slide-shade" />
-                  <div className="lp-slide-copy">
-                    <span>{t(slide.tag)}</span>
-                    <strong>{t(slide.title)}</strong>
-                    <p>{t(slide.sub)}</p>
-                  </div>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="lp-slider-arrow lp-slider-arrow--prev"
-                onClick={() =>
-                  setActiveSlide(
-                    (current) =>
-                      (current - 1 + HERO_SLIDES.length) % HERO_SLIDES.length,
-                  )
-                }
-                aria-label="Previous slide"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                className="lp-slider-arrow lp-slider-arrow--next"
-                onClick={() =>
-                  setActiveSlide((current) => (current + 1) % HERO_SLIDES.length)
-                }
-                aria-label="Next slide"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="lp-slider-dots">
-              {HERO_SLIDES.map((slide, index) => (
-                <button
-                  key={slide.src}
-                  type="button"
-                  className={index === activeSlide ? "is-active" : ""}
-                  onClick={() => setActiveSlide(index)}
-                  aria-label={`${t(slide.tag)} ${index + 1}`}
-                  aria-current={index === activeSlide ? "true" : undefined}
-                />
-              ))}
-            </div>
+        <div className="lp-shell lp-hero-content landing-fade landing-fade--show">
+          <p className="lp-hero-kicker">
+            <span className="lp-hero-dot" />
+            {t("landing.productTag")}
+          </p>
+          <h1 className="lp-brand-title">{t("landing.productName")}</h1>
+          <p className="lp-headline">{t("landing.heroHeadline")}</p>
+          <p className="lp-lede">{t("landing.heroDesc")}</p>
+          <div className="lp-cta-row">
+            <Link href="/login" className="lp-btn-primary">
+              <span>{t("landing.ctaPortal")}</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <a href="#modules" className="lp-btn-ghost">
+              {t("landing.ctaExplore")}
+            </a>
           </div>
         </div>
       </section>
@@ -759,6 +676,8 @@ export function SchoolLandingPage() {
           </div>
         </div>
       </footer>
+
+      <LandingExpertModal />
     </div>
   );
 }

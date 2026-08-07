@@ -1,0 +1,341 @@
+/* Expert lead modal — Codeat Education palette */
+
+.lp-lead-root {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.lp-lead-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(8 20 28 / 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.lp-lead-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 56rem);
+  max-height: min(92dvh, 40rem);
+  overflow: auto;
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(ellipse 80% 60% at 0% 0%, rgb(13 110 110 / 0.14), transparent 55%),
+    linear-gradient(145deg, #eef6f4 0%, #f8fbfa 48%, #e8f2f0 100%);
+  border: 1px solid rgb(213 224 221 / 0.95);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.85) inset,
+    0 40px 80px -32px rgb(12 26 34 / 0.45);
+  animation: lp-lead-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes lp-lead-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.lp-lead-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid rgb(213 224 221 / 0.95);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.92);
+  color: #3d524e;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.lp-lead-close:hover {
+  background: #fff;
+  color: #0c1a22;
+}
+
+.lp-lead-layout {
+  display: grid;
+  gap: 0;
+}
+
+@media (min-width: 768px) {
+  .lp-lead-layout {
+    grid-template-columns: 1fr 1.05fr;
+    min-height: 22rem;
+  }
+}
+
+.lp-lead-promo {
+  padding: 2rem 1.75rem 1.75rem;
+}
+
+@media (min-width: 768px) {
+  .lp-lead-promo {
+    padding: 2.25rem 1.5rem 2rem 2rem;
+    border-right: 1px solid rgb(213 224 221 / 0.7);
+  }
+}
+
+.lp-lead-eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #0d6e6e;
+}
+
+.lp-lead-title {
+  margin: 0.65rem 0 0;
+  font-size: clamp(1.35rem, 3.2vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: #0c1a22;
+}
+
+.lp-lead-desc {
+  margin: 0.65rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #5a6f6c;
+  max-width: 28ch;
+}
+
+.lp-lead-stats {
+  list-style: none;
+  margin: 1.35rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.lp-lead-stats li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.85rem;
+  background: rgb(255 255 255 / 0.72);
+  border: 1px solid rgb(213 224 221 / 0.85);
+  color: #0d6e6e;
+}
+
+.lp-lead-stats strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0c1a22;
+  line-height: 1.2;
+}
+
+.lp-lead-stats span {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.78rem;
+  color: #5a6f6c;
+  line-height: 1.35;
+}
+
+.lp-lead-trust {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1.1rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #3d524e;
+}
+
+.lp-lead-form-wrap {
+  padding: 1.75rem;
+  background: rgb(255 255 255 / 0.88);
+}
+
+@media (min-width: 768px) {
+  .lp-lead-form-wrap {
+    padding: 2rem 2rem 2rem 1.75rem;
+    border-radius: 0 1.35rem 1.35rem 0;
+  }
+}
+
+.lp-lead-form-title {
+  margin: 0 0 1.1rem;
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: #0c1a22;
+}
+
+.lp-lead-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.lp-lead-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.lp-lead-field > span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #3d524e;
+}
+
+.lp-lead-field input,
+.lp-lead-field select {
+  width: 100%;
+  height: 2.65rem;
+  border: 1px solid #d5e0dd;
+  border-radius: 0.65rem;
+  background: #fff;
+  padding: 0 0.85rem;
+  font-size: 0.92rem;
+  color: #0c1a22;
+  outline: none;
+  font-family: inherit;
+}
+
+.lp-lead-field input:focus,
+.lp-lead-field select:focus {
+  border-color: #0d6e6e;
+  box-shadow: 0 0 0 3px rgb(13 110 110 / 0.12);
+}
+
+.lp-lead-field.has-error input,
+.lp-lead-field.has-error select {
+  border-color: #c45c5c;
+  box-shadow: 0 0 0 3px rgb(196 92 92 / 0.1);
+}
+
+.lp-lead-phone-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.lp-lead-phone-prefix {
+  display: inline-flex;
+  align-items: center;
+  height: 2.65rem;
+  padding: 0 0.75rem;
+  border: 1px solid #d5e0dd;
+  border-radius: 0.65rem;
+  background: #f0f5f4;
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: #3d524e;
+  flex-shrink: 0;
+}
+
+.lp-lead-phone-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.lp-lead-field-err {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #b42318;
+}
+
+.lp-lead-form-err {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.82rem;
+}
+
+.lp-lead-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+  width: 100%;
+  height: 2.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #149494, #0d6e6e);
+  color: #fff !important;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 16px 32px -16px rgb(13 110 110 / 0.75);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.lp-lead-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 36px -14px rgb(13 110 110 / 0.8);
+}
+
+.lp-lead-submit:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+.lp-lead-success {
+  display: grid;
+  place-items: center;
+  min-height: 14rem;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: rgb(13 110 110 / 0.08);
+  border: 1px solid rgb(13 110 110 / 0.2);
+  text-align: center;
+}
+
+.lp-lead-success p {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  color: #0d6e6e;
+  line-height: 1.5;
+}
+
+@media (max-width: 767px) {
+  .lp-lead-panel {
+    max-height: 94dvh;
+  }
+
+  .lp-lead-promo {
+    padding-bottom: 1rem;
+  }
+
+  .lp-lead-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .lp-lead-stats li:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-lead-panel {
+    animation: none;
+  }
+}

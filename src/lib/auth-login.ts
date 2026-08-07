@@ -231,11 +231,65 @@ async function loadUserForLogin(email: string, ip: string): Promise<UserWithScho
   return user as UserWithSchool;
 }
 
+/** Web login — school code required; account must belong to that school. */
+async function assertSchoolCodeForWebLogin(
+  user: UserWithSchool,
+  schoolCode: string | null | undefined,
+  ctx: LoginContext,
+): Promise<void> {
+  if (ctx.source !== "web") return;
+
+  // Super Admin — no school code; ignore any code entered
+  if (user.role === "super_admin") {
+    return;
+  }
+
+  if (user.role === "ca") {
+    if (!schoolCode?.trim()) return;
+    const code = schoolCode.trim().toUpperCase();
+    const school = await prisma.school.findFirst({
+      where: { code, isActive: true },
+    });
+    if (!school) {
+      throw new AuthError("School not found for this code", 404);
+    }
+    const assigned = await prisma.caSchoolAssignment.findFirst({
+      where: { userId: user.id, schoolId: school.id },
+    });
+    if (!assigned) {
+      throw new AuthError(
+        "You are not assigned to this school. Check the school code.",
+        403,
+      );
+    }
+    return;
+  }
+
+  const code = schoolCode?.trim().toUpperCase();
+  if (!code) {
+    throw new AuthError("School code is required", 400);
+  }
+
+  const school = await prisma.school.findFirst({
+    where: { code, isActive: true },
+  });
+  if (!school) {
+    throw new AuthError("School not found for this code", 404);
+  }
+
+  if (user.schoolId !== school.id) {
+    throw new AuthError(
+      "This account does not belong to the selected school. Check your school code.",
+      403,
+    );
+  }
+}
+
 export async function authenticateCredentials(
   email: string,
   password: string,
   ctx: LoginContext,
-  options?: { sessionAction?: SessionAction | null },
+  options?: { sessionAction?: SessionAction | null; schoolCode?: string | null },
 ): Promise<AuthenticateResult> {
   if (!password) {
     throw new AuthError("Email aur password required", 400);
@@ -262,6 +316,8 @@ export async function authenticateCredentials(
       401,
     );
   }
+
+  await assertSchoolCodeForWebLogin(user, options?.schoolCode, ctx);
 
   if (
     user.role === "student" &&

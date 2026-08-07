@@ -37,6 +37,12 @@ const STUDENTS_RESERVED = new Set(["new", "board-records"]);
 
 function isPathActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
+  if (href === "/id-cards") {
+    return pathname === "/id-cards" || pathname.startsWith("/id-cards/");
+  }
+  if (href === "/exam-id-cards") {
+    return pathname === "/exam-id-cards" || pathname.startsWith("/exam-id-cards/");
+  }
   if (href === "/staff") {
     if (pathname === "/staff") return true;
     if (!pathname.startsWith("/staff/")) return false;

@@ -9,7 +9,7 @@ import {
 import { buildStaffAttendanceRows } from "@/lib/staff-hr";
 import { enabledDays } from "@/lib/timetable";
 import { getOrCreateTimetableConfig } from "@/lib/timetable-server";
-import { CSV_HEADERS } from "@/lib/constants";
+import { CSV_HEADERS, CSV_HEADER_LABELS } from "@/lib/constants";
 import type { ReportPayload, ReportQuery } from "./types";
 
 function filterSummary(q: ReportQuery): string {
@@ -63,15 +63,28 @@ function monthYearRangeFromDates(dateFrom?: string, dateTo?: string): { month: n
 }
 
 function studentWhere(schoolId: string, q: ReportQuery) {
-  const base = buildStudentWhere(schoolId, {
+  const where = buildStudentWhere(schoolId, {
     standard: q.standard,
     section: q.section,
     status: q.status,
     category: q.category,
     gender: q.gender,
   });
-  if (q.classId) return { ...base, classId: q.classId };
-  return base;
+  if (q.classId) return { ...where, classId: q.classId };
+  return where;
+}
+
+function emptyNote(
+  base: Omit<ReportPayload, "title" | "sheets">,
+  title: string,
+  note: string,
+  sheetName = "Report",
+): ReportPayload {
+  return {
+    ...base,
+    title,
+    sheets: [{ name: sheetName, headers: ["Note"], rows: [[note]] }],
+  };
 }
 
 export async function fetchReportPayload(
@@ -143,6 +156,10 @@ async function fetchStudentsMaster(
     orderBy: [{ standard: "asc" }, { section: "asc" }, { rollNumber: "asc" }],
   });
 
+  if (!students.length) {
+    return emptyNote(base, "Student Master Report", "No students found for selected filters", "Students");
+  }
+
   const headers = [
     "Roll", "GR No", "Name", "Father", "Class", "Category", "Gender", "Mobile",
     "Aadhaar", "Status", "Admission", "Scholarship Scheme",
@@ -150,16 +167,16 @@ async function fetchStudentsMaster(
   const rows = students.map((s) => [
     s.rollNumber || "",
     s.grNumber || "",
-    `${s.firstName} ${s.surname}`,
-    s.fatherName,
+    [s.firstName, s.middleName, s.surname].filter(Boolean).join(" "),
+    s.fatherName || "",
     s.schoolClass?.name || `${s.standard || ""}-${s.section || ""}`,
-    s.category,
-    s.gender,
-    s.mobileNumber,
-    s.aadhaarNumber,
-    s.status,
-    s.admissionStatus,
-    s.scholarshipScheme,
+    s.category || "",
+    s.gender || "",
+    s.mobileNumber || "",
+    s.aadhaarNumber || "",
+    s.status || "",
+    s.admissionStatus || "",
+    s.scholarshipScheme || "",
   ]);
 
   return { ...base, title: "Student Master Report", sheets: [{ name: "Students", headers, rows }] };
@@ -172,19 +189,24 @@ async function fetchClassRoster(
 ): Promise<ReportPayload> {
   const students = await prisma.student.findMany({
     where: studentWhere(schoolId, q),
-    orderBy: [{ rollNumber: "asc" }, { surname: "asc" }],
+    orderBy: [{ standard: "asc" }, { section: "asc" }, { rollNumber: "asc" }, { surname: "asc" }],
   });
 
-  const headers = ["Sr", "Roll", "GR", "Name", "Father", "Category", "Mobile", "Gender"];
+  if (!students.length) {
+    return emptyNote(base, "Class Roster", "No students found for selected filters", "Roster");
+  }
+
+  const headers = ["Sr", "Roll", "GR", "Name", "Father", "Class", "Category", "Mobile", "Gender"];
   const rows = students.map((s, i) => [
     i + 1,
     s.rollNumber || "",
     s.grNumber || "",
-    `${s.firstName} ${s.surname}`,
-    s.fatherName,
-    s.category,
-    s.mobileNumber,
-    s.gender,
+    [s.firstName, s.middleName, s.surname].filter(Boolean).join(" "),
+    s.fatherName || "",
+    `${s.standard || ""}-${s.section || ""}`,
+    s.category || "",
+    s.mobileNumber || "",
+    s.gender || "",
   ]);
 
   return { ...base, title: "Class Roster", sheets: [{ name: "Roster", headers, rows }] };
@@ -195,8 +217,13 @@ async function fetchAdmissions(
   q: ReportQuery,
   base: Omit<ReportPayload, "title" | "sheets">,
 ): Promise<ReportPayload> {
-  const where: Record<string, unknown> = { schoolId };
-  if (q.admissionStatus) where.admissionStatus = q.admissionStatus;
+  const where: Record<string, unknown> = {
+    schoolId,
+    status: { not: "archived" },
+    admissionStatus: q.admissionStatus
+      ? q.admissionStatus
+      : { in: ["pending", "verified", "rejected"] },
+  };
   if (q.classId) where.classId = q.classId;
   if (q.standard) where.standard = q.standard;
   if (q.category) where.category = q.category;
@@ -216,6 +243,15 @@ async function fetchAdmissions(
 
   const students = await prisma.student.findMany({ where, orderBy: { createdAt: "desc" } });
 
+  if (!students.length) {
+    return emptyNote(
+      base,
+      "Admission Register",
+      "No admissions found for selected filters",
+      "Admissions",
+    );
+  }
+
   const headers = [
     "Name", "Father", "Class", "GR", "Category", "Mobile", "Status",
     "Data %", "Verified By", "Verified At", "Created", "Notes",
@@ -223,13 +259,13 @@ async function fetchAdmissions(
   const rows = students.map((s) => {
     const c = computeAdmissionCompleteness(s);
     return [
-      `${s.firstName} ${s.surname}`,
-      s.fatherName,
+      [s.firstName, s.surname].filter(Boolean).join(" "),
+      s.fatherName || "",
       `${s.standard || ""}-${s.section || ""}`,
       s.grNumber || "",
-      s.category,
-      s.mobileNumber,
-      s.admissionStatus,
+      s.category || "",
+      s.mobileNumber || "",
+      s.admissionStatus || "",
       c.percent,
       s.verifiedBy || "",
       s.verifiedAt ? s.verifiedAt.toISOString().slice(0, 10) : "",
@@ -264,6 +300,15 @@ async function fetchAttendance(
   });
   const saved = new Map(records.map((r) => [r.studentId, r]));
   const reports = buildStudentReports(buildAttendanceRows(students, saved));
+
+  if (!reports.length) {
+    return emptyNote(
+      base,
+      `Attendance Report — ${month}/${year}`,
+      "No students found for selected filters",
+      "Attendance",
+    );
+  }
 
   const headers = ["Roll", "Name", "GR", "Present", "Absent", "Half", "Marked Days", "Attendance %"];
   const rows = reports.map((r) => [
@@ -328,7 +373,16 @@ async function fetchTimetable(
   return {
     ...base,
     title: `Timetable — ${academicYear}`,
-    sheets: sheets.filter((s) => s.rows.length > 0),
+    sheets:
+      sheets.length > 0
+        ? sheets
+        : [
+            {
+              name: "Timetable",
+              headers: ["Note"],
+              rows: [["No classes found for this academic year"]],
+            },
+          ],
   };
 }
 
@@ -363,6 +417,15 @@ async function fetchBoardRecords(
     ];
   });
 
+  if (!rows.length) {
+    return emptyNote(
+      base,
+      `Board Records — Class ${standard}`,
+      `No students found for standard ${standard}`,
+      `Std ${standard}`,
+    );
+  }
+
   return { ...base, title: `Board Records — Class ${standard}`, sheets: [{ name: `Std ${standard}`, headers, rows }] };
 }
 
@@ -374,6 +437,10 @@ async function fetchStaffDirectory(
     where: { schoolId },
     orderBy: [{ designation: "asc" }, { firstName: "asc" }],
   });
+
+  if (!staff.length) {
+    return emptyNote(base, "Staff Directory", "No staff records found", "Staff");
+  }
 
   const headers = ["Emp ID", "Name", "Designation", "Department", "Mobile", "Email", "Join Date", "Salary", "Active"];
   const rows = staff.map((s) => [
@@ -417,6 +484,15 @@ async function fetchStaffPayroll(
     r.netSalary,
     r.paymentStatus,
   ]);
+
+  if (!rows.length) {
+    return emptyNote(
+      base,
+      `Payroll — ${month}/${year}`,
+      `No payroll records for ${month}/${year}`,
+      "Payroll",
+    );
+  }
 
   return { ...base, title: `Payroll — ${month}/${year}`, sheets: [{ name: "Payroll", headers, rows }] };
 }
@@ -550,6 +626,10 @@ async function fetchVouchers(
     v.isPosted ? "Yes" : "No",
   ]);
 
+  if (!rows.length) {
+    return emptyNote(base, "Voucher Register", "No vouchers found for selected filters", "Vouchers");
+  }
+
   return { ...base, title: "Voucher Register", sheets: [{ name: "Vouchers", headers, rows }] };
 }
 
@@ -568,7 +648,20 @@ async function fetchGeneralRegister(
       select: { grNumber: true },
     });
     const grs = students.map((s) => s.grNumber).filter(Boolean) as string[];
-    if (grs.length) where.grNumber = { in: grs };
+    if (!grs.length) {
+      return {
+        ...base,
+        title: "General Register (GR)",
+        sheets: [
+          {
+            name: "GR",
+            headers: ["Note"],
+            rows: [["No GR numbers linked to students in this class"]],
+          },
+        ],
+      };
+    }
+    where.grNumber = { in: grs };
   }
 
   const entries = await prisma.generalRegisterEntry.findMany({
@@ -641,11 +734,12 @@ async function fetchAttendanceDaily(
   const dateKeys = enumerateDateKeys(dateFrom, dateTo);
 
   if (dateKeys.length === 0) {
-    return {
-      ...base,
-      title: "Daily Attendance",
-      sheets: [{ name: "Attendance", headers: ["Note"], rows: [["Select a valid date range (max 62 days)"]] }],
-    };
+    return emptyNote(
+      base,
+      "Daily Attendance",
+      "Select a valid date range (From ≤ To, max 62 days)",
+      "Attendance",
+    );
   }
 
   const where: Record<string, unknown> = { schoolId, status: { not: "archived" } };
@@ -689,7 +783,7 @@ async function fetchAttendanceDaily(
     });
     return [
       s.rollNumber || "",
-      `${s.firstName} ${s.surname}`,
+      [s.firstName, s.surname].filter(Boolean).join(" "),
       s.grNumber || "",
       ...marks,
       p,
@@ -697,6 +791,15 @@ async function fetchAttendanceDaily(
       h,
     ];
   });
+
+  if (!rows.length) {
+    return emptyNote(
+      base,
+      `Daily Attendance — ${dateFrom} to ${dateTo}`,
+      "No students found for selected filters",
+      "Daily",
+    );
+  }
 
   return {
     ...base,
@@ -792,6 +895,15 @@ async function fetchDayBook(
     ];
   });
 
+  if (!rows.length) {
+    return emptyNote(
+      base,
+      `Day Book — ${dateFrom} to ${dateTo}`,
+      "No posted receipt/payment vouchers in this date range",
+      "Day Book",
+    );
+  }
+
   return {
     ...base,
     title: `Day Book — ${dateFrom} to ${dateTo}`,
@@ -813,13 +925,17 @@ async function fetchIdCardList(
   const rows = students.map((s) => [
     s.rollNumber || "",
     s.grNumber || "",
-    `${s.firstName} ${s.surname}`,
+    [s.firstName, s.surname].filter(Boolean).join(" "),
     `${s.standard || ""}-${s.section || ""}`,
     s.photoPath ? "Yes" : "No",
     s.mobileNumber || "",
     s.bloodGroup || "",
-    s.status,
+    s.status || "",
   ]);
+
+  if (!rows.length) {
+    return emptyNote(base, "ID Card Checklist", "No students found for selected filters", "ID Cards");
+  }
 
   return {
     ...base,
@@ -850,8 +966,13 @@ async function fetchResults(
 
   const byStudent = new Map<string, Record<string, number | string>>();
   for (const r of exam.results) {
+    if (q.section && r.student.section !== q.section) continue;
+    if (q.standard && r.student.standard !== q.standard) continue;
     if (!byStudent.has(r.studentId)) {
-      byStudent.set(r.studentId, { name: `${r.student.firstName} ${r.student.surname}`, roll: r.student.rollNumber || "" });
+      byStudent.set(r.studentId, {
+        name: `${r.student.firstName} ${r.student.surname}`,
+        roll: r.student.rollNumber || "",
+      });
     }
     const key = r.subject.code || r.subject.name;
     byStudent.get(r.studentId)![key] = r.marksObtained;
@@ -859,11 +980,22 @@ async function fetchResults(
 
   const subHeaders = exam.subjects.map((s) => s.code || s.name);
   const headers = ["Roll", "Name", ...subHeaders, "Total"];
-  const rows = [...byStudent.values()].map((row) => {
-    const marks = subHeaders.map((h) => row[h] ?? "");
-    const total = subHeaders.reduce((s, h) => s + (Number(row[h]) || 0), 0);
-    return [String(row.roll ?? ""), String(row.name ?? ""), ...marks, total];
-  });
+  const rows = [...byStudent.values()]
+    .sort((a, b) => String(a.roll).localeCompare(String(b.roll), undefined, { numeric: true }))
+    .map((row) => {
+      const marks = subHeaders.map((h) => row[h] ?? "");
+      const total = subHeaders.reduce((s, h) => s + (Number(row[h]) || 0), 0);
+      return [String(row.roll ?? ""), String(row.name ?? ""), ...marks, total];
+    });
+
+  if (rows.length === 0) {
+    return emptyNote(
+      base,
+      `Results — ${exam.name}`,
+      "No marks found for selected filters",
+      "Marks",
+    );
+  }
 
   return { ...base, title: `Results — ${exam.name}`, sheets: [{ name: "Marks", headers, rows }] };
 }
@@ -877,9 +1009,12 @@ async function fetchScholarshipExport(
   if (q.status) where.status = q.status;
 
   const students = await prisma.student.findMany({ where, orderBy: { surname: "asc" } });
-  const headers = [...CSV_HEADERS];
+  if (!students.length) {
+    return emptyNote(base, "Scholarship / DG Export", "No students found for selected filters", "DG Export");
+  }
+  const headers = CSV_HEADERS.map((h) => CSV_HEADER_LABELS[h] || h);
   const rows = students.map((s) =>
-    headers.map((h) => {
+    CSV_HEADERS.map((h) => {
       const val = (s as Record<string, unknown>)[h];
       if (val == null) return "";
       if (typeof val === "boolean") return val ? "Yes" : "No";

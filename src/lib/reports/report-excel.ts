@@ -41,7 +41,12 @@ export async function buildReportExcelBuffer(payload: ReportPayload): Promise<Bu
   wb.creator = payload.schoolName;
   wb.created = new Date(payload.generatedAt);
 
-  for (const sheet of payload.sheets) {
+  const sheets =
+    payload.sheets.length > 0
+      ? payload.sheets
+      : [{ name: "Report", headers: ["Note"], rows: [["No data"]] }];
+
+  for (const sheet of sheets) {
     const safeName = sheet.name.replace(/[\\/*?:[\]]/g, "-").slice(0, 31);
     const ws = wb.addWorksheet(safeName || "Report");
 
@@ -63,10 +68,14 @@ export async function buildReportExcelBuffer(payload: ReportPayload): Promise<Bu
     });
     styleHeader(headerRow);
 
-    sheet.rows.forEach((row, idx) => {
+    const dataRows = sheet.rows.length
+      ? sheet.rows
+      : [sheet.headers.map((_, i) => (i === 0 ? "No rows" : ""))];
+
+    dataRows.forEach((row, idx) => {
       const r = ws.getRow(5 + idx);
-      row.forEach((val, i) => {
-        r.getCell(i + 1).value = val ?? "";
+      sheet.headers.forEach((_, i) => {
+        r.getCell(i + 1).value = row[i] ?? "";
       });
       styleData(r, idx % 2 === 1);
     });
