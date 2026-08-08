@@ -44,6 +44,24 @@ export const CERTIFICATE_PACKS: CertificatePackDef[] = [
     certificateTypes: ALL_TYPES,
     folder: "24261004405",
   },
+  {
+    id: "24261004403",
+    label: "Upper Primary LC · 24261004403",
+    description:
+      "Granted Upper Primary Leaving Certificate (scan format) — assignable to any school",
+    schoolCode: "24261004403",
+    certificateTypes: ALL_TYPES,
+    folder: "24261004403",
+  },
+  {
+    id: "24261004404",
+    label: "Upper Primary LC · 24261004404",
+    description:
+      "Granted Upper Primary Leaving Certificate (scan format) — assignable to any school",
+    schoolCode: "24261004404",
+    certificateTypes: ALL_TYPES,
+    folder: "24261004404",
+  },
 ];
 
 /** Legacy aliases still accepted in moduleFormats */

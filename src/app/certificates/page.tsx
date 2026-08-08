@@ -104,6 +104,17 @@ export default function CertificatesHubPage() {
             <p className="text-xs text-violet-700 mt-2 font-medium">
               Format pack: {pack.label}
               <span className="font-mono text-violet-500"> · {pack.id}</span>
+              {pack.schoolCode ? (
+                <span className="text-slate-500">
+                  {" "}
+                  (Super Admin assigned — school code {pack.schoolCode})
+                </span>
+              ) : (
+                <span className="text-slate-500"> (shared default pack)</span>
+              )}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Sirf yahi pack ke layouts print honge. Dusre school packs yahan nahi dikhte.
             </p>
           </div>
         </div>

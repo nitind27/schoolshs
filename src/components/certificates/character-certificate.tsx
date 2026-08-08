@@ -1,6 +1,6 @@
 "use client";
 
-import { CERTIFICATE_SCHOOL } from "@/lib/certificates/config";
+import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
 import { studentFullName } from "@/lib/certificates/date-to-words";
 
 /** Matches official Character/Trial/Bonafide scan — dark navy ink */
@@ -16,15 +16,6 @@ const HALF = {
   pageW: "198mm",
   pageH: "140mm",
   gap: "5mm",
-} as const;
-
-const CHAR_CERT = {
-  schoolTitle: "Shri Sarvajanik HighSchool Fort-Songadh Dist. Tapi",
-  section: "Secondary & Higher Secondary Section",
-  sscIndex: "79.018",
-  hscIndex: "28-003",
-  phone: CERTIFICATE_SCHOOL.phone || "222186",
-  seal: "/certificates/character-school-seal.svg",
 } as const;
 
 type StudentLite = {
@@ -83,28 +74,34 @@ function CharacterHalf({
   issueDate: string;
   logoUrl?: string;
 }) {
+  const school = useCertificateBrand();
   const name = studentFullName(student);
   const [y1 = "2025", y2 = "26"] = (academicYear || "2025-26").split("-");
   const y1Short = y1.length === 4 ? y1 : `20${y1.slice(-2)}`;
   const y2Full = y2.length === 4 ? y2 : `${y1Short.slice(0, 2)}${y2.padStart(2, "0").slice(-2)}`;
   const date = parseIssueDate(issueDate);
+  const schoolTitle =
+    school.nameEnAlt ||
+    school.nameEn ||
+    "School";
+  const seal = "/certificates/character-school-seal.svg";
 
   return (
     <div className="ctc-sheet">
       <div className="ctc-frame">
-        <h1 className="ctc-school">{CHAR_CERT.schoolTitle}</h1>
-        <p className="ctc-section">{CHAR_CERT.section}</p>
+        <h1 className="ctc-school">{schoolTitle}</h1>
+        <p className="ctc-section">{school.section}</p>
 
         <div className="ctc-midhead">
           <div className="ctc-indexes">
-            <div>S.S.C. Index No. {CHAR_CERT.sscIndex}</div>
-            <div>H.S.C. Index No. {CHAR_CERT.hscIndex}</div>
+            <div>S.S.C. Index No. {school.sscIndex}</div>
+            <div>H.S.C. Index No. {school.hscIndex}</div>
           </div>
           <div className="ctc-seal">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logoUrl || CHAR_CERT.seal} alt="" className="ctc-seal-img" />
+            <img src={logoUrl || seal} alt="" className="ctc-seal-img" />
           </div>
-          <div className="ctc-phone">Ph. {CHAR_CERT.phone}</div>
+          <div className="ctc-phone">Ph. {school.phone || "—"}</div>
         </div>
 
         <h2 className="ctc-title">CHARACTER/TRIAL/BONAFIDE CERTIFICATE</h2>

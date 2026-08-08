@@ -32,12 +32,20 @@ export const SAMPLE_BONAFIDE = {
 };
 
 export const SAMPLE_LC: LCData = {
-  student: SAMPLE_STUDENT,
-  serialNo: "245",
-  lastSchool: "SARVAJANIK HIGHSCHOOL, FORT-SONGADH",
+  student: {
+    ...SAMPLE_STUDENT,
+    apaarId: "123456789012",
+    permanentCity: "Fort-Songadh",
+    permanentDistrict: "Tapi",
+    accountNumber: "123456789012",
+    bankName: "State Bank of India",
+    ifscCode: "SBIN0001234",
+  },
+  serialNo: "100",
+  lastSchool: "Shree Sarvajanik Highschool Fort-Songadh",
   admissionDate: "15/06/2015 (Std 1)",
   leavingDate: "31/05/2026",
-  studyingStandard: "Std 10-A",
+  studyingStandard: "Std 8-A",
   studyingSince: "June 2015",
   reason: "Further Education",
   progress: "Good",
@@ -46,6 +54,8 @@ export const SAMPLE_LC: LCData = {
   sscExam: "2026",
   sscSeatNo: "C4000020",
   issueDate: "06/07/2026",
+  outwardNo: "100",
+  medium: "Gujarati / ગુજરાતી",
 };
 
 export const SAMPLE_CHARACTER = {

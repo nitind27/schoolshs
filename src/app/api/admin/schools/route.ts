@@ -101,6 +101,12 @@ export async function POST(request: NextRequest) {
     ) {
       moduleFormats = { ...moduleFormats, certificates: resolveCertificatePackId(code) };
     }
+    if (
+      (!body.moduleFormats || !body.moduleFormats.id_cards) &&
+      ["24261004403", "24261004404", "24261004405"].includes(code)
+    ) {
+      moduleFormats = { ...moduleFormats, id_cards: code };
+    }
     const contractValue = parseDecimal(body.contractValue);
     const totalAmount = parseDecimal(body.totalAmount) ?? contractValue;
     const initialPayment = parseDecimal(body.initialPayment);

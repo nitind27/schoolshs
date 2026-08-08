@@ -1,6 +1,6 @@
 "use client";
 
-import { CERTIFICATE_SCHOOL } from "@/lib/certificates/config";
+import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
 import { studentFullName, dateToWords } from "@/lib/certificates/date-to-words";
 
 export interface LCData {
@@ -19,6 +19,13 @@ export interface LCData {
     standard?: string | null;
     section?: string | null;
     childUid?: string | null;
+    apaarId?: string | null;
+    permanentCity?: string | null;
+    permanentDistrict?: string | null;
+    accountNumber?: string | null;
+    bankName?: string | null;
+    ifscCode?: string | null;
+    branchName?: string | null;
   };
   serialNo: string;
   lastSchool?: string;
@@ -34,6 +41,10 @@ export interface LCData {
   sscSeatNo?: string;
   medium?: string;
   issueDate: string;
+  /** Upper-primary LC extras */
+  outwardNo?: string;
+  nativePlace?: string;
+  apaarId?: string;
 }
 
 const FONT = '"Times New Roman", Times, Georgia, serif';
@@ -126,6 +137,7 @@ function Field({
 }
 
 export function LeavingCertificateView({ data }: { data: LCData }) {
+  const school = useCertificateBrand();
   const S = data.student;
   const nm = studentFullName(S);
   const religionCaste = [S.religion, S.caste].filter(Boolean).join(" / ");
@@ -144,7 +156,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
   const uid = (S.childUid || "").replace(/\D/g, "");
   const uidBoxes = Array.from({ length: 18 }, (_, i) => uid[i] || "");
   const medium = data.medium || "ગુજરાતી / Gujarati";
-  const lastSchool = data.lastSchool || CERTIFICATE_SCHOOL.nameEnAlt;
+  const lastSchool = data.lastSchool || school.nameEnAlt;
 
   return (
     <div className="lc-sheet" style={{ fontFamily: FONT, color: "#000", width: "100%", maxWidth: 720, margin: "0 auto" }}>
@@ -194,10 +206,10 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
               lineHeight: 1.2,
             }}
           >
-            {CERTIFICATE_SCHOOL.nameEnAlt}
+            {school.nameEnAlt}
           </p>
           <p style={{ textAlign: "center", fontWeight: 700, fontSize: 13, margin: "2px 0 8px" }}>
-            {CERTIFICATE_SCHOOL.nameGu}
+            {school.nameGu}
           </p>
 
           {/* Meta — 3 columns like physical LC */}
@@ -216,22 +228,22 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
           >
             <div>
               <div>
-                S.S.C. Index No. : <b>{CERTIFICATE_SCHOOL.sscIndex}</b>
+                S.S.C. Index No. : <b>{school.sscIndex}</b>
               </div>
-              <div style={{ fontSize: 9 }}>એસ.એસ.સી. ઈન્ડેક્સ નં. : {CERTIFICATE_SCHOOL.sscIndex}</div>
+              <div style={{ fontSize: 9 }}>એસ.એસ.સી. ઈન્ડેક્સ નં. : {school.sscIndex}</div>
               <div style={{ marginTop: 3 }}>
-                H.S.C. Index No. : <b>{CERTIFICATE_SCHOOL.hscIndex}</b>
+                H.S.C. Index No. : <b>{school.hscIndex}</b>
               </div>
-              <div style={{ fontSize: 9 }}>એચ.એસ.સી. ઈન્ડેક્સ નં. : {CERTIFICATE_SCHOOL.hscIndex}</div>
+              <div style={{ fontSize: 9 }}>એચ.એસ.સી. ઈન્ડેક્સ નં. : {school.hscIndex}</div>
               <div style={{ marginTop: 3 }}>
-                Dise Code No. : <b>{CERTIFICATE_SCHOOL.diseCode}</b>
+                Dise Code No. : <b>{school.diseCode}</b>
               </div>
-              <div style={{ fontSize: 9 }}>ડાયસ કોડ નં. : {CERTIFICATE_SCHOOL.diseCode}</div>
+              <div style={{ fontSize: 9 }}>ડાયસ કોડ નં. : {school.diseCode}</div>
             </div>
 
             <div style={{ textAlign: "center" }}>
               <div style={{ fontWeight: 700 }}>Ta. Songadh, Dist. Tapi</div>
-              <div style={{ fontSize: 9 }}>{CERTIFICATE_SCHOOL.addressGu}</div>
+              <div style={{ fontSize: 9 }}>{school.addressGu}</div>
               <div style={{ marginTop: 8, fontWeight: 700 }}>Madhyamik / Ucchattar Madhyamik</div>
               <div style={{ fontSize: 9 }}>માધ્યમિક / ઉચ્ચત્તર માધ્યમિક</div>
             </div>

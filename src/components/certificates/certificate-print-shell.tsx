@@ -4,6 +4,8 @@ import { Eye, Printer, X, ArrowLeft, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/locale-provider";
 import { useRouter } from "next/navigation";
+import { CertificateBrandProvider } from "@/components/certificates/certificate-brand-context";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 
 export function CertificatePrintShell({
   children,
@@ -30,9 +32,11 @@ export function CertificatePrintShell({
 }) {
   const t = useT();
   const router = useRouter();
+  const { formats, letterhead } = useSchoolFeatures();
   const pageMargin = printMargin ?? (landscape ? "4mm" : "8mm");
 
   return (
+    <CertificateBrandProvider packId={formats?.certificates} letterhead={letterhead}>
     <div className="certificates-module space-y-5">
 
       {/* ── Top bar ────────────────────────────────── */}
@@ -259,5 +263,6 @@ export function CertificatePrintShell({
         }
       `}</style>
     </div>
+    </CertificateBrandProvider>
   );
 }

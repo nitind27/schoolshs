@@ -93,6 +93,21 @@ export const MODULE_FORMAT_OPTIONS: Record<ModuleFormatKey, ModuleFormatOption[]
   id_cards: [
     { id: "default", label: "Standard ID card", description: "Full student / exam staff card" },
     { id: "compact", label: "Compact ID card", description: "Smaller print layout" },
+    {
+      id: "24261004405",
+      label: "ID card · 24261004405 (Songadh)",
+      description: "Uses this school’s name, logo & colours from School Settings",
+    },
+    {
+      id: "24261004403",
+      label: "ID card · 24261004403",
+      description: "Uses this school’s name, logo & colours from School Settings",
+    },
+    {
+      id: "24261004404",
+      label: "ID card · 24261004404",
+      description: "Uses this school’s name, logo & colours from School Settings",
+    },
   ],
   results: [
     { id: "default", label: "School result format", description: "Internal exam report cards" },

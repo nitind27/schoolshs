@@ -2,12 +2,16 @@ import { resolveCertificatePackId } from "@/lib/certificates/packs-registry";
 import type { CertificateTypeId } from "@/lib/certificates/config";
 import * as defaultPack from "@/components/certificates/packs/default";
 import * as songadhPack from "@/components/certificates/packs/24261004405";
+import * as pack403 from "@/components/certificates/packs/24261004403";
+import * as pack404 from "@/components/certificates/packs/24261004404";
 
 type PackModule = typeof defaultPack;
 
 const PACK_MODULES: Record<string, PackModule> = {
   default: defaultPack,
   "24261004405": songadhPack,
+  "24261004403": pack403,
+  "24261004404": pack404,
 };
 
 export type CertificateViewKey =

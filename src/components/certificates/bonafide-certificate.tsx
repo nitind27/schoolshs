@@ -1,6 +1,6 @@
 "use client";
 
-import { CERTIFICATE_SCHOOL } from "@/lib/certificates/config";
+import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
 import { dateToWords, studentFullName } from "@/lib/certificates/date-to-words";
 
 /** Official border & ink color (matches bonafide-border-frame.svg) */
@@ -193,6 +193,7 @@ export function BonafideCertificateView({
   serialNo: string;
   issueDate?: string;
 }) {
+  const school = useCertificateBrand();
   const name = studentFullName(student);
   const [nameLine1, nameLine2] = splitNameLines(name);
   const dobWords = dateToWords(student.dateOfBirth, "en");
@@ -212,7 +213,7 @@ export function BonafideCertificateView({
             lineHeight: 1.15,
           }}
         >
-          {CERTIFICATE_SCHOOL.nameEn}
+          {school.nameEn}
         </h1>
         <p
           style={{
@@ -224,7 +225,7 @@ export function BonafideCertificateView({
             lineHeight: 1.35,
           }}
         >
-          {CERTIFICATE_SCHOOL.address}
+          {school.address}
         </p>
         <h2
           style={{
@@ -307,7 +308,7 @@ export function BonafideCertificateView({
           <DotLine value={student.section || ""} minWidth={72} />
         </span>
         <span style={{ color: BONAFIDE_MAGENTA, letterSpacing: "0.02em" }}>
-          {CERTIFICATE_SCHOOL.principalLabel}
+          {school.principalLabel}
         </span>
       </div>
     </BonafideBorderFrame>

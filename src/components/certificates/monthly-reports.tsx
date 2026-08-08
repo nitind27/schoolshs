@@ -1,7 +1,7 @@
 "use client";
 
 import type { ScholarshipReportRow, AdmissionReportRow, LeaverReportRow } from "@/lib/certificates/types";
-import { CERTIFICATE_SCHOOL } from "@/lib/certificates/config";
+import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
 
 function padScholarship(rows: ScholarshipReportRow[], n: number): ScholarshipReportRow[] {
   const out = [...rows];
@@ -65,6 +65,7 @@ export function MonthlyReportsView({
   month: string;
   year: string;
 }) {
+  const school = useCertificateBrand();
   const half = Math.ceil(scholarship.length / 2) || 10;
   const left = padScholarship(scholarship.slice(0, half), 10);
   const right = padScholarship(scholarship.slice(half), 10);
@@ -74,7 +75,7 @@ export function MonthlyReportsView({
   return (
     <div className="cert-page cert-reports" style={{ fontSize: "9px", padding: "12px 16px", color: "#1a5c6e" }}>
       <div style={{ textAlign: "center", marginBottom: 12 }}>
-        <div style={{ fontSize: "11px", fontWeight: "bold" }}>{CERTIFICATE_SCHOOL.nameGu}</div>
+        <div style={{ fontSize: "11px", fontWeight: "bold" }}>{school.nameGu}</div>
         <div style={{ fontSize: "10px", marginTop: 4 }}>
           સરકારી માફી, શાળા માફી અને શિષ્યવૃત્તિ મેળવનાર વિદ્યાર્થીઓનો અહેવાલ
         </div>

@@ -4,9 +4,11 @@ import { useState, useCallback, useEffect, Suspense, useRef, useMemo } from "rea
 import { useSearchParams } from "next/navigation";
 import { CertificatePrintShell } from "@/components/certificates/certificate-print-shell";
 import { CertificateFilters } from "@/components/certificates/certificate-filters";
-import { LeavingCertificateView, type LCData } from "@/components/certificates/leaving-certificate";
+import type { LCData } from "@/components/certificates/leaving-certificate";
 import { formatToday } from "@/lib/certificates/date-to-words";
 import { SAMPLE_LC } from "@/lib/certificates/sample-data";
+import { getCertificateViewForType } from "@/lib/certificates/resolve-pack";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
@@ -15,6 +17,11 @@ import { studentShortNameGu } from "@/lib/student-names";
 function LCContent() {
   const t = useT();
   const searchParams = useSearchParams();
+  const { formats } = useSchoolFeatures();
+  const LeavingCertificateView = getCertificateViewForType(
+    formats?.certificates,
+    "lc",
+  ) as typeof import("@/components/certificates/leaving-certificate").LeavingCertificateView;
   const lockedStudentId = searchParams.get("studentId") || "";
   const [filters, setFilters] = useState({
     classId: "",
@@ -44,6 +51,8 @@ function LCContent() {
     leavingDate: "",
     sscExam: "2026",
     sscSeatNo: "",
+    remarks: "",
+    outwardNo: "",
   });
   const autoLoadedRef = useRef(false);
 
@@ -64,6 +73,8 @@ function LCContent() {
       leavingDate: SAMPLE_LC.leavingDate || "",
       sscExam: SAMPLE_LC.sscExam || "2026",
       sscSeatNo: SAMPLE_LC.sscSeatNo || "",
+      remarks: SAMPLE_LC.remarks || "",
+      outwardNo: SAMPLE_LC.outwardNo || SAMPLE_LC.serialNo || "",
     });
   }, []);
 
@@ -95,9 +106,12 @@ function LCContent() {
         reason: extra.reason,
         progress: extra.progress,
         conduct: extra.conduct,
+        remarks: extra.remarks,
+        outwardNo: extra.outwardNo || data.lcSerialNo || "",
         sscExam: extra.sscExam,
         sscSeatNo: extra.sscSeatNo,
         studyingStandard: `Std ${s.standard}-${s.section}`,
+        apaarId: s.apaarId || "",
       });
       setSource("live");
       if (sid) setFilters((f) => ({ ...f, studentId: sid }));
@@ -160,6 +174,18 @@ function LCContent() {
           <Input value={extra.conduct} onChange={(e) => setExtra({ ...extra, conduct: e.target.value })} />
         </div>
         <div>
+          <label className="text-sm font-medium">Remarks / વિશેષ નોંધ</label>
+          <Input value={extra.remarks} onChange={(e) => setExtra({ ...extra, remarks: e.target.value })} />
+        </div>
+        <div>
+          <label className="text-sm font-medium">School Outward No.</label>
+          <Input
+            value={extra.outwardNo}
+            onChange={(e) => setExtra({ ...extra, outwardNo: e.target.value })}
+            placeholder="જાવક નંબર"
+          />
+        </div>
+        <div>
           <label className="text-sm font-medium">{t("certificates.sscExam")}</label>
           <Input
             value={extra.sscExam}
@@ -187,6 +213,8 @@ function LCContent() {
                   reason: extra.reason,
                   progress: extra.progress,
                   conduct: extra.conduct,
+                  remarks: extra.remarks,
+                  outwardNo: extra.outwardNo || displayData.outwardNo,
                   sscExam: extra.sscExam,
                   sscSeatNo: extra.sscSeatNo,
                 }

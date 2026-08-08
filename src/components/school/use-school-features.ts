@@ -6,10 +6,12 @@ import {
   type ModuleFormatMap,
   type SchoolFeatureKey,
 } from "@/lib/school-features";
+import type { LiveSchoolLetterhead } from "@/lib/certificates/school-brand";
 
 type SchoolFeaturesState = {
   features: SchoolFeatureKey[] | null;
   formats: ModuleFormatMap | null;
+  letterhead: LiveSchoolLetterhead | null;
   ready: boolean;
 };
 
@@ -22,7 +24,12 @@ async function loadSchoolFeatures(): Promise<SchoolFeaturesState> {
   inflight = fetch("/api/school/features", { cache: "no-store" })
     .then(async (r) => {
       if (!r.ok) {
-        const empty: SchoolFeaturesState = { features: null, formats: null, ready: true };
+        const empty: SchoolFeaturesState = {
+          features: null,
+          formats: null,
+          letterhead: null,
+          ready: true,
+        };
         cached = empty;
         return empty;
       }
@@ -30,13 +37,19 @@ async function loadSchoolFeatures(): Promise<SchoolFeaturesState> {
       const next: SchoolFeaturesState = {
         features: Array.isArray(d.features) ? d.features : null,
         formats: d.formats ?? null,
+        letterhead: d.letterhead ?? null,
         ready: true,
       };
       cached = next;
       return next;
     })
     .catch(() => {
-      const empty: SchoolFeaturesState = { features: null, formats: null, ready: true };
+      const empty: SchoolFeaturesState = {
+        features: null,
+        formats: null,
+        letterhead: null,
+        ready: true,
+      };
       cached = empty;
       return empty;
     })
@@ -54,7 +67,7 @@ export function invalidateSchoolFeaturesCache() {
 
 export function useSchoolFeatures() {
   const [state, setState] = useState<SchoolFeaturesState>(
-    cached ?? { features: null, formats: null, ready: false },
+    cached ?? { features: null, formats: null, letterhead: null, ready: false },
   );
 
   useEffect(() => {

@@ -1063,6 +1063,11 @@ export default function NewSchoolPage() {
             <CardTitle className="flex items-center gap-2 text-lg">
               <LayoutGrid className="h-5 w-5 text-violet-600" /> Panel & Feature Access
             </CardTitle>
+            <p className="text-sm text-slate-500 mt-1">
+              Jo modules ON karoge wahi Reports & Certificates hub me dikhenge. Certificate pack
+              school-code wise choose karo — naya format sirf usi school pe chalega jise yahan assign
+              kiya.
+            </p>
           </CardHeader>
           <CardContent className="px-4 sm:px-6 space-y-8">
             <FeatureToggleGrid
