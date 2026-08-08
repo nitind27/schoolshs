@@ -1155,6 +1155,7 @@ const en = {
     navContracts: "Contracts",
     navSupport: "Support inbox",
     navLoginActivity: "Login activity",
+    navAccount: "My Account",
     navEmail: "Email / SMTP",
     shellKicker: "Platform",
     shellBrand: "Codeat Control Center",

@@ -17,6 +17,7 @@ import {
   Headphones,
   Activity,
   FolderKanban,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -89,6 +90,12 @@ const NAV_ITEMS: NavItem[] = [
     groupKey: "admin.navGroupSystem",
   },
   {
+    href: "/admin/settings/account",
+    labelKey: "admin.navAccount",
+    icon: UserCog,
+    groupKey: "admin.navGroupSystem",
+  },
+  {
     href: "/admin/settings/email",
     labelKey: "admin.navEmail",
     icon: Mail,
@@ -150,7 +157,12 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="admin-shell">
-      <TopNavbar showProfile={false} sidebarWidth={width} variant="admin" />
+      <TopNavbar
+        showProfile
+        profileHref="/admin/settings/account"
+        sidebarWidth={width}
+        variant="admin"
+      />
 
       <button
         type="button"

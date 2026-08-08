@@ -1136,6 +1136,7 @@ const gu: Messages = {
     navContracts: "કોન્ટ્રાક્ટ",
     navSupport: "સપોર્ટ ઇનબોક્સ",
     navLoginActivity: "લોગિન પ્રવૃત્તિ",
+    navAccount: "મારું એકાઉન્ટ",
     navEmail: "ઈમેલ / SMTP",
     shellKicker: "પ્લેટફોર્મ",
     shellBrand: "Codeat કંટ્રોલ સેન્ટર",
