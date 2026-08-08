@@ -1805,16 +1805,39 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.ad-portal-polish .ad-analytics-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 20rem;
+}
+
 .ad-portal-polish .ad-analytics-body .ad-panel {
-  height: 100%;
-  min-height: 16rem;
+  height: auto;
+  min-height: 0;
 }
 
 .ad-portal-polish .ad-analytics-body .ad-panel-body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 12rem;
+  display: block;
+  width: 100%;
+  min-height: 11rem;
+  padding: 1rem 1.1rem 1.15rem;
+}
+
+.ad-portal-polish .ad-analytics-body .ad-chart-wrap {
+  width: 100%;
+  min-width: 0;
+}
+
+.ad-portal-polish .ad-analytics-empty {
+  display: grid;
+  place-items: center;
+  gap: 0.35rem;
+  min-height: 9rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 @media (max-width: 1100px) {
@@ -1848,4 +1871,199 @@
 html.locale-gu .ad-portal-polish .ad-main-tabs > button,
 html.locale-gu .ad-portal-polish .ad-quicknav-item {
   letter-spacing: 0;
+}
+
+/* -- Dashboard reminders + school directory -- */
+.ad-reminder-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.ad-reminder-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--ad-line);
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.ad-reminder-item:hover {
+  transform: translateY(-1px);
+  border-color: #c4b5fd;
+}
+
+.ad-reminder-item.is-rose {
+  background: linear-gradient(180deg, #fff1f2 0%, #fff 75%);
+  border-color: #fecdd3;
+}
+
+.ad-reminder-item.is-amber {
+  background: linear-gradient(180deg, #fffbeb 0%, #fff 75%);
+  border-color: #fde68a;
+}
+
+.ad-reminder-ico {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.7rem;
+  display: grid;
+  place-items: center;
+  background: #f1f5f9;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.ad-reminder-item.is-rose .ad-reminder-ico {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.ad-reminder-item.is-amber .ad-reminder-ico {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.ad-reminder-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ad-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ad-reminder-meta {
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
+  color: var(--ad-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ad-reminder-msg {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.ad-search-input {
+  min-width: 12rem;
+  max-width: 18rem;
+  height: 2.1rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--ad-line);
+  background: #fff;
+  padding: 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--ad-ink);
+}
+
+.ad-search-input:focus {
+  outline: none;
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 3px rgb(14 165 233 / 0.12);
+}
+
+.ad-table--dense th,
+.ad-table--dense td {
+  padding: 0.65rem 0.7rem;
+  font-size: 0.8rem;
+  vertical-align: top;
+}
+
+.ad-school-admin {
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
+}
+
+.ad-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.18rem 0.55rem;
+  text-transform: capitalize;
+}
+
+.ad-pay-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ad-pay-status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.ad-pay-status.is-paid { color: #047857; }
+.ad-pay-status.is-partial { color: #b45309; }
+.ad-pay-status.is-pending { color: #64748b; }
+.ad-pay-status.is-overdue { color: #b91c1c; }
+.ad-pay-status.is-none { color: #94a3b8; }
+
+.ad-pay-cell small {
+  font-size: 0.68rem;
+  color: var(--ad-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ad-date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: #334155;
+}
+
+.ad-expiry-badge {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+}
+
+.ad-expiry-badge.is-rose {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.ad-expiry-badge.is-amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.ad-expiry-badge.is-emerald {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.ad-expiry-badge.is-slate {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.ad-alert-chip.is-rose {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #9f1239;
 }

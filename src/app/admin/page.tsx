@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatINR, StatusBadge } from "@/components/admin/admin-ui";
 import { BarChart, DoughnutChart, VerticalBarChart } from "@/components/dashboard/charts";
@@ -28,25 +28,47 @@ import {
   Eye,
   Mail,
   Headphones,
+  Bell,
+  CalendarClock,
+  Clock3,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import "@/components/admin/admin-portal.css";
 
-interface SchoolRow {
+interface ReminderRow {
+  kind: "expired" | "expiring" | "due_overdue" | "due_soon";
+  schoolId: string;
+  schoolName: string;
+  schoolCode: string;
+  planName: string | null;
+  date: string | null;
+  daysLeft: number | null;
+  paymentStatus: string | null;
+  message: string;
+}
+
+interface SchoolDirectoryRow {
   id: string;
   name: string;
   code: string;
   district?: string | null;
+  city?: string | null;
   isActive: boolean;
-  _count: { students: number; users: number; classes: number; staff: number };
-  users: { id: string; email: string; name: string; isActive: boolean }[];
-  subscription?: {
-    planName?: string;
-    paymentStatus?: string;
-    totalAmount?: string | null;
-    paidAmount?: string | null;
-  } | null;
-  settings?: { logoPath?: string | null } | null;
+  students: number;
+  staff: number;
+  classes: number;
+  users: number;
+  admins: { id: string; name: string; email: string; isActive: boolean }[];
+  logoPath?: string | null;
+  planName?: string | null;
+  paymentStatus?: string | null;
+  totalAmount?: number | null;
+  paidAmount?: number | null;
+  contractStartDate?: string | null;
+  contractEndDate?: string | null;
+  nextDueDate?: string | null;
+  portalDaysLeft?: number | null;
+  paymentDaysLeft?: number | null;
 }
 
 interface PlatformStats {
@@ -75,6 +97,14 @@ interface PlatformStats {
   }[];
   monthlyPayments?: { key: string; label: string; amount: number }[];
   schoolsByMonth?: { key: string; label: string; count: number }[];
+  reminders?: ReminderRow[];
+  summary?: {
+    portalExpired: number;
+    portalExpiringSoon: number;
+    paymentOverdue: number;
+    paymentDueSoon: number;
+  };
+  schoolDirectory?: SchoolDirectoryRow[];
 }
 
 const PLAN_COLORS = ["#0369a1", "#0ea5e9", "#0891b2", "#0d9488", "#64748b", "#b45309"];
@@ -94,33 +124,61 @@ function progressTone(rate: number) {
   return "is-danger";
 }
 
+function formatDateIN(iso: string | null | undefined) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function portalBadge(daysLeft: number | null | undefined) {
+  if (daysLeft == null) return { label: "No expiry set", tone: "slate" as const };
+  if (daysLeft < 0) return { label: `Expired ${Math.abs(daysLeft)}d`, tone: "rose" as const };
+  if (daysLeft === 0) return { label: "Expires today", tone: "rose" as const };
+  if (daysLeft <= 30) return { label: `${daysLeft}d left`, tone: "amber" as const };
+  return { label: `${daysLeft}d left`, tone: "emerald" as const };
+}
+
+function reminderTone(kind: ReminderRow["kind"]) {
+  if (kind === "expired" || kind === "due_overdue") return "is-rose";
+  if (kind === "expiring" || kind === "due_soon") return "is-amber";
+  return "is-slate";
+}
+
 export default function AdminDashboardPage() {
   const t = useT();
-  const [schools, setSchools] = useState<SchoolRow[]>([]);
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState<"overview" | "analytics">("overview");
-
-  const loadStats = useCallback(() => {
-    return fetch("/api/admin/stats")
-      .then((r) => r.json())
-      .then((statsData) => {
-        if (!statsData.error) setStats(statsData);
-      });
-  }, []);
+  const [schoolQuery, setSchoolQuery] = useState("");
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetch("/api/admin/schools").then((r) => r.json()), loadStats()])
-      .then(([schoolData]) => {
-        setSchools(schoolData.schools || []);
+    fetch("/api/admin/stats", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((statsData) => {
+        if (!statsData.error) setStats(statsData);
       })
       .finally(() => setLoading(false));
-  }, [loadStats]);
+  }, []);
 
-  const recentSchools = useMemo(() => schools.slice(0, 6), [schools]);
   const outstanding = (stats?.totalContractValue ?? 0) - (stats?.totalPaid ?? 0);
   const collectionRate = stats?.collectionRate ?? 0;
+  const directory = stats?.schoolDirectory || [];
+  const reminders = stats?.reminders || [];
+  const reminderSummary = stats?.summary;
+
+  const filteredDirectory = useMemo(() => {
+    const q = schoolQuery.trim().toLowerCase();
+    if (!q) return directory;
+    return directory.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.code.toLowerCase().includes(q) ||
+        (s.district || "").toLowerCase().includes(q) ||
+        (s.city || "").toLowerCase().includes(q),
+    );
+  }, [directory, schoolQuery]);
 
   const planSegments = useMemo(() => {
     const entries = Object.entries(stats?.planBreakdown || {});
@@ -200,7 +258,14 @@ export default function AdminDashboardPage() {
     { n: 4, title: t("admin.flow4Title"), desc: t("admin.flow4Desc"), href: "/admin/schools", icon: Building2 },
   ];
 
-  const hasCritical = (stats?.pendingPayments ?? 0) > 0 || (stats?.openSupportTickets ?? 0) > 0 || (stats?.inactiveSchools ?? 0) > 0;
+  const hasCritical =
+    (stats?.pendingPayments ?? 0) > 0 ||
+    (stats?.openSupportTickets ?? 0) > 0 ||
+    (stats?.inactiveSchools ?? 0) > 0 ||
+    (reminderSummary?.portalExpired ?? 0) > 0 ||
+    (reminderSummary?.portalExpiringSoon ?? 0) > 0 ||
+    (reminderSummary?.paymentOverdue ?? 0) > 0 ||
+    (reminderSummary?.paymentDueSoon ?? 0) > 0;
 
   return (
     <div className="ad-portal ad-portal-v2 ad-portal-polish space-y-4">
@@ -303,6 +368,38 @@ export default function AdminDashboardPage() {
             <span>{t("admin.attentionTitle")}</span>
           </div>
           <div className="ad-alert-chips">
+            {(reminderSummary?.portalExpired ?? 0) > 0 && (
+              <a href="#portal-reminders" className="ad-alert-chip is-rose">
+                <CalendarClock className="h-3.5 w-3.5" />
+                <strong>{reminderSummary?.portalExpired}</strong>
+                <span>Portal expired</span>
+                <ArrowRight className="h-3 w-3 opacity-60" />
+              </a>
+            )}
+            {(reminderSummary?.portalExpiringSoon ?? 0) > 0 && (
+              <a href="#portal-reminders" className="ad-alert-chip is-amber">
+                <Clock3 className="h-3.5 w-3.5" />
+                <strong>{reminderSummary?.portalExpiringSoon}</strong>
+                <span>Expiring ≤30d</span>
+                <ArrowRight className="h-3 w-3 opacity-60" />
+              </a>
+            )}
+            {(reminderSummary?.paymentOverdue ?? 0) > 0 && (
+              <a href="#portal-reminders" className="ad-alert-chip is-rose">
+                <CreditCard className="h-3.5 w-3.5" />
+                <strong>{reminderSummary?.paymentOverdue}</strong>
+                <span>Payment overdue</span>
+                <ArrowRight className="h-3 w-3 opacity-60" />
+              </a>
+            )}
+            {(reminderSummary?.paymentDueSoon ?? 0) > 0 && (
+              <a href="#portal-reminders" className="ad-alert-chip is-amber">
+                <Bell className="h-3.5 w-3.5" />
+                <strong>{reminderSummary?.paymentDueSoon}</strong>
+                <span>Due ≤14d</span>
+                <ArrowRight className="h-3 w-3 opacity-60" />
+              </a>
+            )}
             {(stats?.pendingPayments ?? 0) > 0 && (
               <Link href="/admin/payments" className="ad-alert-chip is-amber">
                 <CreditCard className="h-3.5 w-3.5" />
@@ -330,6 +427,61 @@ export default function AdminDashboardPage() {
           </div>
         </section>
       )}
+
+      {/* ── PORTAL / PAYMENT REMINDERS ── */}
+      <section id="portal-reminders" className="ad-panel">
+        <div className="ad-panel-head">
+          <div>
+            <h2>
+              <Bell className="h-5 w-5 text-amber-600" />
+              Portal & payment reminders
+            </h2>
+            <p>Contract end date = portal expiry · Next due date = payment reminder</p>
+          </div>
+          <Link href="/admin/contracts" className="ad-panel-link">
+            Contracts
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+        <div className="ad-panel-body">
+          {loading ? (
+            <div className="ad-loading"><div className="ad-spinner" /></div>
+          ) : reminders.length === 0 ? (
+            <div className="ad-empty" style={{ padding: "1.25rem" }}>
+              <CheckCircle2 className="h-8 w-8 text-emerald-500 opacity-70" />
+              <p>No expiry or payment reminders right now.</p>
+            </div>
+          ) : (
+            <div className="ad-reminder-list">
+              {reminders.map((r) => (
+                <Link
+                  key={`${r.kind}-${r.schoolId}-${r.date || ""}`}
+                  href={`/admin/schools/${r.schoolId}?tab=contract`}
+                  className={`ad-reminder-item ${reminderTone(r.kind)}`}
+                >
+                  <div className="ad-reminder-ico">
+                    {r.kind === "expired" || r.kind === "expiring" ? (
+                      <CalendarClock className="h-4 w-4" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="ad-reminder-title">{r.schoolName}</p>
+                    <p className="ad-reminder-meta">
+                      <span className="ad-mono">{r.schoolCode}</span>
+                      {r.planName ? <span>· {r.planName}</span> : null}
+                      {r.date ? <span>· {formatDateIN(r.date)}</span> : null}
+                    </p>
+                    <p className="ad-reminder-msg">{r.message}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 opacity-50 shrink-0" />
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* ── QUICK-NAV ── */}
       <section className="ad-quicknav">
@@ -424,72 +576,135 @@ export default function AdminDashboardPage() {
         </section>
       </div>
 
-      {/* ── SCHOOLS TABLE ── */}
+      {/* ── ALL SCHOOLS DIRECTORY ── */}
       <section className="ad-panel">
         <div className="ad-panel-head">
           <div>
             <h2>
               <Building2 className="h-5 w-5 text-sky-700" />
-              {t("admin.recentSchools")}
+              All schools · live data
             </h2>
-            <p>{t("admin.recentSchoolsDesc")}</p>
+            <p>
+              {(stats?.schoolCount ?? 0).toLocaleString("en-IN")} schools ·{" "}
+              {(stats?.studentCount ?? 0).toLocaleString("en-IN")} students ·{" "}
+              {(stats?.staffCount ?? 0).toLocaleString("en-IN")} staff
+            </p>
           </div>
-          <Link href="/admin/schools" className="ad-panel-link">
-            {schools.length}
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <input
+              type="search"
+              value={schoolQuery}
+              onChange={(e) => setSchoolQuery(e.target.value)}
+              placeholder="Search school / code / district"
+              className="ad-search-input"
+            />
+            <Link href="/admin/schools" className="ad-panel-link">
+              Manage
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
         <div className="ad-panel-body is-flush">
           {loading ? (
             <div className="ad-loading"><div className="ad-spinner" /></div>
-          ) : recentSchools.length === 0 ? (
+          ) : filteredDirectory.length === 0 ? (
             <div className="ad-empty">
               <School className="h-9 w-9 opacity-40" />
-              <p>{t("admin.noSchools")}</p>
-              <Link href="/admin/schools/new" className="ad-btn is-primary is-sm" style={{ marginTop: "0.75rem" }}>
-                <Plus className="h-4 w-4" />
-                {t("admin.newSchool")}
-              </Link>
+              <p>{schoolQuery ? "No schools match your search." : t("admin.noSchools")}</p>
+              {!schoolQuery ? (
+                <Link href="/admin/schools/new" className="ad-btn is-primary is-sm" style={{ marginTop: "0.75rem" }}>
+                  <Plus className="h-4 w-4" />
+                  {t("admin.newSchool")}
+                </Link>
+              ) : null}
             </div>
           ) : (
             <div className="ad-table-wrap">
-              <table className="ad-table">
+              <table className="ad-table ad-table--dense">
                 <thead>
                   <tr>
-                    <th>{t("admin.selectSchool")}</th>
-                    <th>{t("admin.students")}</th>
-                    <th>{t("admin.kpiStaff")}</th>
-                    <th>{t("common.status")}</th>
+                    <th>School</th>
+                    <th>Students</th>
+                    <th>Staff</th>
+                    <th>Classes</th>
+                    <th>Plan</th>
+                    <th>Payment</th>
+                    <th>Portal expiry</th>
+                    <th>Next due</th>
+                    <th>Status</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody>
-                  {recentSchools.map((s) => (
-                    <tr key={s.id}>
-                      <td>
-                        <div className="ad-school-cell">
-                          {s.settings?.logoPath ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={`/api/uploads/${s.settings.logoPath}`} alt="" className="ad-school-logo" />
-                          ) : (
-                            <div className="ad-school-logo"><School className="h-4 w-4" /></div>
-                          )}
-                          <div className="min-w-0">
-                            <p className="ad-school-name">{s.name}</p>
-                            <p className="ad-mono">{s.code}</p>
+                  {filteredDirectory.map((s) => {
+                    const badge = portalBadge(s.portalDaysLeft);
+                    return (
+                      <tr key={s.id}>
+                        <td>
+                          <div className="ad-school-cell">
+                            {s.logoPath ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={`/api/uploads/${s.logoPath}`} alt="" className="ad-school-logo" />
+                            ) : (
+                              <div className="ad-school-logo"><School className="h-4 w-4" /></div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="ad-school-name">{s.name}</p>
+                              <p className="ad-mono">
+                                {s.code}
+                                {s.district ? ` · ${s.district}` : ""}
+                              </p>
+                              {s.admins?.[0] ? (
+                                <p className="ad-school-admin">{s.admins[0].email}</p>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td style={{ fontWeight: 700 }}>{s._count.students.toLocaleString("en-IN")}</td>
-                      <td style={{ color: "var(--ad-muted)" }}>{s._count.staff.toLocaleString("en-IN")}</td>
-                      <td><StatusBadge active={s.isActive} /></td>
-                      <td>
-                        <Link href={`/admin/schools/${s.id}`} className="ad-btn is-outline is-sm">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td style={{ fontWeight: 700 }}>{s.students.toLocaleString("en-IN")}</td>
+                        <td style={{ color: "var(--ad-muted)" }}>{s.staff.toLocaleString("en-IN")}</td>
+                        <td style={{ color: "var(--ad-muted)" }}>{s.classes.toLocaleString("en-IN")}</td>
+                        <td>
+                          <span className="ad-pill">{s.planName || "—"}</span>
+                        </td>
+                        <td>
+                          <div className="ad-pay-cell">
+                            <span className={`ad-pay-status is-${s.paymentStatus || "none"}`}>
+                              {s.paymentStatus || "—"}
+                            </span>
+                            <small>
+                              {formatINR(s.paidAmount)} / {formatINR(s.totalAmount)}
+                            </small>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="ad-date-cell">
+                            <span>{formatDateIN(s.contractEndDate)}</span>
+                            <span className={`ad-expiry-badge is-${badge.tone}`}>{badge.label}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="ad-date-cell">
+                            <span>{formatDateIN(s.nextDueDate)}</span>
+                            {s.paymentDaysLeft != null && s.paymentDaysLeft <= 14 ? (
+                              <span className={`ad-expiry-badge is-${s.paymentDaysLeft < 0 ? "rose" : "amber"}`}>
+                                {s.paymentDaysLeft < 0
+                                  ? `Overdue ${Math.abs(s.paymentDaysLeft)}d`
+                                  : s.paymentDaysLeft === 0
+                                    ? "Due today"
+                                    : `${s.paymentDaysLeft}d`}
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td><StatusBadge active={s.isActive} /></td>
+                        <td>
+                          <Link href={`/admin/schools/${s.id}`} className="ad-btn is-outline is-sm">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -528,55 +743,224 @@ export default function AdminDashboardPage() {
       </>
       ) : (
       /* ── ANALYTICS TAB ── */
-      <div className="ad-analytics-body space-y-4">
-        <div className="ad-chart-grid is-3">
-          <section className="ad-panel">
-            <div className="ad-panel-head">
-              <div><h2><LayoutGrid className="h-5 w-5 text-sky-700" />{t("admin.manageTitle")}</h2></div>
-            </div>
+      <div className="ad-analytics-body">
+        {loading || !stats ? (
+          <div className="ad-panel">
             <div className="ad-panel-body">
-              <DoughnutChart
-                segments={planSegments}
-                centerLabel={t("admin.schoolsLabel")}
-                centerValue={planSegments.reduce((s, x) => s + x.value, 0)}
-                size={140}
-              />
+              <div className="ad-loading"><div className="ad-spinner" /></div>
             </div>
-          </section>
-          <section className="ad-panel">
-            <div className="ad-panel-head">
-              <div><h2><School className="h-5 w-5 text-sky-700" />{t("common.status")}</h2></div>
+          </div>
+        ) : (
+          <>
+            <section className="ad-panel">
+              <div className="ad-panel-head">
+                <div>
+                  <h2>
+                    <TrendingUp className="h-5 w-5 text-sky-700" />
+                    {t("admin.analyticsTitle")}
+                  </h2>
+                  <p>
+                    {(stats.schoolCount ?? 0).toLocaleString("en-IN")} schools ·{" "}
+                    {(stats.studentCount ?? 0).toLocaleString("en-IN")} students ·{" "}
+                    {(stats.staffCount ?? 0).toLocaleString("en-IN")} staff
+                  </p>
+                </div>
+              </div>
+              <div className="ad-panel-body">
+                <div className="ad-finance-tiles">
+                  <div className="ad-ftile is-ink">
+                    <span>{t("admin.schoolsLabel")}</span>
+                    <strong>{(stats.schoolCount ?? 0).toLocaleString("en-IN")}</strong>
+                  </div>
+                  <div className="ad-ftile is-ok">
+                    <span>{t("admin.studentsLabel")}</span>
+                    <strong>{(stats.studentCount ?? 0).toLocaleString("en-IN")}</strong>
+                  </div>
+                  <div className="ad-ftile is-warn">
+                    <span>{t("admin.kpiCollected")}</span>
+                    <strong>{formatINR(stats.totalPaid)}</strong>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div className="ad-chart-grid is-3">
+              <section className="ad-panel">
+                <div className="ad-panel-head">
+                  <div>
+                    <h2>
+                      <LayoutGrid className="h-5 w-5 text-sky-700" />
+                      Plans
+                    </h2>
+                    <p>Schools by subscription plan</p>
+                  </div>
+                </div>
+                <div className="ad-panel-body">
+                  <div className="ad-chart-wrap">
+                    {planSegments.length === 0 ? (
+                      <div className="ad-analytics-empty">No plan data yet</div>
+                    ) : (
+                      <DoughnutChart
+                        className="w-full"
+                        segments={planSegments}
+                        centerLabel={t("admin.schoolsLabel")}
+                        centerValue={planSegments.reduce((s, x) => s + x.value, 0)}
+                        size={140}
+                      />
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <section className="ad-panel">
+                <div className="ad-panel-head">
+                  <div>
+                    <h2>
+                      <School className="h-5 w-5 text-sky-700" />
+                      School status
+                    </h2>
+                    <p>Active vs inactive</p>
+                  </div>
+                </div>
+                <div className="ad-panel-body">
+                  <div className="ad-chart-wrap">
+                    <DoughnutChart
+                      className="w-full"
+                      segments={activeSegments}
+                      centerLabel={t("admin.schoolsLabel")}
+                      centerValue={(stats.schoolCount ?? 0).toLocaleString("en-IN")}
+                      size={140}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="ad-panel">
+                <div className="ad-panel-head">
+                  <div>
+                    <h2>
+                      <MapPin className="h-5 w-5 text-sky-700" />
+                      Districts
+                    </h2>
+                    <p>Schools by district</p>
+                  </div>
+                </div>
+                <div className="ad-panel-body">
+                  <div className="ad-chart-wrap">
+                    {districtSegments.length === 0 ? (
+                      <div className="ad-analytics-empty">No district data yet</div>
+                    ) : (
+                      <BarChart className="w-full" segments={districtSegments} />
+                    )}
+                  </div>
+                </div>
+              </section>
             </div>
-            <div className="ad-panel-body">
-              <DoughnutChart
-                segments={activeSegments}
-                centerLabel={t("admin.schoolsLabel")}
-                centerValue={(stats?.schoolCount ?? 0).toLocaleString("en-IN")}
-                size={140}
-              />
+
+            <div className="ad-split-2">
+              <section className="ad-panel">
+                <div className="ad-panel-head">
+                  <div>
+                    <h2>
+                      <Activity className="h-5 w-5 text-sky-700" />
+                      New schools (6 months)
+                    </h2>
+                    <p>School onboarding growth</p>
+                  </div>
+                </div>
+                <div className="ad-panel-body">
+                  <div className="ad-chart-wrap">
+                    {growthSegments.every((s) => s.value === 0) ? (
+                      <div className="ad-analytics-empty">No new schools in last 6 months</div>
+                    ) : (
+                      <VerticalBarChart className="w-full" segments={growthSegments} />
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <section className="ad-panel">
+                <div className="ad-panel-head">
+                  <div>
+                    <h2>
+                      <GraduationCap className="h-5 w-5 text-sky-700" />
+                      Top schools by students
+                    </h2>
+                    <p>Highest student counts</p>
+                  </div>
+                </div>
+                <div className="ad-panel-body">
+                  <div className="ad-chart-wrap">
+                    {topStudentSegments.length === 0 ? (
+                      <div className="ad-analytics-empty">No student data yet</div>
+                    ) : (
+                      <VerticalBarChart className="w-full" segments={topStudentSegments} />
+                    )}
+                  </div>
+                </div>
+              </section>
             </div>
-          </section>
-          <section className="ad-panel">
-            <div className="ad-panel-head">
-              <div><h2><MapPin className="h-5 w-5 text-sky-700" />{t("admin.selectSchool")}</h2></div>
-            </div>
-            <div className="ad-panel-body"><BarChart segments={districtSegments} /></div>
-          </section>
-        </div>
-        <div className="ad-split-2">
-          <section className="ad-panel">
-            <div className="ad-panel-head">
-              <div><h2><Activity className="h-5 w-5 text-sky-700" />{t("admin.analyticsTitle")}</h2></div>
-            </div>
-            <div className="ad-panel-body"><VerticalBarChart segments={growthSegments} /></div>
-          </section>
-          <section className="ad-panel">
-            <div className="ad-panel-head">
-              <div><h2><GraduationCap className="h-5 w-5 text-sky-700" />{t("admin.studentsLabel")}</h2></div>
-            </div>
-            <div className="ad-panel-body"><VerticalBarChart segments={topStudentSegments} /></div>
-          </section>
-        </div>
+
+            <section className="ad-panel">
+              <div className="ad-panel-head">
+                <div>
+                  <h2>
+                    <IndianRupee className="h-5 w-5 text-sky-700" />
+                    Monthly collections
+                  </h2>
+                  <p>Payment amount received (last 6 months)</p>
+                </div>
+                <Link href="/admin/payments" className="ad-panel-link">
+                  Payments
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              <div className="ad-panel-body">
+                <div className="ad-chart-wrap">
+                  {(stats.monthlyPayments || []).length === 0 ? (
+                    <div className="ad-analytics-empty">No payment history yet</div>
+                  ) : (
+                    <BarChart
+                      className="w-full"
+                      segments={(stats.monthlyPayments || []).map((m) => ({
+                        label: m.label,
+                        value: m.amount,
+                        color: "#0ea5e9",
+                      }))}
+                    />
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="ad-panel">
+              <div className="ad-panel-head">
+                <div>
+                  <h2>
+                    <CreditCard className="h-5 w-5 text-sky-700" />
+                    Payment status mix
+                  </h2>
+                  <p>How many schools are paid / pending / overdue</p>
+                </div>
+              </div>
+              <div className="ad-panel-body">
+                <div className="ad-chart-wrap">
+                  {statusSegments.length === 0 ? (
+                    <div className="ad-analytics-empty">No payment status data</div>
+                  ) : (
+                    <DoughnutChart
+                      className="w-full"
+                      segments={statusSegments}
+                      centerLabel="Schools"
+                      centerValue={(stats.schoolCount ?? 0).toLocaleString("en-IN")}
+                      size={140}
+                    />
+                  )}
+                </div>
+              </div>
+            </section>
+          </>
+        )}
       </div>
       )}
     </div>

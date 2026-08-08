@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { requireSchoolFeature } from "@/lib/school-feature-access";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
+    await requireSchoolFeature(session.schoolId, "id_cards");
     const { searchParams } = new URL(request.url);
     const designation = searchParams.get("designation") || "";
     const department = searchParams.get("department") || "";

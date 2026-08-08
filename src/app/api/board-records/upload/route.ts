@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireSchoolAuth, AuthError } from "@/lib/auth";
+import { AuthError } from "@/lib/auth";
+import { requireBoardRecordsAuth } from "@/lib/board-records-auth";
 import { parseBoardExcel } from "@/lib/board-records/excel";
 
 const SSC_SEAT_PREFIXES = new Set(["A", "B", "C", "S", "P"]);
@@ -19,7 +20,7 @@ const HSC_SEAT_PREFIXES = new Set([
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth([
+    const session = await requireBoardRecordsAuth([
       "school_admin",
       "teacher",
       "clerk",

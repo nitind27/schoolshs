@@ -1,13 +1,22 @@
 "use client";
 
-import { Spinner, PageLoader } from "@/components/ui/loader";
+import { PageLoader } from "@/components/ui/loader";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { ArrowLeft, Mail, Save, Send, ShieldCheck, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Mail,
+  Save,
+  Send,
+  ShieldCheck,
+  AlertCircle,
+  CheckCircle2,
+  KeyRound,
+} from "lucide-react";
 
 type SmtpSettings = {
   emailEnabled: boolean;
@@ -19,7 +28,10 @@ type SmtpSettings = {
   smtpFromEmail: string | null;
   smtpReplyTo: string | null;
   hasPassword: boolean;
+  passwordDecryptOk?: boolean;
   passwordMasked: string;
+  configReady?: boolean;
+  configIssue?: string | null;
   smtpLastTestAt: string | null;
   smtpLastTestOk: boolean | null;
   smtpLastTestError: string | null;
@@ -39,49 +51,73 @@ export default function AdminEmailSettingsPage() {
   const [preset, setPreset] = useState("Gmail (App Password)");
   const [testTo, setTestTo] = useState("");
   const [smtpPassword, setSmtpPassword] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [form, setForm] = useState({
     emailEnabled: false,
-    smtpHost: "smtp.gmail.com",
+    smtpHost: "",
     smtpPort: "587",
     smtpSecure: false,
     smtpUser: "",
-    smtpFromName: "SHS Education Portal",
+    smtpFromName: "Codeat Education",
     smtpFromEmail: "",
     smtpReplyTo: "",
   });
-  const [meta, setMeta] = useState<Pick<SmtpSettings, "hasPassword" | "passwordMasked" | "smtpLastTestAt" | "smtpLastTestOk" | "smtpLastTestError">>({
+  const [meta, setMeta] = useState<
+    Pick<
+      SmtpSettings,
+      | "hasPassword"
+      | "passwordDecryptOk"
+      | "passwordMasked"
+      | "configReady"
+      | "configIssue"
+      | "smtpLastTestAt"
+      | "smtpLastTestOk"
+      | "smtpLastTestError"
+    >
+  >({
     hasPassword: false,
+    passwordDecryptOk: false,
     passwordMasked: "",
+    configReady: false,
+    configIssue: null,
     smtpLastTestAt: null,
     smtpLastTestOk: null,
     smtpLastTestError: null,
   });
 
+  const applyLoaded = (d: SmtpSettings) => {
+    setForm({
+      emailEnabled: Boolean(d.emailEnabled),
+      smtpHost: d.smtpHost || "",
+      smtpPort: String(d.smtpPort || 587),
+      smtpSecure: Boolean(d.smtpSecure),
+      smtpUser: d.smtpUser || "",
+      smtpFromName: d.smtpFromName || "Codeat Education",
+      smtpFromEmail: d.smtpFromEmail || "",
+      smtpReplyTo: d.smtpReplyTo || "",
+    });
+    setMeta({
+      hasPassword: d.hasPassword,
+      passwordDecryptOk: d.passwordDecryptOk ?? false,
+      passwordMasked: d.passwordMasked,
+      configReady: d.configReady ?? false,
+      configIssue: d.configIssue ?? null,
+      smtpLastTestAt: d.smtpLastTestAt,
+      smtpLastTestOk: d.smtpLastTestOk,
+      smtpLastTestError: d.smtpLastTestError,
+    });
+    const match = SMTP_PRESETS.find((p) => p.host && p.host === d.smtpHost);
+    if (match) setPreset(match.label);
+    else if (d.smtpHost) setPreset("Custom");
+  };
+
   const load = () => {
     setLoading(true);
-    fetch("/api/admin/platform-settings/email")
+    fetch("/api/admin/platform-settings/email", { cache: "no-store" })
       .then((r) => r.json())
       .then((d: SmtpSettings) => {
-        setForm({
-          emailEnabled: d.emailEnabled,
-          smtpHost: d.smtpHost || "smtp.gmail.com",
-          smtpPort: String(d.smtpPort || 587),
-          smtpSecure: d.smtpSecure,
-          smtpUser: d.smtpUser || "",
-          smtpFromName: d.smtpFromName || "SHS Education Portal",
-          smtpFromEmail: d.smtpFromEmail || "",
-          smtpReplyTo: d.smtpReplyTo || "",
-        });
-        setMeta({
-          hasPassword: d.hasPassword,
-          passwordMasked: d.passwordMasked,
-          smtpLastTestAt: d.smtpLastTestAt,
-          smtpLastTestOk: d.smtpLastTestOk,
-          smtpLastTestError: d.smtpLastTestError,
-        });
-        const match = SMTP_PRESETS.find((p) => p.host === d.smtpHost);
-        if (match) setPreset(match.label);
-        else if (d.smtpHost) setPreset("Custom");
+        if (d && !("error" in d)) applyLoaded(d);
       })
       .finally(() => setLoading(false));
   };
@@ -109,26 +145,61 @@ export default function AdminEmailSettingsPage() {
     }));
   };
 
+  const payload = () => {
+    const user = form.smtpUser.trim().toLowerCase();
+    const from = form.smtpFromEmail.trim().toLowerCase() || user;
+    return {
+      emailEnabled: form.emailEnabled,
+      smtpHost: form.smtpHost.trim(),
+      smtpPort: Number(form.smtpPort) || 587,
+      smtpSecure: form.smtpSecure,
+      smtpUser: user || from,
+      smtpFromName: form.smtpFromName.trim() || "Codeat Education",
+      smtpFromEmail: from,
+      smtpReplyTo: form.smtpReplyTo.trim().toLowerCase() || null,
+      smtpPassword: smtpPassword.replace(/\s+/g, "") || undefined,
+      requireComplete: form.emailEnabled,
+    };
+  };
+
   const save = async () => {
     setSaving(true);
+    setMsg(null);
+    setErr(null);
     try {
+      const body = payload();
+      if (body.emailEnabled) {
+        if (!body.smtpHost) {
+          setErr("SMTP host required (e.g. smtp.gmail.com)");
+          return;
+        }
+        if (!body.smtpFromEmail) {
+          setErr("From Email required — Gmail address jisse App Password banaya ho");
+          return;
+        }
+        if (!body.smtpPassword && !meta.hasPassword) {
+          setErr("App Password required — Google Account → App passwords se 16-char password paste karo");
+          return;
+        }
+      }
+
       const res = await fetch("/api/admin/platform-settings/email", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          smtpPort: Number(form.smtpPort),
-          smtpPassword: smtpPassword || undefined,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Failed to save");
+        setErr(data.error || "Failed to save");
         return;
       }
       setSmtpPassword("");
-      load();
-      alert("Email settings saved");
+      applyLoaded(data);
+      setMsg(
+        data.configReady
+          ? "SMTP saved permanently. Admin email verification ready."
+          : `Saved, but not ready yet: ${data.configIssue || "complete missing fields"}`,
+      );
     } finally {
       setSaving(false);
     }
@@ -136,22 +207,40 @@ export default function AdminEmailSettingsPage() {
 
   const testSmtp = async () => {
     setTesting(true);
+    setMsg(null);
+    setErr(null);
     try {
+      // Always save first so credentials stay permanent
+      const saveRes = await fetch("/api/admin/platform-settings/email", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload(), emailEnabled: true, requireComplete: true }),
+      });
+      const saved = await saveRes.json();
+      if (!saveRes.ok) {
+        setErr(saved.error || "Save failed before test");
+        return;
+      }
+      applyLoaded(saved);
+
       const res = await fetch("/api/admin/platform-settings/email/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           to: testTo,
-          smtpPassword: smtpPassword || undefined,
+          ...payload(),
+          emailEnabled: true,
+          smtpPassword: smtpPassword.replace(/\s+/g, "") || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "SMTP test failed");
+        setErr(data.error || "SMTP test failed");
         load();
         return;
       }
-      alert(`Test email sent to ${data.sentTo}`);
+      setSmtpPassword("");
+      setMsg(`Test email sent to ${data.sentTo}. Credentials stored permanently.`);
       load();
     } finally {
       setTesting(false);
@@ -159,9 +248,7 @@ export default function AdminEmailSettingsPage() {
   };
 
   if (loading) {
-    return (
-      <PageLoader />
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -174,22 +261,72 @@ export default function AdminEmailSettingsPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Email & SMTP Settings</h1>
-          <p className="text-sm text-slate-500">Configure Gmail/Outlook app password — school admin verification emails</p>
+          <p className="text-sm text-slate-500">
+            Credentials DB me permanent store hote hain — har baar email verify / OTP isi se chalega
+          </p>
         </div>
       </div>
+
+      <Card
+        className={
+          meta.configReady
+            ? "border-emerald-200 bg-emerald-50/60"
+            : "border-amber-200 bg-amber-50/60"
+        }
+      >
+        <CardContent className="p-4 text-sm flex gap-3">
+          {meta.configReady ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+          ) : (
+            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          )}
+          <div>
+            <p className="font-semibold text-slate-900">
+              {meta.configReady ? "SMTP ready — permanent" : "SMTP not ready yet"}
+            </p>
+            <p className="mt-1 text-slate-700 leading-relaxed">
+              {meta.configReady
+                ? "Host, From email, aur App Password save ho chuke hain. School admin OTP emails ab is account se jayenge."
+                : meta.configIssue ||
+                  "Enable email, From Email, aur Google App Password bhar ke Save karo."}
+            </p>
+            {meta.hasPassword ? (
+              <p className="mt-2 text-xs text-slate-600 flex items-center gap-1.5">
+                <KeyRound className="h-3.5 w-3.5" />
+                Saved password: {meta.passwordMasked || "••••"}
+                {meta.passwordDecryptOk === false ? " (re-enter needed)" : ""}
+              </p>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="border-blue-100 bg-blue-50/50">
         <CardContent className="p-4 text-sm text-slate-700 flex gap-3">
           <ShieldCheck className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-slate-900">School Admin email verification</p>
-            <p className="mt-1 leading-relaxed">
-              When enabled, new school admins receive a formatted OTP email (6-digit code). Login is blocked until they enter the OTP on the login page.
-              Use Gmail <strong>App Password</strong> (not regular password) if 2FA is on.
-            </p>
+            <p className="font-semibold text-slate-900">Gmail setup (recommended)</p>
+            <ol className="mt-1 list-decimal pl-4 space-y-1 leading-relaxed">
+              <li>Google Account → Security → 2-Step Verification ON</li>
+              <li>App passwords → Mail → generate 16-character password</li>
+              <li>Neeche From Email = wahi Gmail, App Password paste, Enable ON, Save</li>
+              <li>Send Test — success aaye to OTP permanently kaam karega</li>
+            </ol>
           </div>
         </CardContent>
       </Card>
+
+      {(msg || err) && (
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            err
+              ? "border-red-200 bg-red-50 text-red-800"
+              : "border-emerald-200 bg-emerald-50 text-emerald-800"
+          }`}
+        >
+          {err || msg}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -207,8 +344,12 @@ export default function AdminEmailSettingsPage() {
               className="h-4 w-4 rounded border-slate-300"
             />
             <div>
-              <div className="text-sm font-semibold text-slate-900">Enable email sending & verification</div>
-              <div className="text-xs text-slate-500">Required for school admin email verification</div>
+              <div className="text-sm font-semibold text-slate-900">
+                Enable email sending & verification
+              </div>
+              <div className="text-xs text-slate-500">
+                Required for school admin email OTP verification
+              </div>
             </div>
           </label>
 
@@ -220,24 +361,79 @@ export default function AdminEmailSettingsPage() {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input label="SMTP Host" value={form.smtpHost} onChange={(e) => set("smtpHost", e.target.value)} placeholder="smtp.gmail.com" />
-            <Input label="SMTP Port" value={form.smtpPort} onChange={(e) => set("smtpPort", e.target.value)} placeholder="587" />
-            <Input label="SMTP Username / Email" value={form.smtpUser} onChange={(e) => set("smtpUser", e.target.value)} placeholder="noreply@school.com" />
+            <Input
+              label="SMTP Host *"
+              value={form.smtpHost}
+              onChange={(e) => set("smtpHost", e.target.value)}
+              placeholder="smtp.gmail.com"
+            />
+            <Input
+              label="SMTP Port *"
+              value={form.smtpPort}
+              onChange={(e) => set("smtpPort", e.target.value)}
+              placeholder="587"
+            />
+            <Input
+              label="SMTP Username / Gmail *"
+              value={form.smtpUser}
+              onChange={(e) => {
+                const v = e.target.value;
+                setForm((f) => ({
+                  ...f,
+                  smtpUser: v,
+                  smtpFromEmail: f.smtpFromEmail || v,
+                }));
+              }}
+              placeholder="yourname@gmail.com"
+            />
             <div>
               <Input
-                label="SMTP App Password"
+                label="SMTP App Password *"
                 type="password"
                 value={smtpPassword}
                 onChange={(e) => setSmtpPassword(e.target.value)}
-                placeholder={meta.hasPassword ? "Leave blank to keep saved password" : "16-character app password"}
+                placeholder={
+                  meta.hasPassword
+                    ? "Blank = keep DB password (safe)"
+                    : "xxxx xxxx xxxx xxxx"
+                }
+                autoComplete="new-password"
               />
-              {meta.hasPassword && (
-                <p className="mt-1 text-xs text-slate-500">Saved: {meta.passwordMasked}</p>
+              {meta.hasPassword ? (
+                <div className="mt-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-xs text-emerald-800 space-y-0.5">
+                  <p className="font-semibold flex items-center gap-1.5">
+                    <KeyRound className="h-3.5 w-3.5" />
+                    Password database me permanent hai {meta.passwordMasked}
+                  </p>
+                  <p className="text-emerald-700/90">
+                    Field khali dikhega security ke liye — save delete nahi hota. Sirf naya App Password
+                    paste karoge tab replace hoga.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-1 text-xs text-amber-700">
+                  App Password abhi DB me nahi — ek baar paste karke Save karo (permanent store)
+                </p>
               )}
             </div>
-            <Input label="From Name" value={form.smtpFromName} onChange={(e) => set("smtpFromName", e.target.value)} />
-            <Input label="From Email" type="email" value={form.smtpFromEmail} onChange={(e) => set("smtpFromEmail", e.target.value)} />
-            <Input label="Reply-To (optional)" type="email" value={form.smtpReplyTo} onChange={(e) => set("smtpReplyTo", e.target.value)} />
+            <Input
+              label="From Name"
+              value={form.smtpFromName}
+              onChange={(e) => set("smtpFromName", e.target.value)}
+            />
+            <Input
+              label="From Email *"
+              type="email"
+              value={form.smtpFromEmail}
+              onChange={(e) => set("smtpFromEmail", e.target.value)}
+              placeholder="yourname@gmail.com"
+            />
+            <Input
+              label="Reply-To (optional)"
+              type="email"
+              value={form.smtpReplyTo}
+              onChange={(e) => set("smtpReplyTo", e.target.value)}
+            />
             <label className="flex items-center gap-2 text-sm text-slate-700 pt-7">
               <input
                 type="checkbox"
@@ -277,7 +473,7 @@ export default function AdminEmailSettingsPage() {
           <div className="flex flex-wrap gap-3 pt-2">
             <Button variant="success" onClick={save} disabled={saving}>
               <Save className="h-4 w-4" />
-              {saving ? "Saving…" : "Save Settings"}
+              {saving ? "Saving…" : "Save permanently"}
             </Button>
           </div>
         </CardContent>
@@ -287,13 +483,23 @@ export default function AdminEmailSettingsPage() {
         <CardHeader>
           <CardTitle>Send test email</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row gap-3">
-          <Input label="Send test to" type="email" value={testTo} onChange={(e) => setTestTo(e.target.value)} />
-          <div className="flex items-end">
-            <Button onClick={testSmtp} disabled={testing || !testTo}>
-              <Send className="h-4 w-4" />
-              {testing ? "Sending…" : "Send Test"}
-            </Button>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-slate-500">
+            Test pehle settings save karta hai, phir email bhejta hai — success ke baad credentials permanent rehte hain.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Input
+              label="Send test to"
+              type="email"
+              value={testTo}
+              onChange={(e) => setTestTo(e.target.value)}
+            />
+            <div className="flex items-end">
+              <Button onClick={testSmtp} disabled={testing || !testTo}>
+                <Send className="h-4 w-4" />
+                {testing ? "Saving & sending…" : "Save & Send Test"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

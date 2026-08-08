@@ -21,8 +21,12 @@ import {
   SCHOOL_TYPES,
   PAYMENT_METHODS,
   normalizeFeatureList,
+  normalizeModuleFormats,
+  DEFAULT_MODULE_FORMATS,
+  type ModuleFormatMap,
   type SchoolFeatureKey,
 } from "@/lib/school-features";
+import { ModuleFormatPicker } from "@/components/admin/module-format-picker";
 import { ArrowLeft, School, Save, ToggleLeft, ToggleRight, FileText, CreditCard, LayoutGrid, Users, MapPin, Phone, Mail, Globe, Pencil, Trash2 } from "lucide-react";
 
 type Tab = "overview" | "edit" | "contract" | "payments" | "features" | "admins";
@@ -139,6 +143,7 @@ export default function SchoolDetailPage() {
   const [toggling, setToggling] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [features, setFeatures] = useState<SchoolFeatureKey[]>([]);
+  const [moduleFormats, setModuleFormats] = useState<ModuleFormatMap>({ ...DEFAULT_MODULE_FORMATS });
   const [planName, setPlanName] = useState("standard");
   const [editForm, setEditForm] = useState<EditForm>(emptyEditForm());
   const [paymentForm, setPaymentForm] = useState({
@@ -164,9 +169,10 @@ export default function SchoolDetailPage() {
         }
         setSchool(d);
         setEditForm(schoolToEditForm(d));
-        const sub = d.subscription as { enabledFeatures?: unknown; planName?: string } | null;
+        const sub = d.subscription as { enabledFeatures?: unknown; planName?: string; moduleFormats?: unknown } | null;
         if (sub) {
           setFeatures(normalizeFeatureList(sub.enabledFeatures));
+          setModuleFormats(normalizeModuleFormats(sub.moduleFormats));
           setPlanName(sub.planName || "standard");
         }
       })
@@ -242,14 +248,14 @@ export default function SchoolDetailPage() {
       const res = await fetch(`/api/admin/schools/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabledFeatures: features, planName }),
+        body: JSON.stringify({ enabledFeatures: features, moduleFormats, planName }),
       });
       if (!res.ok) {
         const d = await res.json();
         setErr(d.error || "Failed to save features");
         return;
       }
-      setMsg("Panel access saved.");
+      setMsg("Panel access & formats saved.");
       load();
     } finally {
       setSaving(false);
@@ -886,12 +892,18 @@ export default function SchoolDetailPage() {
               <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Features"}
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-8">
             <FeatureToggleGrid
               planName={planName}
               selected={features}
               onPlanChange={setPlanName}
               onChange={setFeatures}
+            />
+            <ModuleFormatPicker
+              formats={moduleFormats}
+              onChange={setModuleFormats}
+              enabledFeatures={features}
+              schoolCode={editForm.code}
             />
           </CardContent>
         </Card>

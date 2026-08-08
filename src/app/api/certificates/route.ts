@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { requireSchoolFeature } from "@/lib/school-feature-access";
 import { studentFullName } from "@/lib/certificates/date-to-words";
 import { buildAttendanceRows, toClassRegisterRows } from "@/lib/attendance";
 import { assertTeacherAttendanceAccess } from "@/lib/teacher-attendance";
@@ -134,6 +135,7 @@ function buildClassRegisterFromAttendance(
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth();
+    await requireSchoolFeature(session.schoolId, "certificates");
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "students";
     const classId = searchParams.get("classId");

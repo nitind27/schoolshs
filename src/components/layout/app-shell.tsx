@@ -17,6 +17,7 @@ import { FeatureTourDemoSearchBridge } from "@/components/feature-tour/feature-t
 import { PageLoader } from "@/components/ui/loader";
 import { RouteProgressGate } from "@/components/layout/route-progress";
 import { SidebarCollapseProvider } from "@/components/layout/sidebar-collapse";
+import { SchoolFeatureRouteGuard } from "@/components/school/school-feature-route-guard";
 
 function LayoutForRole({ role, children }: { role: UserRole; children: React.ReactNode }) {
   switch (role) {
@@ -231,9 +232,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   if (role) {
     return (
-      <LayoutForRole key={role} role={role}>
-        {children}
-      </LayoutForRole>
+      <SchoolFeatureRouteGuard role={role}>
+        <LayoutForRole key={role} role={role}>
+          {children}
+        </LayoutForRole>
+      </SchoolFeatureRouteGuard>
     );
   }
 

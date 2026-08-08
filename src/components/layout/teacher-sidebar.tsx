@@ -18,10 +18,13 @@ import {
   PartyPopper,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
+import { hrefToFeature, isFeatureEnabled } from "@/lib/school-features";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 import "@/components/teacher/teacher-portal.css";
 
 export function TeacherLayout({ children }: { children: React.ReactNode }) {
   const t = useT();
+  const { features } = useSchoolFeatures();
 
   const navItems = [
     {
@@ -86,13 +89,20 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
     },
   ];
 
+  const filteredItems = features
+    ? navItems.filter((item) => {
+        const key = hrefToFeature(item.href);
+        return !key || isFeatureEnabled(features, key);
+      })
+    : navItems;
+
   return (
     <PortalLayout profileHref="/profile" shellClassName="teacher-portal-shell">
       <PortalSidebar
         title={t("teacherNav.title")}
         subtitle={t("teacherNav.subtitle")}
         theme="teacher"
-        navItems={navItems}
+        navItems={filteredItems}
         homeHref="/teacher"
         roleIcon={BookMarked}
       />

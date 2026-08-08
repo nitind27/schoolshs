@@ -11,13 +11,15 @@ export type SendMailInput = {
 };
 
 function createTransporter(config: SmtpConfig): Transporter {
+  const isSecurePort = config.smtpPort === 465 || config.smtpSecure;
   return nodemailer.createTransport({
     host: config.smtpHost,
     port: config.smtpPort,
-    secure: config.smtpSecure,
+    secure: isSecurePort,
+    requireTLS: !isSecurePort && config.smtpPort === 587,
     auth: {
       user: config.smtpUser,
-      pass: config.smtpPassword,
+      pass: config.smtpPassword.replace(/\s+/g, ""),
     },
   });
 }

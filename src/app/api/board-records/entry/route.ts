@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireSchoolAuth, AuthError } from "@/lib/auth";
+import { AuthError } from "@/lib/auth";
+import { requireBoardRecordsAuth } from "@/lib/board-records-auth";
 import { parseStreamFromClassName } from "@/lib/board-records/class-utils";
 
 const BOARD_STANDARDS = ["10", "12"];
@@ -43,7 +44,7 @@ async function assertClassAccess(
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth([
+    const session = await requireBoardRecordsAuth([
       "school_admin",
       "teacher",
       "clerk",
@@ -118,7 +119,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth([
+    const session = await requireBoardRecordsAuth([
       "school_admin",
       "teacher",
       "clerk",

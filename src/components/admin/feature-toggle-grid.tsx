@@ -66,7 +66,12 @@ export function FeatureToggleGrid({
       </div>
 
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-800">Panel & Feature Access</p>
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Panel & Feature Access</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Only toggled modules appear for this school. New modules you add in code show up here — assign per school.
+          </p>
+        </div>
         <span className="text-xs font-medium text-violet-700 bg-violet-100 px-2.5 py-1 rounded-full">
           {selected.length} enabled
         </span>

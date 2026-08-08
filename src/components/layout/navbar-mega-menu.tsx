@@ -10,11 +10,23 @@ import {
   FT_MEGA_CLOSE_EVENT,
   FT_MEGA_OPEN_EVENT,
 } from "@/components/feature-tour/feature-tour-panel";
+import { hrefToFeature, isFeatureEnabled } from "@/lib/school-features";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 
 export function NavbarMegaMenu() {
   const t = useT();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const { features } = useSchoolFeatures();
+
+  const hasAnyLink = !features
+    ? true
+    : REPORTS_CERTS_MEGA_MENU.some((col) =>
+        col.links.some((link) => {
+          const key = hrefToFeature(link.href);
+          return !key || isFeatureEnabled(features, key);
+        }),
+      );
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -47,6 +59,8 @@ export function NavbarMegaMenu() {
       document.body.style.overflow = previous;
     };
   }, [open]);
+
+  if (!hasAnyLink) return null;
 
   return (
     <div className="relative" ref={rootRef}>
@@ -107,6 +121,26 @@ function MegaPanel({
   showClose?: boolean;
 }) {
   const t = useT();
+  const { features } = useSchoolFeatures();
+
+  const columns = REPORTS_CERTS_MEGA_MENU.map((col) => ({
+    ...col,
+    links: col.links.filter((link) => {
+      if (!features) return true;
+      const key = hrefToFeature(link.href);
+      return !key || isFeatureEnabled(features, key);
+    }),
+  })).filter((col) => col.links.length > 0);
+
+  if (!columns.length) {
+    return (
+      <div className="tn-mega-body p-4 text-sm text-slate-500">
+        No report modules enabled for this school.
+      </div>
+    );
+  }
+
+  const primaryHref = columns[0]?.links[0]?.href ?? "/export";
 
   return (
     <div className="tn-mega-body">
@@ -117,11 +151,7 @@ function MegaPanel({
           <p className="tn-mega-sub">{t("megaMenu.panelSubtitle")}</p>
         </div>
         <div className="tn-mega-head-actions">
-          <Link
-            href="/certificates"
-            onClick={onNavigate}
-            className="tn-mega-all"
-          >
+          <Link href={primaryHref} onClick={onNavigate} className="tn-mega-all">
             {t("megaMenu.viewAll")}
             <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
@@ -139,7 +169,7 @@ function MegaPanel({
       </header>
 
       <div className="tn-mega-cols">
-        {REPORTS_CERTS_MEGA_MENU.map((col) => {
+        {columns.map((col) => {
           const ColIcon = col.icon;
           const [featured, ...rest] = col.links;
           const FeatIcon = featured.icon;
@@ -184,9 +214,7 @@ function MegaPanel({
                         </span>
                         <span className="tn-mega-link-text">
                           <span>{t(link.labelKey)}</span>
-                          {link.descKey ? (
-                            <small>{t(link.descKey)}</small>
-                          ) : null}
+                          {link.descKey ? <small>{t(link.descKey)}</small> : null}
                         </span>
                       </Link>
                     </li>

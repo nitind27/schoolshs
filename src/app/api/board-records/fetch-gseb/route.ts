@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireSchoolAuth, AuthError } from "@/lib/auth";
+import { AuthError } from "@/lib/auth";
+import { requireBoardRecordsAuth } from "@/lib/board-records-auth";
 import { parseStreamFromClassName } from "@/lib/board-records/class-utils";
 import { getBoardResultListConfig } from "@/lib/board-records/result-list-config";
 import { fetchGsebResult } from "@/lib/gseb/fetch-gseb";
@@ -20,7 +21,7 @@ async function clearStale(studentId: string, standard: "10" | "12") {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
+    const session = await requireBoardRecordsAuth(["school_admin", "teacher", "clerk"]);
     const body = await request.json();
     const studentId = body.studentId as string | undefined;
     const standardOverride = body.standard as string | undefined;

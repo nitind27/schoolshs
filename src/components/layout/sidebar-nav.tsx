@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
-import type { SchoolFeatureKey } from "@/lib/school-features";
+import { hrefToFeature, type SchoolFeatureKey } from "@/lib/school-features";
 import { useSidebarCollapse } from "@/components/layout/sidebar-collapse";
 
 export type NavLinkItem = {
@@ -306,6 +306,15 @@ export function SidebarNavEntries({
   );
 }
 
+function resolveNavFeatureKey(
+  featureKey: SchoolFeatureKey | undefined,
+  href?: string,
+): SchoolFeatureKey | null {
+  if (featureKey) return featureKey;
+  if (href) return hrefToFeature(href);
+  return null;
+}
+
 export function filterNavEntries(
   items: NavEntry[],
   enabledFeatures: SchoolFeatureKey[] | null,
@@ -316,13 +325,16 @@ export function filterNavEntries(
   return items
     .map((item) => {
       if (item.type === "link") {
-        if (item.featureKey && !isEnabled(enabledFeatures, item.featureKey)) return null;
+        const key = resolveNavFeatureKey(item.featureKey, item.href);
+        if (key && !isEnabled(enabledFeatures, key)) return null;
         return item;
       }
-      if (item.featureKey && !isEnabled(enabledFeatures, item.featureKey)) return null;
-      const children = item.children.filter(
-        (c) => !c.featureKey || isEnabled(enabledFeatures, c.featureKey),
-      );
+      const parentKey = resolveNavFeatureKey(item.featureKey);
+      if (parentKey && !isEnabled(enabledFeatures, parentKey)) return null;
+      const children = item.children.filter((c) => {
+        const key = resolveNavFeatureKey(c.featureKey, c.href);
+        return !key || isEnabled(enabledFeatures, key);
+      });
       if (!children.length) return null;
       return { ...item, children };
     })

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, hashPassword, AuthError } from "@/lib/auth";
-import { defaultFeaturesForPlan, normalizeFeatureList } from "@/lib/school-features";
+import { defaultFeaturesForPlan, normalizeFeatureList, normalizeModuleFormats } from "@/lib/school-features";
+import {
+  isKnownCertificatePackId,
+  resolveCertificatePackId,
+} from "@/lib/certificates/packs-registry";
 import { parseDate, parseDecimal } from "@/lib/admin-school";
 import { generateUniqueSchoolCode } from "@/lib/school-code";
 import {
@@ -14,6 +18,7 @@ import {
   consumePendingAdminEmailVerification,
 } from "@/lib/pending-admin-email-otp";
 import { Prisma } from "@/generated/prisma/client";
+import { repairEmptySubscriptionJson } from "@/lib/repair-subscription-json";
 
 const schoolInclude = {
   _count: { select: { students: true, users: true, classes: true, staff: true, payments: true } },
@@ -28,14 +33,33 @@ const schoolInclude = {
 export async function GET() {
   try {
     await requireAuth(["super_admin"]);
-    const schools = await prisma.school.findMany({
-      orderBy: { createdAt: "desc" },
-      include: schoolInclude,
-    });
+    let schools;
+    try {
+      schools = await prisma.school.findMany({
+        orderBy: { createdAt: "desc" },
+        include: schoolInclude,
+      });
+    } catch (queryErr) {
+      // Empty LONGTEXT JSON fields (e.g. moduleFormats="") break Prisma parse
+      const msg = queryErr instanceof Error ? queryErr.message : String(queryErr);
+      if (msg.includes("JSON") || msg.includes("Unexpected end")) {
+        await repairEmptySubscriptionJson();
+        schools = await prisma.school.findMany({
+          orderBy: { createdAt: "desc" },
+          include: schoolInclude,
+        });
+      } else {
+        throw queryErr;
+      }
+    }
     return NextResponse.json({ schools });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    console.error("GET /api/admin/schools failed", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed" },
+      { status: 500 },
+    );
   }
 }
 
@@ -69,6 +93,14 @@ export async function POST(request: NextRequest) {
 
     const planName = String(body.planName || "standard");
     const features = normalizeFeatureList(body.enabledFeatures ?? defaultFeaturesForPlan(planName));
+    let moduleFormats = normalizeModuleFormats(body.moduleFormats);
+    // If a pack folder exists for this school code and SA didn't pick another, auto-bind it
+    if (
+      (!body.moduleFormats || !body.moduleFormats.certificates) &&
+      isKnownCertificatePackId(code)
+    ) {
+      moduleFormats = { ...moduleFormats, certificates: resolveCertificatePackId(code) };
+    }
     const contractValue = parseDecimal(body.contractValue);
     const totalAmount = parseDecimal(body.totalAmount) ?? contractValue;
     const initialPayment = parseDecimal(body.initialPayment);
@@ -148,6 +180,7 @@ export async function POST(request: NextRequest) {
               contractDocumentPath: body.contractDocumentPath || null,
               contractNotes: body.contractNotes || null,
               enabledFeatures: features,
+              moduleFormats,
               paymentStatus,
               totalAmount: totalAmount != null ? new Prisma.Decimal(totalAmount) : null,
               paidAmount: new Prisma.Decimal(paidAmount),

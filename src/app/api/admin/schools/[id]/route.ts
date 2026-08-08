@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, AuthError } from "@/lib/auth";
-import { normalizeFeatureList } from "@/lib/school-features";
+import { normalizeFeatureList, normalizeModuleFormats } from "@/lib/school-features";
 import { parseDate, parseDecimal } from "@/lib/admin-school";
 import { Prisma } from "@/generated/prisma/client";
+import { repairEmptySubscriptionJson } from "@/lib/repair-subscription-json";
 
 const schoolInclude = {
   _count: { select: { students: true, users: true, classes: true, staff: true, payments: true } },
@@ -18,16 +19,33 @@ const schoolInclude = {
 
 type Params = { params: Promise<{ id: string }> };
 
+async function loadSchool(id: string) {
+  try {
+    return await prisma.school.findUnique({ where: { id }, include: schoolInclude });
+  } catch (queryErr) {
+    const msg = queryErr instanceof Error ? queryErr.message : String(queryErr);
+    if (msg.includes("JSON") || msg.includes("Unexpected end")) {
+      await repairEmptySubscriptionJson();
+      return prisma.school.findUnique({ where: { id }, include: schoolInclude });
+    }
+    throw queryErr;
+  }
+}
+
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     await requireAuth(["super_admin"]);
     const { id } = await params;
-    const school = await prisma.school.findUnique({ where: { id }, include: schoolInclude });
+    const school = await loadSchool(id);
     if (!school) return NextResponse.json({ error: "School not found" }, { status: 404 });
     return NextResponse.json(school);
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    console.error("GET /api/admin/schools/[id] failed", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed" },
+      { status: 500 },
+    );
   }
 }
 
@@ -79,6 +97,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (body.contractNotes !== undefined) subData.contractNotes = body.contractNotes || null;
     if (body.contractDocumentPath !== undefined) subData.contractDocumentPath = body.contractDocumentPath || null;
     if (body.enabledFeatures !== undefined) subData.enabledFeatures = normalizeFeatureList(body.enabledFeatures);
+    if (body.moduleFormats !== undefined) subData.moduleFormats = normalizeModuleFormats(body.moduleFormats);
     if (body.paymentStatus !== undefined) subData.paymentStatus = String(body.paymentStatus);
     if (body.totalAmount !== undefined) {
       const v = parseDecimal(body.totalAmount);

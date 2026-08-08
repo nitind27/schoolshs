@@ -91,8 +91,13 @@ async function assertUserCanLogin(user: UserWithSchool): Promise<void> {
     if (!activeSchool?.isActive) {
       throw new AuthError("No active school assigned for CA", 403);
     }
+    const { assertPortalFeatureForRole } = await import("@/lib/school-feature-access");
+    await assertPortalFeatureForRole(activeSchool.id, "ca");
   } else if (user.role !== "super_admin" && (!user.schoolId || !user.school?.isActive)) {
     throw new AuthError("School inactive or not assigned", 403);
+  } else if (user.schoolId && ["teacher", "clerk", "student"].includes(user.role)) {
+    const { assertPortalFeatureForRole } = await import("@/lib/school-feature-access");
+    await assertPortalFeatureForRole(user.schoolId, user.role);
   }
 }
 

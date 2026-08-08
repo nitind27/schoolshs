@@ -4,7 +4,7 @@ import {
   PortalSidebar,
   PortalLayout,
 } from "@/components/layout/portal-sidebar";
-import type { NavEntry } from "@/components/layout/sidebar-nav";
+import { filterNavEntries, type NavEntry } from "@/components/layout/sidebar-nav";
 import {
   LayoutDashboard,
   Users,
@@ -36,11 +36,14 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
+import { isFeatureEnabled } from "@/lib/school-features";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 import "@/components/clerk/clerk-portal.css";
 
 /** Clerk nav — few top menus + collapsible submenus (easy to scan). */
 export function ClerkLayout({ children }: { children: React.ReactNode }) {
   const t = useT();
+  const { features } = useSchoolFeatures();
 
   const navEntries: NavEntry[] = [
     {
@@ -269,13 +272,15 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
     },
   ];
 
+  const filteredEntries = filterNavEntries(navEntries, features, isFeatureEnabled);
+
   return (
     <PortalLayout profileHref="/profile" shellClassName="clerk-portal-shell">
       <PortalSidebar
         title={t("clerkNav.title")}
         subtitle={t("clerkNav.subtitle")}
         theme="clerk"
-        navEntries={navEntries}
+        navEntries={filteredEntries}
         homeHref="/clerk"
         roleIcon={UserCheck}
       />

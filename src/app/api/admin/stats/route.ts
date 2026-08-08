@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, AuthError } from "@/lib/auth";
+import { repairEmptySubscriptionJson } from "@/lib/repair-subscription-json";
 
 function monthKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -19,6 +20,201 @@ function lastNMonthKeys(n: number): string[] {
     keys.push(monthKey(d));
   }
   return keys;
+}
+
+function startOfDay(d = new Date()) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function daysUntil(date: Date | null | undefined, today: Date): number | null {
+  if (!date) return null;
+  const end = startOfDay(new Date(date));
+  return Math.round((end.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+type ReminderKind = "expired" | "expiring" | "due_overdue" | "due_soon";
+
+function buildReminders(
+  schools: Array<{
+    id: string;
+    name: string;
+    code: string;
+    isActive: boolean;
+    subscription: {
+      contractEndDate: Date | null;
+      nextDueDate: Date | null;
+      paymentStatus: string | null;
+      planName: string | null;
+    } | null;
+  }>,
+) {
+  const today = startOfDay();
+  const reminders: Array<{
+    kind: ReminderKind;
+    schoolId: string;
+    schoolName: string;
+    schoolCode: string;
+    planName: string | null;
+    date: string | null;
+    daysLeft: number | null;
+    paymentStatus: string | null;
+    message: string;
+  }> = [];
+
+  for (const s of schools) {
+    const sub = s.subscription;
+    if (!sub) continue;
+
+    const endDays = daysUntil(sub.contractEndDate, today);
+    if (endDays != null) {
+      if (endDays < 0) {
+        reminders.push({
+          kind: "expired",
+          schoolId: s.id,
+          schoolName: s.name,
+          schoolCode: s.code,
+          planName: sub.planName,
+          date: sub.contractEndDate!.toISOString(),
+          daysLeft: endDays,
+          paymentStatus: sub.paymentStatus,
+          message: `Portal expired ${Math.abs(endDays)} day(s) ago`,
+        });
+      } else if (endDays <= 30) {
+        reminders.push({
+          kind: "expiring",
+          schoolId: s.id,
+          schoolName: s.name,
+          schoolCode: s.code,
+          planName: sub.planName,
+          date: sub.contractEndDate!.toISOString(),
+          daysLeft: endDays,
+          paymentStatus: sub.paymentStatus,
+          message:
+            endDays === 0
+              ? "Portal expires today"
+              : `Portal expires in ${endDays} day(s)`,
+        });
+      }
+    }
+
+    const dueDays = daysUntil(sub.nextDueDate, today);
+    const paySt = sub.paymentStatus || "pending";
+    if (dueDays != null && (paySt === "pending" || paySt === "partial" || paySt === "overdue")) {
+      if (dueDays < 0 || paySt === "overdue") {
+        reminders.push({
+          kind: "due_overdue",
+          schoolId: s.id,
+          schoolName: s.name,
+          schoolCode: s.code,
+          planName: sub.planName,
+          date: sub.nextDueDate!.toISOString(),
+          daysLeft: dueDays,
+          paymentStatus: paySt,
+          message:
+            dueDays != null && dueDays < 0
+              ? `Payment overdue by ${Math.abs(dueDays)} day(s)`
+              : "Payment overdue",
+        });
+      } else if (dueDays <= 14) {
+        reminders.push({
+          kind: "due_soon",
+          schoolId: s.id,
+          schoolName: s.name,
+          schoolCode: s.code,
+          planName: sub.planName,
+          date: sub.nextDueDate!.toISOString(),
+          daysLeft: dueDays,
+          paymentStatus: paySt,
+          message:
+            dueDays === 0 ? "Payment due today" : `Payment due in ${dueDays} day(s)`,
+        });
+      }
+    }
+  }
+
+  const rank: Record<ReminderKind, number> = {
+    expired: 0,
+    due_overdue: 1,
+    expiring: 2,
+    due_soon: 3,
+  };
+
+  reminders.sort((a, b) => {
+    const rk = rank[a.kind] - rank[b.kind];
+    if (rk !== 0) return rk;
+    return (a.daysLeft ?? 9999) - (b.daysLeft ?? 9999);
+  });
+
+  return {
+    reminders,
+    summary: {
+      portalExpired: reminders.filter((r) => r.kind === "expired").length,
+      portalExpiringSoon: reminders.filter((r) => r.kind === "expiring").length,
+      paymentOverdue: reminders.filter((r) => r.kind === "due_overdue").length,
+      paymentDueSoon: reminders.filter((r) => r.kind === "due_soon").length,
+    },
+  };
+}
+
+async function loadSchoolsForStats() {
+  try {
+    return await prisma.school.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        subscription: {
+          select: {
+            totalAmount: true,
+            paidAmount: true,
+            paymentStatus: true,
+            planName: true,
+            contractValue: true,
+            contractStartDate: true,
+            contractEndDate: true,
+            nextDueDate: true,
+          },
+        },
+        settings: { select: { logoPath: true, schoolName: true } },
+        _count: { select: { students: true, users: true, staff: true, classes: true } },
+        users: {
+          where: { role: "school_admin" },
+          select: { id: true, name: true, email: true, isActive: true },
+          take: 3,
+        },
+      },
+    });
+  } catch (queryErr) {
+    const msg = queryErr instanceof Error ? queryErr.message : String(queryErr);
+    if (msg.includes("JSON") || msg.includes("Unexpected end")) {
+      await repairEmptySubscriptionJson();
+      return prisma.school.findMany({
+        orderBy: { name: "asc" },
+        include: {
+          subscription: {
+            select: {
+              totalAmount: true,
+              paidAmount: true,
+              paymentStatus: true,
+              planName: true,
+              contractValue: true,
+              contractStartDate: true,
+              contractEndDate: true,
+              nextDueDate: true,
+            },
+          },
+          settings: { select: { logoPath: true, schoolName: true } },
+          _count: { select: { students: true, users: true, staff: true, classes: true } },
+          users: {
+            where: { role: "school_admin" },
+            select: { id: true, name: true, email: true, isActive: true },
+            take: 3,
+          },
+        },
+      });
+    }
+    throw queryErr;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -43,6 +239,9 @@ export async function GET(request: NextRequest) {
               paymentStatus: true,
               planName: true,
               contractValue: true,
+              contractStartDate: true,
+              contractEndDate: true,
+              nextDueDate: true,
             },
           },
           _count: { select: { students: true, users: true, staff: true, classes: true } },
@@ -79,6 +278,7 @@ export async function GET(request: NextRequest) {
       const st = school.subscription?.paymentStatus || "pending";
       const pendingPayments = st === "pending" || st === "partial" || st === "overdue" ? 1 : 0;
       const planName = school.subscription?.planName || "none";
+      const reminderBundle = buildReminders([school]);
 
       const monthlyMap: Record<string, number> = Object.fromEntries(months.map((k) => [k, 0]));
       for (const p of payments) {
@@ -127,6 +327,8 @@ export async function GET(request: NextRequest) {
           label: monthLabel(k),
           count: monthKey(school.createdAt) === k ? 1 : 0,
         })),
+        ...reminderBundle,
+        schoolDirectory: [],
       });
     }
 
@@ -152,20 +354,7 @@ export async function GET(request: NextRequest) {
       prisma.schoolClass.count(),
       prisma.user.count(),
       prisma.schoolPayment.aggregate({ _sum: { amount: true } }),
-      prisma.school.findMany({
-        include: {
-          subscription: {
-            select: {
-              totalAmount: true,
-              paidAmount: true,
-              paymentStatus: true,
-              planName: true,
-              contractValue: true,
-            },
-          },
-          _count: { select: { students: true } },
-        },
-      }),
+      loadSchoolsForStats(),
       prisma.schoolPayment.findMany({
         where: { paymentDate: { gte: monthStart } },
         select: { amount: true, paymentDate: true },
@@ -235,6 +424,38 @@ export async function GET(request: NextRequest) {
       if (k in growthMap) growthMap[k] += 1;
     }
 
+    const reminderBundle = buildReminders(schools);
+    const today = startOfDay();
+
+    const schoolDirectory = schools.map((s) => {
+      const sub = s.subscription;
+      const endDays = daysUntil(sub?.contractEndDate ?? null, today);
+      const dueDays = daysUntil(sub?.nextDueDate ?? null, today);
+      return {
+        id: s.id,
+        name: s.name,
+        code: s.code,
+        district: s.district,
+        city: s.city,
+        isActive: s.isActive,
+        students: s._count.students,
+        staff: s._count.staff,
+        classes: s._count.classes,
+        users: s._count.users,
+        admins: s.users,
+        logoPath: s.settings?.logoPath || null,
+        planName: sub?.planName || null,
+        paymentStatus: sub?.paymentStatus || null,
+        totalAmount: sub?.totalAmount != null ? Number(sub.totalAmount) : null,
+        paidAmount: sub?.paidAmount != null ? Number(sub.paidAmount) : null,
+        contractStartDate: sub?.contractStartDate?.toISOString() || null,
+        contractEndDate: sub?.contractEndDate?.toISOString() || null,
+        nextDueDate: sub?.nextDueDate?.toISOString() || null,
+        portalDaysLeft: endDays,
+        paymentDaysLeft: dueDays,
+      };
+    });
+
     return NextResponse.json({
       schoolId: "all",
       schoolCount,
@@ -266,9 +487,15 @@ export async function GET(request: NextRequest) {
         label: monthLabel(k),
         count: growthMap[k] || 0,
       })),
+      ...reminderBundle,
+      schoolDirectory,
     });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    console.error("GET /api/admin/stats failed", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed" },
+      { status: 500 },
+    );
   }
 }

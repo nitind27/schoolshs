@@ -25,7 +25,10 @@ export type SmtpSettingsPublic = {
   smtpFromEmail: string | null;
   smtpReplyTo: string | null;
   hasPassword: boolean;
+  passwordDecryptOk: boolean;
   passwordMasked: string;
+  configReady: boolean;
+  configIssue: string | null;
   smtpLastTestAt: string | null;
   smtpLastTestOk: boolean | null;
   smtpLastTestError: string | null;
@@ -48,39 +51,50 @@ export async function isEmailEnabled(): Promise<boolean> {
 }
 
 /** Why SMTP is not ready — for admin UI / OTP errors */
-export async function getSmtpConfigIssue(): Promise<string | null> {
-  const row = await getPlatformSettings();
-  if (!row.emailEnabled) {
-    return "Email is disabled. Enable it in Admin → Email Settings.";
+export async function getSmtpConfigIssue(
+  row?: Awaited<ReturnType<typeof getPlatformSettings>>,
+): Promise<string | null> {
+  const settings = row || (await getPlatformSettings());
+  if (!settings.emailEnabled) {
+    return "Email is disabled. Enable it in Admin → Email Settings and Save.";
   }
-  if (!row.smtpHost?.trim()) return "SMTP host is missing.";
-  if (!row.smtpFromEmail?.trim()) return "From email is missing.";
-  if (!row.smtpPasswordEnc?.trim()) {
-    return "SMTP app password is not saved. Enter it and click Save.";
+  if (!settings.smtpHost?.trim()) return "SMTP host is missing.";
+  if (!settings.smtpFromEmail?.trim() && !settings.smtpUser?.trim()) {
+    return "From email / SMTP username is missing. Enter Gmail address and Save.";
   }
-  const password = decryptSecret(row.smtpPasswordEnc);
+  if (!settings.smtpFromEmail?.trim()) {
+    return "From email is missing. Enter sender email and Save.";
+  }
+  if (!settings.smtpPasswordEnc?.trim()) {
+    return "SMTP app password is not saved. Enter the 16-character App Password and click Save.";
+  }
+  const password = decryptSecret(settings.smtpPasswordEnc);
   if (!password) {
-    return "SMTP password could not be decrypted. Re-enter the app password and Save (do not change AUTH_SECRET after saving).";
+    return "Saved SMTP password cannot be decrypted. Re-enter App Password and Save (keep AUTH_SECRET unchanged).";
   }
   return null;
 }
 
 export async function getSmtpConfig(): Promise<SmtpConfig | null> {
   const row = await getPlatformSettings();
-  if (!row.emailEnabled || !row.smtpHost || !row.smtpFromEmail) return null;
+  if (!row.emailEnabled) return null;
+
+  const fromEmail = (row.smtpFromEmail || row.smtpUser || "").trim().toLowerCase();
+  const host = (row.smtpHost || "").trim();
+  if (!host || !fromEmail) return null;
 
   const password = decryptSecret(row.smtpPasswordEnc);
   if (!password) return null;
 
   return {
     emailEnabled: true,
-    smtpHost: row.smtpHost,
+    smtpHost: host,
     smtpPort: row.smtpPort || 587,
     smtpSecure: row.smtpSecure,
-    smtpUser: row.smtpUser || row.smtpFromEmail,
+    smtpUser: (row.smtpUser || fromEmail).trim(),
     smtpPassword: password,
-    smtpFromName: row.smtpFromName || "SHS Education Portal",
-    smtpFromEmail: row.smtpFromEmail,
+    smtpFromName: row.smtpFromName || "Codeat Education",
+    smtpFromEmail: fromEmail,
     smtpReplyTo: row.smtpReplyTo,
   };
 }
@@ -89,6 +103,22 @@ export function toPublicSmtpSettings(
   row: Awaited<ReturnType<typeof getPlatformSettings>>,
 ): SmtpSettingsPublic {
   const password = decryptSecret(row.smtpPasswordEnc);
+  const hasPassword = Boolean(row.smtpPasswordEnc);
+  const passwordDecryptOk = Boolean(password);
+  const fromEmail = row.smtpFromEmail || row.smtpUser;
+  const configReady =
+    row.emailEnabled &&
+    Boolean(row.smtpHost?.trim()) &&
+    Boolean(fromEmail?.trim()) &&
+    passwordDecryptOk;
+
+  let configIssue: string | null = null;
+  if (!row.emailEnabled) configIssue = "Email sending is disabled.";
+  else if (!row.smtpHost?.trim()) configIssue = "SMTP host missing.";
+  else if (!fromEmail?.trim()) configIssue = "From email missing.";
+  else if (!hasPassword) configIssue = "App password not saved.";
+  else if (!passwordDecryptOk) configIssue = "Saved password cannot be decrypted — re-enter and Save.";
+
   return {
     emailEnabled: row.emailEnabled,
     smtpHost: row.smtpHost,
@@ -98,8 +128,11 @@ export function toPublicSmtpSettings(
     smtpFromName: row.smtpFromName,
     smtpFromEmail: row.smtpFromEmail,
     smtpReplyTo: row.smtpReplyTo,
-    hasPassword: Boolean(row.smtpPasswordEnc),
-    passwordMasked: password ? `••••••••${password.slice(-4)}` : "",
+    hasPassword,
+    passwordDecryptOk,
+    passwordMasked: password ? `••••••••${password.slice(-4)}` : hasPassword ? "••••••••(locked)" : "",
+    configReady,
+    configIssue,
     smtpLastTestAt: row.smtpLastTestAt?.toISOString() ?? null,
     smtpLastTestOk: row.smtpLastTestOk,
     smtpLastTestError: row.smtpLastTestError,

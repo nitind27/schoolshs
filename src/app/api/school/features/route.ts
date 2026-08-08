@@ -1,25 +1,17 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
-import { normalizeFeatureList, SCHOOL_FEATURE_KEYS, type SchoolFeatureKey } from "@/lib/school-features";
+import { getSchoolFeatureBundle } from "@/lib/school-feature-access";
 
 export async function GET() {
   try {
     const session = await requireSchoolAuth();
-    const sub = await prisma.schoolSubscription.findUnique({ where: { schoolId: session.schoolId } });
-
-    let features: SchoolFeatureKey[];
-    if (!sub) {
-      features = [...SCHOOL_FEATURE_KEYS];
-    } else {
-      const enabled = normalizeFeatureList(sub.enabledFeatures);
-      features = enabled.length ? enabled : [...SCHOOL_FEATURE_KEYS];
-    }
+    const bundle = await getSchoolFeatureBundle(session.schoolId);
 
     return NextResponse.json({
-      features,
-      planName: sub?.planName ?? "legacy",
-      paymentStatus: sub?.paymentStatus ?? "paid",
+      features: bundle.features,
+      formats: bundle.formats,
+      planName: bundle.planName,
+      paymentStatus: bundle.paymentStatus,
     });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });

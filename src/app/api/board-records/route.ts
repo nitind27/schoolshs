@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireSchoolAuth, AuthError } from "@/lib/auth";
+import { AuthError } from "@/lib/auth";
+import { requireBoardRecordsAuth } from "@/lib/board-records-auth";
 
 export async function GET() {
   try {
-    const session = await requireSchoolAuth([
-      "school_admin",
-      "teacher",
-      "clerk",
-    ]);
+    const session = await requireBoardRecordsAuth();
 
     const where: Record<string, unknown> = { schoolId: session.schoolId };
     if (session.role === "teacher") {

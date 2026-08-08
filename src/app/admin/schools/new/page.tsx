@@ -15,9 +15,13 @@ import {
   SCHOOL_TYPES,
   PAYMENT_METHODS,
   defaultFeaturesForPlan,
+  DEFAULT_MODULE_FORMATS,
+  normalizeModuleFormats,
+  type ModuleFormatMap,
   type SchoolFeatureKey,
 } from "@/lib/school-features";
 import { FeatureToggleGrid } from "@/components/admin/feature-toggle-grid";
+import { ModuleFormatPicker } from "@/components/admin/module-format-picker";
 import { FileUploadField } from "@/components/admin/file-upload-field";
 import { SchoolLocationFields } from "@/components/admin/school-location-fields";
 import { StepWizard } from "@/components/admin/admin-ui";
@@ -57,6 +61,7 @@ const INITIAL_FORM = {
   initialPaymentRef: "",
   nextDueDate: "",
   enabledFeatures: defaultFeaturesForPlan("standard") as SchoolFeatureKey[],
+  moduleFormats: { ...DEFAULT_MODULE_FORMATS } as ModuleFormatMap,
 };
 
 type FormState = typeof INITIAL_FORM;
@@ -77,12 +82,17 @@ function normalizeForm(raw: Record<string, unknown>): FormState {
   const out: FormState = {
     ...INITIAL_FORM,
     enabledFeatures: [...INITIAL_FORM.enabledFeatures],
+    moduleFormats: { ...INITIAL_FORM.moduleFormats },
   };
   for (const key of Object.keys(INITIAL_FORM) as (keyof FormState)[]) {
     const v = raw[key];
     if (v === undefined || v === null) continue;
     if (key === "enabledFeatures") {
       if (Array.isArray(v) && v.length > 0) out.enabledFeatures = v as SchoolFeatureKey[];
+      continue;
+    }
+    if (key === "moduleFormats") {
+      out.moduleFormats = normalizeModuleFormats(v);
       continue;
     }
     out[key] = String(v);
@@ -107,6 +117,7 @@ export default function NewSchoolPage() {
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>();
   const [emailVerificationRequired, setEmailVerificationRequired] = useState(false);
+  const [smtpConfigIssue, setSmtpConfigIssue] = useState<string | null>(null);
   const [adminOtpVerified, setAdminOtpVerified] = useState(false);
   const [adminOtp, setAdminOtp] = useState("");
   const [otpSending, setOtpSending] = useState(false);
@@ -356,11 +367,23 @@ export default function NewSchoolPage() {
   }, [form.name, form.city, form.taluka, form.district, form.code, codeManuallyEdited, suggestCode]);
 
   useEffect(() => {
-    fetch("/api/admin/schools/admin-email-otp")
+    let cancelled = false;
+    fetch("/api/admin/schools/admin-email-otp", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => setEmailVerificationRequired(Boolean(d.required)))
-      .catch(() => setEmailVerificationRequired(false));
-  }, []);
+      .then((d) => {
+        if (cancelled) return;
+        setEmailVerificationRequired(Boolean(d.required));
+        setSmtpConfigIssue(d.configIssue ? String(d.configIssue) : null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setEmailVerificationRequired(false);
+        setSmtpConfigIssue("Could not load SMTP status");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [step]);
 
   useEffect(() => {
     const email = form.adminEmail.trim().toLowerCase();
@@ -915,9 +938,26 @@ export default function NewSchoolPage() {
                 Enter admin email above to send and verify OTP before the next step.
               </p>
             )}
-            {!emailVerificationRequired && form.adminEmail.trim() && (
-              <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                SMTP email verification is off — admin can sign in immediately after school is created.
+            {!emailVerificationRequired && (
+              <div className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 space-y-1.5">
+                <p className="font-semibold">
+                  Admin email OTP verification is not active yet
+                </p>
+                <p>
+                  {smtpConfigIssue ||
+                    "SMTP incomplete — enable email, set From Email + App Password, then Save & Send Test."}
+                </p>
+                <Link
+                  href="/admin/settings/email"
+                  className="inline-flex font-semibold text-violet-700 underline underline-offset-2"
+                >
+                  Open Email & SMTP Settings →
+                </Link>
+              </div>
+            )}
+            {emailVerificationRequired && form.adminEmail.trim() && adminOtpVerified && (
+              <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                SMTP ready — admin email verified. School create can continue.
               </p>
             )}
           </CardContent>
@@ -1024,12 +1064,18 @@ export default function NewSchoolPage() {
               <LayoutGrid className="h-5 w-5 text-violet-600" /> Panel & Feature Access
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-4 sm:px-6">
+          <CardContent className="px-4 sm:px-6 space-y-8">
             <FeatureToggleGrid
               planName={form.planName}
               selected={form.enabledFeatures}
               onPlanChange={(p) => setField("planName", p)}
               onChange={(features) => setForm((f) => ({ ...f, enabledFeatures: features }))}
+            />
+            <ModuleFormatPicker
+              formats={form.moduleFormats}
+              onChange={(moduleFormats) => setForm((f) => ({ ...f, moduleFormats }))}
+              enabledFeatures={form.enabledFeatures}
+              schoolCode={form.code}
             />
           </CardContent>
         </Card>

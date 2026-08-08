@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { CERTIFICATE_TYPES } from "@/lib/certificates/config";
+import { getCertificatePack } from "@/lib/certificates/packs-registry";
 import { useT, useLocale } from "@/i18n/locale-provider";
 import { FileText, ArrowRight, Eye, Printer, BookOpen } from "lucide-react";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 
 const CERT_META: Record<string, {
   icon: string;
@@ -82,6 +84,8 @@ const CERT_META: Record<string, {
 export default function CertificatesHubPage() {
   const t = useT();
   const { locale } = useLocale();
+  const { formats } = useSchoolFeatures();
+  const pack = getCertificatePack(formats?.certificates);
 
   return (
     <div className="space-y-6 animate-fade-in" data-ft-anchor="main">
@@ -97,13 +101,17 @@ export default function CertificatesHubPage() {
               {t("certificates.title")}
             </h1>
             <p className="text-sm text-slate-500 mt-0.5">{t("certificates.subtitle")}</p>
+            <p className="text-xs text-violet-700 mt-2 font-medium">
+              Format pack: {pack.label}
+              <span className="font-mono text-violet-500"> · {pack.id}</span>
+            </p>
           </div>
         </div>
       </div>
 
       {/* ── Certificate cards grid ─────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {CERTIFICATE_TYPES.map((cert) => {
+        {CERTIFICATE_TYPES.filter((cert) => pack.certificateTypes.includes(cert.id)).map((cert) => {
           const meta = CERT_META[cert.id] ?? {
             icon: "📄", gradient: "from-slate-50 to-gray-50", border: "border-slate-200",
             iconBg: "bg-slate-100", badge: "Print", badgeColor: "bg-slate-100 text-slate-600",

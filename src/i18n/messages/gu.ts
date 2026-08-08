@@ -1130,6 +1130,7 @@ const gu: Messages = {
     navGroupSystem: "૪ · સિસ્ટમ",
     navHome: "હોમ",
     navSchools: "શાળાઓ",
+    navFormats: "ફોર્મેટ્સ",
     navAdmins: "એડમિન",
     navPayments: "પેમેન્ટ",
     navContracts: "કોન્ટ્રાક્ટ",

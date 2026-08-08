@@ -16,6 +16,7 @@ import {
   Mail,
   Headphones,
   Activity,
+  FolderKanban,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/admin/schools",
     labelKey: "admin.navSchools",
     icon: Building2,
+    groupKey: "admin.navGroupSchools",
+  },
+  {
+    href: "/admin/formats",
+    labelKey: "admin.navFormats",
+    icon: FolderKanban,
     groupKey: "admin.navGroupSchools",
   },
   {

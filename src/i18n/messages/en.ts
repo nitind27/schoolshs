@@ -1149,6 +1149,7 @@ const en = {
     navGroupSystem: "4 · System",
     navHome: "Home",
     navSchools: "Schools",
+    navFormats: "Formats",
     navAdmins: "Admins",
     navPayments: "Payments",
     navContracts: "Contracts",

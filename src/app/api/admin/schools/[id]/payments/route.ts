@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { parseDate } from "@/lib/admin-school";
+import { defaultFeaturesForPlan } from "@/lib/school-features";
 import { Prisma } from "@/generated/prisma/client";
 
 type Params = { params: Promise<{ id: string }> };
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           schoolId: id,
           paidAmount: new Prisma.Decimal(newPaid),
           paymentStatus,
-          enabledFeatures: [],
+          enabledFeatures: defaultFeaturesForPlan("standard"),
         },
         update: {
           paidAmount: new Prisma.Decimal(newPaid),

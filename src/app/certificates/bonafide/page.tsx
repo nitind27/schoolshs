@@ -4,9 +4,10 @@ import { useState, useCallback, useEffect, Suspense, useRef, useMemo } from "rea
 import { useSearchParams } from "next/navigation";
 import { CertificatePrintShell } from "@/components/certificates/certificate-print-shell";
 import { CertificateFilters } from "@/components/certificates/certificate-filters";
-import { BonafideCertificateView } from "@/components/certificates/bonafide-certificate";
 import { formatToday } from "@/lib/certificates/date-to-words";
 import { SAMPLE_BONAFIDE } from "@/lib/certificates/sample-data";
+import { getCertificateViewForType } from "@/lib/certificates/resolve-pack";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
@@ -15,6 +16,11 @@ import { studentShortNameGu } from "@/lib/student-names";
 function BonafideContent() {
   const t = useT();
   const searchParams = useSearchParams();
+  const { formats } = useSchoolFeatures();
+  const BonafideCertificateView = getCertificateViewForType(
+    formats?.certificates,
+    "bonafide",
+  ) as typeof import("@/components/certificates/bonafide-certificate").BonafideCertificateView;
   const lockedStudentId = searchParams.get("studentId") || "";
   const [filters, setFilters] = useState({
     classId: "",

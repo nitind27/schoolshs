@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { AuthError } from "@/lib/auth";
+import { requireBoardRecordsAuth } from "@/lib/board-records-auth";
 import { buildOverallResultAnalysis } from "@/lib/board-records/overall-result-analysis";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
+    const session = await requireBoardRecordsAuth(["school_admin", "teacher", "clerk"]);
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get("classId");
     const academicYear = searchParams.get("academicYear") || "2025-26";

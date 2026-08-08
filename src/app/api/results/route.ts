@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
+import { requireSchoolFeature } from "@/lib/school-feature-access";
 import { calculateGrade } from "@/lib/accounting";
 import {
   ANNUAL_RESULT_SUBJECTS,
@@ -17,6 +18,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
+    await requireSchoolFeature(session.schoolId, "results");
     const { searchParams } = new URL(request.url);
     const standard = searchParams.get("standard");
     const examId = searchParams.get("examId");
@@ -92,6 +94,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
+    await requireSchoolFeature(session.schoolId, "results");
     const body = await request.json();
 
     if (body.action === "create_session") {

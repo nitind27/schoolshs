@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireSchoolAuth, AuthError } from "@/lib/auth";
+import { AuthError } from "@/lib/auth";
+import { requireBoardRecordsAuth } from "@/lib/board-records-auth";
 import { parseSeatInput } from "@/lib/gseb/fetch-ssc-result";
 
 interface ImportRow {
@@ -56,7 +57,7 @@ function parseCsv(text: string): ImportRow[] {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth(["school_admin", "clerk"]);
+    const session = await requireBoardRecordsAuth(["school_admin", "clerk"]);
     const body = await request.json();
     const csv = String(body.csv || "");
     const academicYear = String(body.academicYear || "2025-26");

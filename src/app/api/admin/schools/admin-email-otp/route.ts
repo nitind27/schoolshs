@@ -6,19 +6,31 @@ import {
   verifyPendingAdminEmailOtp,
   isPendingAdminEmailVerified,
 } from "@/lib/pending-admin-email-otp";
+import { getSmtpConfigIssue } from "@/lib/platform-settings";
 
 export async function GET(request: NextRequest) {
   try {
     await requireAuth(["super_admin"]);
     const email = request.nextUrl.searchParams.get("email")?.trim().toLowerCase() || "";
     const required = await getEmailVerificationRequired();
+    const issue = required ? null : await getSmtpConfigIssue();
 
     if (!email) {
-      return NextResponse.json({ required, verified: false });
+      return NextResponse.json({
+        required,
+        verified: false,
+        configReady: required,
+        configIssue: issue,
+      });
     }
 
     const verified = required ? await isPendingAdminEmailVerified(email) : true;
-    return NextResponse.json({ required, verified });
+    return NextResponse.json({
+      required,
+      verified,
+      configReady: required,
+      configIssue: issue,
+    });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Failed" }, { status: 500 });

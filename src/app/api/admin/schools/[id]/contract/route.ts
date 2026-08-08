@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { saveAdminSchoolFile, deleteAdminSchoolFile } from "@/lib/admin-school";
+import { defaultFeaturesForPlan } from "@/lib/school-features";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -19,7 +20,11 @@ export async function POST(request: NextRequest, { params }: Params) {
     const contractDocumentPath = await saveAdminSchoolFile(id, file, "contract");
     await prisma.schoolSubscription.upsert({
       where: { schoolId: id },
-      create: { schoolId: id, contractDocumentPath, enabledFeatures: [] },
+      create: {
+        schoolId: id,
+        contractDocumentPath,
+        enabledFeatures: defaultFeaturesForPlan("standard"),
+      },
       update: { contractDocumentPath },
     });
 
