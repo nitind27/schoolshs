@@ -92,18 +92,33 @@ export function mergeCertificateBrand(
   live?: LiveSchoolLetterhead | null,
 ): CertificateSchoolBrand {
   if (!live) return pack;
+
+  const dise = (live.udiseCode || live.code || pack.diseCode || "").trim();
+  const dedicated =
+    Boolean(pack.diseCode) &&
+    pack.nameEnAlt !== "SCHOOL" &&
+    pack.nameGu !== "શાળા";
+
+  // Official pack letterheads (403/404/405) keep printed school name/address from pack.
+  // Only DISE / phone come from live school profile.
+  if (dedicated) {
+    return {
+      ...pack,
+      diseCode: dise || pack.diseCode,
+      phone: live.phone?.trim() || pack.phone,
+    };
+  }
+
   const name = live.name?.trim();
   const parts = [live.address, live.taluka, live.city, live.district, live.pincode]
     .map((x) => (x || "").trim())
     .filter(Boolean);
   const address = parts.length ? parts.join(", ") : pack.address;
-  const dise = (live.udiseCode || live.code || pack.diseCode || "").trim();
 
   return {
     ...pack,
     nameEn: name ? name.toUpperCase() : pack.nameEn,
     nameEnAlt: name || pack.nameEnAlt,
-    // Keep Gujarati from pack when SA filled it; else fall back to English name
     nameGu: pack.nameGu && pack.nameGu !== "શાળા" ? pack.nameGu : name || pack.nameGu,
     address: address || pack.address,
     phone: live.phone?.trim() || pack.phone,

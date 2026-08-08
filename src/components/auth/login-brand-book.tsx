@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Database,
   KeyRound,
-  MapPin,
   Shield,
   Sparkles,
   Users,
@@ -41,7 +40,7 @@ const AUTO_MS = 4200;
 export function LoginBrandBook({
   branding,
   headline,
-  metaLine,
+  metaLine: _metaLine,
   mode = "default",
 }: {
   branding: SchoolBranding | null;
@@ -65,9 +64,9 @@ export function LoginBrandBook({
           title: t("caNav.title"),
           body: t("login.caLoginDesc"),
           items: [
-            { icon: Shield, label: t("caPortal.verifyVouchersTitle"), hint: "01" },
-            { icon: BookOpen, label: t("caNav.trialBalance"), hint: "02" },
-            { icon: Check, label: t("caPortal.auditSession"), hint: "03" },
+            { icon: Shield, label: t("caPortal.verifyVouchersTitle"), hint: "Audit" },
+            { icon: BookOpen, label: t("caNav.trialBalance"), hint: "Books" },
+            { icon: Check, label: t("caPortal.auditSession"), hint: "FY close" },
           ],
           footer: t("caNav.subtitle"),
         },
@@ -77,7 +76,7 @@ export function LoginBrandBook({
           title: t("login.caLoginHero"),
           body: t("caPortal.assignedSchoolsDesc"),
           items: [
-            { icon: Users, label: t("caPortal.switchSchool"), hint: "Multi" },
+            { icon: Users, label: t("caPortal.switchSchool"), hint: "Multi-school" },
             { icon: Shield, label: t("login.secureLogin"), hint: "RBAC" },
             { icon: Sparkles, label: t("loginHub.digitalGujarat"), hint: "Portal" },
           ],
@@ -89,9 +88,9 @@ export function LoginBrandBook({
           title: t("caPortal.voucherVerification"),
           body: t("caPortal.voucherVerificationDesc"),
           items: [
-            { icon: Shield, label: t("login.feature1"), hint: "01" },
-            { icon: Database, label: t("login.feature2"), hint: "02" },
-            { icon: KeyRound, label: t("login.feature3"), hint: "03" },
+            { icon: Shield, label: t("login.feature1"), hint: "Isolation" },
+            { icon: Database, label: t("login.feature2"), hint: "Privacy" },
+            { icon: KeyRound, label: t("login.feature3"), hint: "Roles" },
           ],
           footer: t("caNav.subtitle"),
         },
@@ -109,69 +108,58 @@ export function LoginBrandBook({
         },
       ]
     : [
-    {
-      id: "welcome",
-      eyebrow: branding ? t("login.schoolVerified") : t("loginHub.trustedPlatform"),
-      title: headline,
-      body: branding
-        ? [metaLine, branding.address].filter(Boolean).join(" · ") || t("loginHub.heroDesc")
-        : t("loginHub.heroDesc"),
-      items: branding
-        ? [
-            ...(branding.district
-              ? [{ icon: MapPin, label: branding.district, hint: "District" }]
-              : []),
-            ...(branding.udiseCode
-              ? [{ icon: Check, label: branding.udiseCode, hint: "UDISE" }]
-              : []),
-            { icon: Shield, label: branding.code, hint: "School code" },
-          ].slice(0, 3)
-        : [
-            { icon: Sparkles, label: t("loginHub.digitalGujarat"), hint: "Platform" },
-            { icon: Shield, label: t("login.secureLogin"), hint: "Access" },
+        {
+          id: "welcome",
+          eyebrow: branding ? t("login.schoolVerified") : t("loginHub.trustedPlatform"),
+          title: branding?.name?.trim() || headline,
+          body: t("loginHub.heroDesc"),
+          items: [
+            { icon: Sparkles, label: t("loginHub.digitalGujarat"), hint: "Scholarship portal" },
+            { icon: Shield, label: t("login.secureLogin"), hint: "Encrypted sessions" },
             { icon: Users, label: t("loginHub.statPortals"), hint: "12+ roles" },
           ],
-      footer: branding
-        ? `${branding.name} · ${branding.code}`
-        : t("landing.productTag"),
-    },
-    {
-      id: "modules",
-      eyebrow: t("landing.navModules"),
-      title: t("loginHub.badge"),
-      body: t("loginHub.heroDesc"),
-      items: [
-        { icon: Award, label: t("loginHub.moduleScholarship"), hint: "01" },
-        { icon: BookOpen, label: t("loginHub.moduleResults"), hint: "02" },
-        { icon: Wallet, label: t("loginHub.moduleAccounting"), hint: "03" },
-      ],
-      footer: t("loginHub.footerNote"),
-    },
-    {
-      id: "security",
-      eyebrow: t("login.secureLogin"),
-      title: t("loginHub.statSecure"),
-      body: t("login.subtitle"),
-      items: [
-        { icon: Shield, label: t("login.feature1"), hint: "01" },
-        { icon: Database, label: t("login.feature2"), hint: "02" },
-        { icon: KeyRound, label: t("login.feature3"), hint: "03" },
-      ],
-      footer: t("loginHub.gsebReady"),
-    },
-    {
-      id: "trust",
-      eyebrow: t("loginHub.digitalGujarat"),
-      title: t("landing.productName"),
-      body: t("loginHub.selectRole"),
-      items: [
-        { icon: Check, label: t("loginHub.gsebReady"), hint: "Board" },
-        { icon: Shield, label: t("loginHub.statSecure"), hint: "100%" },
-        { icon: Users, label: t("loginHub.statPortals"), hint: "12+" },
-      ],
-      footer: t("landing.managedBy"),
-    },
-  ];
+          footer: branding
+            ? `${branding.name} · Codeat Education`
+            : t("loginHub.footerNote"),
+        },
+        {
+          id: "modules",
+          eyebrow: t("landing.navModules"),
+          title: t("loginHub.badge"),
+          body: t("loginHub.heroDesc"),
+          items: [
+            { icon: Award, label: t("loginHub.moduleScholarship"), hint: "Digital Gujarat" },
+            { icon: BookOpen, label: t("loginHub.moduleResults"), hint: "Term & board" },
+            { icon: Wallet, label: t("loginHub.moduleAccounting"), hint: "Day book & ledger" },
+            { icon: Check, label: t("loginHub.moduleCertificates"), hint: "LC · Bonafide · GR" },
+          ],
+          footer: t("loginHub.footerNote"),
+        },
+        {
+          id: "security",
+          eyebrow: t("login.secureLogin"),
+          title: t("loginHub.statSecure"),
+          body: t("login.subtitle"),
+          items: [
+            { icon: Shield, label: t("login.feature1"), hint: "Per school" },
+            { icon: Database, label: t("login.feature2"), hint: "Private data" },
+            { icon: KeyRound, label: t("login.feature3"), hint: "Admin · Staff · Student" },
+          ],
+          footer: t("loginHub.gsebReady"),
+        },
+        {
+          id: "trust",
+          eyebrow: t("loginHub.digitalGujarat"),
+          title: t("landing.productName"),
+          body: t("loginHub.selectRole"),
+          items: [
+            { icon: Check, label: t("loginHub.gsebReady"), hint: "Board exams" },
+            { icon: BookOpen, label: t("loginHub.moduleAdmissions"), hint: "Online intake" },
+            { icon: Award, label: t("loginHub.moduleIdCards"), hint: "CR-80 print" },
+          ],
+          footer: t("landing.managedBy"),
+        },
+      ];
 
   const total = pages.length;
   const page = pages[index];
@@ -244,8 +232,8 @@ export function LoginBrandBook({
               <p className="auth-book-body">{page.body}</p>
 
               <ul className="auth-book-list">
-                {page.items.map((item) => (
-                  <li key={`${page.id}-${item.label}`}>
+                {page.items.map((item, i) => (
+                  <li key={`${page.id}-${i}`}>
                     <span className="auth-book-list-icon">
                       <item.icon className="h-4 w-4" strokeWidth={2} />
                     </span>

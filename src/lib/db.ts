@@ -10,7 +10,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** Bump when schema changes — forces fresh client in dev HMR */
-const SCHEMA_VERSION = 36;
+const SCHEMA_VERSION = 37;
 
 function isClientFresh(client: PrismaClient): boolean {
   const hasLoginSecurity =
@@ -23,6 +23,7 @@ function isClientFresh(client: PrismaClient): boolean {
   const hasLoginGeo = "lastLoginIp" in Prisma.UserScalarFieldEnum;
   const hasExamTemplate =
     "examTemplate" in Prisma.SchoolSettingsScalarFieldEnum;
+  const hasLetterheadJson = "letterheadJson" in Prisma.SchoolSettingsScalarFieldEnum;
 
   return (
     "user" in client &&
@@ -46,7 +47,8 @@ function isClientFresh(client: PrismaClient): boolean {
     hasEmailVerification &&
     hasStaffGuNames &&
     hasLoginGeo &&
-    hasExamTemplate
+    hasExamTemplate &&
+    hasLetterheadJson
   );
 }
 

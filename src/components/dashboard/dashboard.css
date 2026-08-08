@@ -5359,6 +5359,13 @@ html.locale-gu .ops-main-tab-copy strong {
   white-space: nowrap;
 }
 
+.ops-drill-gr {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #0f172a;
+}
+
 .ops-drill-table th.ops-drill-sr {
   color: #0c4a6e !important;
 }

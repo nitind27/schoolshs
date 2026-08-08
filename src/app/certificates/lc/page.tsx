@@ -8,20 +8,43 @@ import type { LCData } from "@/components/certificates/leaving-certificate";
 import { formatToday } from "@/lib/certificates/date-to-words";
 import { SAMPLE_LC } from "@/lib/certificates/sample-data";
 import { getCertificateViewForType } from "@/lib/certificates/resolve-pack";
-import { useSchoolFeatures } from "@/components/school/use-school-features";
+import {
+  invalidateSchoolFeaturesCache,
+  useSchoolFeatures,
+} from "@/components/school/use-school-features";
 import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
 import { studentShortNameGu } from "@/lib/student-names";
+import { PageLoader } from "@/components/ui/loader";
 
 function LCContent() {
   const t = useT();
   const searchParams = useSearchParams();
-  const { formats } = useSchoolFeatures();
-  const LeavingCertificateView = getCertificateViewForType(
-    formats?.certificates,
-    "lc",
-  ) as typeof import("@/components/certificates/leaving-certificate").LeavingCertificateView;
+  const { formats, letterhead, ready } = useSchoolFeatures();
+
+  // Prefer Super Admin assigned pack; fall back to school code pack (403/404/405)
+  const packId = useMemo(() => {
+    const assigned = formats?.certificates?.trim();
+    if (assigned && assigned !== "default") return assigned;
+    const code = (letterhead?.code || letterhead?.udiseCode || "").trim();
+    if (code === "24261004403" || code === "24261004404" || code === "24261004405") {
+      return code;
+    }
+    return assigned || "default";
+  }, [formats?.certificates, letterhead?.code, letterhead?.udiseCode]);
+
+  const LeavingCertificateView = useMemo(
+    () =>
+      getCertificateViewForType(packId, "lc") as typeof import("@/components/certificates/leaving-certificate").LeavingCertificateView,
+    [packId],
+  );
+
+  useEffect(() => {
+    // Always re-fetch formats when opening LC (avoid stale default pack)
+    invalidateSchoolFeaturesCache();
+  }, []);
+
   const lockedStudentId = searchParams.get("studentId") || "";
   const [filters, setFilters] = useState({
     classId: "",
@@ -134,6 +157,10 @@ function LCContent() {
   const displayData = source === "preview" ? SAMPLE_LC : lcData;
   const isPreview = source === "preview";
 
+  if (!ready) {
+    return <PageLoader label="Loading certificate format…" />;
+  }
+
   return (
     <CertificatePrintShell
       title={t("certificates.lcTitle")}
@@ -142,7 +169,14 @@ function LCContent() {
       onExitPreview={() => setSource(lcData ? "live" : "none")}
       canPrint={!!displayData}
       printMargin="6mm"
+      packId={packId}
     >
+      <p className="no-print text-xs text-violet-700 mb-2 font-medium">
+        Format pack: <span className="font-mono">{packId}</span>
+        {packId === "24261004403" || packId === "24261004404"
+          ? " · Upper Primary LC (scan layout)"
+          : null}
+      </p>
       <CertificateFilters
         value={filters}
         onChange={setFilters}
@@ -204,6 +238,7 @@ function LCContent() {
       </div>
       {displayData ? (
         <LeavingCertificateView
+          key={`lc-${packId}`}
           data={
             source === "preview"
               ? SAMPLE_LC

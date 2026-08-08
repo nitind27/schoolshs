@@ -744,6 +744,7 @@ const gu: Messages = {
     drillEmpty: "આ ફિલ્ટર પ્રમાણે કોઈ વિદ્યાર્થી નથી",
     hrEyebrow: "સ્ટાફ HR ડેટા",
     exportEyebrow: "એક્સપોર્ટ વિકલ્પો",
+    drillColGr: "GR નં.",
     drillColRoll: "રોલ",
     drillColName: "નામ",
     drillColClass: "વર્ગ",

@@ -750,6 +750,7 @@ const en = {
     drillEmpty: "No students match these filters",
     hrEyebrow: "Staff HR data",
     exportEyebrow: "Export options",
+    drillColGr: "GR No.",
     drillColRoll: "Roll",
     drillColName: "Name",
     drillColClass: "Class",

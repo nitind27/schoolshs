@@ -2374,6 +2374,7 @@
             </div>
             <div class="app-tool-section section-save">
                 <span class="app-tool-label">Save</span>
+                <button type="button" class="app-tool-btn" id="btnSaveServer" onclick="saveLetterheadNow()" title="Save to school database (permanent)">☁ Save</button>
                 <button type="button" class="app-tool-btn" onclick="downloadBackup()">Backup</button>
                 <button type="button" class="app-tool-btn" onclick="triggerRestore()">Restore</button>
             </div>
@@ -2534,17 +2535,17 @@
                                 <table class="contact-table">
                                     <tr>
                                         <td class="contact-left-cell">
-                                            <div contenteditable="true" id="leftTitle">આચાર્યાશ્રી (નોન ગ્રાન્ટેડ)</div>
+                                            <div contenteditable="true" id="leftTitle">આચાર્યશ્રી (નોન ગ્રાન્ટેડ)</div>
                                             <div contenteditable="true" id="leftName">શ્રીમતિ વૈશાલીબેન એમ. ગામીત</div>
                                             <div contenteditable="true" id="leftMobile">Mo. 9979278886</div>
                                         </td>
                                         <td class="contact-center-cell">
                                             <div contenteditable="true" id="centerTitle">પ્રાથમિક વિભાગ (ગ્રાન્ટેડ અને નોનગ્રાન્ટેડ)</div>
-                                            <div contenteditable="true" id="centerAddress">ફોર્ટ-સોનગઢ, જુ. તાપી</div>
+                                            <div contenteditable="true" id="centerAddress">ફોર્ટ-સોનગઢ, જી. તાપી</div>
                                         </td>
                                         <td class="contact-right-cell">
                                             <div contenteditable="true" id="rightTitle">આચાર્યશ્રી (ગ્રાન્ટેડ)</div>
-                                            <div contenteditable="true" id="rightName">શ્રી ઓન. આર. ગામીત</div>
+                                            <div contenteditable="true" id="rightName">શ્રી એન. આર. ગામીત</div>
                                             <div contenteditable="true" id="rightMobile">Mo. 9426539035</div>
                                         </td>
                                     </tr>
@@ -2553,9 +2554,9 @@
                                 <!-- Footer Info -->
                                 <table class="footer-table">
                                     <tr>
-                                        <td class="footer-left" contenteditable="true" id="footerLeft">શાળા કાયસ કોડ : 24261004403</td>
+                                        <td class="footer-left" contenteditable="true" id="footerLeft">શાળા કોડ : 24261004403</td>
                                         <td class="footer-center" contenteditable="true" id="footerCenter">Email : nilesh198333@mail.com</td>
-                                        <td class="footer-right" contenteditable="true" id="footerRight">શાળા કાયસ કોડ : 24261004404</td>
+                                        <td class="footer-right" contenteditable="true" id="footerRight">શાળા કોડ : 24261004404</td>
                                     </tr>
                                 </table>
                             </div>
@@ -4135,59 +4136,182 @@
 
         function saveToLocalStorage() {
             const data = getDocumentState();
-            localStorage.setItem('letterheadData', JSON.stringify(data));
+            try {
+                localStorage.setItem('letterheadData', JSON.stringify(data));
+            } catch (e) {
+                console.warn('localStorage save failed', e);
+            }
+            // Always queue cloud save when embedded in portal
+            if (isEmbeddedLetterhead()) {
+                queueCloudSave();
+            }
+        }
+
+        function isEmbeddedLetterhead() {
+            return document.documentElement.classList.contains('embedded') ||
+                new URLSearchParams(window.location.search).get('embed') === '1';
+        }
+
+        let cloudSaveTimer = null;
+        let cloudSaveInFlight = false;
+        let schoolLetterheadMeta = { schoolCode: '', schoolName: '', saved: false };
+
+        function setSaveStatus(msg, ok) {
+            const btn = document.getElementById('btnSaveServer');
+            if (btn) {
+                btn.textContent = msg;
+                btn.style.opacity = ok === false ? '0.85' : '1';
+            }
+            try {
+                window.parent.postMessage({
+                    type: 'letterhead:status',
+                    message: msg,
+                    schoolCode: schoolLetterheadMeta.schoolCode,
+                    saved: schoolLetterheadMeta.saved,
+                }, '*');
+            } catch (_) { /* ignore */ }
+        }
+
+        function queueCloudSave() {
+            clearTimeout(cloudSaveTimer);
+            cloudSaveTimer = setTimeout(() => { void saveToServer(false); }, 1200);
+        }
+
+        async function saveToServer(manual) {
+            if (!isEmbeddedLetterhead()) {
+                saveToLocalStorage();
+                if (manual) alert('Saved locally!');
+                return;
+            }
+            if (cloudSaveInFlight) return;
+            cloudSaveInFlight = true;
+            setSaveStatus('Saving…', true);
+            try {
+                const data = getDocumentState();
+                localStorage.setItem('letterheadData', JSON.stringify(data));
+                const res = await fetch('/api/school/letterhead', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ data }),
+                });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.error || 'Save failed');
+                schoolLetterheadMeta.saved = true;
+                if (json.schoolCode) schoolLetterheadMeta.schoolCode = json.schoolCode;
+                setSaveStatus('Saved ✓', true);
+                if (manual) {
+                    setTimeout(() => setSaveStatus('☁ Save', true), 1600);
+                } else {
+                    setTimeout(() => setSaveStatus('☁ Save', true), 2200);
+                }
+            } catch (err) {
+                console.error(err);
+                setSaveStatus('Save failed', false);
+                if (manual) alert(err instanceof Error ? err.message : 'Could not save letterhead');
+            } finally {
+                cloudSaveInFlight = false;
+            }
+        }
+
+        function saveLetterheadNow() {
+            clearTimeout(cloudSaveTimer);
+            void saveToServer(true);
+        }
+
+        function applyDocumentState(data) {
+            if (!data || typeof data !== 'object') return;
+
+            if (data.headerTop) document.getElementById('headerTop').innerHTML = data.headerTop;
+            if (data.schoolName) document.getElementById('schoolName').innerHTML = data.schoolName;
+            if (data.leftTitle) document.getElementById('leftTitle').innerHTML = data.leftTitle;
+            if (data.leftName) document.getElementById('leftName').innerHTML = data.leftName;
+            if (data.leftMobile) document.getElementById('leftMobile').innerHTML = data.leftMobile;
+            if (data.centerTitle) document.getElementById('centerTitle').innerHTML = data.centerTitle;
+            if (data.centerAddress) document.getElementById('centerAddress').innerHTML = data.centerAddress;
+            if (data.rightTitle) document.getElementById('rightTitle').innerHTML = data.rightTitle;
+            if (data.rightName) document.getElementById('rightName').innerHTML = data.rightName;
+            if (data.rightMobile) document.getElementById('rightMobile').innerHTML = data.rightMobile;
+            if (data.footerLeft) document.getElementById('footerLeft').innerHTML = data.footerLeft;
+            if (data.footerCenter) document.getElementById('footerCenter').innerHTML = data.footerCenter;
+            if (data.footerRight) document.getElementById('footerRight').innerHTML = data.footerRight;
+            if (data.serialNo) document.getElementById('serialNo').innerHTML = data.serialNo;
+            if (data.dateDay) document.getElementById('dateDay').innerHTML = data.dateDay;
+            if (data.dateMonth) document.getElementById('dateMonth').innerHTML = data.dateMonth;
+            if (data.dateYear) document.getElementById('dateYear').innerHTML = data.dateYear;
+
+            if (data.pageContents && data.pageContents[0]) {
+                document.getElementById('contentArea').innerHTML = data.pageContents[0];
+            }
+
+            if (data.pageCount && data.pageCount > 1) {
+                for (let i = 2; i <= data.pageCount; i++) {
+                    addNewPage();
+                    if (data.pageContents && data.pageContents[i - 1]) {
+                        const el = document.getElementById(`contentArea-${i}`);
+                        if (el) el.innerHTML = data.pageContents[i - 1];
+                    }
+                }
+            }
+
+            if (data.logo) {
+                logoData = normalizeLogoSrc(data.logo);
+            } else {
+                logoData = DEFAULT_LOGO_URL;
+            }
+            applyLogo(logoData, false);
+
+            if (data.stamps && data.stamps.length > 0) {
+                stamps = data.stamps;
+                loadStamps();
+            }
         }
 
         function loadFromLocalStorage() {
             const saved = localStorage.getItem('letterheadData');
             if (saved) {
-                const data = JSON.parse(saved);
-                
-                if (data.headerTop) document.getElementById('headerTop').innerHTML = data.headerTop;
-                if (data.schoolName) document.getElementById('schoolName').innerHTML = data.schoolName;
-                if (data.leftTitle) document.getElementById('leftTitle').innerHTML = data.leftTitle;
-                if (data.leftName) document.getElementById('leftName').innerHTML = data.leftName;
-                if (data.leftMobile) document.getElementById('leftMobile').innerHTML = data.leftMobile;
-                if (data.centerTitle) document.getElementById('centerTitle').innerHTML = data.centerTitle;
-                if (data.centerAddress) document.getElementById('centerAddress').innerHTML = data.centerAddress;
-                if (data.rightTitle) document.getElementById('rightTitle').innerHTML = data.rightTitle;
-                if (data.rightName) document.getElementById('rightName').innerHTML = data.rightName;
-                if (data.rightMobile) document.getElementById('rightMobile').innerHTML = data.rightMobile;
-                if (data.footerLeft) document.getElementById('footerLeft').innerHTML = data.footerLeft;
-                if (data.footerCenter) document.getElementById('footerCenter').innerHTML = data.footerCenter;
-                if (data.footerRight) document.getElementById('footerRight').innerHTML = data.footerRight;
-                if (data.serialNo) document.getElementById('serialNo').innerHTML = data.serialNo;
-                if (data.dateDay) document.getElementById('dateDay').innerHTML = data.dateDay;
-                if (data.dateMonth) document.getElementById('dateMonth').innerHTML = data.dateMonth;
-                if (data.dateYear) document.getElementById('dateYear').innerHTML = data.dateYear;
-                
-                // Load first page content
-                if (data.pageContents && data.pageContents[0]) {
-                    document.getElementById('contentArea').innerHTML = data.pageContents[0];
+                try {
+                    applyDocumentState(JSON.parse(saved));
+                } catch (e) {
+                    console.warn('local letterhead parse failed', e);
                 }
-                
-                // Create additional pages if needed
-                if (data.pageCount && data.pageCount > 1) {
-                    for (let i = 2; i <= data.pageCount; i++) {
-                        addNewPage();
-                        if (data.pageContents && data.pageContents[i-1]) {
-                            document.getElementById(`contentArea-${i}`).innerHTML = data.pageContents[i-1];
-                        }
-                    }
-                }
-                
-                if (data.logo) {
-                    logoData = normalizeLogoSrc(data.logo);
-                } else {
-                    logoData = DEFAULT_LOGO_URL;
-                }
-                applyLogo(logoData, false);
+            }
+        }
 
-                // Load stamps
-                if (data.stamps && data.stamps.length > 0) {
-                    stamps = data.stamps;
-                    loadStamps();
+        async function loadLetterheadFromServer() {
+            if (!isEmbeddedLetterhead()) {
+                loadFromLocalStorage();
+                return;
+            }
+            setSaveStatus('Loading…', true);
+            try {
+                const res = await fetch('/api/school/letterhead', { credentials: 'same-origin', cache: 'no-store' });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || 'Load failed');
+                schoolLetterheadMeta = {
+                    schoolCode: json.schoolCode || '',
+                    schoolName: json.schoolName || '',
+                    saved: Boolean(json.saved),
+                };
+                if (json.data) {
+                    applyDocumentState(json.data);
+                    try {
+                        localStorage.setItem('letterheadData', JSON.stringify(json.data));
+                    } catch (_) { /* ignore */ }
                 }
+                setSaveStatus(json.saved ? '☁ Save' : '☁ Save (new)', true);
+                try {
+                    window.parent.postMessage({
+                        type: 'letterhead:loaded',
+                        schoolCode: schoolLetterheadMeta.schoolCode,
+                        schoolName: schoolLetterheadMeta.schoolName,
+                        saved: schoolLetterheadMeta.saved,
+                    }, '*');
+                } catch (_) { /* ignore */ }
+            } catch (err) {
+                console.error(err);
+                loadFromLocalStorage();
+                setSaveStatus('☁ Save', false);
             }
         }
 
@@ -4209,8 +4333,7 @@
                         break;
                     case 's':
                         e.preventDefault();
-                        saveToLocalStorage();
-                        alert('Saved!');
+                        saveLetterheadNow();
                         break;
                     case 'p':
                         e.preventDefault();
@@ -4229,12 +4352,12 @@
             }
         });
 
-        // Load saved data on page load
+        // Load saved data on page load (DB when embedded in portal)
         window.onload = function() {
-            loadFromLocalStorage();
-            // Ensure default /shs/logo.png is visible even with empty / legacy storage
-            applyLogo(logoData || DEFAULT_LOGO_URL, false);
-            updateWordCount();
+            void loadLetterheadFromServer().then(function() {
+                applyLogo(logoData || DEFAULT_LOGO_URL, false);
+                updateWordCount();
+            });
         };
     </script>
 </body>

@@ -338,6 +338,10 @@
             border-bottom: 1px solid var(--app-border);
         }
 
+        .mobile-scroll-hint {
+            display: none;
+        }
+
         .app-tool-section {
             display: flex;
             align-items: center;
@@ -349,6 +353,7 @@
             box-shadow: var(--app-shadow);
         }
 
+        .app-tool-section.section-logo { border-left: 3px solid #b45309; }
         .app-tool-section.section-page { border-left: 3px solid var(--lh-ink); }
         .app-tool-section.section-insert { border-left: 3px solid #0e7490; }
         .app-tool-section.section-quick { border-left: 3px solid var(--lh-crimson); }
@@ -979,8 +984,23 @@
             margin: 0 auto;
         }
 
+        .logo-placeholder.has-logo,
+        .logo-placeholder:has(img) {
+            border: none;
+            background: transparent;
+            height: auto;
+            min-height: 70px;
+        }
+
         .logo-placeholder:hover {
             background: #ffe5e5;
+        }
+
+        .logo-placeholder.has-logo:hover,
+        .logo-placeholder:has(img):hover {
+            background: rgba(196, 30, 58, 0.06);
+            outline: 1px dashed #c41e3a;
+            outline-offset: 2px;
         }
 
         .logo-placeholder span {
@@ -1399,6 +1419,178 @@
             display: block;
         }
 
+        /* Logo gallery panel */
+        .logo-panel {
+            max-width: 210mm;
+            margin: 0 auto 10px;
+            background: linear-gradient(145deg, #0f172a 0%, #134e4a 100%);
+            border-radius: 12px;
+            padding: 14px 15px 16px;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.28);
+            color: #ecfeff;
+        }
+
+        .logo-panel.active {
+            display: block;
+        }
+
+        .logo-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .logo-panel-header h3 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: var(--ui-font);
+        }
+
+        .logo-panel-close {
+            border: 0;
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logo-panel-close:hover {
+            background: rgba(255,255,255,0.22);
+        }
+
+        .logo-panel-hint {
+            margin: 0 0 12px;
+            font-size: 12px;
+            line-height: 1.45;
+            color: rgba(204, 251, 241, 0.9);
+        }
+
+        .logo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+            gap: 10px;
+        }
+
+        .logo-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 8px 8px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+            text-align: center;
+        }
+
+        .logo-card:hover {
+            background: rgba(255,255,255,0.14);
+            border-color: rgba(94, 234, 212, 0.55);
+            transform: translateY(-1px);
+        }
+
+        .logo-card.is-active {
+            border-color: #5eead4;
+            background: rgba(13, 115, 119, 0.45);
+            box-shadow: 0 0 0 2px rgba(94, 234, 212, 0.25);
+        }
+
+        .logo-card.is-default::after {
+            content: "DEFAULT";
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            font-size: 8px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            padding: 2px 5px;
+            border-radius: 999px;
+            background: #f59e0b;
+            color: #111;
+        }
+
+        .logo-card img {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            background: #fff;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .logo-card-label {
+            font-size: 10px;
+            font-weight: 650;
+            color: #ecfeff;
+            line-height: 1.25;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .logo-card-remove {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 20px;
+            height: 20px;
+            border: 0;
+            border-radius: 6px;
+            background: rgba(239, 68, 68, 0.9);
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .logo-card.is-custom:hover .logo-card-remove {
+            display: inline-flex;
+        }
+
+        .logo-panel-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .logo-panel-actions .app-tool-btn {
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            border-color: rgba(255,255,255,0.2);
+            cursor: pointer;
+        }
+
+        .logo-panel-actions .app-tool-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        @media print {
+            .logo-panel {
+                display: none !important;
+            }
+        }
+
+        html.embedded .logo-panel {
+            max-width: none;
+            margin-left: 12px;
+            margin-right: 12px;
+        }
+
         .stamp-panel-header {
             display: flex;
             justify-content: space-between;
@@ -1705,6 +1897,277 @@
             right: 12px;
         }
 
+        /* Compact touch workspace — keep every editor control usable on phones */
+        @media screen and (max-width: 700px) {
+            html.embedded .editor-sticky-bar {
+                max-height: none;
+                overflow: visible;
+                padding: 6px 6px 0;
+            }
+
+            html.embedded .app-chrome {
+                border-radius: 9px;
+            }
+
+            html.embedded .app-header {
+                display: flex;
+                gap: 7px;
+                padding: 8px;
+            }
+
+            html.embedded .app-brand {
+                width: 100%;
+                min-width: 0;
+                gap: 8px;
+                padding-left: 2px;
+            }
+
+            html.embedded .app-brand-icon {
+                width: 34px;
+                height: 34px;
+                border-radius: 9px;
+            }
+
+            html.embedded .app-brand-title {
+                font-size: 12px;
+            }
+
+            html.embedded .app-brand-sub {
+                font-size: 10px;
+            }
+
+            html.embedded .app-header-actions {
+                width: 100%;
+                flex: 1 0 100%;
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                overflow-x: auto;
+                padding: 1px 1px 4px;
+                scrollbar-width: none;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            html.embedded .app-header-actions::-webkit-scrollbar {
+                display: none;
+            }
+
+            html.embedded .mobile-scroll-hint {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 5px;
+                min-height: 24px;
+                border-top: 1px solid var(--app-border);
+                background: linear-gradient(90deg, #f8fafc, #eef2f7, #f8fafc);
+                color: #64748b;
+                font-family: var(--ui-font);
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+            }
+
+            html.embedded .app-action-cluster,
+            html.embedded .app-divider {
+                flex-shrink: 0;
+            }
+
+            html.embedded .app-btn {
+                min-height: 34px;
+                padding: 6px 10px;
+                font-size: 10px;
+            }
+
+            html.embedded .app-meta {
+                width: 100%;
+                margin-left: 0;
+                justify-content: space-between;
+                gap: 5px;
+            }
+
+            html.embedded .app-stat {
+                flex: 1;
+                padding: 5px 7px;
+                text-align: center;
+            }
+
+            html.embedded .app-zoom {
+                flex-shrink: 0;
+            }
+
+            html.embedded .app-toolbar {
+                flex-wrap: nowrap;
+                gap: 6px;
+                overflow-x: auto;
+                padding: 7px 8px;
+                scrollbar-width: thin;
+                scrollbar-color: #94a3b8 #e2e8f0;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            html.embedded .app-toolbar::-webkit-scrollbar,
+            html.embedded .editor-toolbar::-webkit-scrollbar {
+                height: 5px;
+            }
+
+            html.embedded .app-toolbar::-webkit-scrollbar-track,
+            html.embedded .editor-toolbar::-webkit-scrollbar-track {
+                background: #e2e8f0;
+            }
+
+            html.embedded .app-toolbar::-webkit-scrollbar-thumb,
+            html.embedded .editor-toolbar::-webkit-scrollbar-thumb {
+                border-radius: 999px;
+                background: #94a3b8;
+            }
+
+            html.embedded .app-tool-section {
+                flex-shrink: 0;
+            }
+
+            html.embedded .app-tool-btn {
+                min-height: 30px;
+                padding: 5px 8px;
+                font-size: 10px;
+            }
+
+            html.embedded .editor-toolbar {
+                flex-wrap: nowrap;
+                gap: 4px;
+                overflow-x: auto;
+                padding: 7px 8px;
+                scrollbar-width: thin;
+                scrollbar-color: #94a3b8 #e2e8f0;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            html.embedded .toolbar-group {
+                flex-shrink: 0;
+                padding-right: 5px;
+            }
+
+            html.embedded .toolbar-btn {
+                width: 30px;
+                height: 30px;
+            }
+
+            html.embedded .toolbar-select {
+                min-width: 76px;
+                max-width: 112px;
+            }
+
+            html.embedded .editor-scroll-area {
+                overflow-x: hidden;
+                padding: 10px 6px 16px;
+            }
+
+            html.embedded .page-container {
+                width: 100%;
+                min-height: auto;
+                margin-bottom: 12px;
+                padding: 5mm 4mm 12mm;
+                overflow-wrap: anywhere;
+            }
+
+            html.embedded .print-table,
+            html.embedded .header-table,
+            html.embedded .contact-table,
+            html.embedded .footer-table,
+            html.embedded .serial-date-table {
+                width: 100%;
+                table-layout: fixed;
+            }
+
+            html.embedded .header-top {
+                font-size: 10px;
+            }
+
+            html.embedded .logo-cell {
+                width: 58px;
+            }
+
+            html.embedded .logo-cell img,
+            html.embedded .logo-placeholder {
+                width: 50px;
+            }
+
+            html.embedded .logo-placeholder {
+                height: 58px;
+            }
+
+            html.embedded .school-name {
+                font-size: clamp(16px, 5.3vw, 20px);
+                letter-spacing: 0;
+                overflow-wrap: anywhere;
+            }
+
+            html.embedded .contact-table td,
+            html.embedded .footer-table td {
+                padding: 2px;
+                font-size: 9px;
+                overflow-wrap: anywhere;
+            }
+
+            html.embedded .serial-date-table {
+                margin-top: 10px;
+                font-size: 11px;
+            }
+
+            html.embedded .serial-date-table td {
+                padding: 3px 2px;
+                overflow-wrap: anywhere;
+            }
+
+            html.embedded .underline-field {
+                max-width: 100%;
+            }
+
+            html.embedded .content-area {
+                min-height: 55mm;
+                margin-top: 12px;
+                padding: 6px 2px;
+                font-size: 12px;
+                line-height: 1.75;
+                overflow-wrap: anywhere;
+            }
+
+            html.embedded .page-number {
+                right: 4mm;
+                bottom: 4mm;
+                font-size: 9px;
+            }
+
+            html.embedded .stamp-panel,
+            html.embedded .ocr-panel,
+            html.embedded .template-panel {
+                width: calc(100vw - 16px);
+                max-height: calc(100dvh - 24px);
+                padding: 14px;
+                border-radius: 12px;
+            }
+
+            html.embedded .ocr-content {
+                flex-direction: column;
+            }
+
+            html.embedded .ocr-upload-area,
+            html.embedded .ocr-preview {
+                width: 100%;
+                min-width: 0;
+            }
+
+            html.embedded .template-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            html.embedded .edit-indicator {
+                right: 8px;
+                bottom: 8px;
+                max-width: calc(100vw - 16px);
+                font-size: 10px;
+            }
+        }
+
         /* Responsive */
         @media screen and (max-width: 900px) {
             .page-container {
@@ -1725,6 +2188,93 @@
                 padding-right: 5px;
             }
         }
+
+        /*
+         * On phones keep the document itself in true A4 proportions.
+         * The studio controls reflow, but the printable page only scales down,
+         * so its desktop/laptop layout never changes.
+         */
+        @media screen and (max-width: 700px) {
+            html.embedded .editor-scroll-area {
+                overflow-x: auto;
+            }
+
+            html.embedded .page-container {
+                width: 210mm;
+                max-width: none;
+                min-height: 297mm;
+                padding: 8mm 15mm 15mm;
+                zoom: var(--mobile-page-fit, 1);
+                overflow-wrap: normal;
+            }
+
+            html.embedded .print-table,
+            html.embedded .header-table,
+            html.embedded .contact-table,
+            html.embedded .footer-table,
+            html.embedded .serial-date-table {
+                table-layout: auto;
+            }
+
+            html.embedded .header-top {
+                font-size: 13px;
+            }
+
+            html.embedded .logo-cell {
+                width: 80px;
+            }
+
+            html.embedded .logo-cell img,
+            html.embedded .logo-placeholder {
+                width: 70px;
+            }
+
+            html.embedded .logo-placeholder {
+                height: 80px;
+            }
+
+            html.embedded .school-name {
+                font-size: 28px;
+                letter-spacing: 1px;
+                overflow-wrap: normal;
+            }
+
+            html.embedded .contact-table td,
+            html.embedded .footer-table td {
+                padding: 2px 5px;
+                font-size: 11px;
+                overflow-wrap: normal;
+            }
+
+            html.embedded .serial-date-table {
+                margin-top: 15px;
+                font-size: 14px;
+            }
+
+            html.embedded .serial-date-table td {
+                padding: 5px;
+                overflow-wrap: normal;
+            }
+
+            html.embedded .underline-field {
+                max-width: none;
+            }
+
+            html.embedded .content-area {
+                min-height: 80mm;
+                margin-top: 20px;
+                padding: 10px;
+                font-size: 14px;
+                line-height: 2;
+                overflow-wrap: normal;
+            }
+
+            html.embedded .page-number {
+                right: 15mm;
+                bottom: 8mm;
+                font-size: 12px;
+            }
+        }
     </style>
     <!-- Tesseract.js OCR Library -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -1736,6 +2286,27 @@
             "embedded",
             new URLSearchParams(window.location.search).get("embed") === "1"
         );
+
+        function updateMobilePageFit() {
+            const root = document.documentElement;
+            if (!root.classList.contains("embedded") || window.innerWidth > 700) {
+                root.style.removeProperty("--mobile-page-fit");
+                return;
+            }
+
+            const workspace = document.querySelector(".editor-scroll-area");
+            const availableWidth = Math.max(
+                240,
+                (workspace?.clientWidth || window.innerWidth) - 12
+            );
+            const a4WidthPx = 210 * (96 / 25.4);
+            const fit = Math.min(1, availableWidth / a4WidthPx);
+            root.style.setProperty("--mobile-page-fit", fit.toFixed(4));
+        }
+
+        window.addEventListener("resize", updateMobilePageFit, { passive: true });
+        window.addEventListener("DOMContentLoaded", updateMobilePageFit);
+        window.addEventListener("load", updateMobilePageFit);
     </script>
     <div class="edit-indicator">Edit mode — click any text to edit</div>
     <div class="panel-backdrop" id="panelBackdrop" onclick="closeFloatingPanels()"></div>
@@ -1773,7 +2344,18 @@
                 </div>
             </div>
         </div>
+        <div class="mobile-scroll-hint" aria-hidden="true">
+            <span>←</span>
+            <span>Swipe toolbars left / right</span>
+            <span>→</span>
+        </div>
         <div class="app-toolbar">
+            <div class="app-tool-section section-logo">
+                <span class="app-tool-label">Logo</span>
+                <button type="button" class="app-tool-btn" onclick="toggleLogoPanel()" title="Browse saved logos">Gallery</button>
+                <button type="button" class="app-tool-btn" onclick="changeLogo()" title="Upload a new logo">Upload</button>
+                <button type="button" class="app-tool-btn" onclick="resetDefaultLogo()" title="Use default SHS logo">Default</button>
+            </div>
             <div class="app-tool-section section-page">
                 <span class="app-tool-label">Page</span>
                 <button type="button" class="app-tool-btn" onclick="addNewPage()">+ Add</button>
@@ -1792,6 +2374,7 @@
             </div>
             <div class="app-tool-section section-save">
                 <span class="app-tool-label">Save</span>
+                <button type="button" class="app-tool-btn" id="btnSaveServer" onclick="saveLetterheadNow()" title="Save to school database (permanent)">☁ Save</button>
                 <button type="button" class="app-tool-btn" onclick="downloadBackup()">Backup</button>
                 <button type="button" class="app-tool-btn" onclick="triggerRestore()">Restore</button>
             </div>
@@ -1938,8 +2521,8 @@
                                 <table class="header-table">
                                     <tr>
                                         <td class="logo-cell">
-                                            <div class="logo-placeholder" id="logoContainer" onclick="document.getElementById('logoInput').click()">
-                                                <img src="logo.png" style="width: 70px; height: auto;" alt="Logo">
+                                            <div class="logo-placeholder has-logo" id="logoContainer" onclick="toggleLogoPanel()" title="Click to choose logo">
+                                                <img src="/shs/logo.png" style="width: 70px; height: auto;" alt="School Logo">
                                             </div>
                                         </td>
                                         <td class="school-name-cell">
@@ -1952,17 +2535,17 @@
                                 <table class="contact-table">
                                     <tr>
                                         <td class="contact-left-cell">
-                                            <div contenteditable="true" id="leftTitle">આચાર્યાશ્રી (નોન ગ્રાન્ટેડ)</div>
+                                            <div contenteditable="true" id="leftTitle">આચાર્યશ્રી (નોન ગ્રાન્ટેડ)</div>
                                             <div contenteditable="true" id="leftName">શ્રીમતિ વૈશાલીબેન એમ. ગામીત</div>
                                             <div contenteditable="true" id="leftMobile">Mo. 9979278886</div>
                                         </td>
                                         <td class="contact-center-cell">
                                             <div contenteditable="true" id="centerTitle">પ્રાથમિક વિભાગ (ગ્રાન્ટેડ અને નોનગ્રાન્ટેડ)</div>
-                                            <div contenteditable="true" id="centerAddress">ફોર્ટ-સોનગઢ, જુ. તાપી</div>
+                                            <div contenteditable="true" id="centerAddress">ફોર્ટ-સોનગઢ, જી. તાપી</div>
                                         </td>
                                         <td class="contact-right-cell">
                                             <div contenteditable="true" id="rightTitle">આચાર્યશ્રી (ગ્રાન્ટેડ)</div>
-                                            <div contenteditable="true" id="rightName">શ્રી ઓન. આર. ગામીત</div>
+                                            <div contenteditable="true" id="rightName">શ્રી એન. આર. ગામીત</div>
                                             <div contenteditable="true" id="rightMobile">Mo. 9426539035</div>
                                         </td>
                                     </tr>
@@ -1971,9 +2554,9 @@
                                 <!-- Footer Info -->
                                 <table class="footer-table">
                                     <tr>
-                                        <td class="footer-left" contenteditable="true" id="footerLeft">શાળા કાયસ કોડ : 24261004403</td>
+                                        <td class="footer-left" contenteditable="true" id="footerLeft">શાળા કોડ : 24261004403</td>
                                         <td class="footer-center" contenteditable="true" id="footerCenter">Email : nilesh198333@mail.com</td>
-                                        <td class="footer-right" contenteditable="true" id="footerRight">શાળા કાયસ કોડ : 24261004404</td>
+                                        <td class="footer-right" contenteditable="true" id="footerRight">શાળા કોડ : 24261004404</td>
                                     </tr>
                                 </table>
                             </div>
@@ -2022,6 +2605,21 @@
 
     <!-- Add Page Button -->
     <button class="add-page-btn" onclick="addNewPage()">+ Add new page</button>
+    </div>
+
+    <!-- Logo Gallery Panel -->
+    <div class="logo-panel" id="logoPanel">
+        <div class="logo-panel-header">
+            <h3>🏫 School Logo Gallery</h3>
+            <button type="button" class="logo-panel-close" onclick="toggleLogoPanel(false)">✕</button>
+        </div>
+        <p class="logo-panel-hint">Default is <strong>SHS logo.png</strong>. Click any preview to use it on the letterhead. Upload adds to this list.</p>
+        <div class="logo-gallery" id="logoGallery"></div>
+        <div class="logo-panel-actions">
+            <button type="button" class="app-tool-btn" onclick="changeLogo()">+ Upload logo</button>
+            <button type="button" class="app-tool-btn" onclick="resetDefaultLogo()">Use default</button>
+            <button type="button" class="app-tool-btn" onclick="toggleLogoPanel(false)">Done</button>
+        </div>
     </div>
 
     <!-- Stamp Selection Panel -->
@@ -2135,7 +2733,18 @@
 
     <script>
         let editMode = false;
-        let logoData = 'logo.png'; // Default logo
+        /** Default: E:\shs\scholarship-portal\shs\logo.png → served as /shs/logo.png */
+        const DEFAULT_LOGO_URL = '/shs/logo.png';
+        const LOGO_LIBRARY_KEY = 'letterheadCustomLogos';
+        const BUILTIN_LOGOS = [
+            { id: 'default', label: 'SHS Default', src: DEFAULT_LOGO_URL, builtin: true },
+            { id: 'school-logo', label: 'School Crest', src: '/shs/logos/school-logo.png', builtin: true },
+            { id: 'sarvajanik', label: 'Sarvajanik Crest', src: '/shs/logos/sarvajanik-crest.png', builtin: true },
+            { id: 'logo-jpeg', label: 'Logo JPEG', src: '/shs/logos/logo.jpeg', builtin: true },
+            { id: 'school-photo', label: 'School Photo', src: '/shs/logos/school-photo.jpeg', builtin: true },
+            { id: 'mark', label: 'Mark', src: '/shs/logos/mark.png', builtin: true },
+        ];
+        let logoData = DEFAULT_LOGO_URL;
         let pageCount = 1;
         let selectedStamp = null;
         let stampCounter = 0;
@@ -3075,22 +3684,136 @@
             reader.readAsText(file);
         }
 
-        function handleLogoUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    logoData = e.target.result;
-                    // Update all logo containers
-                    document.querySelectorAll('.logo-placeholder, .logo-container').forEach(container => {
-                        container.innerHTML = `<img src="${logoData}" style="width: 70px; height: auto;">`;
-                        container.style.border = 'none';
-                        container.style.background = 'transparent';
-                    });
-                    saveToLocalStorage();
-                };
-                reader.readAsDataURL(file);
+        function normalizeLogoSrc(src) {
+            if (!src || typeof src !== 'string') return DEFAULT_LOGO_URL;
+            const trimmed = src.trim();
+            if (!trimmed) return DEFAULT_LOGO_URL;
+            if (
+                trimmed === 'logo.png' ||
+                trimmed === './logo.png' ||
+                trimmed === 'shs/logo.png' ||
+                trimmed.endsWith('/undefined')
+            ) {
+                return DEFAULT_LOGO_URL;
             }
+            return trimmed;
+        }
+
+        function loadCustomLogos() {
+            try {
+                const raw = localStorage.getItem(LOGO_LIBRARY_KEY);
+                const list = raw ? JSON.parse(raw) : [];
+                return Array.isArray(list) ? list.filter((x) => x && x.src && x.id) : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function saveCustomLogos(list) {
+            localStorage.setItem(LOGO_LIBRARY_KEY, JSON.stringify(list.slice(0, 16)));
+        }
+
+        function getAllLogos() {
+            return [...BUILTIN_LOGOS, ...loadCustomLogos()];
+        }
+
+        function renderLogoGallery() {
+            const gallery = document.getElementById('logoGallery');
+            if (!gallery) return;
+            const active = normalizeLogoSrc(logoData);
+            gallery.innerHTML = getAllLogos()
+                .map((item) => {
+                    const isActive = item.src === active;
+                    const isDefault = item.src === DEFAULT_LOGO_URL;
+                    const customCls = item.builtin ? '' : ' is-custom';
+                    const activeCls = isActive ? ' is-active' : '';
+                    const defaultCls = isDefault ? ' is-default' : '';
+                    const removeBtn = item.builtin
+                        ? ''
+                        : `<button type="button" class="logo-card-remove" title="Remove uploaded logo" onclick="event.stopPropagation(); removeCustomLogo('${item.id}')">✕</button>`;
+                    return `<button type="button" class="logo-card${activeCls}${defaultCls}${customCls}" onclick="selectLibraryLogo('${item.id}')" title="${item.label}">
+                        ${removeBtn}
+                        <img src="${item.src}" alt="${item.label}" onerror="this.style.opacity=0.3">
+                        <span class="logo-card-label">${item.label}</span>
+                    </button>`;
+                })
+                .join('');
+        }
+
+        function selectLibraryLogo(id) {
+            const item = getAllLogos().find((x) => x.id === id);
+            if (!item) return;
+            applyLogo(item.src, true);
+            renderLogoGallery();
+        }
+
+        function removeCustomLogo(id) {
+            const customs = loadCustomLogos();
+            const removed = customs.find((x) => x.id === id);
+            saveCustomLogos(customs.filter((x) => x.id !== id));
+            if (removed && logoData === removed.src) {
+                applyLogo(DEFAULT_LOGO_URL, true);
+            } else {
+                renderLogoGallery();
+            }
+        }
+
+        function toggleLogoPanel(force) {
+            const panel = document.getElementById('logoPanel');
+            if (!panel) return;
+            const stamp = document.getElementById('stampPanel');
+            const ocr = document.getElementById('ocrPanel');
+            if (stamp) stamp.classList.remove('active');
+            if (ocr) ocr.classList.remove('active');
+            const open = typeof force === 'boolean' ? force : !panel.classList.contains('active');
+            panel.classList.toggle('active', open);
+            if (open) renderLogoGallery();
+        }
+
+        function applyLogo(src, persist) {
+            logoData = normalizeLogoSrc(src);
+            document.querySelectorAll('.logo-placeholder, .logo-container').forEach((container) => {
+                container.innerHTML =
+                    `<img src="${logoData}" style="width: 70px; height: auto;" alt="School Logo" onerror="this.onerror=null;this.src='${DEFAULT_LOGO_URL}'">`;
+                container.classList.add('has-logo');
+                container.style.border = 'none';
+                container.style.background = 'transparent';
+                container.style.cursor = 'pointer';
+                container.title = 'Click to choose logo';
+                container.onclick = function () {
+                    toggleLogoPanel(true);
+                };
+            });
+            if (persist) saveToLocalStorage();
+            renderLogoGallery();
+        }
+
+        function changeLogo() {
+            const input = document.getElementById('logoInput');
+            if (input) input.click();
+        }
+
+        function resetDefaultLogo() {
+            applyLogo(DEFAULT_LOGO_URL, true);
+            toggleLogoPanel(true);
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const src = e.target.result;
+                const custom = loadCustomLogos();
+                const id = `custom-${Date.now()}`;
+                const label = (file.name || 'Uploaded').replace(/\.[^.]+$/, '').slice(0, 28) || 'Uploaded';
+                custom.unshift({ id, label, src, builtin: false });
+                saveCustomLogos(custom);
+                applyLogo(src, true);
+                toggleLogoPanel(true);
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
         }
 
         // Add new page with same header
@@ -3162,14 +3885,8 @@
             // Setup new page for stamp drag-drop
             setupPageForStamp(newPage);
             
-            // Update logo on new page if exists
-            if (logoData) {
-                newPage.querySelectorAll('.logo-placeholder').forEach(container => {
-                    container.innerHTML = `<img src="${logoData}" style="width: 70px; height: auto;">`;
-                    container.style.border = 'none';
-                    container.style.background = 'transparent';
-                });
-            }
+            // Keep logo in sync on new page
+            applyLogo(logoData, false);
             
             // Scroll to new page
             newPage.scrollIntoView({ behavior: 'smooth' });
@@ -3419,62 +4136,182 @@
 
         function saveToLocalStorage() {
             const data = getDocumentState();
-            localStorage.setItem('letterheadData', JSON.stringify(data));
+            try {
+                localStorage.setItem('letterheadData', JSON.stringify(data));
+            } catch (e) {
+                console.warn('localStorage save failed', e);
+            }
+            // Always queue cloud save when embedded in portal
+            if (isEmbeddedLetterhead()) {
+                queueCloudSave();
+            }
+        }
+
+        function isEmbeddedLetterhead() {
+            return document.documentElement.classList.contains('embedded') ||
+                new URLSearchParams(window.location.search).get('embed') === '1';
+        }
+
+        let cloudSaveTimer = null;
+        let cloudSaveInFlight = false;
+        let schoolLetterheadMeta = { schoolCode: '', schoolName: '', saved: false };
+
+        function setSaveStatus(msg, ok) {
+            const btn = document.getElementById('btnSaveServer');
+            if (btn) {
+                btn.textContent = msg;
+                btn.style.opacity = ok === false ? '0.85' : '1';
+            }
+            try {
+                window.parent.postMessage({
+                    type: 'letterhead:status',
+                    message: msg,
+                    schoolCode: schoolLetterheadMeta.schoolCode,
+                    saved: schoolLetterheadMeta.saved,
+                }, '*');
+            } catch (_) { /* ignore */ }
+        }
+
+        function queueCloudSave() {
+            clearTimeout(cloudSaveTimer);
+            cloudSaveTimer = setTimeout(() => { void saveToServer(false); }, 1200);
+        }
+
+        async function saveToServer(manual) {
+            if (!isEmbeddedLetterhead()) {
+                saveToLocalStorage();
+                if (manual) alert('Saved locally!');
+                return;
+            }
+            if (cloudSaveInFlight) return;
+            cloudSaveInFlight = true;
+            setSaveStatus('Saving…', true);
+            try {
+                const data = getDocumentState();
+                localStorage.setItem('letterheadData', JSON.stringify(data));
+                const res = await fetch('/api/school/letterhead', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ data }),
+                });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.error || 'Save failed');
+                schoolLetterheadMeta.saved = true;
+                if (json.schoolCode) schoolLetterheadMeta.schoolCode = json.schoolCode;
+                setSaveStatus('Saved ✓', true);
+                if (manual) {
+                    setTimeout(() => setSaveStatus('☁ Save', true), 1600);
+                } else {
+                    setTimeout(() => setSaveStatus('☁ Save', true), 2200);
+                }
+            } catch (err) {
+                console.error(err);
+                setSaveStatus('Save failed', false);
+                if (manual) alert(err instanceof Error ? err.message : 'Could not save letterhead');
+            } finally {
+                cloudSaveInFlight = false;
+            }
+        }
+
+        function saveLetterheadNow() {
+            clearTimeout(cloudSaveTimer);
+            void saveToServer(true);
+        }
+
+        function applyDocumentState(data) {
+            if (!data || typeof data !== 'object') return;
+
+            if (data.headerTop) document.getElementById('headerTop').innerHTML = data.headerTop;
+            if (data.schoolName) document.getElementById('schoolName').innerHTML = data.schoolName;
+            if (data.leftTitle) document.getElementById('leftTitle').innerHTML = data.leftTitle;
+            if (data.leftName) document.getElementById('leftName').innerHTML = data.leftName;
+            if (data.leftMobile) document.getElementById('leftMobile').innerHTML = data.leftMobile;
+            if (data.centerTitle) document.getElementById('centerTitle').innerHTML = data.centerTitle;
+            if (data.centerAddress) document.getElementById('centerAddress').innerHTML = data.centerAddress;
+            if (data.rightTitle) document.getElementById('rightTitle').innerHTML = data.rightTitle;
+            if (data.rightName) document.getElementById('rightName').innerHTML = data.rightName;
+            if (data.rightMobile) document.getElementById('rightMobile').innerHTML = data.rightMobile;
+            if (data.footerLeft) document.getElementById('footerLeft').innerHTML = data.footerLeft;
+            if (data.footerCenter) document.getElementById('footerCenter').innerHTML = data.footerCenter;
+            if (data.footerRight) document.getElementById('footerRight').innerHTML = data.footerRight;
+            if (data.serialNo) document.getElementById('serialNo').innerHTML = data.serialNo;
+            if (data.dateDay) document.getElementById('dateDay').innerHTML = data.dateDay;
+            if (data.dateMonth) document.getElementById('dateMonth').innerHTML = data.dateMonth;
+            if (data.dateYear) document.getElementById('dateYear').innerHTML = data.dateYear;
+
+            if (data.pageContents && data.pageContents[0]) {
+                document.getElementById('contentArea').innerHTML = data.pageContents[0];
+            }
+
+            if (data.pageCount && data.pageCount > 1) {
+                for (let i = 2; i <= data.pageCount; i++) {
+                    addNewPage();
+                    if (data.pageContents && data.pageContents[i - 1]) {
+                        const el = document.getElementById(`contentArea-${i}`);
+                        if (el) el.innerHTML = data.pageContents[i - 1];
+                    }
+                }
+            }
+
+            if (data.logo) {
+                logoData = normalizeLogoSrc(data.logo);
+            } else {
+                logoData = DEFAULT_LOGO_URL;
+            }
+            applyLogo(logoData, false);
+
+            if (data.stamps && data.stamps.length > 0) {
+                stamps = data.stamps;
+                loadStamps();
+            }
         }
 
         function loadFromLocalStorage() {
             const saved = localStorage.getItem('letterheadData');
             if (saved) {
-                const data = JSON.parse(saved);
-                
-                if (data.headerTop) document.getElementById('headerTop').innerHTML = data.headerTop;
-                if (data.schoolName) document.getElementById('schoolName').innerHTML = data.schoolName;
-                if (data.leftTitle) document.getElementById('leftTitle').innerHTML = data.leftTitle;
-                if (data.leftName) document.getElementById('leftName').innerHTML = data.leftName;
-                if (data.leftMobile) document.getElementById('leftMobile').innerHTML = data.leftMobile;
-                if (data.centerTitle) document.getElementById('centerTitle').innerHTML = data.centerTitle;
-                if (data.centerAddress) document.getElementById('centerAddress').innerHTML = data.centerAddress;
-                if (data.rightTitle) document.getElementById('rightTitle').innerHTML = data.rightTitle;
-                if (data.rightName) document.getElementById('rightName').innerHTML = data.rightName;
-                if (data.rightMobile) document.getElementById('rightMobile').innerHTML = data.rightMobile;
-                if (data.footerLeft) document.getElementById('footerLeft').innerHTML = data.footerLeft;
-                if (data.footerCenter) document.getElementById('footerCenter').innerHTML = data.footerCenter;
-                if (data.footerRight) document.getElementById('footerRight').innerHTML = data.footerRight;
-                if (data.serialNo) document.getElementById('serialNo').innerHTML = data.serialNo;
-                if (data.dateDay) document.getElementById('dateDay').innerHTML = data.dateDay;
-                if (data.dateMonth) document.getElementById('dateMonth').innerHTML = data.dateMonth;
-                if (data.dateYear) document.getElementById('dateYear').innerHTML = data.dateYear;
-                
-                // Load first page content
-                if (data.pageContents && data.pageContents[0]) {
-                    document.getElementById('contentArea').innerHTML = data.pageContents[0];
+                try {
+                    applyDocumentState(JSON.parse(saved));
+                } catch (e) {
+                    console.warn('local letterhead parse failed', e);
                 }
-                
-                // Create additional pages if needed
-                if (data.pageCount && data.pageCount > 1) {
-                    for (let i = 2; i <= data.pageCount; i++) {
-                        addNewPage();
-                        if (data.pageContents && data.pageContents[i-1]) {
-                            document.getElementById(`contentArea-${i}`).innerHTML = data.pageContents[i-1];
-                        }
-                    }
-                }
-                
-                if (data.logo) {
-                    logoData = data.logo;
-                }
-                // Always update logo containers with current logoData (default or saved)
-                document.querySelectorAll('.logo-placeholder').forEach(container => {
-                    container.innerHTML = `<img src="${logoData}" style="width: 70px; height: auto;">`;
-                    container.style.border = 'none';
-                    container.style.background = 'transparent';
-                });
+            }
+        }
 
-                // Load stamps
-                if (data.stamps && data.stamps.length > 0) {
-                    stamps = data.stamps;
-                    loadStamps();
+        async function loadLetterheadFromServer() {
+            if (!isEmbeddedLetterhead()) {
+                loadFromLocalStorage();
+                return;
+            }
+            setSaveStatus('Loading…', true);
+            try {
+                const res = await fetch('/api/school/letterhead', { credentials: 'same-origin', cache: 'no-store' });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || 'Load failed');
+                schoolLetterheadMeta = {
+                    schoolCode: json.schoolCode || '',
+                    schoolName: json.schoolName || '',
+                    saved: Boolean(json.saved),
+                };
+                if (json.data) {
+                    applyDocumentState(json.data);
+                    try {
+                        localStorage.setItem('letterheadData', JSON.stringify(json.data));
+                    } catch (_) { /* ignore */ }
                 }
+                setSaveStatus(json.saved ? '☁ Save' : '☁ Save (new)', true);
+                try {
+                    window.parent.postMessage({
+                        type: 'letterhead:loaded',
+                        schoolCode: schoolLetterheadMeta.schoolCode,
+                        schoolName: schoolLetterheadMeta.schoolName,
+                        saved: schoolLetterheadMeta.saved,
+                    }, '*');
+                } catch (_) { /* ignore */ }
+            } catch (err) {
+                console.error(err);
+                loadFromLocalStorage();
+                setSaveStatus('☁ Save', false);
             }
         }
 
@@ -3496,8 +4333,7 @@
                         break;
                     case 's':
                         e.preventDefault();
-                        saveToLocalStorage();
-                        alert('Saved!');
+                        saveLetterheadNow();
                         break;
                     case 'p':
                         e.preventDefault();
@@ -3516,10 +4352,12 @@
             }
         });
 
-        // Load saved data on page load
+        // Load saved data on page load (DB when embedded in portal)
         window.onload = function() {
-            loadFromLocalStorage();
-            updateWordCount();
+            void loadLetterheadFromServer().then(function() {
+                applyLogo(logoData || DEFAULT_LOGO_URL, false);
+                updateWordCount();
+            });
         };
     </script>
 </body>

@@ -19,7 +19,6 @@ let cached: SchoolFeaturesState | null = null;
 let inflight: Promise<SchoolFeaturesState> | null = null;
 
 async function loadSchoolFeatures(): Promise<SchoolFeaturesState> {
-  if (cached?.ready) return cached;
   if (inflight) return inflight;
   inflight = fetch("/api/school/features", { cache: "no-store" })
     .then(async (r) => {
@@ -59,26 +58,44 @@ async function loadSchoolFeatures(): Promise<SchoolFeaturesState> {
   return inflight;
 }
 
+type FeaturesListener = () => void;
+const listeners = new Set<FeaturesListener>();
+
 /** Clear cache after Super Admin updates (or after re-login). */
 export function invalidateSchoolFeaturesCache() {
   cached = null;
   inflight = null;
+  listeners.forEach((fn) => fn());
 }
 
 export function useSchoolFeatures() {
   const [state, setState] = useState<SchoolFeaturesState>(
     cached ?? { features: null, formats: null, letterhead: null, ready: false },
   );
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const onInvalidate = () => setTick((n) => n + 1);
+    listeners.add(onInvalidate);
+    return () => {
+      listeners.delete(onInvalidate);
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
+    // Force a fresh fetch whenever cache was invalidated
+    if (tick > 0) {
+      cached = null;
+      inflight = null;
+    }
     void loadSchoolFeatures().then((next) => {
       if (alive) setState(next);
     });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [tick]);
 
   return {
     ...state,

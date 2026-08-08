@@ -31,6 +31,7 @@ export type DrillTarget = {
 
 type StudentRow = {
   id: string;
+  grNumber?: string | null;
   rollNumber?: string | null;
   mobileNumber?: string | null;
   category?: string | null;
@@ -332,6 +333,7 @@ export function DashboardDrillModal({
                 <thead>
                   <tr>
                     <th className="ops-drill-sr">{t("common.srNo")}</th>
+                    <th>{t("dashboard.drillColGr")}</th>
                     <th>{t("dashboard.drillColRoll")}</th>
                     <th>{t("dashboard.drillColName")}</th>
                     <th>{t("dashboard.drillColClass")}</th>
@@ -345,6 +347,7 @@ export function DashboardDrillModal({
                   {students.map((s, i) => (
                     <tr key={s.id}>
                       <td className="ops-drill-sr">{(page - 1) * PAGE_SIZE + i + 1}</td>
+                      <td className="ops-drill-gr">{s.grNumber?.trim() || "—"}</td>
                       <td>{s.rollNumber || "—"}</td>
                       <td>
                         <Link href={`/students/${s.id}`} className="ops-drill-name">

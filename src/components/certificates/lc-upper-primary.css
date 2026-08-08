@@ -1,0 +1,81 @@
+/* Upper Primary LC — DOB scan layout:
+   ONE flex row: [In Words .........] [તારીખ] [માસ] [વર્ષ] */
+
+.lc-up-dob-row {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-end !important;
+  gap: 10px !important;
+  margin-left: 14px !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.lc-up-dob-boxes {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  flex: 0 0 auto !important;
+}
+
+.lc-up-dob-unit {
+  display: inline-block !important;
+  vertical-align: top !important;
+  text-align: center !important;
+  float: none !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+.lc-up-dob-box {
+  display: inline-block !important;
+  border: 1.5px solid #111 !important;
+  box-sizing: border-box !important;
+  background: #fff !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  line-height: 28px !important;
+  text-align: center !important;
+  overflow: hidden !important;
+  float: none !important;
+  vertical-align: middle !important;
+}
+
+.lc-up-dob-box--day,
+.lc-up-dob-box--month {
+  width: 42px !important;
+  height: 28px !important;
+  min-width: 42px !important;
+}
+
+.lc-up-dob-box--year {
+  width: 68px !important;
+  height: 28px !important;
+  min-width: 68px !important;
+}
+
+.lc-up-dob-label {
+  display: block !important;
+  font-size: 11px !important;
+  margin-top: 4px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+@media print {
+  .lc-up-dob-row,
+  .lc-up-dob-boxes {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+  }
+  .lc-up-dob-unit,
+  .lc-up-dob-box {
+    display: inline-block !important;
+  }
+}

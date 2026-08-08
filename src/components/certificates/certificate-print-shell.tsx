@@ -17,6 +17,7 @@ export function CertificatePrintShell({
   canPrint = true,
   hidePrint = false,
   printMargin,
+  packId: packIdProp,
 }: {
   children: React.ReactNode;
   landscape?: boolean;
@@ -29,14 +30,27 @@ export function CertificatePrintShell({
   hidePrint?: boolean;
   /** @page margin — default 8mm portrait / 4mm landscape */
   printMargin?: string;
+  /** Override pack (LC page resolves school-code fallback) */
+  packId?: string | null;
 }) {
   const t = useT();
   const router = useRouter();
   const { formats, letterhead } = useSchoolFeatures();
   const pageMargin = printMargin ?? (landscape ? "4mm" : "8mm");
 
+  const packId =
+    packIdProp ||
+    formats?.certificates ||
+    (() => {
+      const code = (letterhead?.code || letterhead?.udiseCode || "").trim();
+      if (code === "24261004403" || code === "24261004404" || code === "24261004405") {
+        return code;
+      }
+      return "default";
+    })();
+
   return (
-    <CertificateBrandProvider packId={formats?.certificates} letterhead={letterhead}>
+    <CertificateBrandProvider packId={packId} letterhead={letterhead}>
     <div className="certificates-module space-y-5">
 
       {/* ── Top bar ────────────────────────────────── */}

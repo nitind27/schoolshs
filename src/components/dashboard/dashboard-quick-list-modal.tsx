@@ -14,6 +14,7 @@ export type QuickListKind = "admission" | "staff";
 
 type AdmissionRow = {
   id: string;
+  grNumber?: string | null;
   firstName?: string | null;
   surname?: string | null;
   firstNameGu?: string | null;
@@ -189,6 +190,7 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
                 <thead>
                   <tr>
                     <th className="ops-drill-sr">{t("common.srNo")}</th>
+                    <th>{t("dashboard.drillColGr")}</th>
                     <th>{t("dashboard.drillColName")}</th>
                     <th>{t("dashboard.drillColClass")}</th>
                     <th>{t("dashboard.drillColCategory")}</th>
@@ -201,6 +203,7 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
                   {admissionRows.map((s, i) => (
                     <tr key={s.id}>
                       <td className="ops-drill-sr">{(page - 1) * PAGE_SIZE + i + 1}</td>
+                      <td className="ops-drill-gr">{s.grNumber?.trim() || "—"}</td>
                       <td>
                         <Link href={`/students/${s.id}`} className="ops-drill-name">
                           {studentShortNameGu(s)}

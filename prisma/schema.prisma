@@ -310,6 +310,10 @@ model SchoolSettings {
    * DG OTP wala registered mobile — phone bridge link is number se connect
    */
   dgOtpMobile          String?
+  /**
+   * Official letterhead editor payload (JSON) — school-code scoped, persists edits
+   */
+  letterheadJson       Json?
 
   @@map("schoolsettings")
 }
