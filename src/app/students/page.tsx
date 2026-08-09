@@ -6,7 +6,7 @@ import {
   studentFullNameGu,
   studentShortNameGu,
 } from "@/lib/student-names";
-import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
+import { useEffect, useState, useCallback, useMemo, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,11 @@ import {
   CreditCard,
   X,
   Users,
+  UserX,
+  Ban,
+  MoreHorizontal,
+  Phone,
+  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
@@ -37,8 +42,170 @@ import { PageShell } from "@/components/layout/page-shell";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/hooks/use-confirm";
 import { genderShort, normalizeGender } from "@/lib/gender-utils";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 
 const PAGE_SIZE = 25;
+
+function studentInitial(name: string) {
+  const ch = name.trim().charAt(0);
+  return ch || "?";
+}
+
+function genderTone(gender?: string | null) {
+  const g = String(gender || "").toLowerCase();
+  if (g.includes("female") || g === "f") return "bg-rose-50 text-rose-700 border-rose-100";
+  if (g.includes("male") || g === "m") return "bg-sky-50 text-sky-700 border-sky-100";
+  return "bg-slate-100 text-slate-700 border-slate-200";
+}
+
+function StudentRowActions({
+  studentId,
+  onDeactivate,
+  onDelete,
+  compact = false,
+  showAutoApply = true,
+}: {
+  studentId: string;
+  onDeactivate: () => void;
+  onDelete: () => void;
+  compact?: boolean;
+  showAutoApply?: boolean;
+}) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+
+  const placeMenu = useCallback(() => {
+    const btn = menuBtnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const menuW = 184;
+    const left = Math.min(
+      Math.max(8, compact ? r.left : r.right - menuW),
+      window.innerWidth - menuW - 8,
+    );
+    const below = r.bottom + 6;
+    const estimatedH = 180;
+    const top =
+      below + estimatedH > window.innerHeight - 8
+        ? Math.max(8, r.top - estimatedH - 6)
+        : below;
+    setMenuPos({ top, left });
+  }, [compact]);
+
+  useEffect(() => {
+    if (!open) return;
+    placeMenu();
+    const onPointer = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("resize", placeMenu);
+    window.addEventListener("scroll", placeMenu, true);
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, placeMenu]);
+
+  return (
+    <div ref={rootRef} className={cn("relative flex items-center gap-1.5", compact ? "flex-wrap" : "justify-end")}>
+      <Link href={`/students/${studentId}`}>
+        <Button variant="outline" size="sm" className="h-9 gap-1.5 px-2.5">
+          <Eye className="h-3.5 w-3.5" />
+          {t("common.view")}
+        </Button>
+      </Link>
+      <Link href={`/students/${studentId}/edit`}>
+        <Button variant="secondary" size="sm" className="h-9 gap-1.5 px-2.5">
+          <Edit className="h-3.5 w-3.5" />
+          {t("common.edit")}
+        </Button>
+      </Link>
+      <Button
+        ref={menuBtnRef}
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-9 gap-1.5 px-2.5"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => {
+          if (open) {
+            setOpen(false);
+            return;
+          }
+          placeMenu();
+          setOpen(true);
+        }}
+      >
+        <MoreHorizontal className="h-3.5 w-3.5" />
+        {t("common.more")}
+      </Button>
+
+      {open && menuPos ? (
+        <div
+          role="menu"
+          style={{ top: menuPos.top, left: menuPos.left }}
+          className="fixed z-50 min-w-[11.5rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+        >
+          <Link
+            href={`/id-cards?studentId=${studentId}`}
+            role="menuitem"
+            className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+            onClick={() => setOpen(false)}
+          >
+            <CreditCard className="h-4 w-4 text-pink-600" />
+            {t("students.idCard")}
+          </Link>
+          {showAutoApply ? (
+            <Link
+              href={`/auto-apply?ids=${studentId}`}
+              role="menuitem"
+              className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+              onClick={() => setOpen(false)}
+            >
+              <Play className="h-4 w-4 text-emerald-600" />
+              {t("students.autoFill")}
+            </Link>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-amber-800 hover:bg-amber-50"
+            onClick={() => {
+              setOpen(false);
+              onDeactivate();
+            }}
+          >
+            <Ban className="h-4 w-4 text-amber-600" />
+            {t("students.deactivate")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-red-700 hover:bg-red-50"
+            onClick={() => {
+              setOpen(false);
+              onDelete();
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-red-500" />
+            {t("common.delete")}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 type StudentRow = Student & {
   schoolClass?: Pick<
@@ -91,6 +258,8 @@ export default function StudentsPage() {
 function StudentsContent() {
   const t = useT();
   const { confirm, ConfirmDialog } = useConfirm();
+  const { has } = useSchoolFeatures();
+  const canAutoApply = has("scholarship_auto_apply");
   const searchParams = useSearchParams();
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [classes, setClasses] = useState<ClassMeta[]>([]);
@@ -273,6 +442,33 @@ function StudentsContent() {
     fetchStudents();
   };
 
+  const deactivateStudent = async (id: string) => {
+    const ok = await confirm({
+      title: t("students.deactivateTitle"),
+      message: t("students.confirmDeactivate"),
+      confirmLabel: t("students.deactivate"),
+      cancelLabel: t("common.cancel"),
+      variant: "destructive",
+    });
+    if (!ok) return;
+    const res = await fetch(`/api/students/${id}/active`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: false }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || t("students.deactivateFailed"));
+      return;
+    }
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    fetchStudents();
+  };
+
   const exportSelected = () => {
     const ids = selected.size > 0 ? Array.from(selected).join(",") : "";
     window.open(`/api/students/export?${ids ? `ids=${ids}` : ""}`, "_blank");
@@ -283,8 +479,9 @@ function StudentsContent() {
       {
         id: "select",
         enableSorting: false,
+        size: 44,
         header: () => (
-          <button type="button" onClick={toggleAll} className="p-0.5">
+          <button type="button" onClick={toggleAll} className="p-0.5" aria-label="Select all">
             {selected.size === students.length && students.length > 0 ? (
               <CheckSquare className="h-4 w-4 text-blue-600" />
             ) : (
@@ -297,6 +494,7 @@ function StudentsContent() {
             type="button"
             onClick={() => toggleSelect(row.original.id)}
             className="p-0.5"
+            aria-label="Select student"
           >
             {selected.has(row.original.id) ? (
               <CheckSquare className="h-4 w-4 text-blue-600" />
@@ -307,96 +505,84 @@ function StudentsContent() {
         ),
       },
       {
-        header: t("fields.grNumber"),
-        accessorKey: "grNumber",
-        cell: ({ row }) => (
-          <span className="font-mono text-xs font-semibold text-slate-700">
-            {row.original.grNumber || "—"}
-          </span>
-        ),
-      },
-      {
-        header: t("fields.roll"),
-        accessorKey: "rollNumber",
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-slate-600">
-            {row.original.rollNumber || "—"}
-          </span>
-        ),
-      },
-      {
+        id: "student",
         header: t("common.name"),
         accessorFn: (s) => studentFullNameGu(s) || studentShortNameGu(s) || "",
         cell: ({ row }) => {
-          const name =
-            studentFullNameGu(row.original) || studentShortNameGu(row.original) || "—";
-          const father = studentDisplayFatherName(row.original);
+          const s = row.original;
+          const name = studentFullNameGu(s) || studentShortNameGu(s) || "—";
+          const father = studentDisplayFatherName(s);
           return (
-            <div>
-              <p className="font-semibold leading-snug text-slate-900">{name}</p>
-              {father ? (
-                <p className="mt-0.5 text-[11px] text-slate-500">
-                  {t("fields.fatherName")}: {father}
-                </p>
-              ) : null}
+            <div className="flex min-w-[14rem] max-w-sm items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-indigo-100 text-sm font-bold text-sky-800 ring-1 ring-sky-200/70">
+                {studentInitial(name)}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[15px] font-semibold leading-snug text-slate-900">{name}</p>
+                {father ? (
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {t("fields.fatherName")}:{" "}
+                    <span className="font-medium text-slate-700">{father}</span>
+                  </p>
+                ) : null}
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[11px] font-semibold text-slate-700">
+                    GR {s.grNumber || "—"}
+                  </span>
+                  <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
+                    Roll {s.rollNumber || "—"}
+                  </span>
+                </div>
+              </div>
             </div>
           );
         },
       },
       {
+        id: "class",
         header: t("fields.class"),
         accessorFn: (s) => classLabel(s, t),
         cell: ({ row }) => (
-          <span className="inline-flex rounded-lg bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800 border border-sky-100">
-            {classLabel(row.original, t)}
-          </span>
+          <div className="space-y-1.5">
+            <span className="inline-flex rounded-lg border border-sky-100 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800">
+              {classLabel(row.original, t)}
+            </span>
+            <div>
+              <span
+                className={cn(
+                  "inline-flex h-6 min-w-[1.75rem] items-center justify-center rounded-md border px-1.5 text-[11px] font-bold",
+                  genderTone(row.original.gender),
+                )}
+              >
+                {genderShort(normalizeGender(row.original.gender))}
+              </span>
+            </div>
+          </div>
         ),
       },
       {
-        header: t("fields.gender"),
-        accessorKey: "gender",
+        id: "details",
+        header: t("common.details"),
+        enableSorting: false,
         cell: ({ row }) => {
-          const g = String(row.original.gender || "").toLowerCase();
-          const tone =
-            g.includes("female") || g === "f"
-              ? "bg-rose-50 text-rose-700 border-rose-100"
-              : g.includes("male") || g === "m"
-                ? "bg-sky-50 text-sky-700 border-sky-100"
-                : "bg-slate-100 text-slate-700 border-slate-200";
+          const s = row.original;
           return (
-            <span className={cn("inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md border px-1.5 text-[11px] font-bold", tone)}>
-              {genderShort(row.original.gender)}
-            </span>
+            <div className="min-w-[11rem] space-y-1.5 text-xs">
+              <div className="flex items-center gap-1.5 text-slate-700">
+                <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <span className="font-medium tabular-nums">{s.mobileNumber || "—"}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-600">
+                <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <span>{s.dateOfBirth || "—"}</span>
+              </div>
+              <p className="font-mono text-[11px] tracking-wide text-slate-500">
+                {maskAadhaar(s.aadhaarNumber)}
+              </p>
+              {s.category ? <CategoryBadge category={s.category} /> : null}
+            </div>
           );
         },
-      },
-      {
-        header: t("fields.category"),
-        accessorKey: "category",
-        cell: ({ row }) => <CategoryBadge category={row.original.category} />,
-      },
-      {
-        header: t("fields.mobile"),
-        accessorKey: "mobileNumber",
-        cell: ({ row }) => (
-          <span className="text-xs text-slate-700">{row.original.mobileNumber || "—"}</span>
-        ),
-      },
-      {
-        header: t("fields.dob"),
-        accessorKey: "dateOfBirth",
-        cell: ({ row }) => (
-          <span className="text-xs text-slate-600">{row.original.dateOfBirth || "—"}</span>
-        ),
-      },
-      {
-        header: t("fields.aadhaar"),
-        accessorKey: "aadhaarNumber",
-        cell: ({ row }) => (
-          <span className="font-mono text-[11px] text-slate-500">
-            {maskAadhaar(row.original.aadhaarNumber)}
-          </span>
-        ),
       },
       {
         header: t("common.status"),
@@ -408,50 +594,16 @@ function StudentsContent() {
         header: () => <span className="block text-right">{t("common.actions")}</span>,
         enableSorting: false,
         cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-0.5">
-            <Link href={`/id-cards?studentId=${row.original.id}`}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                title={t("students.idCard")}
-              >
-                <CreditCard className="h-3.5 w-3.5 text-pink-600" />
-              </Button>
-            </Link>
-            <Link href={`/auto-apply?ids=${row.original.id}`}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                title={t("students.autoFill")}
-              >
-                <Play className="h-3.5 w-3.5 text-emerald-600" />
-              </Button>
-            </Link>
-            <Link href={`/students/${row.original.id}`}>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Eye className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-            <Link href={`/students/${row.original.id}/edit`}>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Edit className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => deleteStudent(row.original.id)}
-            >
-              <Trash2 className="h-3.5 w-3.5 text-red-500" />
-            </Button>
-          </div>
+          <StudentRowActions
+            studentId={row.original.id}
+            showAutoApply={canAutoApply}
+            onDeactivate={() => deactivateStudent(row.original.id)}
+            onDelete={() => deleteStudent(row.original.id)}
+          />
         ),
       },
     ],
-    [selected, students.length, t],
+    [selected, students.length, t, canAutoApply],
   );
 
   return (
@@ -464,7 +616,16 @@ function StudentsContent() {
       ]}
       icon={<Users className="h-5 w-5" />}
       actions={
-        <div className="grid w-full grid-cols-1 gap-2 min-[350px]:grid-cols-[0.9fr_1.1fr] sm:flex sm:w-auto">
+        <div className="grid w-full grid-cols-1 gap-2 min-[350px]:grid-cols-[0.9fr_1.1fr] sm:flex sm:w-auto sm:flex-wrap">
+          <Link href="/students/inactive" className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              className="w-full whitespace-nowrap border-amber-200 bg-amber-50 px-3 text-amber-900 hover:bg-amber-100 sm:w-auto sm:px-4"
+            >
+              <UserX className="h-3.5 w-3.5" />
+              {t("students.inactiveStudents")}
+            </Button>
+          </Link>
           <Button
             variant="outline"
             onClick={exportSelected}
@@ -796,65 +957,66 @@ function StudentsContent() {
                                 </button>
                               </td>
                               <td className="min-w-0 px-2 py-3 pr-3">
-                                <div className="flex min-w-0 items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <p className="break-words text-sm font-semibold leading-snug text-slate-900">
-                                      {name}
-                                    </p>
-                                    <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                                      {classLabel(student, t)} ·{" "}
-                                      {genderShort(normalizeGender(student.gender))}
-                                      {student.category ? ` · ${student.category}` : ""}
-                                    </p>
+                                <div className="flex min-w-0 items-start gap-2.5">
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-indigo-100 text-sm font-bold text-sky-800 ring-1 ring-sky-200/70">
+                                    {studentInitial(name)}
                                   </div>
-                                  <div className="shrink-0">
-                                    <Badge status={student.status} />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="min-w-0">
+                                        <p className="break-words text-sm font-semibold leading-snug text-slate-900">
+                                          {name}
+                                        </p>
+                                        {father ? (
+                                          <p className="mt-0.5 text-xs text-slate-500">
+                                            {t("fields.fatherName")}: {father}
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                      <Badge status={student.status} />
+                                    </div>
+
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                      <span className="inline-flex rounded-lg border border-sky-100 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
+                                        {classLabel(student, t)}
+                                      </span>
+                                      <span
+                                        className={cn(
+                                          "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-bold",
+                                          genderTone(student.gender),
+                                        )}
+                                      >
+                                        {genderShort(normalizeGender(student.gender))}
+                                      </span>
+                                      {student.category ? (
+                                        <CategoryBadge category={student.category} />
+                                      ) : null}
+                                    </div>
+
+                                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2 text-[11px] text-slate-600">
+                                      <span className="font-mono font-semibold text-slate-700">
+                                        GR {student.grNumber || "—"}
+                                      </span>
+                                      <span>Roll {student.rollNumber || "—"}</span>
+                                      <span className="truncate tabular-nums">
+                                        {student.mobileNumber || "—"}
+                                      </span>
+                                      <span>DOB {student.dateOfBirth || "—"}</span>
+                                      <span className="col-span-2 font-mono tracking-wide text-slate-500">
+                                        {maskAadhaar(student.aadhaarNumber)}
+                                      </span>
+                                    </div>
+
+                                    <div className="mt-2.5">
+                                      <StudentRowActions
+                                        studentId={student.id}
+                                        compact
+                                        showAutoApply={canAutoApply}
+                                        onDeactivate={() => deactivateStudent(student.id)}
+                                        onDelete={() => deleteStudent(student.id)}
+                                      />
+                                    </div>
                                   </div>
-                                </div>
-
-                                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] text-slate-600">
-                                  <span>GR: {student.grNumber || "—"}</span>
-                                  <span>Roll: {student.rollNumber || "—"}</span>
-                                  <span className="truncate">{student.mobileNumber || "—"}</span>
-                                  <span>DOB: {student.dateOfBirth || "—"}</span>
-                                  {father ? (
-                                    <span className="col-span-2 truncate">
-                                      {t("fields.fatherName")}: {father}
-                                    </span>
-                                  ) : null}
-                                </div>
-
-                                <div className="mt-2.5 flex flex-wrap items-center gap-1">
-                                  <Link href={`/students/${student.id}`}>
-                                    <Button variant="outline" size="sm" className="h-9 px-2.5">
-                                      <Eye className="h-3.5 w-3.5" />
-                                      {t("common.view")}
-                                    </Button>
-                                  </Link>
-                                  <Link href={`/id-cards?studentId=${student.id}`}>
-                                    <Button variant="ghost" size="icon-sm" className="h-9 w-9" title={t("students.idCard")}>
-                                      <CreditCard className="h-4 w-4 text-pink-600" />
-                                    </Button>
-                                  </Link>
-                                  <Link href={`/auto-apply?ids=${student.id}`}>
-                                    <Button variant="ghost" size="icon-sm" className="h-9 w-9" title={t("students.autoFill")}>
-                                      <Play className="h-4 w-4 text-emerald-600" />
-                                    </Button>
-                                  </Link>
-                                  <Link href={`/students/${student.id}/edit`}>
-                                    <Button variant="secondary" size="icon-sm" className="h-9 w-9" title={t("common.edit")}>
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                  </Link>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="h-9 w-9 text-red-500"
-                                    onClick={() => deleteStudent(student.id)}
-                                    title={t("common.delete")}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
                                 </div>
                               </td>
                             </tr>
@@ -889,7 +1051,7 @@ function StudentsContent() {
                 {t("students.bulkSubmitSelected")}
               </Button>
             </Link>
-            {selected.size > 1 && userRole === "school_admin" && (
+            {selected.size > 1 && userRole === "school_admin" && canAutoApply && (
               <Link href={`/auto-apply?ids=${Array.from(selected).join(",")}`} className="w-full">
                 <Button variant="secondary" className="h-10 w-full text-xs">
                   <Play className="h-3 w-3" />

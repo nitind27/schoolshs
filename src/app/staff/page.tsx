@@ -7,13 +7,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { STAFF_DESIGNATIONS, getStaffRoleWork } from "@/lib/constants";
-import { Plus, Edit, Search, Users, ClipboardList, IndianRupee, KeyRound } from "lucide-react";
+import { Plus, Edit, Search, ClipboardList, IndianRupee, KeyRound } from "lucide-react";
 import type { Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 import { PageShell } from "@/components/layout/page-shell";
 import { PAGE_SIZE } from "@/lib/pagination";
 import type { ColumnDef } from "@tanstack/react-table";
 import { GlobalDataTable } from "@/components/ui/global-data-table";
+import { ClickableStaffPhoto } from "@/components/staff/staff-photo-lightbox";
+import { staffPhotoPublicUrl } from "@/lib/staff-photo";
 
 type StaffRow = Staff & { _count?: { classes: number } };
 
@@ -74,7 +76,25 @@ export default function StaffPage() {
       {
         header: t("common.name"),
         accessorFn: (s) => `${s.firstName || ""} ${s.lastName || ""}`.trim(),
-        cell: ({ row }) => <p className="font-semibold text-slate-900">{row.original.firstName} {row.original.lastName}</p>,
+        cell: ({ row }) => {
+          const s = row.original;
+          const name = `${s.firstName || ""} ${s.lastName || ""}`.trim();
+          const initial = (s.firstName || s.lastName || "?").charAt(0).toUpperCase();
+          const photoSrc = staffPhotoPublicUrl(s.photoPath);
+          return (
+            <div className="flex items-center gap-2.5">
+              <ClickableStaffPhoto
+                src={photoSrc}
+                name={name || "Staff"}
+                subtitle={[s.designation, s.employeeId].filter(Boolean).join(" · ")}
+                initial={initial}
+              />
+              <p className="font-semibold text-slate-900">
+                {s.firstName} {s.lastName}
+              </p>
+            </div>
+          );
+        },
       },
       {
         header: t("staffPage.teacherCode"),

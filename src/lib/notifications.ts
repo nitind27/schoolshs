@@ -11,7 +11,8 @@ export type NotificationType =
   | "admission"
   | "result"
   | "system"
-  | "timetable";
+  | "timetable"
+  | "birthday";
 
 export type NotificationItem = {
   id: string;
@@ -149,9 +150,41 @@ export async function markNotificationsRead(
 export async function buildNotificationFeed(
   userId: string,
   role: UserRole,
-  opts?: { take?: number }
+  opts?: { take?: number; schoolId?: string | null }
 ) {
   const take = opts?.take ?? 20;
+
+  // Ensure today's birthday notification exists for school staff
+  if (opts?.schoolId) {
+    try {
+      const { getTodayBirthdays, ensureBirthdayNotification } = await import(
+        "@/lib/birthdays"
+      );
+      const bdays = await getTodayBirthdays(opts.schoolId);
+      if (bdays.total > 0) {
+        const names = bdays.all
+          .slice(0, 3)
+          .map((p) => p.name)
+          .join(", ");
+        const more = bdays.total > 3 ? ` +${bdays.total - 3}` : "";
+        const title =
+          bdays.total === 1
+            ? `Birthday today · ${names}`
+            : `${bdays.total} birthdays today`;
+        const body = `${names}${more} · ${bdays.staff.length} staff · ${bdays.students.length} students`;
+        await ensureBirthdayNotification({
+          userId,
+          schoolId: opts.schoolId,
+          title,
+          body,
+          href: "/dashboard?birthday=1",
+        });
+      }
+    } catch (e) {
+      console.error("[birthday notify]", e);
+    }
+  }
+
   const [items, eventUnread, chatUnread] = await Promise.all([
     listUserNotifications(userId, take),
     getUnreadNotificationCount(userId),

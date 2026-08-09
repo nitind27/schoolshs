@@ -28,6 +28,7 @@ import { BoardAnalysisPanel } from "@/components/board-records/board-analysis-pa
 import { DivisionResultsView } from "@/components/board-records/division-results";
 import { GradeLegend } from "@/components/board-records/grade-legend";
 import { BoardSeatEntry } from "@/components/board-records/board-seat-entry";
+import { SeatNumbersGuide } from "@/components/students/seat-numbers-guide";
 import { GsebBulkFetch, studentsToGsebBulk } from "@/components/board-records/gseb-bulk-fetch";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGE_SIZE, paginateSlice } from "@/lib/pagination";
@@ -476,6 +477,10 @@ function BoardRecordsContent() {
               <ArrowLeft className="h-4 w-4" />
               {t("common.back")} — {t("boardRecords.hubHome")}
             </button>
+            <SeatNumbersGuide
+              teacher={pathname.startsWith("/teacher")}
+              highlight="board"
+            />
             <BoardSeatEntry standard={standard} onSaved={load} />
           </div>
         )}

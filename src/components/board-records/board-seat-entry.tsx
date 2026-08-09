@@ -13,6 +13,7 @@ import {
   ChevronRight,
   GraduationCap,
   Layers,
+  Sparkles,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import {
@@ -115,6 +116,7 @@ export function BoardSeatEntry({
   } | null>(null);
   const [rows, setRows] = useState<EntryRow[]>([]);
   const [bulkPrefix, setBulkPrefix] = useState("");
+  const [startAt, setStartAt] = useState("1");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -241,6 +243,26 @@ export function BoardSeatEntry({
       current.map((row) => ({ ...row, seatPrefix: prefix })),
     );
     setMessage(null);
+  };
+
+  const autoGenerateSeatNumbers = () => {
+    const len = seatDigitLen(standard);
+    const first = Math.max(1, Number.parseInt(startAt, 10) || 1);
+    const prefix =
+      bulkPrefix ||
+      (rows[0]?.seatPrefix || (standard === "12" ? "B" : "A")).toUpperCase().slice(0, 1);
+    setBulkPrefix(prefix);
+    setRows((current) =>
+      current.map((row, index) => ({
+        ...row,
+        seatPrefix: prefix,
+        seatNumber: String(first + index).padStart(len, "0").slice(-len),
+      })),
+    );
+    setMessage({
+      type: "ok",
+      text: t("boardRecords.generatedSeats", { count: rows.length, prefix }),
+    });
   };
 
   const saveAll = async () => {
@@ -540,7 +562,7 @@ export function BoardSeatEntry({
               </span>
             </div>
 
-            <div className="rounded-xl border border-violet-200 bg-white p-3">
+            <div className="rounded-xl border border-violet-200 bg-white p-3 space-y-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div className="min-w-[220px]">
                   <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-violet-800">
@@ -559,6 +581,27 @@ export function BoardSeatEntry({
                     ))}
                   </select>
                 </div>
+                <div className="min-w-[8rem]">
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-violet-800">
+                    {t("boardRecords.startAt")}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={startAt}
+                    onChange={(e) => setStartAt(e.target.value)}
+                    className="h-11 w-full rounded-xl border-2 border-violet-300 bg-violet-50 px-3 text-base font-bold text-violet-900 outline-none focus:border-violet-500"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={autoGenerateSeatNumbers}
+                  disabled={rows.length === 0}
+                  className="flex h-11 items-center justify-center gap-2 rounded-xl border-2 border-violet-400 bg-violet-600 px-4 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {t("boardRecords.generateSeats")}
+                </button>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-800">
                     {t("boardRecords.applyPrefixHint")}
@@ -570,6 +613,9 @@ export function BoardSeatEntry({
                   </p>
                 </div>
               </div>
+              <p className="rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-900">
+                {t("boardRecords.only1012Note")}
+              </p>
             </div>
           </div>
 

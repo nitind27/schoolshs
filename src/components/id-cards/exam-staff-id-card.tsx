@@ -15,6 +15,8 @@ export type ExamStaffCardPerson = {
   department?: string | null;
   mobileNumber: string;
   photoPath?: string | null;
+  photoUrl?: string | null;
+  hasPhoto?: boolean;
   qualification?: string | null;
 };
 

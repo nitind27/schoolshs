@@ -35,6 +35,8 @@ interface DocumentUploaderProps {
   documents: DocumentInfo[];
   onUpdate: (type: DocType, data: Partial<DocumentInfo>) => void;
   onRemove: (type: DocType) => void;
+  /** Override upload API (default: /api/students/{id}/documents). Student portal uses /api/student-portal/documents */
+  apiUrl?: string;
 }
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
@@ -89,12 +91,14 @@ function isImage(mime?: string | null, fileName?: string | null) {
 
 function DocumentCard({
   doc,
-  studentId,
+  studentId: _studentId,
+  apiUrl,
   onUpdate,
   onRemove,
 }: {
   doc: DocumentInfo;
   studentId: string;
+  apiUrl: string;
   onUpdate: (type: DocType, data: Partial<DocumentInfo>) => void;
   onRemove: (type: DocType) => void;
 }) {
@@ -147,7 +151,7 @@ function DocumentCard({
       formData.append("originalSize", String(originalSize));
 
       try {
-        const res = await fetch(`/api/students/${studentId}/documents`, {
+        const res = await fetch(apiUrl, {
           method: "POST",
           body: formData,
         });
@@ -178,13 +182,13 @@ function DocumentCard({
         setUploading(false);
       }
     },
-    [doc.type, studentId, onUpdate, compressMsg, t]
+    [doc.type, apiUrl, onUpdate, compressMsg, t]
   );
 
   const handleRemove = async () => {
     setUploading(true);
     try {
-      await fetch(`/api/students/${studentId}/documents`, {
+      await fetch(apiUrl, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ docType: doc.type }),
@@ -399,8 +403,10 @@ export function DocumentUploader({
   documents,
   onUpdate,
   onRemove,
+  apiUrl,
 }: DocumentUploaderProps) {
   const t = useT();
+  const endpoint = apiUrl || `/api/students/${studentId}/documents`;
   const uploaded = documents.filter((d) => d.previewUrl || d.fileName).length;
   const dgReadyCount = documents.filter((d) => d.dgReady ?? (d.size ? isDGReady(d.size, d.type) : false)).length;
 
@@ -442,6 +448,7 @@ export function DocumentUploader({
             key={doc.type}
             doc={doc}
             studentId={studentId}
+            apiUrl={endpoint}
             onUpdate={onUpdate}
             onRemove={onRemove}
           />

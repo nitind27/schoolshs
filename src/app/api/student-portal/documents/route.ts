@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { AuthError, requireStaffAuth } from "@/lib/auth";
+import { AuthError, requireStudentAuth } from "@/lib/auth";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 import { compressDocumentServer } from "@/lib/compress-document.server";
@@ -10,7 +10,6 @@ import {
   DOC_TYPES,
   buildDocRelativePath,
   isDocType,
-  type DocType,
 } from "@/lib/student-documents";
 import {
   buildDocAbsolutePath,
@@ -28,24 +27,20 @@ const ALLOWED_TYPES = [
   "application/pdf",
 ];
 
-async function getOwnedStudent(id: string, schoolId: string) {
-  return prisma.student.findFirst({ where: { id, schoolId } });
-}
-
 async function removeFileIfExists(filePath: string | null) {
   if (!filePath) return;
   const abs = path.isAbsolute(filePath) ? filePath : buildDocAbsolutePath(filePath);
   await unlink(abs).catch(() => {});
 }
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+/** Student self-service documents — only own studentId. */
+export async function GET() {
   try {
-    const session = await requireStaffAuth();
-    const { id } = await params;
-    const student = await getOwnedStudent(id, session.schoolId);
+    const session = await requireStudentAuth();
+    const id = session.studentId;
+    const student = await prisma.student.findFirst({
+      where: { id, schoolId: session.schoolId },
+    });
     if (!student) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 });
     }
@@ -85,24 +80,25 @@ export async function GET(
           dgReady,
           maxKB: DG_DOC_LIMITS[type].maxKB,
         };
-      })
+      }),
     );
 
-    return NextResponse.json({ documents });
+    return NextResponse.json({ documents, studentId: id });
   } catch (error) {
-    if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest) {
   try {
-    const session = await requireStaffAuth();
-    const { id } = await params;
-    const student = await getOwnedStudent(id, session.schoolId);
+    const session = await requireStudentAuth();
+    const id = session.studentId;
+    const student = await prisma.student.findFirst({
+      where: { id, schoolId: session.schoolId },
+    });
     if (!student) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 });
     }
@@ -164,26 +160,27 @@ export async function POST(
           : `${formatKB(compressed.compressedSize)} — DG ready`,
     });
   } catch (error) {
-    if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
-    console.error("Document upload error:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    console.error("Student document upload error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest) {
   try {
-    const session = await requireStaffAuth();
-    const { id } = await params;
+    const session = await requireStudentAuth();
+    const id = session.studentId;
     const { docType } = await request.json();
 
     if (!docType || !isDocType(docType)) {
       return NextResponse.json({ error: "Invalid document type" }, { status: 400 });
     }
 
-    const student = await getOwnedStudent(id, session.schoolId);
+    const student = await prisma.student.findFirst({
+      where: { id, schoolId: session.schoolId },
+    });
     if (!student) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 });
     }
@@ -199,7 +196,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 }

@@ -50,7 +50,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       qualification: body.qualification ? String(body.qualification).trim() : null,
       payLevel: body.payLevel ? String(body.payLevel).trim() : null,
       isActive: body.isActive !== false,
-      photoPath: body.photoPath ? String(body.photoPath).trim() : null,
+      photoPath:
+        body.photoPath !== undefined
+          ? String(body.photoPath || "").trim() || null
+          : existing.photoPath,
       monthlySalary: body.monthlySalary != null && body.monthlySalary !== "" ? Number(body.monthlySalary) : null,
       hra: body.hra != null && body.hra !== "" ? Number(body.hra) : 0,
       conveyance: body.conveyance != null && body.conveyance !== "" ? Number(body.conveyance) : 0,

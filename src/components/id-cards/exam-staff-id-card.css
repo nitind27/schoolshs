@@ -162,6 +162,8 @@
   height: 100%;
   object-fit: cover;
   object-position: center top;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 .exam-id-card__photo-fallback {

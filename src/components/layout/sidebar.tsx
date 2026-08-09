@@ -30,6 +30,7 @@ import {
   CalendarDays,
   Trophy,
   BadgeCheck,
+  UserX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -91,7 +92,7 @@ const useNavGroups = (
       {
         type: "link",
         href: "/exam-seat-numbers",
-        label: t("examSeats.title"),
+        label: t("examSeats.navTitle"),
         icon: Armchair,
         featureKey: "results",
       },
@@ -106,6 +107,12 @@ const useNavGroups = (
             href: "/students",
             label: t("nav.studentsAll"),
             icon: Users,
+            featureKey: "students",
+          },
+          {
+            href: "/students/inactive",
+            label: t("nav.studentsInactive"),
+            icon: UserX,
             featureKey: "students",
           },
           {
@@ -308,6 +315,12 @@ const useNavGroups = (
             label: t("megaMenu.generalRegister"),
             icon: BookOpen,
             featureKey: "certificates",
+          },
+          {
+            href: "/students/board-records?view=entry&std=10",
+            label: t("examSeats.guideBoardTitle"),
+            icon: Armchair,
+            featureKey: "board_records",
           },
           {
             href: "/students/board-records",

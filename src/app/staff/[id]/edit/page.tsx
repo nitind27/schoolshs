@@ -31,7 +31,7 @@ export default function EditStaffPage() {
       });
   }, [id]);
 
-  const handleSubmit = async (data: Partial<Staff>) => {
+  const handleSubmit = async (data: Partial<Staff>, _photoFile?: File | null) => {
     const res = await fetch(`/api/staff/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

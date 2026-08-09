@@ -4,7 +4,7 @@ import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, FileCheck, CheckCircle, AlertCircle, Upload, Send, ArrowRight, BookOpen, Briefcase, CreditCard, GraduationCap, Star, Calculator, CalendarDays, Award, UserPlus, Wallet, FileSpreadsheet, ClipboardCheck, Clock, Ban } from "lucide-react";
+import { Users, FileCheck, CheckCircle, AlertCircle, Upload, Send, ArrowRight, BookOpen, Briefcase, CreditCard, GraduationCap, Star, Calculator, CalendarDays, Award, UserPlus, Wallet, FileSpreadsheet, ClipboardCheck, Clock, Ban, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/i18n/locale-provider";
 import {
@@ -42,6 +42,7 @@ import {
   DEFAULT_EXPORT_OPTIONS,
   type DashboardExportOptions,
 } from "@/lib/dashboard-export-options";
+import { BirthdayCelebrationCard } from "@/components/dashboard/birthday-celebration";
 import "@/components/dashboard/dashboard.css";
 
 interface Stats {
@@ -50,6 +51,9 @@ interface Stats {
   totalStaff?: number;
   staffTotalAll?: number;
   schoolName?: string;
+  logoPath?: string | null;
+  academicYear?: string | null;
+  tagline?: string | null;
   byStatus: Record<string, number>;
   byCategory: { category: string; count: number }[];
   categoryChart?: { category: string; count: number; color: string }[];
@@ -109,6 +113,7 @@ function buildFilterSummary(filters: DashboardFilterValues, t: (k: string, p?: R
 
 export default function SchoolOpsDashboard() {
   const t = useT();
+  const [birthdayAutoOpen, setBirthdayAutoOpen] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +131,7 @@ export default function SchoolOpsDashboard() {
   });
   const [insightTab, setInsightTab] = useState<InsightTab>("students");
   const [mainTab, setMainTab] = useState<MainTab>("students");
+  const [showMoreCharts, setShowMoreCharts] = useState(false);
   const [drillTarget, setDrillTarget] = useState<DrillTarget | null>(null);
   const [drillOpen, setDrillOpen] = useState(false);
   const [quickList, setQuickList] = useState<{
@@ -168,6 +174,16 @@ export default function SchoolOpsDashboard() {
       .then((r) => r.json())
       .then((d) => setUserRole(d?.user?.role || null))
       .catch(() => setUserRole(null));
+  }, []);
+
+  useEffect(() => {
+    try {
+      setBirthdayAutoOpen(
+        new URLSearchParams(window.location.search).get("birthday") === "1",
+      );
+    } catch {
+      setBirthdayAutoOpen(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -403,8 +419,15 @@ export default function SchoolOpsDashboard() {
   }
 
   return (
-    <div className="dashboard-page ops-dash animate-fade-in">
-      <DashboardHero schoolName={stats?.schoolName} />
+    <div className="dashboard-page ops-dash ops-cards-v2 animate-fade-in">
+      <DashboardHero
+        schoolName={stats?.schoolName}
+        logoPath={stats?.logoPath}
+        tagline={stats?.tagline}
+        academicYear={stats?.academicYear || opsOverview?.academicYear}
+      />
+
+      <BirthdayCelebrationCard autoOpen={birthdayAutoOpen} />
 
       {error && (
         <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
@@ -472,7 +495,7 @@ export default function SchoolOpsDashboard() {
           }
         />
 
-        <section className="ops-pulse ops-pulse-compact" aria-label={t("dashboard.pulseTitle")}>
+        <section className="ops-pulse ops-pulse-compact ops-metric-strip" aria-label={t("dashboard.pulseTitle")}>
           <div className="ops-pulse-grid">
             <button
               type="button"
@@ -480,8 +503,10 @@ export default function SchoolOpsDashboard() {
               onClick={openAllStudents}
             >
               <span className="ops-pulse-ico"><Users className="h-4 w-4" /></span>
-              <strong>{(stats?.total || 0).toLocaleString("en-IN")}</strong>
-              <span>{t("dashboard.totalStudents")}</span>
+              <span className="ops-pulse-copy">
+                <strong>{(stats?.total || 0).toLocaleString("en-IN")}</strong>
+                <span>{t("dashboard.totalStudents")}</span>
+              </span>
             </button>
             <button
               type="button"
@@ -496,8 +521,10 @@ export default function SchoolOpsDashboard() {
               }
             >
               <span className="ops-pulse-ico"><FileCheck className="h-4 w-4" /></span>
-              <strong>{(stats?.byStatus?.ready || 0).toLocaleString("en-IN")}</strong>
-              <span>{t("dashboard.readyToSubmit")}</span>
+              <span className="ops-pulse-copy">
+                <strong>{(stats?.byStatus?.ready || 0).toLocaleString("en-IN")}</strong>
+                <span>{t("dashboard.readyToSubmit")}</span>
+              </span>
             </button>
             <button
               type="button"
@@ -512,8 +539,10 @@ export default function SchoolOpsDashboard() {
               }
             >
               <span className="ops-pulse-ico"><AlertCircle className="h-4 w-4" /></span>
-              <strong>{(stats?.byStatus?.draft || 0).toLocaleString("en-IN")}</strong>
-              <span>{t("dashboard.incomplete")}</span>
+              <span className="ops-pulse-copy">
+                <strong>{(stats?.byStatus?.draft || 0).toLocaleString("en-IN")}</strong>
+                <span>{t("dashboard.incomplete")}</span>
+              </span>
             </button>
             <button
               type="button"
@@ -528,12 +557,16 @@ export default function SchoolOpsDashboard() {
               }
             >
               <span className="ops-pulse-ico"><CheckCircle className="h-4 w-4" /></span>
-              <strong>{(stats?.byStatus?.submitted || 0).toLocaleString("en-IN")}</strong>
-              <span>{t("dashboard.submitted")}</span>
+              <span className="ops-pulse-copy">
+                <strong>{(stats?.byStatus?.submitted || 0).toLocaleString("en-IN")}</strong>
+                <span>{t("dashboard.submitted")}</span>
+              </span>
             </button>
             <div className="ops-pulse-tile is-slate is-static">
-              <span className="ops-pulse-rate">{stats?.completionRate || 0}%</span>
-              <span>{t("dashboard.completionRate")}</span>
+              <span className="ops-pulse-copy">
+                <strong className="ops-pulse-rate">{stats?.completionRate || 0}%</strong>
+                <span>{t("dashboard.completionRate")}</span>
+              </span>
               <span className="ops-pulse-bar" aria-hidden>
                 <i style={{ width: `${Math.min(100, Math.max(0, stats?.completionRate || 0))}%` }} />
               </span>
@@ -653,53 +686,74 @@ export default function SchoolOpsDashboard() {
                   )}
                 </article>
 
-                <article className="ops-chart-card" data-tone="teal">
-                  <header>
-                    <h3>{t("dashboard.statusChart")}</h3>
-                    <p>{t("dashboard.statusChartDesc")}</p>
-                  </header>
-                  {statusSegments.length > 0 ? (
-                    <VerticalBarChart
-                      segments={statusSegments}
-                      onSegmentClick={(seg) => openDrill("status", seg)}
-                    />
-                  ) : (
-                    <div className="ops-insights-empty-box">
-                      <p>{t("dashboard.noClassData")}</p>
-                    </div>
-                  )}
-                </article>
+                {showMoreCharts ? (
+                  <>
+                    <article className="ops-chart-card" data-tone="teal">
+                      <header>
+                        <h3>{t("dashboard.statusChart")}</h3>
+                        <p>{t("dashboard.statusChartDesc")}</p>
+                      </header>
+                      {statusSegments.length > 0 ? (
+                        <VerticalBarChart
+                          segments={statusSegments}
+                          onSegmentClick={(seg) => openDrill("status", seg)}
+                        />
+                      ) : (
+                        <div className="ops-insights-empty-box">
+                          <p>{t("dashboard.noClassData")}</p>
+                        </div>
+                      )}
+                    </article>
 
-                <article className="ops-chart-card" data-tone="pink">
-                  <header>
-                    <h3>{t("dashboard.genderChart")}</h3>
-                    <p>{t("dashboard.chartClickHint")}</p>
-                  </header>
-                  <DoughnutChart
-                    segments={genderSegments}
-                    centerValue={stats?.byGender?.total || 0}
-                    centerLabel={t("dashboard.totalLabel")}
-                    size={148}
-                    onSegmentClick={(seg) => openDrill("gender", seg)}
-                  />
-                </article>
+                    <article className="ops-chart-card" data-tone="pink">
+                      <header>
+                        <h3>{t("dashboard.genderChart")}</h3>
+                        <p>{t("dashboard.chartClickHint")}</p>
+                      </header>
+                      <DoughnutChart
+                        segments={genderSegments}
+                        centerValue={stats?.byGender?.total || 0}
+                        centerLabel={t("dashboard.totalLabel")}
+                        size={148}
+                        onSegmentClick={(seg) => openDrill("gender", seg)}
+                      />
+                    </article>
 
-                <article className="ops-chart-card ops-chart-wide" data-tone="blue">
-                  <header>
-                    <h3>{t("dashboard.classBarChart")}</h3>
-                    <p>{t("dashboard.chartClickHint")}</p>
-                  </header>
-                  {classSegments.length > 0 ? (
-                    <VerticalBarChart
-                      segments={classSegments}
-                      onSegmentClick={(seg) => openDrill("class", seg)}
-                    />
+                    <article className="ops-chart-card ops-chart-wide" data-tone="blue">
+                      <header>
+                        <h3>{t("dashboard.classBarChart")}</h3>
+                        <p>{t("dashboard.chartClickHint")}</p>
+                      </header>
+                      {classSegments.length > 0 ? (
+                        <VerticalBarChart
+                          segments={classSegments}
+                          onSegmentClick={(seg) => openDrill("class", seg)}
+                        />
+                      ) : (
+                        <div className="ops-insights-empty-box">
+                          <p>{t("dashboard.noClassData")}</p>
+                        </div>
+                      )}
+                    </article>
+                  </>
+                ) : null}
+              </div>
+
+              <div className="ops-charts-more">
+                <button
+                  type="button"
+                  className="ops-charts-more-btn"
+                  onClick={() => setShowMoreCharts((v) => !v)}
+                >
+                  {showMoreCharts ? (
+                    <ChevronUp className="h-4 w-4" />
                   ) : (
-                    <div className="ops-insights-empty-box">
-                      <p>{t("dashboard.noClassData")}</p>
-                    </div>
+                    <ChevronDown className="h-4 w-4" />
                   )}
-                </article>
+                  {showMoreCharts
+                    ? t("dashboard.hideMoreCharts")
+                    : t("dashboard.showMoreCharts")}
+                </button>
               </div>
             </div>
           )}
@@ -947,6 +1001,7 @@ export default function SchoolOpsDashboard() {
         hr={hrSummary}
       />
 
+      {!(stats?.total && stats.total > 0 && (stats.totalClasses || 0) > 0) ? (
       <section className="ops-flow ops-flow-compact ops-flow-slim">
         <div className="ops-flow-steps">
           {setupFlow.map((step, i) => {
@@ -966,6 +1021,7 @@ export default function SchoolOpsDashboard() {
           })}
         </div>
       </section>
+      ) : null}
       </>
       ) : (
       <>
@@ -980,7 +1036,7 @@ export default function SchoolOpsDashboard() {
           onOpenPayrollPending={() => setHrModal("payrollPending")}
         />
 
-        <section className="ops-pulse ops-pulse-compact ops-pulse-staff" aria-label={t("dashboard.mainTabStaff")}>
+        <section className="ops-pulse ops-pulse-compact ops-pulse-staff ops-metric-strip" aria-label={t("dashboard.mainTabStaff")}>
           <div className="ops-pulse-grid ops-pulse-grid-staff">
             <button
               type="button"
@@ -988,39 +1044,49 @@ export default function SchoolOpsDashboard() {
               onClick={() => openQuickList("staff", "", t("dashboard.staffActive"))}
             >
               <span className="ops-pulse-ico"><Briefcase className="h-4 w-4" /></span>
-              <strong>{(hrSummary?.totalStaff ?? stats?.totalStaff ?? 0).toLocaleString("en-IN")}</strong>
-              <span>{t("dashboard.staffActive")}</span>
+              <span className="ops-pulse-copy">
+                <strong>{(hrSummary?.totalStaff ?? stats?.totalStaff ?? 0).toLocaleString("en-IN")}</strong>
+                <span>{t("dashboard.staffActive")}</span>
+              </span>
             </button>
             <button type="button" className="ops-pulse-tile is-emerald" onClick={() => setHrModal("attendance")}>
               <span className="ops-pulse-ico"><ClipboardCheck className="h-4 w-4" /></span>
-              <strong>
-                {(hrSummary?.attendanceMarked || 0).toLocaleString("en-IN")}
-                <small className="ops-pulse-of">/{(hrSummary?.totalStaff || stats?.totalStaff || 0).toLocaleString("en-IN")}</small>
-              </strong>
-              <span>{t("dashboard.hrAttendanceMarked")}</span>
+              <span className="ops-pulse-copy">
+                <strong>
+                  {(hrSummary?.attendanceMarked || 0).toLocaleString("en-IN")}
+                  <small className="ops-pulse-of">/{(hrSummary?.totalStaff || stats?.totalStaff || 0).toLocaleString("en-IN")}</small>
+                </strong>
+                <span>{t("dashboard.hrAttendanceMarked")}</span>
+              </span>
             </button>
             <button type="button" className="ops-pulse-tile is-amber" onClick={() => setHrModal("attendanceUnmarked")}>
               <span className="ops-pulse-ico"><Clock className="h-4 w-4" /></span>
-              <strong>
-                {(
-                  hrSummary?.attendanceUnmarked ??
-                  Math.max(
-                    0,
-                    (hrSummary?.totalStaff || stats?.totalStaff || 0) - (hrSummary?.attendanceMarked || 0),
-                  )
-                ).toLocaleString("en-IN")}
-              </strong>
-              <span>{t("dashboard.hrAttendanceUnmarked")}</span>
+              <span className="ops-pulse-copy">
+                <strong>
+                  {(
+                    hrSummary?.attendanceUnmarked ??
+                    Math.max(
+                      0,
+                      (hrSummary?.totalStaff || stats?.totalStaff || 0) - (hrSummary?.attendanceMarked || 0),
+                    )
+                  ).toLocaleString("en-IN")}
+                </strong>
+                <span>{t("dashboard.hrAttendanceUnmarked")}</span>
+              </span>
             </button>
             <button type="button" className="ops-pulse-tile is-violet" onClick={() => setHrModal("payrollPaid")}>
               <span className="ops-pulse-ico"><Wallet className="h-4 w-4" /></span>
-              <strong>{(hrSummary?.payrollPaid || 0).toLocaleString("en-IN")}</strong>
-              <span>{t("dashboard.hrPaid")}</span>
+              <span className="ops-pulse-copy">
+                <strong>{(hrSummary?.payrollPaid || 0).toLocaleString("en-IN")}</strong>
+                <span>{t("dashboard.hrPaid")}</span>
+              </span>
             </button>
             <button type="button" className="ops-pulse-tile is-rose" onClick={() => setHrModal("payrollPending")}>
               <span className="ops-pulse-ico"><AlertCircle className="h-4 w-4" /></span>
-              <strong>{(hrSummary?.payrollPending || 0).toLocaleString("en-IN")}</strong>
-              <span>{t("dashboard.hrPayPending")}</span>
+              <span className="ops-pulse-copy">
+                <strong>{(hrSummary?.payrollPending || 0).toLocaleString("en-IN")}</strong>
+                <span>{t("dashboard.hrPayPending")}</span>
+              </span>
             </button>
           </div>
         </section>

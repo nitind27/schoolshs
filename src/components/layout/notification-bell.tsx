@@ -11,6 +11,7 @@ import {
   GraduationCap,
   Info,
   CalendarClock,
+  Cake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/locale-provider";
@@ -39,6 +40,8 @@ function typeIcon(type: string) {
       return GraduationCap;
     case "timetable":
       return CalendarClock;
+    case "birthday":
+      return Cake;
     default:
       return Info;
   }
@@ -201,6 +204,8 @@ export function NotificationBell() {
                           "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
                           item.type === "chat"
                             ? "bg-violet-100 text-violet-700"
+                            : item.type === "birthday"
+                              ? "bg-amber-100 text-amber-700"
                             : item.type === "student" || item.type === "admission"
                               ? "bg-teal-100 text-teal-700"
                               : item.type === "attendance"

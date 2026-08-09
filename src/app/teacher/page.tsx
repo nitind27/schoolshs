@@ -29,6 +29,7 @@ import {
   Clock,
   Hash,
   Armchair,
+  GraduationCap,
 } from "lucide-react";
 
 type ClassCard = {
@@ -503,7 +504,7 @@ export default function TeacherDashboard() {
             description={t("teacherPortal.quickActionsDesc")}
             iconClassName={tp.academicsIcon}
           >
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {[
                 {
                   href: "/teacher/attendance",
@@ -536,9 +537,16 @@ export default function TeacherDashboard() {
                 {
                   href: "/teacher/exam-seat-numbers",
                   icon: Armchair,
-                  title: t("examSeats.title"),
+                  title: t("teacherNav.examSeats"),
                   desc: t("examSeats.teacherSubtitle"),
                   color: "text-amber-700 bg-amber-50",
+                },
+                {
+                  href: "/teacher/board-records?view=entry&std=10",
+                  icon: GraduationCap,
+                  title: t("teacherNav.boardSeats"),
+                  desc: t("examSeats.guideBoardDesc"),
+                  color: "text-violet-700 bg-violet-50",
                 },
                 {
                   href: "/teacher/board-records",

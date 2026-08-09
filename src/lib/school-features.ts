@@ -157,7 +157,8 @@ export const PLAN_PRESETS: Record<string, { label: string; features: SchoolFeatu
     priceHint: "₹35,000/yr",
     features: [
       "dashboard", "classes", "students", "staff", "admissions", "results", "attendance", "activities",
-      "scholarship_add", "scholarship_import", "scholarship_bulk_submit", "scholarship_export",
+      "scholarship_add", "scholarship_import", "scholarship_bulk_submit", "scholarship_auto_apply",
+      "scholarship_export",
       "certificates", "id_cards", "portal_teacher", "portal_clerk", "portal_student", "chat",
     ],
   },
@@ -186,6 +187,16 @@ export function normalizeFeatureList(features: unknown): SchoolFeatureKey[] {
   if (list.includes("students") && !list.includes("activities")) {
     list.push("activities");
   }
+  // Legacy schools: unlock Auto Apply when other scholarship tools are already enabled
+  if (
+    !list.includes("scholarship_auto_apply") &&
+    (list.includes("scholarship_import") ||
+      list.includes("scholarship_bulk_submit") ||
+      list.includes("scholarship_export") ||
+      list.includes("scholarship_add"))
+  ) {
+    list.push("scholarship_auto_apply");
+  }
   return list;
 }
 
@@ -212,6 +223,7 @@ export function isFeatureEnabled(features: SchoolFeatureKey[], key: SchoolFeatur
 
 /** Map sidebar href to required feature key */
 export function hrefToFeature(href: string): SchoolFeatureKey | null {
+  const clean = (href.split("?")[0] || href).split("#")[0] || href;
   const map: Record<string, SchoolFeatureKey> = {
     "/dashboard": "dashboard",
     "/clerk": "dashboard",
@@ -259,11 +271,11 @@ export function hrefToFeature(href: string): SchoolFeatureKey | null {
     "/ca": "portal_ca",
     "/student": "portal_student",
   };
-  if (map[href]) return map[href];
+  if (map[clean]) return map[clean];
   // Longest prefix first
   const entries = Object.entries(map).sort((a, b) => b[0].length - a[0].length);
   for (const [path, key] of entries) {
-    if (href === path || href.startsWith(path + "/")) return key;
+    if (clean === path || clean.startsWith(path + "/")) return key;
   }
   return null;
 }

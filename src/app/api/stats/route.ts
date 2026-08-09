@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
       admissionGrouped,
       recentVerified,
       staffByDesignation,
+      schoolSettings,
     ] = await Promise.all([
       prisma.student.count({ where }),
       prisma.student.count({ where: { ...where, status: "draft" } }),
@@ -97,6 +98,10 @@ export async function GET(request: NextRequest) {
         by: ["designation"],
         where: { ...schoolScope, isActive: true },
         _count: true,
+      }),
+      prisma.schoolSettings.findUnique({
+        where: { schoolId: session.schoolId },
+        select: { schoolName: true, logoPath: true, academicYear: true, tagline: true },
       }),
     ]);
 
@@ -182,7 +187,10 @@ export async function GET(request: NextRequest) {
       staffByDesignation: staffDesignation,
       recentSubmissions,
       completionRate: total > 0 ? Math.round(((ready + submitted + approved) / total) * 100) : 0,
-      schoolName: session.schoolName,
+      schoolName: schoolSettings?.schoolName || session.schoolName,
+      logoPath: schoolSettings?.logoPath || null,
+      academicYear: schoolSettings?.academicYear || null,
+      tagline: schoolSettings?.tagline || null,
       filterMeta: {
         standards,
         sections,

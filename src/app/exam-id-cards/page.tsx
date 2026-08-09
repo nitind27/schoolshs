@@ -21,7 +21,10 @@ import {
   Printer,
   Search,
   Users,
+  Camera,
+  CameraOff,
 } from "lucide-react";
+import Link from "next/link";
 
 type SettingsLite = {
   schoolName?: string | null;
@@ -38,6 +41,22 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
+async function preloadImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { credentials: "same-origin", cache: "force-cache" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export default function ExamIdCardsPage() {
   const t = useT();
   const [staff, setStaff] = useState<ExamStaffCardPerson[]>([]);
@@ -47,7 +66,11 @@ export default function ExamIdCardsPage() {
   const [designations, setDesignations] = useState<string[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [printing, setPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photoDataUrls, setPhotoDataUrls] = useState<Record<string, string>>({});
+  const [withPhoto, setWithPhoto] = useState(0);
+  const [withoutPhoto, setWithoutPhoto] = useState(0);
 
   const [designation, setDesignation] = useState("");
   const [department, setDepartment] = useState("");
@@ -85,13 +108,30 @@ export default function ExamIdCardsPage() {
       setSchool(data.school || null);
       setDesignations(data.filters?.designations || []);
       setDepartments(data.filters?.departments || []);
+      setWithPhoto(Number(data.withPhoto) || 0);
+      setWithoutPhoto(Number(data.withoutPhoto) || 0);
       setSelected(new Set((data.staff || []).map((s: ExamStaffCardPerson) => s.id)));
+      setPhotoDataUrls({});
       if (data.settings?.academicYear) {
         setMeta((m) => ({
           ...m,
           academicYear: data.settings.academicYear || m.academicYear,
         }));
       }
+
+      // Warm photo cache for cards that have files on disk
+      const nextUrls: Record<string, string> = {};
+      await Promise.all(
+        ((data.staff || []) as ExamStaffCardPerson[])
+          .filter((s) => s.hasPhoto && (s.photoUrl || s.photoPath))
+          .map(async (s) => {
+            const src = s.photoUrl || (s.photoPath ? `/api/uploads/${s.photoPath}` : "");
+            if (!src) return;
+            const dataUrl = await preloadImageAsDataUrl(src);
+            if (dataUrl) nextUrls[s.id] = dataUrl;
+          }),
+      );
+      setPhotoDataUrls(nextUrls);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
       setStaff([]);
@@ -130,8 +170,35 @@ export default function ExamIdCardsPage() {
   const selectAll = () => setSelected(new Set(staff.map((s) => s.id)));
   const clearAll = () => setSelected(new Set());
 
-  const photoUrl = (s: ExamStaffCardPerson) =>
-    s.photoPath ? `/api/uploads/${s.photoPath}` : undefined;
+  const resolvePhotoUrl = (s: ExamStaffCardPerson) =>
+    photoDataUrls[s.id] ||
+    s.photoUrl ||
+    (s.photoPath ? `/api/uploads/${s.photoPath}` : undefined);
+
+  const handlePrint = async () => {
+    if (!selectedStaff.length) return;
+    setPrinting(true);
+    try {
+      const missing = selectedStaff.filter((s) => s.hasPhoto && !photoDataUrls[s.id]);
+      if (missing.length) {
+        const next = { ...photoDataUrls };
+        await Promise.all(
+          missing.map(async (s) => {
+            const src = s.photoUrl || (s.photoPath ? `/api/uploads/${s.photoPath}` : "");
+            if (!src) return;
+            const dataUrl = await preloadImageAsDataUrl(src);
+            if (dataUrl) next[s.id] = dataUrl;
+          }),
+        );
+        setPhotoDataUrls(next);
+        // allow React to paint data-url images before print
+        await new Promise((r) => window.setTimeout(r, 120));
+      }
+      window.print();
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   return (
     <PageShell
@@ -163,10 +230,10 @@ export default function ExamIdCardsPage() {
           <Button
             size="sm"
             className="gap-1.5"
-            onClick={() => window.print()}
-            disabled={!selectedStaff.length}
+            onClick={() => void handlePrint()}
+            disabled={!selectedStaff.length || printing}
           >
-            <Printer className="h-4 w-4" />
+            {printing ? <Spinner size="sm" /> : <Printer className="h-4 w-4" />}
             {t("examIdCards.printSelected", { count: String(selectedStaff.length) })}
           </Button>
         </div>
@@ -301,6 +368,15 @@ export default function ExamIdCardsPage() {
 
         <p className="exam-id-preview-note print:hidden text-xs text-slate-500">
           {t("examIdCards.previewHint")}
+          {staff.length > 0 ? (
+            <span className="ml-2 font-medium text-slate-700">
+              ·{" "}
+              {t("examIdCards.photoStats", {
+                with: String(withPhoto),
+                without: String(withoutPhoto),
+              })}
+            </span>
+          ) : null}
         </p>
 
         {loading ? (
@@ -327,15 +403,40 @@ export default function ExamIdCardsPage() {
                           : "border-slate-200"
                       }`}
                     >
-                      <label className="mb-3 flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-800">
+                      <label className="mb-3 flex cursor-pointer items-start gap-2 text-sm font-medium text-slate-800">
                         <input
                           type="checkbox"
+                          className="mt-1"
                           checked={checked}
                           onChange={() => toggle(s.id)}
                         />
-                        {[s.firstName, s.lastName].filter(Boolean).join(" ")}
-                        <span className="font-normal text-slate-500">
-                          · {s.designation}
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-2">
+                            {[s.firstName, s.lastName].filter(Boolean).join(" ")}
+                            <span className="font-normal text-slate-500">
+                              · {s.designation}
+                            </span>
+                            {s.hasPhoto ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+                                <Camera className="h-3 w-3" />
+                                {t("examIdCards.photoReady")}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                                <CameraOff className="h-3 w-3" />
+                                {t("examIdCards.photoMissing")}
+                              </span>
+                            )}
+                          </span>
+                          {!s.hasPhoto ? (
+                            <Link
+                              href={`/staff/${s.id}/edit`}
+                              className="mt-1 inline-block text-xs font-semibold text-teal-700 hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {t("examIdCards.addPhotoLink")}
+                            </Link>
+                          ) : null}
                         </span>
                       </label>
                       <div className="exam-id-preview-wrap overflow-x-auto pb-1">
@@ -351,7 +452,7 @@ export default function ExamIdCardsPage() {
                             school={school}
                             settings={settings}
                             meta={meta}
-                            photoUrl={photoUrl(s)}
+                            photoUrl={resolvePhotoUrl(s)}
                             logoUrl={logoUrl}
                           />
                         </div>
@@ -393,7 +494,7 @@ export default function ExamIdCardsPage() {
                             school={school}
                             settings={settings}
                             meta={meta}
-                            photoUrl={photoUrl(s)}
+                            photoUrl={resolvePhotoUrl(s)}
                             logoUrl={logoUrl}
                           />
                         </div>
@@ -415,11 +516,11 @@ export default function ExamIdCardsPage() {
               })}
             </span>
             <Button
-              onClick={() => window.print()}
-              disabled={!selectedStaff.length}
+              onClick={() => void handlePrint()}
+              disabled={!selectedStaff.length || printing}
               className="gap-1.5"
             >
-              {loading ? <Spinner size="sm" /> : <Printer className="h-4 w-4" />}
+              {printing ? <Spinner size="sm" /> : <Printer className="h-4 w-4" />}
               {t("examIdCards.printSelected", {
                 count: String(selectedStaff.length),
               })}

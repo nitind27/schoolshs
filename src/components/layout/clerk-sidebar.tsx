@@ -22,6 +22,7 @@ import {
   Briefcase,
   School,
   UserPlus,
+  UserX,
   Bot,
   Award,
   FileSearch,
@@ -87,10 +88,11 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
         { href: "/exams", label: t("nav.exams"), icon: Award },
         {
           href: "/exam-seat-numbers",
-          label: t("examSeats.title"),
+          label: t("examSeats.navTitle"),
           icon: Armchair,
         },
         { href: "/students", label: t("nav.studentsAll"), icon: Users },
+        { href: "/students/inactive", label: t("nav.studentsInactive"), icon: UserX },
         { href: "/students/new", label: t("nav.addStudent"), icon: UserPlus },
         {
           href: "/students/roll-numbers",
@@ -113,6 +115,11 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
           icon: CalendarClock,
         },
         { href: "/results", label: t("navExt.results"), icon: Award },
+        {
+          href: "/students/board-records?view=entry&std=10",
+          label: t("examSeats.guideBoardTitle"),
+          icon: Armchair,
+        },
         {
           href: "/students/board-records",
           label: t("navExt.boardRecords"),

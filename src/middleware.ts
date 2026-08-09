@@ -214,6 +214,10 @@ export async function middleware(request: NextRequest) {
     if (isHolidayRoute(pathname)) {
       return NextResponse.next();
     }
+    // Own document files — ownership enforced in /api/uploads
+    if (pathname.startsWith("/api/uploads/students/")) {
+      return NextResponse.next();
+    }
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
@@ -233,7 +237,17 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/api/uploads/chat/") &&
     session.schoolId &&
-    ["school_admin", "teacher", "clerk"].includes(session.role)
+    ["school_admin", "teacher", "clerk", "ca"].includes(session.role)
+  ) {
+    return NextResponse.next();
+  }
+
+  // Student / staff photos — school staff (ownership checked in /api/uploads)
+  if (
+    (pathname.startsWith("/api/uploads/students/") ||
+      pathname.startsWith("/api/uploads/staff/")) &&
+    session.schoolId &&
+    ["school_admin", "teacher", "clerk", "ca"].includes(session.role)
   ) {
     return NextResponse.next();
   }
@@ -281,7 +295,10 @@ export async function middleware(request: NextRequest) {
       "/chat",
       "/api/chat",
       "/api/uploads/chat",
+      "/api/uploads/students",
+      "/api/uploads/staff",
       "/api/notifications",
+      "/api/birthdays",
       "/api/help",
       "/id-cards",
       "/api/id-cards",
@@ -328,6 +345,7 @@ export async function middleware(request: NextRequest) {
           pathname.startsWith("/api/chat") ||
           pathname.startsWith("/api/uploads/chat") ||
           pathname.startsWith("/api/notifications") ||
+          pathname.startsWith("/api/birthdays") ||
           pathname.startsWith("/api/help") ||
           pathname.startsWith("/staff/holidays") ||
           pathname.startsWith("/teacher/holidays") ||
@@ -350,6 +368,7 @@ export async function middleware(request: NextRequest) {
           pathname.startsWith("/ca") ||
           pathname.startsWith("/api/ca") ||
           pathname.startsWith("/api/notifications") ||
+          pathname.startsWith("/api/birthdays") ||
           pathname.startsWith("/api/help") ||
           pathname.startsWith("/profile") ||
           pathname.startsWith("/api/account")));

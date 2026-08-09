@@ -16,6 +16,7 @@ import {
   Armchair,
   CalendarDays,
   PartyPopper,
+  GraduationCap,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { hrefToFeature, isFeatureEnabled } from "@/lib/school-features";
@@ -59,8 +60,14 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
     },
     {
       href: "/teacher/exam-seat-numbers",
-      label: t("examSeats.title"),
+      label: t("teacherNav.examSeats"),
       icon: Armchair,
+      group: t("teacherNav.groupMyWork"),
+    },
+    {
+      href: "/teacher/board-records?view=entry&std=10",
+      label: t("teacherNav.boardSeats"),
+      icon: GraduationCap,
       group: t("teacherNav.groupMyWork"),
     },
     {

@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     );
     const feed = await buildNotificationFeed(session.userId, session.role as UserRole, {
       take,
+      schoolId: session.schoolId,
     });
     return NextResponse.json(feed);
   } catch (e) {
@@ -51,7 +52,9 @@ export async function POST(request: NextRequest) {
     }
 
     const count = await markNotificationsRead(session.userId, all ? undefined : ids);
-    const feed = await buildNotificationFeed(session.userId, session.role as UserRole);
+    const feed = await buildNotificationFeed(session.userId, session.role as UserRole, {
+      schoolId: session.schoolId,
+    });
     return NextResponse.json({ success: true, marked: count, ...feed });
   } catch (e) {
     if (e instanceof AuthError) {

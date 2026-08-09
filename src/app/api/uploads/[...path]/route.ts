@@ -71,6 +71,26 @@ async function assertUploadAccess(segments: string[]) {
     return;
   }
 
+  if (segments[0] === "staff" && segments[1]) {
+    const staffId = segments[1];
+    if (session.role === "super_admin") return;
+    if (!session.schoolId) throw new AuthError("Access denied", 403);
+    const staff = await prisma.staff.findFirst({
+      where: { id: staffId, schoolId: session.schoolId },
+      select: { id: true },
+    });
+    if (!staff) throw new AuthError("Access denied", 403);
+    if (
+      session.role === "school_admin" ||
+      session.role === "clerk" ||
+      session.role === "teacher" ||
+      session.role === "ca"
+    ) {
+      return;
+    }
+    throw new AuthError("Access denied", 403);
+  }
+
   throw new AuthError("Not found", 404);
 }
 
@@ -80,7 +100,7 @@ export async function GET(
 ) {
   try {
     const { path: segments } = await params;
-    const allowedRoots = new Set(["students", "chat", "schools"]);
+    const allowedRoots = new Set(["students", "chat", "schools", "staff"]);
     if (!segments?.length || !allowedRoots.has(segments[0])) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }

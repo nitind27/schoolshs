@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { requireSchoolFeature } from "@/lib/school-feature-access";
+import { staffPhotoFileExists, staffPhotoPublicUrl } from "@/lib/staff-photo.server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,10 +33,24 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [staff, settings, designations, departments] = await Promise.all([
+    const [staffRows, settings, designations, departments] = await Promise.all([
       prisma.staff.findMany({
         where,
         orderBy: [{ designation: "asc" }, { firstName: "asc" }, { lastName: "asc" }],
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          firstNameGu: true,
+          lastNameGu: true,
+          employeeId: true,
+          designation: true,
+          department: true,
+          mobileNumber: true,
+          photoPath: true,
+          qualification: true,
+          isActive: true,
+        },
       }),
       prisma.schoolSettings.findUnique({ where: { schoolId: session.schoolId } }),
       prisma.staff.findMany({
@@ -74,6 +89,20 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Only expose photoPath when the file actually exists on disk
+    const staff = staffRows.map((row) => {
+      const hasPhoto = staffPhotoFileExists(row.photoPath);
+      const photoPath = hasPhoto ? row.photoPath : null;
+      return {
+        ...row,
+        photoPath,
+        hasPhoto,
+        photoUrl: staffPhotoPublicUrl(photoPath),
+      };
+    });
+
+    const withPhoto = staff.filter((s) => s.hasPhoto).length;
+
     return NextResponse.json({
       staff,
       settings: schoolSettings,
@@ -85,6 +114,8 @@ export async function GET(request: NextRequest) {
           .filter((d): d is string => Boolean(d)),
       },
       total: staff.length,
+      withPhoto,
+      withoutPhoto: staff.length - withPhoto,
     });
   } catch (e) {
     if (e instanceof AuthError) {

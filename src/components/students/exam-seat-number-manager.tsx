@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Armchair,
   Download,
@@ -10,6 +11,7 @@ import {
   Search,
   Sparkles,
   Users,
+  GraduationCap,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
@@ -17,7 +19,8 @@ import { Input } from "@/components/ui/input";
 import { PageLoader, Spinner } from "@/components/ui/loader";
 import { Select } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
-import { useT } from "@/i18n/locale-provider";
+import { SeatNumbersGuide } from "@/components/students/seat-numbers-guide";
+import { useLocale, useT } from "@/i18n/locale-provider";
 
 type ClassOption = {
   id: string;
@@ -53,6 +56,7 @@ export function ExamSeatNumberManager({
   teacher?: boolean;
 }) {
   const t = useT();
+  const { locale } = useLocale();
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [classId, setClassId] = useState("");
   const [terms, setTerms] = useState<ExamTerm[]>([]);
@@ -318,6 +322,13 @@ export function ExamSeatNumberManager({
 
   if (loading) return <PageLoader />;
 
+  const selectedClass = classes.find((item) => item.id === classId);
+  const isBoardClass =
+    selectedClass?.standard === "10" || selectedClass?.standard === "12";
+  const boardEntryHref = teacher
+    ? `/teacher/board-records?view=entry&std=${selectedClass?.standard || "10"}&classId=${classId}`
+    : `/students/board-records?view=entry&std=${selectedClass?.standard || "10"}&classId=${classId}`;
+
   return (
     <PageShell
       title={t("examSeats.title")}
@@ -382,7 +393,13 @@ export function ExamSeatNumberManager({
       }
     >
       <div className="space-y-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:space-y-4">
+        <SeatNumbersGuide teacher={teacher} highlight="exam" />
+
         <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+          <div className="mb-3">
+            <h2 className="text-sm font-bold text-slate-900">{t("examSeats.assignTitle")}</h2>
+            <p className="mt-0.5 text-xs text-slate-500">{t("examSeats.assignHint")}</p>
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Select
               label={t("examSeats.selectClass")}
@@ -400,11 +417,36 @@ export function ExamSeatNumberManager({
               onChange={(event) => setTermKey(event.target.value)}
               options={terms.map((term) => ({
                 value: term.key,
-                label: term.labelEn,
+                label:
+                  locale === "gu"
+                    ? term.labelGu || term.labelEn
+                    : term.labelEn || term.labelGu,
               }))}
-              emptyLabel={t("examSeats.chooseExam")}
+              emptyLabel={
+                classId && !terms.length
+                  ? t("examSeats.noExamsConfigured")
+                  : t("examSeats.chooseExam")
+              }
             />
           </div>
+          {classId && !terms.length && !rowsLoading ? (
+            <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              {t("examSeats.noExamsHint")}
+            </p>
+          ) : null}
+          {isBoardClass && classId ? (
+            <div className="mt-3 flex flex-col gap-2 rounded-xl border border-violet-200 bg-violet-50/80 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="flex items-start gap-2 text-xs text-violet-900">
+                <GraduationCap className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{t("examSeats.boardClassNote")}</span>
+              </p>
+              <Link href={boardEntryHref} className="shrink-0">
+                <Button type="button" variant="outline" size="sm" className="w-full border-violet-300 bg-white sm:w-auto">
+                  {t("examSeats.openBoardSeats")}
+                </Button>
+              </Link>
+            </div>
+          ) : null}
         </section>
 
         {students.length ? (

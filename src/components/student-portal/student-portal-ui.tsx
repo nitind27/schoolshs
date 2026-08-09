@@ -8,6 +8,7 @@ import { useT } from "@/i18n/locale-provider";
 import { ArrowRight, AlertCircle } from "lucide-react";
 
 export type StudentPortalData = Record<string, unknown> & {
+  id?: string;
   firstName?: string;
   surname?: string;
   middleName?: string | null;

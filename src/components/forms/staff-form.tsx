@@ -24,6 +24,9 @@ import {
   joinQualificationList,
   parseQualificationList,
 } from "@/components/ui/multi-select-search";
+import {
+  StaffPhotoField,
+} from "@/components/staff/staff-photo-field";
 import "./staff-form.css";
 
 type StaffFormData = Partial<Staff> & {
@@ -36,7 +39,7 @@ type FieldErrors = Record<string, string>;
 
 interface StaffFormProps {
   initialData?: StaffFormData;
-  onSubmit: (data: StaffFormData) => Promise<void>;
+  onSubmit: (data: StaffFormData, photoFile?: File | null) => Promise<void>;
   submitLabel?: string;
   cancelHref?: string;
 }
@@ -114,10 +117,12 @@ export function StaffForm({
   const [guTouched, setGuTouched] = useState<Partial<Record<GuTouchKey, boolean>>>({});
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
 
   const resolvedSubmitLabel = submitLabel ?? t("staffPage.saveStaff");
   const roleWork = getStaffRoleWork(String(form.designation || ""));
   const isEditMode = Boolean(initialData?.id);
+  const staffId = form.id || initialData?.id || null;
 
   const clearError = (field: string) => {
     setErrors((prev) => {
@@ -193,7 +198,7 @@ export function StaffForm({
         panNumber: String(form.panNumber || "").trim().toUpperCase() || null,
         ifscCode: String(form.ifscCode || "").trim().toUpperCase() || null,
       });
-      await onSubmit(payload);
+      await onSubmit(payload, pendingPhoto);
     } finally {
       setLoading(false);
     }
@@ -209,6 +214,14 @@ export function StaffForm({
           description={t("staffPage.staffDetailsDesc")}
         >
           {formError ? <p className="staff-form__banner-error">{formError}</p> : null}
+
+          <StaffPhotoField
+            staffId={staffId}
+            photoPath={form.photoPath}
+            pendingFile={pendingPhoto}
+            onPendingFileChange={setPendingPhoto}
+            onPhotoPathChange={(photoPath) => update("photoPath", photoPath)}
+          />
 
           <div className="staff-form__grid">
             <div className="staff-form__field-stack">

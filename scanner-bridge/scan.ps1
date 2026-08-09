@@ -13,7 +13,7 @@ if (-not $OutputPath) {
 $dm = New-Object -ComObject WIA.DeviceManager
 $scanners = @($dm.DeviceInfos | Where-Object { $_.Type -eq 1 })
 if ($scanners.Count -eq 0) {
-    Write-Error "No WIA scanner found. Connect USB printer-scanner and install driver."
+    Write-Error "No WIA scanner found. Connect USB scanner or install Wi-Fi / network scanner driver so Windows can see it."
     exit 2
 }
 if ($DeviceIndex -lt 0 -or $DeviceIndex -ge $scanners.Count) {

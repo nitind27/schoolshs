@@ -11,11 +11,26 @@ import {
   checkScannerBridge,
   listHardwareScanners,
   scanFromHardware,
+  scannerConnectionLabel,
   type HardwareScannerDevice,
   type ScanMode,
+  type ScannerConnection,
 } from "@/lib/scanner-bridge.client";
 import { useLocale, useT } from "@/i18n/locale-provider";
-import { ScanLine, X, Camera, RotateCcw, Check, SwitchCamera, AlertCircle, Printer, RefreshCw, Plug } from "lucide-react";
+import {
+  ScanLine,
+  X,
+  Camera,
+  RotateCcw,
+  Check,
+  SwitchCamera,
+  AlertCircle,
+  Printer,
+  RefreshCw,
+  Plug,
+  Wifi,
+  Usb,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
@@ -38,6 +53,30 @@ function translateBridgeError(t: Translator, message: string, locale: string): s
     return t("documents.scannerBridgeErrorGeneric");
   }
   return message;
+}
+
+function ConnectionBadge({
+  connection,
+  label,
+}: {
+  connection?: ScannerConnection;
+  label: string;
+}) {
+  const isWifi = connection === "wifi";
+  const isUsb = connection === "usb";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        isWifi && "border-sky-200 bg-sky-50 text-sky-800",
+        isUsb && "border-violet-200 bg-violet-50 text-violet-800",
+        !isWifi && !isUsb && "border-slate-200 bg-slate-50 text-slate-600",
+      )}
+    >
+      {isWifi ? <Wifi className="h-3 w-3" /> : isUsb ? <Usb className="h-3 w-3" /> : <Printer className="h-3 w-3" />}
+      {label}
+    </span>
+  );
 }
 
 interface DocumentScannerProps {
@@ -370,9 +409,14 @@ export function DocumentScanner({
                 )}
               >
                 <Printer className="h-4 w-4" />
-                {t("documents.scannerModeHardware")}
+                <span className="flex flex-col items-start leading-tight sm:flex-row sm:items-center sm:gap-1.5">
+                  <span>{t("documents.scannerModeHardware")}</span>
+                  <span className="text-[10px] font-medium text-slate-500 sm:text-xs">
+                    {t("documents.scannerModeHardwareSub")}
+                  </span>
+                </span>
                 {bridgeOnline && (
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" title={t("documents.scannerBridgeOnline")} />
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" title={t("documents.scannerBridgeOnline")} />
                 )}
               </button>
             </div>
@@ -410,21 +454,98 @@ export function DocumentScanner({
         )}
 
         {!captured && scanMode === "hardware" && hardwareDevices.length > 0 && (
-          <div className="px-5 py-3 border-b border-slate-100 bg-white">
-            <label className="text-xs font-medium text-slate-600 mb-1.5 block">
-              {t("documents.scannerSelectHardware")}
-            </label>
-            <select
-              value={selectedHardwareDevice}
-              onChange={(e) => setSelectedHardwareDevice(e.target.value)}
-              className="w-full h-9 rounded-lg border border-slate-300 px-3 text-sm bg-white"
-            >
-              {hardwareDevices.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-3 border-b border-slate-100 bg-white px-5 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="text-xs font-medium text-slate-600">
+                {t("documents.scannerSelectHardware")}
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {hardwareDevices.some((d) => d.connection === "usb") ? (
+                  <ConnectionBadge connection="usb" label={t("documents.scannerConnUsb")} />
+                ) : null}
+                {hardwareDevices.some((d) => d.connection === "wifi") ? (
+                  <ConnectionBadge connection="wifi" label={t("documents.scannerConnWifi")} />
+                ) : null}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={selectedHardwareDevice}
+                onChange={(e) => setSelectedHardwareDevice(e.target.value)}
+                className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              >
+                {hardwareDevices.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                    {d.connection === "wifi"
+                      ? ` · ${t("documents.scannerConnWifi")}`
+                      : d.connection === "usb"
+                        ? ` · ${t("documents.scannerConnUsb")}`
+                        : ""}
+                    {d.port ? ` (${d.port})` : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => void loadHardwareScanners()}
+                className="rounded-lg border border-slate-300 p-2 hover:bg-slate-50"
+                title={t("documents.scannerRefresh")}
+                aria-label={t("documents.scannerRefresh")}
+              >
+                <RefreshCw className="h-4 w-4 text-slate-600" />
+              </button>
+            </div>
+            <ul className="grid gap-1.5 sm:grid-cols-2">
+              {hardwareDevices.map((d) => {
+                const active = d.id === selectedHardwareDevice;
+                return (
+                  <li key={d.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedHardwareDevice(d.id)}
+                      className={cn(
+                        "flex w-full items-start gap-2 rounded-xl border px-3 py-2.5 text-left transition",
+                        active
+                          ? "border-blue-300 bg-blue-50/80 ring-1 ring-blue-200"
+                          : "border-slate-200 bg-slate-50/60 hover:border-slate-300",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                          d.connection === "wifi"
+                            ? "bg-sky-100 text-sky-700"
+                            : d.connection === "usb"
+                              ? "bg-violet-100 text-violet-700"
+                              : "bg-slate-200 text-slate-600",
+                        )}
+                      >
+                        {d.connection === "wifi" ? (
+                          <Wifi className="h-4 w-4" />
+                        ) : d.connection === "usb" ? (
+                          <Usb className="h-4 w-4" />
+                        ) : (
+                          <Printer className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">{d.name}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <ConnectionBadge
+                            connection={d.connection}
+                            label={scannerConnectionLabel(d.connection, t)}
+                          />
+                          {d.port ? (
+                            <span className="truncate font-mono text-[10px] text-slate-500">{d.port}</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         )}
 
@@ -450,9 +571,20 @@ export function DocumentScanner({
                   </p>
                   <ol className="list-decimal list-inside space-y-1 text-slate-300">
                     <li>{t("documents.scannerBridgeStep1")}</li>
+                    <li>{t("documents.scannerBridgeStep1Wifi")}</li>
                     <li>{t("documents.scannerBridgeStep2")}</li>
                     <li>{t("documents.scannerBridgeStep3")}</li>
                   </ol>
+                </div>
+              )}
+              {scanMode === "hardware" && bridgeOnline && hardwareDevices.length === 0 && (
+                <div className="w-full max-w-sm space-y-2 rounded-xl bg-white/10 p-4 text-left text-xs text-slate-200">
+                  <p className="font-semibold text-white">{t("documents.scannerNoHardwareHelpTitle")}</p>
+                  <ul className="list-disc space-y-1 pl-4 text-slate-300">
+                    <li>{t("documents.scannerNoHardwareHelpUsb")}</li>
+                    <li>{t("documents.scannerNoHardwareHelpWifi")}</li>
+                    <li>{t("documents.scannerNoHardwareHelpDriver")}</li>
+                  </ul>
                 </div>
               )}
               <Button
@@ -510,11 +642,28 @@ export function DocumentScanner({
           ) : showHardwareIdle && !loading && !error ? (
             <div className="flex flex-col items-center justify-center gap-4 p-8 text-center text-white">
               <div className="p-5 rounded-2xl bg-white/10">
-                <Printer className="h-14 w-14 text-blue-300" />
+                {hardwareDevices.find((d) => d.id === selectedHardwareDevice)?.connection === "wifi" ? (
+                  <Wifi className="h-14 w-14 text-sky-300" />
+                ) : (
+                  <Printer className="h-14 w-14 text-blue-300" />
+                )}
               </div>
               <div>
                 <p className="font-semibold text-lg">{t("documents.scannerHardwareReady")}</p>
-                <p className="text-sm text-slate-300 mt-1 max-w-sm">{t("documents.scannerHardwareHint")}</p>
+                <p className="mt-1 max-w-sm text-sm text-slate-300">{t("documents.scannerHardwareHint")}</p>
+                {(() => {
+                  const selected = hardwareDevices.find((d) => d.id === selectedHardwareDevice);
+                  if (!selected) return null;
+                  return (
+                    <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                      <ConnectionBadge
+                        connection={selected.connection}
+                        label={scannerConnectionLabel(selected.connection, t)}
+                      />
+                      <span className="max-w-[16rem] truncate text-xs text-slate-300">{selected.name}</span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ) : null}

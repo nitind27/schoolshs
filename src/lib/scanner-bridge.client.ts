@@ -5,15 +5,29 @@ export const SCANNER_BRIDGE_URL =
 
 export type ScanMode = "camera" | "hardware";
 
+export type ScannerConnection = "usb" | "wifi" | "unknown";
+
 export interface HardwareScannerDevice {
   id: string;
   name: string;
+  connection?: ScannerConnection;
+  port?: string | null;
+  server?: string | null;
+  manufacturer?: string | null;
 }
 
 export interface ScannerBridgeHealth {
   ok: boolean;
   platform?: string;
   wia?: boolean;
+  supportsWifi?: boolean;
+}
+
+function normalizeConnection(raw?: string | null): ScannerConnection {
+  const v = String(raw || "").toLowerCase();
+  if (v === "usb") return "usb";
+  if (v === "wifi" || v === "network" || v === "wsd") return "wifi";
+  return "unknown";
 }
 
 async function bridgeFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -42,7 +56,10 @@ export async function checkScannerBridge(): Promise<ScannerBridgeHealth | null> 
 
 export async function listHardwareScanners(): Promise<HardwareScannerDevice[]> {
   const data = await bridgeFetch<{ devices: HardwareScannerDevice[] }>("/devices");
-  return data.devices || [];
+  return (data.devices || []).map((d) => ({
+    ...d,
+    connection: normalizeConnection(d.connection),
+  }));
 }
 
 export async function scanFromHardware(deviceId: string): Promise<File> {
@@ -55,4 +72,13 @@ export async function scanFromHardware(deviceId: string): Promise<File> {
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   const blob = new Blob([bytes], { type: data.mimeType || "image/jpeg" });
   return new File([blob], `hardware_scan_${Date.now()}.jpg`, { type: data.mimeType || "image/jpeg" });
+}
+
+export function scannerConnectionLabel(
+  connection: ScannerConnection | undefined,
+  t: (key: string) => string,
+): string {
+  if (connection === "usb") return t("documents.scannerConnUsb");
+  if (connection === "wifi") return t("documents.scannerConnWifi");
+  return t("documents.scannerConnUnknown");
 }

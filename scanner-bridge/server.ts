@@ -1,5 +1,6 @@
 /**
- * Local USB scanner bridge (Windows WIA).
+ * Local scanner bridge (Windows WIA).
+ * Supports USB cable scanners and Wi‑Fi / network MFPs that Windows installs as WIA devices.
  * Run once on school PC: npm run scanner-bridge
  * Browser portal connects via http://127.0.0.1:9847
  */
@@ -103,6 +104,7 @@ const server = http.createServer(async (req, res) => {
           ok: true,
           platform: process.platform,
           wia: process.platform === "win32",
+          supportsWifi: process.platform === "win32",
           port: PORT,
         },
         headers
@@ -114,7 +116,10 @@ const server = http.createServer(async (req, res) => {
       sendJson(
         res,
         501,
-        { error: "USB scanner bridge works only on Windows with WIA drivers installed." },
+        {
+          error:
+            "Scanner bridge works only on Windows with WIA drivers (USB or Wi‑Fi / network scanners).",
+        },
         headers
       );
       return;
@@ -160,11 +165,11 @@ const server = http.createServer(async (req, res) => {
 });
 
 if (process.platform !== "win32") {
-  console.warn("Warning: USB scanner bridge is designed for Windows (WIA). Camera mode still works in browser.");
+  console.warn("Warning: Scanner bridge is designed for Windows (WIA). Camera mode still works in browser.");
 }
 
 server.listen(PORT, HOST, () => {
   console.log(`Scanner bridge running at http://${HOST}:${PORT}`);
-  console.log("Keep this window open while using USB Scanner in the portal.");
+  console.log("Keep this window open while using USB / Wi‑Fi scanners in the portal.");
   console.log("Endpoints: GET /health  GET /devices  POST /scan");
 });

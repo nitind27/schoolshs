@@ -20,6 +20,8 @@ export function Badge({
     flagged: "bg-red-100 text-red-800",
     query: "bg-orange-100 text-orange-800",
     verified: "bg-emerald-100 text-emerald-800",
+    archived: "bg-amber-100 text-amber-900",
+    rejected: "bg-red-100 text-red-700",
   };
 
   const label = t(`status.${status}`);

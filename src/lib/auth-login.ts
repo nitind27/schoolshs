@@ -99,6 +99,19 @@ async function assertUserCanLogin(user: UserWithSchool): Promise<void> {
     const { assertPortalFeatureForRole } = await import("@/lib/school-feature-access");
     await assertPortalFeatureForRole(user.schoolId, user.role);
   }
+
+  if (user.role === "student" && user.studentId) {
+    const student = await prisma.student.findFirst({
+      where: { id: user.studentId, schoolId: user.schoolId || undefined },
+      select: { status: true },
+    });
+    if (!student || student.status === "archived") {
+      throw new AuthError(
+        "Student account is deactivated. Contact your school office.",
+        403,
+      );
+    }
+  }
 }
 
 export async function buildSessionUser(

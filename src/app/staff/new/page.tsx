@@ -7,6 +7,7 @@ import {
   StaffCredentialsModal,
   type StaffPortalCredentials,
 } from "@/components/staff/staff-credentials-modal";
+import { uploadStaffPhoto } from "@/components/staff/staff-photo-field";
 import type { Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 import { PageShell } from "@/components/layout/page-shell";
@@ -31,7 +32,7 @@ export default function NewStaffPage() {
       .catch(() => {});
   }, []);
 
-  const handleSubmit = async (data: Partial<Staff>) => {
+  const handleSubmit = async (data: Partial<Staff>, photoFile?: File | null) => {
     const res = await fetch("/api/staff", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -41,6 +42,17 @@ export default function NewStaffPage() {
     if (!res.ok) {
       alert(result.error || t("staffPage.saveFailed"));
       return;
+    }
+    if (photoFile && result?.id) {
+      try {
+        await uploadStaffPhoto(result.id, photoFile);
+      } catch (err) {
+        alert(
+          err instanceof Error
+            ? `${t("staffPage.staffSavedPhotoFailed")}: ${err.message}`
+            : t("staffPage.staffSavedPhotoFailed"),
+        );
+      }
     }
     setCreated(result as CreatedStaffResult);
   };

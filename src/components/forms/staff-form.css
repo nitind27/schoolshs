@@ -256,6 +256,109 @@
   flex-shrink: 0;
 }
 
+/* ── Passport photo (optional) ───────────────────────────── */
+.staff-photo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f0fdfa 100%);
+}
+
+.staff-photo__frame {
+  position: relative;
+  width: 7.5rem;
+  height: 10rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 0.85rem;
+  border: 2px solid #cbd5e1;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.staff-photo__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.staff-photo__placeholder {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.staff-photo__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.staff-photo__meta {
+  min-width: 0;
+  flex: 1;
+  padding-top: 0.15rem;
+}
+
+.staff-photo__label {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.staff-photo__optional {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0d7377;
+  background: #ccfbf1;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+}
+
+.staff-photo__hint {
+  margin: 0.35rem 0 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.staff-photo__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.staff-photo__error {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+
 /* ── Action buttons ─────────────────────────────────────────
    xs : stacked column-reverse (Save on top, Cancel below)
    sm : row

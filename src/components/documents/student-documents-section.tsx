@@ -10,15 +10,17 @@ import {
 } from "@/components/documents/document-uploader";
 import { useT } from "@/i18n/locale-provider";
 
-
 interface Props {
   studentId: string;
+  /** Default: staff `/api/students/{id}/documents`. Student portal: `/api/student-portal/documents` */
+  apiUrl?: string;
 }
 
-export function StudentDocumentsSection({ studentId }: Props) {
+export function StudentDocumentsSection({ studentId, apiUrl }: Props) {
   const t = useT();
+  const endpoint = apiUrl || `/api/students/${studentId}/documents`;
   const [documents, setDocuments] = useState<DocumentInfo[]>(() =>
-    getDefaultDocuments(t).map((d) => ({ ...d }))
+    getDefaultDocuments(t).map((d) => ({ ...d })),
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,12 +29,23 @@ export function StudentDocumentsSection({ studentId }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/students/${studentId}/documents`);
+      const res = await fetch(endpoint);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t("documents.loadFailed"));
 
       const defaults = getDefaultDocuments(t);
-      const byType = new Map((data.documents as { type: DocType; previewUrl?: string; fileName?: string; mimeType?: string; size?: number; dgReady?: boolean }[]).map((d) => [d.type, d]));
+      const byType = new Map(
+        (
+          data.documents as {
+            type: DocType;
+            previewUrl?: string;
+            fileName?: string;
+            mimeType?: string;
+            size?: number;
+            dgReady?: boolean;
+          }[]
+        ).map((d) => [d.type, d]),
+      );
 
       setDocuments(
         defaults.map((base) => {
@@ -46,14 +59,14 @@ export function StudentDocumentsSection({ studentId }: Props) {
             size: remote.size ?? null,
             dgReady: remote.dgReady,
           };
-        })
+        }),
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : t("documents.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [studentId, t]);
+  }, [endpoint, t]);
 
   useEffect(() => {
     loadDocuments();
@@ -78,8 +91,8 @@ export function StudentDocumentsSection({ studentId }: Props) {
               dgReady: false,
               compressMessage: null,
             }
-          : d
-      )
+          : d,
+      ),
     );
   };
 
@@ -103,6 +116,7 @@ export function StudentDocumentsSection({ studentId }: Props) {
   return (
     <DocumentUploader
       studentId={studentId}
+      apiUrl={endpoint}
       documents={documents}
       onUpdate={handleUpdate}
       onRemove={handleRemove}

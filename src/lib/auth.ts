@@ -126,6 +126,13 @@ export async function requireStudentAuth(): Promise<SessionUser & { schoolId: st
   if (!account?.isActive || account.studentId !== session.studentId) {
     throw new AuthError("Student account is inactive", 403);
   }
+  const student = await prisma.student.findFirst({
+    where: { id: session.studentId, schoolId: session.schoolId },
+    select: { status: true },
+  });
+  if (!student || student.status === "archived") {
+    throw new AuthError("Student account is deactivated. Contact your school office.", 403);
+  }
   if (!account.emailVerified || account.mustChangePassword) {
     throw new AuthError(
       "Email verification and password change required before using the student portal",

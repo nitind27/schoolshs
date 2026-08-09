@@ -815,6 +815,10 @@ model Student {
   lastAutomationLog String?   @db.Text
 
   status           String    @default("draft")
+  /**
+   * Scholarship/workflow status restored when student is re-activated from archived
+   */
+  previousStatus   String?
   admissionStatus  String    @default("pending")
   verifiedAt       DateTime?
   verifiedBy       String?

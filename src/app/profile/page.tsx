@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageShell } from "@/components/layout/page-shell";
 import { useT } from "@/i18n/locale-provider";
-import { KeyRound, ShieldAlert, User, Mail, Building2, CheckCircle2, Lock } from "lucide-react";
+import { KeyRound, ShieldAlert, User, Mail, Building2, CheckCircle2, Lock, Camera } from "lucide-react";
+import { StaffPhotoField } from "@/components/staff/staff-photo-field";
 
 type MeUser = {
   name: string;
   email: string;
   role: string;
+  staffId?: string | null;
   schoolName?: string | null;
   schoolCode?: string | null;
 };
@@ -22,6 +24,7 @@ export default function ProfilePage() {
   const t = useT();
   const [user, setUser] = useState<MeUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -31,6 +34,7 @@ export default function ProfilePage() {
   const homeHref =
     user?.role === "clerk" ? "/clerk" : user?.role === "teacher" ? "/teacher" : "/dashboard";
   const isAdmin = user?.role === "school_admin";
+  const staffId = user?.staffId || null;
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -38,6 +42,17 @@ export default function ProfilePage() {
       .then((d) => setUser(d.user || null))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!staffId) {
+      setPhotoPath(null);
+      return;
+    }
+    fetch(`/api/staff/${staffId}`)
+      .then((r) => r.json())
+      .then((d) => setPhotoPath(d.photoPath || null))
+      .catch(() => setPhotoPath(null));
+  }, [staffId]);
 
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,9 +111,18 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="h-14 w-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl font-bold uppercase">
-                {(user?.name || "?").charAt(0)}
-              </div>
+              {photoPath ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`/api/uploads/${photoPath}`}
+                  alt=""
+                  className="h-14 w-14 rounded-2xl object-cover ring-1 ring-slate-200"
+                />
+              ) : (
+                <div className="h-14 w-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl font-bold uppercase">
+                  {(user?.name || "?").charAt(0)}
+                </div>
+              )}
               <div className="min-w-0">
                 <p className="font-semibold text-slate-900 truncate">{user?.name}</p>
                     <p className="text-xs text-slate-500 capitalize">
@@ -128,7 +152,26 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 space-y-5">
+          {staffId ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Camera className="h-4 w-4 text-teal-700" />
+                  {t("staffPage.myPhotoTitle")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-3 text-xs text-slate-500">{t("staffPage.myPhotoHint")}</p>
+                <StaffPhotoField
+                  staffId={staffId}
+                  photoPath={photoPath}
+                  onPhotoPathChange={setPhotoPath}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+
           {isAdmin ? (
             <Card>
               <CardHeader>
