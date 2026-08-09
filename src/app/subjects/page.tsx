@@ -5,32 +5,25 @@ import {
   BookMarked,
   CheckSquare,
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
   Layers,
   Plus,
   Pencil,
-  RefreshCw,
   Save,
   Trash2,
-  Upload,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/loader";
 import { InfoModal } from "@/components/ui/info-modal";
 import { useT } from "@/i18n/locale-provider";
-import {
-  SCHOOL_STANDARDS,
-  SENIOR_STREAMS,
-  FINANCIAL_YEARS,
-} from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import "./subjects-hub.css";
 
-type TabId = "master" | "standard" | "apply";
+type TabId = "master" | "classes";
 
 type MasterRow = {
   id?: string;
@@ -50,7 +43,7 @@ type ClassRow = {
   section: string;
   stream: string;
   academicYear: string;
-  _count: { classSubjects: number };
+  _count: { classSubjects: number; students: number };
 };
 
 function emptyMaster(order: number): MasterRow {
@@ -65,11 +58,24 @@ function emptyMaster(order: number): MasterRow {
   };
 }
 
+function mapMaster(rows: MasterRow[]): MasterRow[] {
+  return (rows || []).map((s, i) => ({
+    id: s.id,
+    name: s.name,
+    code: s.code,
+    shortName: s.shortName || "",
+    type: s.type === "grade" ? "grade" : "numeric",
+    maxMarks: s.maxMarks ?? 100,
+    sortOrder: s.sortOrder ?? i,
+    isActive: s.isActive !== false,
+  }));
+}
+
 export default function SubjectsHubPage() {
   const t = useT();
   const [tab, setTab] = useState<TabId>("master");
 
-  // Master
+  // Step 1 — master
   const [master, setMaster] = useState<MasterRow[]>([]);
   const [masterLoading, setMasterLoading] = useState(true);
   const [masterSaving, setMasterSaving] = useState(false);
@@ -80,97 +86,106 @@ export default function SubjectsHubPage() {
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
 
-  // Standard assign
-  const [standard, setStandard] = useState("9");
-  const [stream, setStream] = useState("");
-  const [allSubjects, setAllSubjects] = useState<MasterRow[]>([]);
-  const [assignedIds, setAssignedIds] = useState<string[]>([]);
-  const [stdLoading, setStdLoading] = useState(false);
-  const [stdSaving, setStdSaving] = useState(false);
+  // Step 2 — by class
   const [classes, setClasses] = useState<ClassRow[]>([]);
+  const [classesLoading, setClassesLoading] = useState(false);
+  const [classId, setClassId] = useState("");
+  const [classSubjectsLoading, setClassSubjectsLoading] = useState(false);
+  const [assignedIds, setAssignedIds] = useState<string[]>([]);
+  const [classSaving, setClassSaving] = useState(false);
+  const [classSearch, setClassSearch] = useState("");
 
-  // Apply
-  const [academicYear, setAcademicYear] = useState<string>("2025-26");
-  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
-  const [applying, setApplying] = useState(false);
+  const selectedClass = classes.find((c) => c.id === classId);
 
-  const needsStream = ["11", "12"].includes(standard);
-
-  const loadMaster = useCallback(
-    async (seed = false) => {
-      setMasterLoading(true);
-      try {
-        const res = await fetch(
-          `/api/subjects?view=master${seed ? "&seed=1" : ""}`,
-          {
-            cache: "no-store",
-          },
-        );
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed");
-        setMaster(
-          (data.subjects || []).map((s: MasterRow, i: number) => ({
-            id: s.id,
-            name: s.name,
-            code: s.code,
-            shortName: s.shortName || "",
-            type: s.type === "grade" ? "grade" : "numeric",
-            maxMarks: s.maxMarks ?? 100,
-            sortOrder: s.sortOrder ?? i,
-            isActive: s.isActive !== false,
-          })),
-        );
-      } catch (e) {
-        toast.error(
-          e instanceof Error ? e.message : t("subjectsHub.loadFailed"),
-        );
-      } finally {
-        setMasterLoading(false);
-      }
-    },
-    [t],
-  );
-
-  const loadStandard = useCallback(async () => {
-    setStdLoading(true);
+  const loadMaster = useCallback(async () => {
+    setMasterLoading(true);
     try {
-      const params = new URLSearchParams({
-        view: "standard",
-        standard,
-        academicYear,
-      });
-      if (needsStream && stream) params.set("stream", stream);
-      const res = await fetch(`/api/subjects?${params}`, { cache: "no-store" });
+      const res = await fetch("/api/subjects?view=master", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      setAllSubjects(
-        (data.subjects || []).map((s: MasterRow) => ({
-          ...s,
-          type: s.type === "grade" ? "grade" : "numeric",
-        })),
-      );
-      setAssignedIds(data.assignedIds || []);
-      setClasses(data.classes || []);
-      setSelectedClassIds((data.classes || []).map((c: ClassRow) => c.id));
+      setMaster(mapMaster(data.subjects || []));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("subjectsHub.loadFailed"));
     } finally {
-      setStdLoading(false);
+      setMasterLoading(false);
     }
-  }, [standard, stream, needsStream, academicYear, t]);
+  }, [t]);
+
+  const loadClasses = useCallback(async () => {
+    setClassesLoading(true);
+    try {
+      const res = await fetch("/api/subjects?view=classes", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setClasses(data.classes || []);
+      if (data.subjects) setMaster(mapMaster(data.subjects));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("subjectsHub.loadFailed"));
+    } finally {
+      setClassesLoading(false);
+    }
+  }, [t]);
+
+  const loadClassSubjects = useCallback(
+    async (id: string) => {
+      if (!id) {
+        setAssignedIds([]);
+        return;
+      }
+      setClassSubjectsLoading(true);
+      try {
+        const res = await fetch(`/api/classes/${id}/subjects?seed=0`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed");
+
+        const classRows = (data.subjects || []) as Array<{
+          code: string;
+          isActive?: boolean;
+          sortOrder?: number;
+        }>;
+        const active = classRows
+          .filter((s) => s.isActive !== false)
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+        // Match class subjects to master by code (preferred) then name
+        const byCode = new Map(
+          master.filter((m) => m.id).map((m) => [m.code.toUpperCase(), m.id!]),
+        );
+
+        const ids: string[] = [];
+        for (const row of active) {
+          const idFromCode = byCode.get(String(row.code || "").toUpperCase());
+          if (idFromCode && !ids.includes(idFromCode)) {
+            ids.push(idFromCode);
+          }
+        }
+        setAssignedIds(ids);
+      } catch (e) {
+        setAssignedIds([]);
+        toast.error(e instanceof Error ? e.message : t("subjectsHub.loadFailed"));
+      } finally {
+        setClassSubjectsLoading(false);
+      }
+    },
+    [master, t],
+  );
 
   useEffect(() => {
     void loadMaster();
   }, [loadMaster]);
 
   useEffect(() => {
-    if (tab === "standard" || tab === "apply") void loadStandard();
-  }, [tab, loadStandard]);
+    if (tab === "classes") void loadClasses();
+  }, [tab, loadClasses]);
 
   useEffect(() => {
-    if (needsStream && !stream) setStream("Arts");
-    if (!needsStream) setStream("");
-  }, [needsStream, stream]);
+    if (tab !== "classes" || !classId) return;
+    void loadClassSubjects(classId);
+    // Only reload when class changes — not when master list updates mid-edit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, classId]);
 
   const openAddModal = () => {
     setEditIndex(null);
@@ -210,6 +225,27 @@ export default function SubjectsHubPage() {
     });
   };
 
+  const persistMaster = async (next: MasterRow[], successTitle: string) => {
+    setMasterSaving(true);
+    try {
+      const res = await fetch("/api/subjects", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "save_master", subjects: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setMaster(mapMaster(data.subjects || []));
+      toast.push({ title: successTitle, variant: "success", duration: 2800 });
+      return true;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("subjectsHub.saveFailed"));
+      return false;
+    } finally {
+      setMasterSaving(false);
+    }
+  };
+
   const submitAddModal = async () => {
     const name = draft.name.trim();
     const code = draft.code.trim().toUpperCase().replace(/\s+/g, "_");
@@ -243,42 +279,14 @@ export default function SubjectsHubPage() {
         : [...master, row];
 
     setAddSaving(true);
-    setMasterSaving(true);
-    try {
-      const res = await fetch("/api/subjects", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "save_master", subjects: next }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      setMaster(
-        (data.subjects || []).map((s: MasterRow, i: number) => ({
-          id: s.id,
-          name: s.name,
-          code: s.code,
-          shortName: s.shortName || "",
-          type: s.type === "grade" ? "grade" : "numeric",
-          maxMarks: s.maxMarks ?? 100,
-          sortOrder: s.sortOrder ?? i,
-          isActive: s.isActive !== false,
-        })),
-      );
-      toast.push({
-        title:
-          editIndex != null
-            ? t("subjectsHub.modalUpdated")
-            : t("subjectsHub.modalAdded"),
-        variant: "success",
-        duration: 2800,
-      });
-      closeAddModal();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("subjectsHub.saveFailed"));
-    } finally {
-      setAddSaving(false);
-      setMasterSaving(false);
-    }
+    const ok = await persistMaster(
+      next,
+      editIndex != null
+        ? t("subjectsHub.modalUpdated")
+        : t("subjectsHub.modalAdded"),
+    );
+    setAddSaving(false);
+    if (ok) closeAddModal();
   };
 
   const confirmDeleteSubject = async () => {
@@ -287,39 +295,9 @@ export default function SubjectsHubPage() {
       .filter((_, idx) => idx !== deleteIndex)
       .map((r, idx) => ({ ...r, sortOrder: idx }));
     setDeleteSaving(true);
-    setMasterSaving(true);
-    try {
-      const res = await fetch("/api/subjects", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "save_master", subjects: next }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      setMaster(
-        (data.subjects || []).map((s: MasterRow, i: number) => ({
-          id: s.id,
-          name: s.name,
-          code: s.code,
-          shortName: s.shortName || "",
-          type: s.type === "grade" ? "grade" : "numeric",
-          maxMarks: s.maxMarks ?? 100,
-          sortOrder: s.sortOrder ?? i,
-          isActive: s.isActive !== false,
-        })),
-      );
-      setDeleteIndex(null);
-      toast.push({
-        title: t("subjectsHub.deleteDone"),
-        variant: "success",
-        duration: 2800,
-      });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("subjectsHub.saveFailed"));
-    } finally {
-      setDeleteSaving(false);
-      setMasterSaving(false);
-    }
+    const ok = await persistMaster(next, t("subjectsHub.deleteDone"));
+    setDeleteSaving(false);
+    if (ok) setDeleteIndex(null);
   };
 
   const updateDraft = (patch: Partial<MasterRow>) => {
@@ -338,37 +316,7 @@ export default function SubjectsHubPage() {
   };
 
   const saveMaster = async () => {
-    setMasterSaving(true);
-    try {
-      const res = await fetch("/api/subjects", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "save_master", subjects: master }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      setMaster(
-        (data.subjects || []).map((s: MasterRow, i: number) => ({
-          id: s.id,
-          name: s.name,
-          code: s.code,
-          shortName: s.shortName || "",
-          type: s.type === "grade" ? "grade" : "numeric",
-          maxMarks: s.maxMarks ?? 100,
-          sortOrder: s.sortOrder ?? i,
-          isActive: s.isActive !== false,
-        })),
-      );
-      toast.push({
-        title: t("subjectsHub.masterSaved"),
-        variant: "success",
-        duration: 3000,
-      });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("subjectsHub.saveFailed"));
-    } finally {
-      setMasterSaving(false);
-    }
+    await persistMaster(master, t("subjectsHub.masterSaved"));
   };
 
   const toggleAssigned = (id: string) => {
@@ -390,95 +338,81 @@ export default function SubjectsHubPage() {
     });
   };
 
-  const saveStandard = async () => {
-    setStdSaving(true);
-    try {
-      const res = await fetch("/api/subjects", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "save_standard",
-          standard,
-          stream: needsStream ? stream : "",
-          subjectIds: assignedIds,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      toast.push({
-        title: t("subjectsHub.standardSaved"),
-        description: t("subjectsHub.standardSavedDesc", {
-          count: data.count || 0,
-        }),
-        variant: "success",
-        duration: 3000,
-      });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("subjectsHub.saveFailed"));
-    } finally {
-      setStdSaving(false);
-    }
-  };
+  const assignedOrdered = useMemo(() => {
+    const byId = new Map(master.filter((s) => s.id).map((s) => [s.id!, s]));
+    return assignedIds.map((id) => byId.get(id)).filter(Boolean) as MasterRow[];
+  }, [assignedIds, master]);
 
-  const applyToClasses = async () => {
-    if (!selectedClassIds.length) {
-      toast.warning(t("subjectsHub.pickClasses"));
+  const filteredClasses = useMemo(() => {
+    const q = classSearch.trim().toLowerCase();
+    if (!q) return classes;
+    return classes.filter((c) =>
+      [c.name, c.standard, c.section, c.stream, c.academicYear]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [classes, classSearch]);
+
+  const saveClassSubjects = async () => {
+    if (!classId || !selectedClass) return;
+    if (!assignedOrdered.length) {
+      toast.warning(t("subjectsHub.pickAtLeastOne"));
       return;
     }
-    setApplying(true);
+    setClassSaving(true);
     try {
-      // Save standard assignment first so apply uses latest
-      await fetch("/api/subjects", {
-        method: "PUT",
+      const payload = assignedOrdered.map((s, i) => ({
+        name: s.name,
+        code: s.code,
+        shortName: s.shortName || s.name.slice(0, 2),
+        type: s.type,
+        maxMarks: s.type === "grade" ? 0 : s.maxMarks || 100,
+        sortOrder: i,
+        isActive: true,
+      }));
+      const res = await fetch(`/api/classes/${classId}/subjects`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "save_standard",
-          standard,
-          stream: needsStream ? stream : "",
-          subjectIds: assignedIds,
-        }),
-      });
-      const res = await fetch("/api/subjects", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "apply_to_classes",
-          standard,
-          stream: needsStream ? stream : "",
-          academicYear,
-          classIds: selectedClassIds,
-        }),
+        body: JSON.stringify({ subjects: payload, syncExam: true }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
+
+      setClasses((prev) =>
+        prev.map((c) =>
+          c.id === classId
+            ? {
+                ...c,
+                _count: {
+                  ...c._count,
+                  classSubjects: payload.length,
+                },
+              }
+            : c,
+        ),
+      );
+
       toast.push({
-        title: t("subjectsHub.applied"),
-        description: t("subjectsHub.appliedDesc", {
-          classes: data.applied || 0,
-          subjects: data.subjectCount || 0,
+        title: t("subjectsHub.classSaved"),
+        description: t("subjectsHub.classSavedDesc", {
+          class: selectedClass.name,
+          count: payload.length,
         }),
         variant: "success",
-        duration: 4000,
+        duration: 3500,
       });
-      await loadStandard();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("subjectsHub.saveFailed"));
     } finally {
-      setApplying(false);
+      setClassSaving(false);
     }
   };
-
-  const assignedOrdered = useMemo(() => {
-    const byId = new Map(
-      allSubjects.filter((s) => s.id).map((s) => [s.id!, s]),
-    );
-    return assignedIds.map((id) => byId.get(id)).filter(Boolean) as MasterRow[];
-  }, [assignedIds, allSubjects]);
 
   const tabs: { id: TabId; label: string; icon: typeof BookMarked }[] = [
     { id: "master", label: t("subjectsHub.tabMaster"), icon: BookMarked },
-    { id: "standard", label: t("subjectsHub.tabStandard"), icon: Layers },
-    { id: "apply", label: t("subjectsHub.tabApply"), icon: Upload },
+    { id: "classes", label: t("subjectsHub.tabClasses"), icon: Layers },
   ];
 
   return (
@@ -497,7 +431,6 @@ export default function SubjectsHubPage() {
           <ol>
             <li>{t("subjectsHub.step1")}</li>
             <li>{t("subjectsHub.step2")}</li>
-            <li>{t("subjectsHub.step3")}</li>
           </ol>
         </div>
 
@@ -550,6 +483,16 @@ export default function SubjectsHubPage() {
                   )}
                   {t("common.save")}
                 </Button>
+                {master.length > 0 ? (
+                  <Button
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                    onClick={() => setTab("classes")}
+                  >
+                    {t("subjectsHub.goClasses")}
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -681,199 +624,160 @@ export default function SubjectsHubPage() {
           </section>
         )}
 
-        {(tab === "standard" || tab === "apply") && (
+        {tab === "classes" && (
           <section className="subhub__panel">
             <div className="subhub__panel-head">
               <div>
-                <h2>
-                  {tab === "standard"
-                    ? t("subjectsHub.standardTitle")
-                    : t("subjectsHub.applyTitle")}
-                </h2>
-                <p>
-                  {tab === "standard"
-                    ? t("subjectsHub.standardDesc")
-                    : t("subjectsHub.applyDesc")}
-                </p>
-              </div>
-              <div className="subhub__filters">
-                <Select
-                  label={t("classes.standard")}
-                  hideEmptyOption
-                  options={SCHOOL_STANDARDS.map((s) => ({
-                    value: s,
-                    label: s,
-                  }))}
-                  value={standard}
-                  onChange={(e) => setStandard(e.target.value)}
-                />
-                {needsStream ? (
-                  <Select
-                    label={t("classes.stream")}
-                    hideEmptyOption
-                    options={SENIOR_STREAMS.map((s) => ({
-                      value: s,
-                      label: s,
-                    }))}
-                    value={stream || "Arts"}
-                    onChange={(e) => setStream(e.target.value)}
-                  />
-                ) : null}
-                {tab === "apply" ? (
-                  <Select
-                    label={t("classes.academicYear")}
-                    hideEmptyOption
-                    options={FINANCIAL_YEARS.map((y) => ({
-                      value: y,
-                      label: y,
-                    }))}
-                    value={academicYear}
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                  />
-                ) : null}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  className="self-end"
-                  onClick={() => void loadStandard()}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  {t("common.filter")}
-                </Button>
+                <h2>{t("subjectsHub.classesStepTitle")}</h2>
+                <p>{t("subjectsHub.classesStepDesc")}</p>
               </div>
             </div>
 
-            {stdLoading ? (
+            {master.filter((s) => s.id && s.isActive !== false).length === 0 ? (
+              <div className="subhub__empty">
+                <p>{t("subjectsHub.needMasterFirst")}</p>
+                <Button type="button" size="sm" onClick={() => setTab("master")}>
+                  {t("subjectsHub.tabMaster")}
+                </Button>
+              </div>
+            ) : classesLoading ? (
               <div className="flex justify-center py-16">
                 <Spinner size="lg" />
               </div>
-            ) : (
-              <div className="subhub__split">
-                <div className="subhub__col">
-                  {tab === "standard" ? (
-                    <>
-                      <h3>{t("subjectsHub.pickSubjects")}</h3>
-                      <p className="subhub__hint">
-                        {t("subjectsHub.pickSubjectsHint")}
-                      </p>
-                      {allSubjects.length === 0 ? (
-                        <div className="subhub__empty subhub__empty--sm">
-                          <p>{t("subjectsHub.needMasterFirst")}</p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => setTab("master")}
-                          >
-                            {t("subjectsHub.tabMaster")}
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="subhub__checklist">
-                          {allSubjects
-                            .filter((s) => s.id && s.isActive !== false)
-                            .map((s) => {
-                              const on = assignedIds.includes(s.id!);
-                              return (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  className={cn(
-                                    "subhub__check",
-                                    on && "subhub__check--on",
-                                  )}
-                                  onClick={() => toggleAssigned(s.id!)}
-                                >
-                                  <CheckSquare
-                                    className={cn(
-                                      "h-4 w-4",
-                                      on ? "opacity-100" : "opacity-30",
-                                    )}
-                                  />
-                                  <span className="subhub__check-body">
-                                    <span className="subhub__check-name">
-                                      {s.name}
-                                    </span>
-                                    <span className="subhub__check-meta">
-                                      {s.code}
-                                    </span>
-                                  </span>
-                                </button>
-                              );
-                            })}
-                        </div>
-                      )}
-                      <div className="subhub__actions subhub__actions--end">
-                        <Button
-                          type="button"
-                          disabled={stdSaving}
-                          onClick={() => void saveStandard()}
-                        >
-                          {stdSaving ? (
-                            <Spinner size="sm" />
-                          ) : (
-                            <Save className="h-3.5 w-3.5" />
-                          )}
-                          {t("subjectsHub.saveStandard")}
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="subhub__apply-package">
-                      <div className="subhub__apply-package-head">
-                        <div className="subhub__apply-package-icon">
-                          <BookMarked className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <span className="subhub__eyebrow">
-                            {t("subjectsHub.packageReady")}
-                          </span>
-                          <h3>
-                            {t("classes.standard")} {standard}
-                            {needsStream && stream ? ` · ${stream}` : ""}
-                          </h3>
-                          <p>
-                            {t("subjectsHub.packageSummary", {
-                              count: assignedOrdered.length,
-                            })}
-                          </p>
-                        </div>
-                      </div>
-
-                      {assignedOrdered.length === 0 ? (
-                        <div className="subhub__empty subhub__empty--sm">
-                          <p>{t("subjectsHub.noneAssigned")}</p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => setTab("standard")}
-                          >
-                            {t("subjectsHub.tabStandard")}
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="subhub__subject-chips">
-                          {assignedOrdered.map((subject, index) => (
-                            <div
-                              key={subject.id}
-                              className="subhub__subject-chip"
-                            >
-                              <span>{index + 1}</span>
-                              <div>
-                                <strong>{subject.name}</strong>
-                                <small>{subject.code}</small>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+            ) : !classId ? (
+              <div className="subhub__class-pick">
+                <div className="subhub__class-pick-head">
+                  <div>
+                    <h3>{t("subjectsHub.pickClassTitle")}</h3>
+                    <p>{t("subjectsHub.pickClassHint")}</p>
+                  </div>
+                  <Input
+                    value={classSearch}
+                    onChange={(e) => setClassSearch(e.target.value)}
+                    placeholder={t("subjectsHub.searchClass")}
+                    className="max-w-xs"
+                  />
                 </div>
 
-                <div className="subhub__col">
-                  {tab === "standard" ? (
-                    <>
+                {filteredClasses.length === 0 ? (
+                  <div className="subhub__empty subhub__empty--sm">
+                    <p>{t("subjectsHub.noClasses")}</p>
+                  </div>
+                ) : (
+                  <div className="subhub__class-grid">
+                    {filteredClasses.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="subhub__class-card subhub__class-card--btn"
+                        onClick={() => setClassId(c.id)}
+                      >
+                        <div>
+                          <strong>{c.name}</strong>
+                          <span>
+                            Std {c.standard}
+                            {c.stream ? ` · ${c.stream}` : ""} · {c.academicYear}
+                          </span>
+                        </div>
+                        <small>
+                          {t("subjectsHub.classSubjectCount", {
+                            count: c._count.classSubjects,
+                          })}
+                          {" · "}
+                          {c._count.students} {t("subjectsHub.studentsShort")}
+                        </small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="subhub__class-assign">
+                <div className="subhub__class-assign-bar">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setClassId("");
+                      setAssignedIds([]);
+                    }}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    {t("subjectsHub.backToClasses")}
+                  </Button>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900">
+                      {selectedClass?.name}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {t("subjectsHub.assignForClass", {
+                        count: assignedOrdered.length,
+                      })}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={classSaving || classSubjectsLoading}
+                    onClick={() => void saveClassSubjects()}
+                  >
+                    {classSaving ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+                    {t("subjectsHub.saveClassSubjects")}
+                  </Button>
+                </div>
+
+                {classSubjectsLoading ? (
+                  <div className="flex justify-center py-16">
+                    <Spinner size="lg" />
+                  </div>
+                ) : (
+                  <div className="subhub__split">
+                    <div className="subhub__col">
+                      <h3>{t("subjectsHub.pickSubjects")}</h3>
+                      <p className="subhub__hint">
+                        {t("subjectsHub.pickSubjectsForClass")}
+                      </p>
+                      <div className="subhub__checklist">
+                        {master
+                          .filter((s) => s.id && s.isActive !== false)
+                          .map((s) => {
+                            const on = assignedIds.includes(s.id!);
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                className={cn(
+                                  "subhub__check",
+                                  on && "subhub__check--on",
+                                )}
+                                onClick={() => toggleAssigned(s.id!)}
+                              >
+                                <CheckSquare
+                                  className={cn(
+                                    "h-4 w-4",
+                                    on ? "opacity-100" : "opacity-30",
+                                  )}
+                                />
+                                <span className="subhub__check-body">
+                                  <span className="subhub__check-name">
+                                    {s.name}
+                                  </span>
+                                  <span className="subhub__check-meta">
+                                    {s.code}
+                                  </span>
+                                </span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
+
+                    <div className="subhub__col">
                       <h3>
                         {t("subjectsHub.assignedOrder")}{" "}
                         <span className="subhub__count">
@@ -920,110 +824,23 @@ export default function SubjectsHubPage() {
                           ))}
                         </ul>
                       )}
-                    </>
-                  ) : (
-                    <div className="subhub__apply-classes">
-                      <div className="subhub__section-title">
-                        <div>
-                          <h3>{t("subjectsHub.classesTitle")}</h3>
-                          <p>{t("subjectsHub.classesHint")}</p>
-                        </div>
-                        <span className="subhub__selection-count">
-                          {t("subjectsHub.selectedClasses", {
-                            selected: selectedClassIds.length,
-                            total: classes.length,
-                          })}
-                        </span>
-                      </div>
-
-                      {classes.length === 0 ? (
-                        <div className="subhub__empty subhub__empty--sm">
-                          <p>{t("subjectsHub.noClasses")}</p>
-                        </div>
-                      ) : (
-                        <>
-                          <label className="subhub__select-all">
-                            <input
-                              type="checkbox"
-                              checked={
-                                classes.length > 0 &&
-                                selectedClassIds.length === classes.length
-                              }
-                              onChange={(e) => {
-                                setSelectedClassIds(
-                                  e.target.checked
-                                    ? classes.map((c) => c.id)
-                                    : [],
-                                );
-                              }}
-                            />
-                            <span>{t("subjectsHub.selectAllClasses")}</span>
-                          </label>
-
-                          <div className="subhub__class-grid">
-                            {classes.map((c) => {
-                              const selected = selectedClassIds.includes(c.id);
-                              return (
-                                <label
-                                  key={c.id}
-                                  className={cn(
-                                    "subhub__class-card",
-                                    selected && "subhub__class-card--selected",
-                                  )}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={selected}
-                                    onChange={(e) => {
-                                      setSelectedClassIds((prev) =>
-                                        e.target.checked
-                                          ? [...prev, c.id]
-                                          : prev.filter((id) => id !== c.id),
-                                      );
-                                    }}
-                                  />
-                                  <div>
-                                    <strong>{c.name}</strong>
-                                    <span>{c.academicYear}</span>
-                                  </div>
-                                  <small>
-                                    {t("subjectsHub.classSubjectCount", {
-                                      count: c._count.classSubjects,
-                                    })}
-                                  </small>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-
-                      <div className="subhub__apply-footer">
-                        <div>
-                          <strong>{t("subjectsHub.readyToApply")}</strong>
-                          <span>{t("subjectsHub.replaceWarning")}</span>
-                        </div>
+                      <div className="subhub__actions subhub__actions--end mt-4">
                         <Button
                           type="button"
-                          size="lg"
-                          disabled={
-                            applying ||
-                            !assignedOrdered.length ||
-                            !selectedClassIds.length
-                          }
-                          onClick={() => void applyToClasses()}
+                          disabled={classSaving}
+                          onClick={() => void saveClassSubjects()}
                         >
-                          {applying ? (
+                          {classSaving ? (
                             <Spinner size="sm" />
                           ) : (
-                            <Upload className="h-3.5 w-3.5" />
+                            <Save className="h-3.5 w-3.5" />
                           )}
-                          {t("subjectsHub.applyBtn")}
+                          {t("subjectsHub.saveClassSubjects")}
                         </Button>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </section>

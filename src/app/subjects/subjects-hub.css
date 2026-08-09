@@ -524,9 +524,54 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
-  max-height: 18rem;
+  max-height: min(28rem, 60vh);
   overflow-y: auto;
   padding-right: 0.15rem;
+}
+
+.subhub__class-pick {
+  padding: 1rem 1.15rem 1.25rem;
+}
+
+.subhub__class-pick-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.subhub__class-pick-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0c1929;
+}
+
+.subhub__class-pick-head p {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.subhub__class-assign {
+  padding: 0 0 1rem;
+}
+
+.subhub__class-assign-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.15rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #f8fafc, #fff);
+}
+
+.subhub__class-assign-bar > div {
+  flex: 1;
+  min-width: 8rem;
 }
 
 .subhub__class-card {
@@ -540,10 +585,21 @@
   border-radius: 0.8rem;
   background: #fff;
   cursor: pointer;
+  text-align: left;
+  width: 100%;
   transition:
     border-color 120ms ease,
     background 120ms ease,
     box-shadow 120ms ease;
+}
+
+.subhub__class-card--btn {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.35rem;
+}
+
+.subhub__class-card--btn small {
+  grid-column: 1;
 }
 
 .subhub__class-card:hover {
@@ -624,7 +680,7 @@
 
   .subhub__tabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.3rem;
     padding: 0.3rem;
   }

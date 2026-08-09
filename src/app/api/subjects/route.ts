@@ -27,6 +27,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ overview, subjects, total: subjects.length });
     }
 
+    if (view === "classes") {
+      const classes = await prisma.schoolClass.findMany({
+        where: { schoolId: session.schoolId },
+        orderBy: [
+          { standard: "asc" },
+          { stream: "asc" },
+          { section: "asc" },
+          { name: "asc" },
+        ],
+        select: {
+          id: true,
+          name: true,
+          standard: true,
+          section: true,
+          stream: true,
+          academicYear: true,
+          _count: { select: { classSubjects: true, students: true } },
+        },
+      });
+      const subjects = await listSchoolSubjects(session.schoolId);
+      return NextResponse.json({
+        classes,
+        subjects,
+        totalClasses: classes.length,
+        totalSubjects: subjects.length,
+      });
+    }
+
     if (view === "standard") {
       if (!standard) {
         return NextResponse.json({ error: "standard required" }, { status: 400 });

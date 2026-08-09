@@ -34,7 +34,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     if (!schoolClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
 
     let subjects = await listClassSubjects(id);
-    if (!subjects.length) {
+    const seedParam = _request.nextUrl.searchParams.get("seed");
+    // Hub assign UI passes seed=0 so empty classes stay empty until user picks subjects
+    if (!subjects.length && seedParam !== "0") {
       subjects = await seedClassSubjects(id, schoolClass.standard, schoolClass.stream);
     }
 
