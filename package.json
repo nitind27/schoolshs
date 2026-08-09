@@ -9,6 +9,7 @@
     "start": "tsx server.ts",
     "start:next": "next start -p 3010",
     "lint": "eslint",
+    "test:help": "tsx scripts/test-help-bot.ts",
     "db:seed-mega": "tsx scripts/seed-mega.ts",
     "db:seed-mega-100k": "SCHOOLS=500 SPC=20 tsx scripts/seed-mega.ts",
     "db:seed": "tsx scripts/seed-all-dummy.ts",

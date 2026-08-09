@@ -31,6 +31,7 @@ import {
   Trophy,
   BadgeCheck,
   UserX,
+  Headphones,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -277,6 +278,12 @@ const useNavGroups = (
         label: t("navExt.accounting"),
         icon: Calculator,
         featureKey: "accounting",
+      },
+      {
+        type: "link",
+        href: "/help-desk",
+        label: t("helpDesk.title"),
+        icon: Headphones,
       },
       {
         type: "link",

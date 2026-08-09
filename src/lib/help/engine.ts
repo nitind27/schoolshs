@@ -137,6 +137,11 @@ export function sanitizeHelpHref(href: string | undefined, role: string | null |
   return filterHrefForRole(href, role);
 }
 
+/** Alias used by conversational engine */
+export function filterHrefForRolePublic(href: string | undefined, role: UserRole): string | undefined {
+  return filterHrefForRole(href, role);
+}
+
 const FALLBACK: Record<HelpLang, string> = {
   en: "I can help you find pages and explain features for your role only. Try asking about things in your panel — or tap a suggestion below.",
   hi: "मैं सिर्फ आपके पैनल की चीज़ें ढूँढने में मदद कर सकता हूँ। अपने पैनल के बारे में पूछें — या नीचे सुझाव चुनें।",
@@ -145,28 +150,28 @@ const FALLBACK: Record<HelpLang, string> = {
 
 const GREET: Record<HelpLang, Record<UserRole, string>> = {
   en: {
-    super_admin: "Hi! I’m the Super Admin help assistant. I only cover platform/school management — not school staff panels.",
-    school_admin: "Hi! I’m your School Admin help assistant. I only show admin panel pages — not teacher/clerk/CA panels.",
-    teacher: "Hi! I’m your Teacher help assistant. I only cover your teacher panel (classes, attendance, results, chat).",
-    clerk: "Hi! I’m your Clerk help assistant. I only cover clerk/school operations in your panel.",
-    ca: "Hi! I’m your CA help assistant. I only cover audit & accounting in your CA panel.",
-    student: "Hi! I’m your Student help assistant. I only show your own student portal pages.",
+    super_admin: "Hi! Ask me anything about platform/school management — like a colleague. If something’s unclear, say “explain again” or talk to staff.",
+    school_admin: "Hi! Ask freely about students, scholarship, attendance, accounts, certificates… I’ll explain step by step. If you don’t understand, ask again — or tap Talk to staff for a manual reply.",
+    teacher: "Hi! Ask about your class, attendance, timetable, marks… I’ll answer like a person. Confused? Say “explain simply” or talk to staff.",
+    clerk: "Hi! Ask about scholarship, students, day-to-day ops… I’ll walk you through it. Don’t understand? Ask follow-ups — or talk to staff.",
+    ca: "Hi! Ask about audit, vouchers, reports… I’ll explain clearly. Need a person? Tap Talk to staff.",
+    student: "Hi! Ask about your results, profile, and portal pages. If you’re stuck, ask again in simple words.",
   },
   hi: {
-    super_admin: "नमस्ते! मैं सुपर एडमिन हेल्प हूँ — सिर्फ प्लेटफ़ॉर्म/स्कूल प्रबंधन। स्टाफ पैनल नहीं।",
-    school_admin: "नमस्ते! मैं स्कूल एडमिन हेल्प हूँ — सिर्फ एडमिन पैनल। टीचर/क्लर्क/CA पैनल नहीं खोलूँगा।",
-    teacher: "नमस्ते! मैं टीचर हेल्प हूँ — सिर्फ आपका टीचर पैनल (क्लास, हाजरी, परिणाम, चैट)।",
-    clerk: "नमस्ते! मैं क्लर्क हेल्प हूँ — सिर्फ आपके क्लर्क पैनल की चीज़ें।",
-    ca: "नमस्ते! मैं CA हेल्प हूँ — सिर्फ ऑडिट और अकाउंटिंग।",
-    student: "नमस्ते! मैं छात्र हेल्प हूँ — सिर्फ आपका छात्र पोर्टल।",
+    super_admin: "नमस्ते! प्लेटफ़ॉर्म/स्कूल प्रबंधन के बारे में पूछें — जैसे किसी से बात। समझ न आए तो “फिर समझाओ” कहें या स्टाफ से बात करें।",
+    school_admin: "नमस्ते! छात्र, छात्रवृत्ति, हाजरी, हिसाब, प्रमाणपत्र… जो चाहें पूछें। चरण-दर-चरण समझाऊँगा। समझ न आए तो फिर पूछें — या स्टाफ से मैन्युअल बात करें।",
+    teacher: "नमस्ते! क्लास, हाजरी, समयसारणी, अंक… पूछें। व्यक्ति की तरह जवाब दूँगा। उलझन हो तो “आसान भाषा में समझाओ” या स्टाफ से बात करें।",
+    clerk: "नमस्ते! छात्रवृत्ति, छात्र, रोज़ के काम… पूछें। समझ न आए तो फॉलो-अप पूछें — या स्टाफ से बात करें।",
+    ca: "नमस्ते! ऑडिट, वाउचर, रिपोर्ट… पूछें। व्यक्ति चाहिए तो स्टाफ से बात करें।",
+    student: "नमस्ते! परिणाम, प्रोफ़ाइल, पोर्टल… पूछें। अटक जाएँ तो सरल भाषा में फिर पूछें।",
   },
   gu: {
-    super_admin: "નમસ્તે! હું સુપર એડમિન હેલ્પ છું — માત્ર પ્લેટફોર્મ/શાળા મેનેજમેન્ટ. સ્ટાફ પેનલ નહીં.",
-    school_admin: "નમસ્તે! હું સ્કૂલ એડમિન હેલ્પ છું — માત્ર એડમિન પેનલ. શિક્ષક/ક્લાર્ક/CA પેનલ નહીં ખોલું.",
-    teacher: "નમસ્તે! હું શિક્ષક હેલ્પ છું — માત્ર તમારું ટીચર પેનલ (વર્ગ, હાજરી, પરિણામ, ચેટ).",
-    clerk: "નમસ્તે! હું ક્લાર્ક હેલ્પ છું — માત્ર તમારા ક્લાર્ક પેનલની વસ્તુઓ.",
-    ca: "નમસ્તે! હું CA હેલ્પ છું — માત્ર ઓડિટ અને એકાઉન્ટિંગ.",
-    student: "નમસ્તે! હું વિદ્યાર્થી હેલ્પ છું — માત્ર તમારું સ્ટુડન્ટ પોર્ટલ.",
+    super_admin: "નમસ્તે! પ્લેટફોર્મ/શાળા મેનેજમેન્ટ વિશે પૂછો — જેમ કોઈ સાથે વાત. સમજાય નહીં તો “ફરી સમજાવો” કહો અથવા સ્ટાફ સાથે વાત કરો.",
+    school_admin: "નમસ્તે! વિદ્યાર્થી, શિષ્યવૃત્તિ, હાજરી, હિસાબ, પ્રમાણપત્ર… જે પૂછવું હોય પૂછો. હું પગલાંવાર સમજાવીશ. સમજાયું ન હોય તો ફરી પૂછો — અથવા સ્ટાફ સાથે મેન્યુઅલ વાત કરો.",
+    teacher: "નમસ્તે! વર્ગ, હાજરી, સમયપત્રક, ગુણ… પૂછો. માણસની જેમ જવાબ આપીશ. અટકી જાઓ તો “સરળ રીતે સમજાવો” અથવા સ્ટાફ સાથે વાત કરો.",
+    clerk: "નમસ્તે! શિષ્યવૃત્તિ, વિદ્યાર્થી, રોજિંદા કામ… પૂછો. સમજાય નહીં તો ફોલો-અપ પૂછો — અથવા સ્ટાફ સાથે વાત કરો.",
+    ca: "નમસ્તે! ઓડિટ, વાઉચર, રિપોર્ટ… પૂછો. વ્યક્તિ જોઈએ તો સ્ટાફ સાથે વાત કરો.",
+    student: "નમસ્તે! પરિણામ, પ્રોફાઇલ, પોર્ટલ… પૂછો. અટકી જાઓ તો સરળ ભાષામાં ફરી પૂછો.",
   },
 };
 
@@ -190,6 +195,17 @@ export type HelpReply = {
   links?: { href: string; label: string }[];
   suggestions?: { id: string; label: string; query: string }[];
   role: UserRole;
+  /** 0–100 match confidence for handoff decisions */
+  confidence?: number;
+  /** Suggest human handoff when low confidence */
+  canEscalate?: boolean;
+  /** Last matched topic — used for follow-up context */
+  topicId?: string;
+  /** Detected conversational intent */
+  intent?: string;
+  /** Active troubleshooting playbook */
+  diagnosticId?: string;
+  diagnosticStep?: number;
 };
 
 export function getHelpSuggestions(role: UserRole, lang: HelpLang) {
@@ -270,6 +286,8 @@ export function answerHelpQuery(
       role,
       text: FALLBACK[lang],
       suggestions: getHelpSuggestions(role, lang),
+      confidence: Math.min(bestScore * 10, 25),
+      canEscalate: true,
     };
   }
 
@@ -281,6 +299,8 @@ export function answerHelpQuery(
     })
     .filter(Boolean) as { href: string; label: string }[];
 
+  const confidence = Math.min(100, Math.round((bestScore / 20) * 100));
+
   return {
     lang,
     role,
@@ -289,5 +309,23 @@ export function answerHelpQuery(
     href,
     links: links.length ? links : undefined,
     suggestions: getHelpSuggestions(role, lang),
+    confidence,
+    canEscalate: confidence < 55,
   };
+}
+
+/** Detect explicit request to talk to a human */
+export function wantsHumanAgent(raw: string): boolean {
+  const t = raw.toLowerCase();
+  if (
+    /\b(human|agent|staff|person|operator|talk to|speak to|manual|live chat|help desk|real person)\b/i.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  // Indic scripts: word-boundary `\b` is unreliable — use includes / loose match
+  return /સ્ટાફ|માનવી|વ્યક્તિ|મદદ\s*ડેસ્ક|મેન્યુઅલ|વાત\s*કર|કોઈ\s*વ્યક્તિ|स्टाफ|इंसान|लाइव\s*चैट|मदद\s*डेस्क|बात\s*कर|मैन्युअल|कोई\s*व्यक्ति|मानव/i.test(
+    raw,
+  );
 }

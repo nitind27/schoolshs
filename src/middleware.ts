@@ -48,6 +48,7 @@ const ROLE_ROUTES: Record<string, UserRole[]> = {
   "/api/results": ["school_admin", "teacher", "clerk"],
   "/api/results/print": ["school_admin", "teacher", "student", "clerk"],
   "/student/results/print": ["student"],
+  "/help-desk": ["school_admin", "clerk"],
   "/exam-id-cards": ["school_admin", "clerk"],
   "/api/exam-id-cards": ["school_admin", "clerk"],
 };
@@ -295,6 +296,8 @@ export async function middleware(request: NextRequest) {
       "/chat",
       "/api/chat",
       "/api/uploads/chat",
+      "/help-desk",
+      "/api/help",
       "/api/uploads/students",
       "/api/uploads/staff",
       "/api/notifications",

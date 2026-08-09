@@ -63,6 +63,7 @@ model School {
   examSeatAssignments    ExamSeatAssignment[]
   holidays               Holiday[]
   activities             Activity[]
+  helpConversations      HelpConversation[]
 
   @@index([isActive])
   @@index([district])
@@ -206,6 +207,9 @@ model User {
   notifications       Notification[]
   loginEvents         LoginEvent[]
   sessions            UserSession[]
+  helpConversations   HelpConversation[] @relation("HelpConversationUser")
+  helpAssigned        HelpConversation[] @relation("HelpConversationAssignee")
+  helpMessagesSent    HelpMessage[]      @relation("HelpMessageSender")
 
   @@index([schoolId])
   @@index([role])
@@ -1453,6 +1457,73 @@ model ContactSupportMessage {
   @@index([source, createdAt])
   @@index([createdAt])
   @@map("contactsupportmessage")
+}
+
+/**
+ * In-app Help chatbot conversation (bot + optional human handoff)
+ * status: bot | waiting | active | closed
+ */
+model HelpConversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  schoolId String?
+  school   School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("HelpConversationUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  /**
+   * Snapshot of asker role at start
+   */
+  role String
+  lang String @default("gu")
+
+  /**
+   * bot | waiting | active | closed
+   */
+  status String @default("bot")
+
+  assignedToId String?
+  assignedTo   User?   @relation("HelpConversationAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  subject   String?
+  rating    Int?
+  feedback  String?   @db.Text
+  closedAt  DateTime?
+
+  messages HelpMessage[]
+
+  @@index([schoolId, status, updatedAt])
+  @@index([userId, updatedAt])
+  @@index([assignedToId, status])
+  @@index([status, updatedAt])
+  @@map("helpconversation")
+}
+
+model HelpMessage {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  conversationId String
+  conversation   HelpConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  /**
+   * user | bot | staff | system
+   */
+  senderRole String
+  senderId   String?
+  sender     User?   @relation("HelpMessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+
+  content String @db.Text
+  /**
+   * Optional JSON: title, href, links, confidence, topicId
+   */
+  metaJson String? @db.Text
+
+  @@index([conversationId, createdAt])
+  @@map("helpmessage")
 }
 
 // ─── School Holidays ───
