@@ -174,7 +174,7 @@ export function BirthdayCelebrationCard({ autoOpen = false, className }: Props) 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/birthdays/today");
+      const res = await fetch("/api/birthdays/today", { cache: "no-store" });
       const json = await res.json();
       if (res.ok) {
         setData({

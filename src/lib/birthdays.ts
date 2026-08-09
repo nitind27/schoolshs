@@ -2,6 +2,11 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { calcAgeYears, parseDobToDate } from "@/lib/student-age";
+import {
+  getSchoolYmd,
+  schoolDateKey,
+  schoolDayStartUtc,
+} from "@/lib/school-timezone";
 
 export type BirthdayPerson = {
   id: string;
@@ -16,17 +21,19 @@ export type BirthdayPerson = {
   photoPath?: string | null;
 };
 
+/**
+ * Compare DOB month/day to "today" in Asia/Kolkata (IST).
+ * Avoids UTC server midnight lag (e.g. 12:51 AM IST still UTC previous day).
+ */
 export function isBirthdayToday(dob: string | null | undefined, onDate = new Date()): boolean {
   const dt = parseDobToDate(dob);
   if (!dt) return false;
-  return dt.getDate() === onDate.getDate() && dt.getMonth() === onDate.getMonth();
+  const today = getSchoolYmd(onDate);
+  return dt.getDate() === today.day && dt.getMonth() + 1 === today.month;
 }
 
 export function birthdayDateKey(onDate = new Date()): string {
-  const y = onDate.getFullYear();
-  const m = String(onDate.getMonth() + 1).padStart(2, "0");
-  const d = String(onDate.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return schoolDateKey(onDate);
 }
 
 function personName(
@@ -142,7 +149,7 @@ export async function getTodayBirthdays(
 }
 
 /**
- * Create at most one birthday notification per user per calendar day
+ * Create at most one birthday notification per user per calendar day (IST)
  * when there is at least one birthday today.
  */
 export async function ensureBirthdayNotification(opts: {
@@ -153,8 +160,7 @@ export async function ensureBirthdayNotification(opts: {
   href?: string;
 }): Promise<boolean> {
   const dateKey = birthdayDateKey();
-  const dayStart = new Date();
-  dayStart.setHours(0, 0, 0, 0);
+  const dayStart = schoolDayStartUtc();
 
   const existing = await prisma.notification.findFirst({
     where: {
@@ -166,7 +172,6 @@ export async function ensureBirthdayNotification(opts: {
   });
 
   if (existing) {
-    // Refresh title/body if count changed
     await prisma.notification.update({
       where: { id: existing.id },
       data: {

@@ -11,15 +11,22 @@ export async function GET() {
       "ca",
     ]);
     const data = await getTodayBirthdays(session.schoolId);
-    return NextResponse.json({
-      dateKey: data.dateKey,
-      total: data.total,
-      studentCount: data.students.length,
-      staffCount: data.staff.length,
-      students: data.students,
-      staff: data.staff,
-      all: data.all,
-    });
+    return NextResponse.json(
+      {
+        dateKey: data.dateKey,
+        total: data.total,
+        studentCount: data.students.length,
+        staffCount: data.staff.length,
+        students: data.students,
+        staff: data.staff,
+        all: data.all,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      },
+    );
   } catch (e) {
     if (e instanceof AuthError) {
       return NextResponse.json({ error: e.message }, { status: e.status });
