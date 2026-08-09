@@ -142,10 +142,10 @@ function humanWrap(
     parts.push("");
     parts.push(
       lang === "gu"
-        ? "સમજાયું ન હોય તો પૂછો — અથવા “સ્ટાફ સાથે વાત” દબાવો."
+        ? "વધુ જોઈએ તો ફરી પૂછો — હું સિસ્ટમ વિશે ઓટો જવાબ આપું છું."
         : lang === "hi"
-          ? "समझ न आए तो पूछें — या “स्टाफ से बात” दबाएँ।"
-          : "If anything is unclear, ask me — or tap “Talk to staff”.",
+          ? "और चाहिए तो फिर पूछें — मैं सिस्टम के बारे में ऑटो जवाब देता हूँ।"
+          : "Ask again if needed — I auto-reply about this system.",
     );
   }
   return parts.join("\n");
@@ -295,7 +295,7 @@ function replyFromTopic(
     links: links.length ? links : undefined,
     suggestions: relatedSuggestions(topic.id, role, lang),
     confidence,
-    canEscalate: confidence < 55 || intent === "troubleshoot",
+    canEscalate: false,
     topicId: topic.id,
     intent,
   };
@@ -338,14 +338,14 @@ export function answerHelpConversational(
       role,
       text:
         lang === "gu"
-          ? "બરાબર — હું તમને શાળા સ્ટાફ સાથે જોડું છું. તેઓ મેન્યુઅલી જવાબ આપશે."
+          ? "આ સ્ટાફ ચેટ નથી — સિસ્ટમ ઓટો-મદદ છે. કયું પેજ / કયું કામ સમજવું છે તે લખો, હું તે વિશે જવાબ આપીશ."
           : lang === "hi"
-            ? "ठीक है — मैं आपको स्कूल स्टाफ से जोड़ता हूँ। वे मैन्युअल जवाब देंगे।"
-            : "Okay — I’ll connect you with school staff for a manual reply.",
-      canEscalate: true,
-      confidence: 100,
+            ? "यह स्टाफ चैट नहीं है — सिस्टम ऑटो-मदद है। कौन सा पेज / काम समझना है लिखें, मैं उसी के बारे में जवाब दूँगा।"
+            : "This is not a staff chat — it’s automatic system help. Write which page or task you need, and I’ll answer about that.",
+      canEscalate: false,
+      confidence: 90,
       suggestions: getHelpSuggestions(role, lang),
-      intent: "escalate",
+      intent: "howto",
     };
   }
 
@@ -359,10 +359,10 @@ export function answerHelpConversational(
       role,
       text:
         lang === "gu"
-          ? "નમસ્તે! હું એડવાન્સ મદદ છું — કેવી રીતે કરવું, ક્યાં છે, અથવા શું ખરાબ થયું તે પૂછો. સમજાય નહીં તો ફરી પૂછો."
+          ? "નમસ્તે! હું સિસ્ટમ ઓટો-મદદ છું — પેજ ક્યાં છે અથવા કેવી રીતે કરવું તે પૂછો."
           : lang === "hi"
-            ? "नमस्ते! मैं एडवांस मदद हूँ — कैसे करें, कहाँ है, या क्या टूटा है पूछें। समझ न आए तो फिर पूछें।"
-            : "Hi! I’m advanced help — ask how to do something, where it is, or what’s broken. Confused? Ask again.",
+            ? "नमस्ते! मैं सिस्टम ऑटो-मदद हूँ — पेज कहाँ है या कैसे करें पूछें।"
+            : "Hi! I’m automatic system help — ask where a page is or how to use a feature.",
       href: getRoleHome(role),
       suggestions: getHelpSuggestions(role, lang),
       confidence: 92,
@@ -392,7 +392,7 @@ export function answerHelpConversational(
           text: formatted.text,
           href: filterHrefForRolePublic(fresh.playbook.href, role),
           confidence: Math.min(95, 50 + fresh.score * 5),
-          canEscalate: true,
+          canEscalate: false,
           intent: "troubleshoot",
           diagnosticId: fresh.playbook.id,
           diagnosticStep: formatted.nextStep,
@@ -403,14 +403,9 @@ export function answerHelpConversational(
               query: lang === "gu" ? "હા" : lang === "hi" ? "हाँ" : "yes",
             },
             {
-              id: "diag-staff",
-              label: lang === "gu" ? "સ્ટાફ સાથે વાત" : lang === "hi" ? "स्टाफ से बात" : "Talk to staff",
-              query:
-                lang === "gu"
-                  ? "સ્ટાફ સાથે વાત"
-                  : lang === "hi"
-                    ? "स्टाफ से बात"
-                    : "talk to staff",
+              id: "diag-no",
+              label: lang === "gu" ? "ના, અટક્યું" : lang === "hi" ? "नहीं, अटका" : "No, stuck",
+              query: lang === "gu" ? "ના" : lang === "hi" ? "नहीं" : "no",
             },
           ],
         };
@@ -424,11 +419,11 @@ export function answerHelpConversational(
           title: playbook.title[lang],
           text:
             lang === "gu"
-              ? "બરાબર — શું દેખાય છે / કયો એરર? એક વાક્યમાં લખો, અથવા સ્ટાફ સાથે વાત કરો."
+              ? "બરાબર — શું દેખાય છે / કયો એરર? એક વાક્યમાં લખો."
               : lang === "hi"
-                ? "ठीक — क्या दिख रहा है / कौन सा एरर? एक वाक्य में लिखें, या स्टाफ से बात करें।"
-                : "Okay — what do you see / which error? One sentence, or talk to staff.",
-          canEscalate: true,
+                ? "ठीक — क्या दिख रहा है / कौन सा एरर? एक वाक्य में लिखें।"
+                : "Okay — what do you see / which error? Describe in one sentence.",
+          canEscalate: false,
           confidence: 70,
           intent: "troubleshoot",
           diagnosticId: playbook.id,
@@ -445,7 +440,7 @@ export function answerHelpConversational(
           text: formatted.text,
           href: filterHrefForRolePublic(playbook.href, role),
           confidence: formatted.done ? 88 : 80,
-          canEscalate: true,
+          canEscalate: false,
           intent: "troubleshoot",
           diagnosticId: playbook.id,
           diagnosticStep: formatted.nextStep,
@@ -456,25 +451,11 @@ export function answerHelpConversational(
               label: lang === "gu" ? "હા, થઈ ગયું" : lang === "hi" ? "हाँ, हो गया" : "Yes, done",
               query: lang === "gu" ? "હા" : lang === "hi" ? "हाँ" : "yes",
             },
-            ...(formatted.done
-              ? [
-                  {
-                    id: "diag-staff",
-                    label:
-                      lang === "gu"
-                        ? "સ્ટાફ સાથે વાત"
-                        : lang === "hi"
-                          ? "स्टाफ से बात"
-                          : "Talk to staff",
-                    query:
-                      lang === "gu"
-                        ? "સ્ટાફ સાથે વાત"
-                        : lang === "hi"
-                          ? "स्टाफ से बात"
-                          : "talk to staff",
-                  },
-                ]
-              : []),
+            {
+              id: "diag-no",
+              label: lang === "gu" ? "ના, અટક્યું" : lang === "hi" ? "नहीं, अटका" : "No, stuck",
+              query: lang === "gu" ? "ના" : lang === "hi" ? "नहीं" : "no",
+            },
           ],
         };
       }
@@ -494,7 +475,7 @@ export function answerHelpConversational(
         text: formatted.text,
         href: filterHrefForRolePublic(found.playbook.href, role),
         confidence: Math.min(95, 45 + found.score * 6),
-        canEscalate: true,
+        canEscalate: false,
         intent: "troubleshoot",
         diagnosticId: found.playbook.id,
         diagnosticStep: formatted.nextStep,
@@ -554,7 +535,7 @@ export function answerHelpConversational(
             ? "यह सुपर एडमिन / प्लेटफ़ॉर्म क्षेत्र है — आपके पैनल में उपलब्ध नहीं। अपने काम के बारे में पूछें।"
             : "That’s a Super Admin / platform area — not in your panel. Ask about your own tasks.",
       suggestions: getHelpSuggestions(role, lang),
-      canEscalate: true,
+      canEscalate: false,
       confidence: 40,
       intent,
     };
@@ -580,7 +561,7 @@ export function answerHelpConversational(
       href: getRoleHome(role),
       suggestions: getHelpSuggestions(role, lang),
       confidence: 40,
-      canEscalate: true,
+      canEscalate: false,
       intent,
     };
   }
@@ -628,7 +609,7 @@ export function answerHelpConversational(
         query: r.t.title[lang],
       })),
       confidence: 48,
-      canEscalate: true,
+      canEscalate: false,
       topicId: best.id,
       intent,
     };
@@ -640,13 +621,13 @@ export function answerHelpConversational(
       role,
       text:
         lang === "gu"
-          ? "મને હજુ સ્પષ્ટ નથી.\n\nતમે કહી શકો:\n• “કેવી રીતે…” (કામ)\n• “ક્યાં છે…” (પેજ)\n• “કામ નથી થતું…” (સમસ્યા)\n\nઅથવા સૂચન પસંદ કરો / સ્ટાફ સાથે વાત કરો."
+          ? "મને હજુ સ્પષ્ટ નથી.\n\nતમે કહી શકો:\n• “કેવી રીતે…” (કામ)\n• “ક્યાં છે…” (પેજ)\n• “કામ નથી થતું…” (સમસ્યા)\n\nઅથવા નીચે સૂચન પસંદ કરો."
           : lang === "hi"
-            ? "मुझे अभी साफ़ नहीं लगा।\n\nआप कह सकते हैं:\n• “कैसे…” (काम)\n• “कहाँ है…” (पेज)\n• “काम नहीं हो रहा…” (समस्या)\n\nसुझाव चुनें / स्टाफ से बात करें।"
-            : "I’m not sure yet.\n\nYou can say:\n• “How do I…” (task)\n• “Where is…” (page)\n• “It’s not working…” (problem)\n\nPick a suggestion or talk to staff.",
+            ? "मुझे अभी साफ़ नहीं लगा।\n\nआप कह सकते हैं:\n• “कैसे…” (काम)\n• “कहाँ है…” (पेज)\n• “काम नहीं हो रहा…” (समस्या)\n\nनीचे सुझाव चुनें।"
+            : "I’m not sure yet.\n\nYou can say:\n• “How do I…” (task)\n• “Where is…” (page)\n• “It’s not working…” (problem)\n\nPick a suggestion below.",
       suggestions: getHelpSuggestions(role, lang).slice(0, 5),
       confidence: Math.min(bestScore * 10, 30),
-      canEscalate: true,
+      canEscalate: false,
       intent,
     };
   }

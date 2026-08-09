@@ -33,7 +33,7 @@ export async function getOrCreateOpenConversation(params: {
   const existing = await prisma.helpConversation.findFirst({
     where: {
       userId: params.userId,
-      status: { in: ["bot", "waiting", "active"] },
+      status: "bot",
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -46,6 +46,14 @@ export async function getOrCreateOpenConversation(params: {
     }
     return existing;
   }
+  // Close any leftover staff-chat sessions from older builds
+  await prisma.helpConversation.updateMany({
+    where: {
+      userId: params.userId,
+      status: { in: ["waiting", "active"] },
+    },
+    data: { status: "closed", closedAt: new Date() },
+  });
   return prisma.helpConversation.create({
     data: {
       userId: params.userId,

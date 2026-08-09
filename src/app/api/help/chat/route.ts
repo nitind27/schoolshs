@@ -3,16 +3,13 @@ import { AuthError, requireAuth } from "@/lib/auth";
 import { isUserRole } from "@/lib/roles";
 import {
   getWelcomeMessage,
-  wantsHumanAgent,
   type HelpLang,
 } from "@/lib/help/engine";
 import { answerHelpConversational } from "@/lib/help/conversation";
 import {
   appendHelpMessage,
-  escalateSystemText,
   getOrCreateOpenConversation,
   loadConversationMessages,
-  notifySchoolHelpStaff,
   replyMeta,
 } from "@/lib/help/service";
 import { prisma } from "@/lib/db";
@@ -52,7 +49,7 @@ export async function GET(request: NextRequest) {
     const open = await prisma.helpConversation.findFirst({
       where: {
         userId: session.userId,
-        status: { in: ["bot", "waiting", "active"] },
+        status: "bot",
       },
       orderBy: { updatedAt: "desc" },
     });
@@ -138,43 +135,27 @@ export async function POST(request: NextRequest) {
     };
 
     if (action === "escalate") {
+      // Manual staff chat disabled — keep auto system help only
       const conv = await ensureConv();
-      if (conv.status === "closed") {
-        return NextResponse.json({ error: "Conversation closed" }, { status: 400 });
-      }
-      if (!session.schoolId) {
-        return NextResponse.json(
-          { error: "Help desk handoff needs a school account" },
-          { status: 400 },
-        );
-      }
-      const updated = await prisma.helpConversation.update({
-        where: { id: conv.id },
-        data: {
-          status: "waiting",
-          lang: preferredLang,
-          subject: String(body.subject || "Help request").slice(0, 120),
-        },
-      });
-      const sys = escalateSystemText(preferredLang);
-      await appendHelpMessage({
-        conversationId: conv.id,
-        senderRole: "system",
-        content: sys,
-      });
-      await notifySchoolHelpStaff({
-        schoolId: session.schoolId,
-        conversationId: conv.id,
-        askerName: session.name || "User",
-        preview: String(body.message || body.subject || "Needs help"),
-      });
+      const reply = answerHelpConversational(
+        String(body.message || body.subject || "system help"),
+        session.role,
+        preferredLang,
+        {},
+      );
       return NextResponse.json({
-        conversationId: updated.id,
-        status: updated.status,
+        conversationId: conv.id,
+        status: "bot",
         role: session.role,
         lang: preferredLang,
-        text: sys,
-        escalated: true,
+        text:
+          preferredLang === "gu"
+            ? "આ સ્ટાફ ચેટ નથી. સિસ્ટમ વિશે પૂછો — હું ઓટો જવાબ આપીશ."
+            : preferredLang === "hi"
+              ? "यह स्टाफ चैट नहीं है। सिस्टम के बारे में पूछें — मैं ऑटो जवाब दूँगा।"
+              : "This is not a staff chat. Ask about the system — I’ll auto-reply.",
+        suggestions: reply.suggestions || getWelcomeMessage(session.role, preferredLang).suggestions,
+        escalated: false,
       });
     }
 
@@ -250,63 +231,20 @@ export async function POST(request: NextRequest) {
     const conv = await ensureConv();
     conversationId = conv.id;
 
+    // Always stay in auto bot mode (no staff live-chat)
+    if (conv.status !== "bot") {
+      await prisma.helpConversation.update({
+        where: { id: conv.id },
+        data: { status: "bot", lang: preferredLang },
+      });
+    }
+
     await appendHelpMessage({
       conversationId: conv.id,
       senderRole: "user",
       senderId: session.userId,
       content: message,
     });
-
-    // Live staff mode — store user message only; staff replies manually
-    if (conv.status === "waiting" || conv.status === "active") {
-      await prisma.helpConversation.update({
-        where: { id: conv.id },
-        data: { updatedAt: new Date(), lang: preferredLang },
-      });
-      return NextResponse.json({
-        conversationId: conv.id,
-        status: conv.status,
-        role: session.role,
-        lang: preferredLang,
-        text:
-          preferredLang === "gu"
-            ? "તમારો મેસેજ સ્ટાફને મોકલાયો. જવાબ આવે ત્યાં સુધી રાહ જુઓ."
-            : preferredLang === "hi"
-              ? "आपका संदेश स्टाफ को भेज दिया गया। जवाब आने तक प्रतीक्षा करें।"
-              : "Your message was sent to staff. Please wait for their reply.",
-        waitingForStaff: true,
-        suggestions: [],
-      });
-    }
-
-    // Explicit human request
-    if (wantsHumanAgent(message) && session.schoolId) {
-      await prisma.helpConversation.update({
-        where: { id: conv.id },
-        data: { status: "waiting", subject: message.slice(0, 120), lang: preferredLang },
-      });
-      const sys = escalateSystemText(preferredLang);
-      await appendHelpMessage({
-        conversationId: conv.id,
-        senderRole: "system",
-        content: sys,
-      });
-      await notifySchoolHelpStaff({
-        schoolId: session.schoolId,
-        conversationId: conv.id,
-        askerName: session.name || "User",
-        preview: message,
-      });
-      return NextResponse.json({
-        conversationId: conv.id,
-        status: "waiting",
-        role: session.role,
-        lang: preferredLang,
-        text: sys,
-        escalated: true,
-        canEscalate: false,
-      });
-    }
 
     const history = await loadConversationMessages(conv.id);
     const lastBot = [...history]
@@ -346,14 +284,15 @@ export async function POST(request: NextRequest) {
     });
     await prisma.helpConversation.update({
       where: { id: conv.id },
-      data: { lang: reply.lang },
+      data: { lang: reply.lang, status: "bot" },
     });
 
     return NextResponse.json({
       conversationId: conv.id,
-      status: conv.status,
+      status: "bot",
       ...reply,
       role: session.role,
+      canEscalate: false,
     });
   } catch (e) {
     if (e instanceof AuthError) {

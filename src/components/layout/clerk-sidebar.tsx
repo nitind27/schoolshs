@@ -28,7 +28,6 @@ import {
   FileSearch,
   ClipboardList,
   IndianRupee,
-  Headphones,
   CalendarClock,
   FolderOpen,
   Hash,
@@ -205,11 +204,6 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
           href: "/accounting",
           label: t("navExt.accounting"),
           icon: Calculator,
-        },
-        {
-          href: "/help-desk",
-          label: t("helpDesk.title"),
-          icon: Headphones,
         },
         {
           href: "/certificates",

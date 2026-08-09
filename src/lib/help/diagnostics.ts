@@ -380,9 +380,9 @@ export const HELP_DIAGNOSTICS: DiagnosticPlaybook[] = [
       ],
     },
     fix: {
-      en: "Reply with page + what failed. Or tap Talk to staff for a manual fix.",
-      hi: "पेज + क्या फेल हुआ लिखें। या Talk to staff दबाएँ।",
-      gu: "પેજ + શું ફેલ થયું લખો. અથવા Talk to staff દબાવો.",
+      en: "Reply with the page name and what failed — I’ll guide the next check.",
+      hi: "पेज का नाम और क्या फेल हुआ लिखें — अगला चेक बताऊँगा।",
+      gu: "પેજનું નામ અને શું ફેલ થયું લખો — આગળનું ચેક કહીશ.",
     },
   },
 ];
@@ -494,10 +494,10 @@ export function formatDiagnosticReply(
       playbook.fix[lang],
       "",
       lang === "gu"
-        ? "હજુ પણ ન થાય તો “સ્ટાફ સાથે વાત” દબાવો."
+        ? "હજુ પણ ન થાય તો વધુ વિગત લખો — કયું પેજ, શું ક્લિક કર્યું."
         : lang === "hi"
-          ? "फिर भी न सुलझे तो “स्टाफ से बात” दबाएँ।"
-          : "Still stuck? Tap “Talk to staff”.",
+          ? "फिर भी न सुलझे तो और विवरण लिखें — कौन सा पेज, क्या क्लिक किया।"
+          : "Still stuck? Add detail — which page, what you clicked.",
     ].join("\n"),
     nextStep: step,
     done: true,

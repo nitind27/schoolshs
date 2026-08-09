@@ -36,7 +36,7 @@ console.log("1) Intent detection");
 assert("howto", detectHelpIntent("વિદ્યાર્થી કેવી રીતે ઉમેરું?").intent === "howto");
 assert("troubleshoot", detectHelpIntent("data nahi aa raha").intent === "troubleshoot");
 assert("clarify", detectHelpIntent("મને સમજાયું નહીં").intent === "clarify");
-assert("escalate gu", detectHelpIntent("સ્ટાફ સાથે વાત").intent === "escalate");
+assert("escalate intent detected", detectHelpIntent("સ્ટાફ સાથે વાત").intent === "escalate");
 assert("thanks", detectHelpIntent("thanks").intent === "thanks");
 assert("affirm", detectHelpIntent("હા").intent === "affirm");
 
@@ -106,12 +106,8 @@ console.log("\n6) Diagnostics — data missing FY");
 console.log("\n7) Submit to CA diagnostic");
 {
   const r = ask("Submit to CA button not showing", "school_admin", "en");
-  assert(
-    "ca or button diag",
-    r.diagnosticId === "submit-ca" || r.diagnosticId === "button-missing",
-    `got ${r.diagnosticId}`,
-  );
-  assert("can escalate", r.canEscalate === true);
+  assert("ca or button diag", r.diagnosticId === "submit-ca" || r.diagnosticId === "button-missing", `got ${r.diagnosticId}`);
+  assert("auto only", r.canEscalate !== true);
 }
 
 console.log("\n8) Subjects + roll diagnostics");
@@ -135,10 +131,12 @@ console.log("\n9) Security isolation");
   assert("no admin href", !r.href?.startsWith("/admin"));
 }
 
-console.log("\n10) Escalate + thanks");
+console.log("\n10) Staff request → stays auto system help");
 {
   const r = ask("સ્ટાફ સાથે વાત", "school_admin", "gu");
-  assert("escalate", r.intent === "escalate" && r.canEscalate);
+  assert("not staff handoff", r.intent !== "escalate", `got ${r.intent}`);
+  assert("explains auto help", /ઓટો|સિસ્ટમ|auto|system/i.test(r.text));
+  assert("no escalate flag", r.canEscalate !== true);
 }
 {
   const r = ask("thanks", "teacher", "en");
@@ -150,7 +148,7 @@ console.log("\n11) Ambiguous clarification");
   // Force a vague query that might match multiple — engine should still reply usefully
   const r = ask("help", "school_admin", "en");
   assert("low conf or suggestions", (r.confidence || 0) < 60 || (r.suggestions?.length || 0) > 0);
-  assert("can escalate vague", r.canEscalate === true || (r.suggestions?.length || 0) > 0);
+  assert("has suggestions", (r.suggestions?.length || 0) > 0);
 }
 
 console.log("\n12) Diagnostic formatter unit");

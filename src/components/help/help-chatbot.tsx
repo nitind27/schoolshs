@@ -4,18 +4,7 @@ import { Spinner } from "@/components/ui/loader";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Bot,
-  X,
-  Send,
-  Sparkles,
-  ExternalLink,
-  Headphones,
-  ThumbsUp,
-  ThumbsDown,
-  Plus,
-  LifeBuoy,
-} from "lucide-react";
+import { Bot, X, Send, ExternalLink, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/i18n/locale-provider";
 import { sanitizeHelpHref } from "@/lib/help/engine";
@@ -25,13 +14,11 @@ type HelpLang = "en" | "hi" | "gu";
 
 type ChatMsg = {
   id: string;
-  role: "user" | "bot" | "staff" | "system";
+  role: "user" | "bot";
   text: string;
   title?: string;
   href?: string;
   links?: { href: string; label: string }[];
-  senderName?: string | null;
-  canEscalate?: boolean;
 };
 
 type Suggestion = { id: string; label: string; query: string };
@@ -41,38 +28,38 @@ function mapApiMessages(
     id: string;
     senderRole: string;
     content: string;
-    senderName?: string | null;
     meta?: Record<string, unknown> | null;
   }>,
   role: string | null,
 ): ChatMsg[] {
-  return rows.map((m) => {
-    const meta = m.meta || {};
-    const href = sanitizeHelpHref(
-      typeof meta.href === "string" ? meta.href : undefined,
-      role,
-    );
-    const links = Array.isArray(meta.links)
-      ? (meta.links as { href: string; label: string }[])
-          .map((l) => {
-            const h = sanitizeHelpHref(l.href, role);
-            return h ? { href: h, label: l.label } : null;
-          })
-          .filter(Boolean) as { href: string; label: string }[]
-      : undefined;
-    return {
-      id: m.id,
-      role: (m.senderRole as ChatMsg["role"]) || "bot",
-      text: m.content,
-      title: typeof meta.title === "string" ? meta.title : undefined,
-      href,
-      links,
-      senderName: m.senderName,
-      canEscalate: Boolean(meta.canEscalate),
-    };
-  });
+  return rows
+    .filter((m) => m.senderRole === "user" || m.senderRole === "bot")
+    .map((m) => {
+      const meta = m.meta || {};
+      const href = sanitizeHelpHref(
+        typeof meta.href === "string" ? meta.href : undefined,
+        role,
+      );
+      const links = Array.isArray(meta.links)
+        ? (meta.links as { href: string; label: string }[])
+            .map((l) => {
+              const h = sanitizeHelpHref(l.href, role);
+              return h ? { href: h, label: l.label } : null;
+            })
+            .filter(Boolean) as { href: string; label: string }[]
+        : undefined;
+      return {
+        id: m.id,
+        role: m.senderRole === "user" ? "user" : "bot",
+        text: m.content,
+        title: typeof meta.title === "string" ? meta.title : undefined,
+        href,
+        links,
+      };
+    });
 }
 
+/** Simple system help guide — auto answers only (not a staff chat app). */
 export function HelpChatbot() {
   const t = useT();
   const { locale } = useLocale();
@@ -85,8 +72,6 @@ export function HelpChatbot() {
   const [replyLang, setReplyLang] = useState<HelpLang>(locale === "en" ? "en" : "gu");
   const [sessionRole, setSessionRole] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>("bot");
-  const [rated, setRated] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -95,7 +80,6 @@ export function HelpChatbot() {
   }, [locale]);
 
   const preferredLang: HelpLang = replyLang;
-  const liveStaff = status === "waiting" || status === "active";
 
   const scrollBottom = () => {
     requestAnimationFrame(() => {
@@ -103,13 +87,11 @@ export function HelpChatbot() {
     });
   };
 
-  const resetChat = useCallback(() => {
+  const resetPanel = useCallback(() => {
     setMessages([]);
     setSuggestions([]);
     setInput("");
     setConversationId(null);
-    setStatus("bot");
-    setRated(false);
   }, []);
 
   useEffect(() => {
@@ -121,12 +103,8 @@ export function HelpChatbot() {
           if (!alive) return;
           const role = d.user?.role ? String(d.user.role) : null;
           setSessionRole((prev) => {
-            if (prev && role && prev !== role) {
-              resetChat();
-              setOpen(false);
-            }
-            if (!role && prev) {
-              resetChat();
+            if ((prev && role && prev !== role) || (!role && prev)) {
+              resetPanel();
               setOpen(false);
             }
             return role;
@@ -143,7 +121,7 @@ export function HelpChatbot() {
       alive = false;
       window.removeEventListener(AUTH_CHANGED_EVENT, onAuth);
     };
-  }, [pathname, resetChat]);
+  }, [pathname, resetPanel]);
 
   const bootstrap = useCallback(async () => {
     try {
@@ -153,17 +131,15 @@ export function HelpChatbot() {
       if (!res.ok) return;
       const data = await res.json();
       if (data.role && sessionRole && data.role !== sessionRole) {
-        resetChat();
+        resetPanel();
         return;
       }
       if (data.role) setSessionRole(data.role);
       if (data.conversationId) setConversationId(data.conversationId);
-      if (data.status) setStatus(data.status);
-      if (data.rating) setRated(true);
       setSuggestions(data.suggestions || []);
       if (Array.isArray(data.messages) && data.messages.length) {
         setMessages(mapApiMessages(data.messages, data.role || sessionRole));
-      } else {
+      } else if (data.text) {
         setMessages([
           {
             id: "welcome",
@@ -177,7 +153,7 @@ export function HelpChatbot() {
     } catch {
       /* ignore */
     }
-  }, [preferredLang, sessionRole, resetChat]);
+  }, [preferredLang, sessionRole, resetPanel]);
 
   useEffect(() => {
     if (open && messages.length === 0) void bootstrap();
@@ -190,29 +166,6 @@ export function HelpChatbot() {
     }
   }, [open, messages, loading]);
 
-  // Poll when waiting for staff
-  useEffect(() => {
-    if (!open || !conversationId || !liveStaff) return;
-    const tick = async () => {
-      try {
-        const res = await fetch(
-          `/api/help/chat?conversationId=${conversationId}&lang=${preferredLang}`,
-          { cache: "no-store" },
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.status) setStatus(data.status);
-        if (Array.isArray(data.messages)) {
-          setMessages(mapApiMessages(data.messages, data.role || sessionRole));
-        }
-      } catch {
-        /* ignore */
-      }
-    };
-    const id = window.setInterval(tick, 6000);
-    return () => window.clearInterval(id);
-  }, [open, conversationId, liveStaff, preferredLang, sessionRole]);
-
   if (
     pathname === "/login" ||
     pathname === "/" ||
@@ -224,39 +177,6 @@ export function HelpChatbot() {
   ) {
     return null;
   }
-
-  const pushBotFromReply = (data: Record<string, unknown>) => {
-    const role = String(data.role || sessionRole || "");
-    if (data.conversationId) setConversationId(String(data.conversationId));
-    if (typeof data.status === "string") setStatus(data.status);
-    if (data.lang === "en" || data.lang === "hi" || data.lang === "gu") {
-      setReplyLang(data.lang);
-    }
-    setSuggestions((data.suggestions as Suggestion[]) || []);
-    const links = Array.isArray(data.links)
-      ? (data.links as { href: string; label: string }[])
-          .map((l) => {
-            const h = sanitizeHelpHref(l.href, role);
-            return h ? { href: h, label: l.label } : null;
-          })
-          .filter(Boolean) as { href: string; label: string }[]
-      : undefined;
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `b-${Date.now()}`,
-        role: data.escalated || data.waitingForStaff ? "system" : "bot",
-        text: String(data.text || ""),
-        title: typeof data.title === "string" ? data.title : undefined,
-        href: sanitizeHelpHref(
-          typeof data.href === "string" ? data.href : undefined,
-          role,
-        ),
-        links,
-        canEscalate: Boolean(data.canEscalate),
-      },
-    ]);
-  };
 
   const ask = async (raw: string) => {
     const message = raw.trim();
@@ -287,11 +207,38 @@ export function HelpChatbot() {
         return;
       }
       if (sessionRole && data.role && data.role !== sessionRole) {
-        resetChat();
+        resetPanel();
         return;
       }
       if (data.role) setSessionRole(data.role);
-      pushBotFromReply(data);
+      if (data.conversationId) setConversationId(String(data.conversationId));
+      if (data.lang === "en" || data.lang === "hi" || data.lang === "gu") {
+        setReplyLang(data.lang);
+      }
+      setSuggestions((data.suggestions as Suggestion[]) || []);
+      const role = String(data.role || sessionRole || "");
+      const links = Array.isArray(data.links)
+        ? (data.links as { href: string; label: string }[])
+            .map((l) => {
+              const h = sanitizeHelpHref(l.href, role);
+              return h ? { href: h, label: l.label } : null;
+            })
+            .filter(Boolean) as { href: string; label: string }[]
+        : undefined;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `b-${Date.now()}`,
+          role: "bot",
+          text: String(data.text || ""),
+          title: typeof data.title === "string" ? data.title : undefined,
+          href: sanitizeHelpHref(
+            typeof data.href === "string" ? data.href : undefined,
+            role,
+          ),
+          links,
+        },
+      ]);
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -302,53 +249,7 @@ export function HelpChatbot() {
     }
   };
 
-  const escalate = async () => {
-    if (loading || liveStaff) return;
-    setLoading(true);
-    try {
-      const res = await fetch("/api/help/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "escalate",
-          lang: preferredLang,
-          conversationId,
-          subject: t("helpBot.escalateSubject"),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `e-${Date.now()}`,
-            role: "system",
-            text: data.error || t("helpBot.error"),
-          },
-        ]);
-        return;
-      }
-      pushBotFromReply(data);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendFeedback = async (up: boolean) => {
-    if (!conversationId || rated) return;
-    setRated(true);
-    await fetch("/api/help/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "feedback",
-        conversationId,
-        rating: up ? 5 : 2,
-      }),
-    }).catch(() => null);
-  };
-
-  const startNew = async () => {
+  const clearAsk = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/help/chat", {
@@ -362,9 +263,8 @@ export function HelpChatbot() {
       });
       const data = await res.json();
       if (!res.ok) return;
-      resetChat();
+      resetPanel();
       setConversationId(data.conversationId || null);
-      setStatus(data.status || "bot");
       setSuggestions(data.suggestions || []);
       setMessages([
         {
@@ -380,8 +280,7 @@ export function HelpChatbot() {
     }
   };
 
-  const showStaffLink =
-    sessionRole === "school_admin" || sessionRole === "clerk";
+  const lastBotId = [...messages].reverse().find((m) => m.role === "bot")?.id;
 
   return (
     <>
@@ -421,48 +320,38 @@ export function HelpChatbot() {
       {open && (
         <div
           className={cn(
-            "fixed bottom-5 right-5 z-[95] flex w-[min(100vw-1.25rem,420px)] flex-col overflow-hidden",
-            "h-[min(82dvh,680px)] rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/20",
+            "fixed bottom-5 right-5 z-[95] flex w-[min(100vw-1.25rem,400px)] flex-col overflow-hidden",
+            "h-[min(78dvh,620px)] rounded-xl border border-slate-200 bg-white shadow-xl",
             "help-bot-panel",
           )}
           role="dialog"
           aria-label={t("helpBot.title")}
         >
-          <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-slate-900 via-cyan-900 to-sky-800 px-4 py-3.5 text-white">
-            <div className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full bg-cyan-400/20 blur-2xl" />
-            <div className="relative flex items-start justify-between gap-2">
+          <header className="shrink-0 border-b border-slate-200 bg-slate-900 px-4 py-3 text-white">
+            <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
-                  {liveStaff ? (
-                    <Headphones className="h-5 w-5" />
-                  ) : (
-                    <Bot className="h-5 w-5" />
-                  )}
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
+                  <Bot className="h-4.5 w-4.5" />
                 </span>
                 <div>
-                  <p className="text-sm font-bold leading-tight">{t("helpBot.title")}</p>
-                  <p className="mt-0.5 flex items-center gap-1 text-[11px] text-cyan-100/90">
-                    <Sparkles className="h-3 w-3" />
-                    {liveStaff
-                      ? t("helpBot.liveStaffMode")
-                      : t("helpBot.advancedMode")}
-                  </p>
+                  <p className="text-sm font-semibold leading-tight">{t("helpBot.title")}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-300">{t("helpBot.subtitle")}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => void startNew()}
-                  className="rounded-lg p-1.5 text-white/80 hover:bg-white/10 hover:text-white"
+                  onClick={() => void clearAsk()}
+                  className="rounded-md p-1.5 text-white/70 hover:bg-white/10 hover:text-white"
                   title={t("helpBot.newChat")}
                   aria-label={t("helpBot.newChat")}
                 >
-                  <Plus className="h-4 w-4" />
+                  <RotateCcw className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-lg p-1.5 text-white/80 hover:bg-white/10 hover:text-white"
+                  className="rounded-md p-1.5 text-white/70 hover:bg-white/10 hover:text-white"
                   aria-label={t("common.cancel")}
                 >
                   <X className="h-4 w-4" />
@@ -470,23 +359,23 @@ export function HelpChatbot() {
               </div>
             </div>
 
-            <div className="relative mt-3 flex gap-1 rounded-xl bg-black/20 p-1">
+            <div className="mt-2.5 flex gap-1 rounded-lg bg-black/25 p-1">
               {(["en", "hi", "gu"] as HelpLang[]).map((l) => (
                 <button
                   key={l}
                   type="button"
                   onClick={() => {
                     setReplyLang(l);
-                    resetChat();
+                    resetPanel();
                   }}
                   className={cn(
-                    "flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-colors",
+                    "flex-1 rounded-md py-1 text-[11px] font-semibold transition-colors",
                     preferredLang === l
-                      ? "bg-white text-slate-900 shadow"
-                      : "text-white/75 hover:bg-white/10 hover:text-white",
+                      ? "bg-white text-slate-900"
+                      : "text-white/70 hover:bg-white/10 hover:text-white",
                   )}
                 >
-                  {l === "en" ? "English" : l === "hi" ? "हिंदी" : "ગુજરાતી"}
+                  {l === "en" ? "EN" : l === "hi" ? "हिंदी" : "ગુજ"}
                 </button>
               ))}
             </div>
@@ -494,46 +383,31 @@ export function HelpChatbot() {
 
           <div
             ref={listRef}
-            className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-slate-50/80 px-3 py-3"
+            className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-slate-50 px-3 py-3"
           >
             {messages.map((m) => (
               <div
                 key={m.id}
-                className={cn(
-                  "flex",
-                  m.role === "user" || m.role === "staff"
-                    ? "justify-end"
-                    : "justify-start",
-                  m.role === "system" && "justify-center",
-                )}
+                className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}
               >
                 <div
                   className={cn(
-                    "max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm",
-                    m.role === "user" && "rounded-br-md bg-cyan-700 text-white",
-                    m.role === "staff" &&
-                      "rounded-br-md border border-emerald-200 bg-emerald-50 text-emerald-950",
+                    "max-w-[92%] rounded-lg px-3 py-2 text-sm leading-relaxed",
+                    m.role === "user" && "bg-slate-800 text-white",
                     m.role === "bot" &&
-                      "rounded-bl-md border border-slate-200/80 bg-white text-slate-700",
-                    m.role === "system" &&
-                      "max-w-full border border-dashed border-slate-300 bg-transparent text-center text-xs text-slate-500 shadow-none",
+                      "border border-slate-200 bg-white text-slate-700",
                   )}
                 >
-                  {m.role === "staff" && (
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                      {m.senderName || t("helpBot.staffLabel")}
-                    </p>
-                  )}
                   {m.role === "bot" && m.title && (
-                    <p className="mb-1 text-xs font-bold text-cyan-800">{m.title}</p>
+                    <p className="mb-1 text-xs font-semibold text-slate-900">{m.title}</p>
                   )}
                   <p className="whitespace-pre-wrap">{m.text}</p>
                   {m.role === "bot" && (m.href || (m.links && m.links.length > 0)) && (
-                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    <div className="mt-2 flex flex-wrap gap-1.5">
                       {m.href && (
                         <Link
                           href={m.href}
-                          className="inline-flex items-center gap-1 rounded-lg bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-800 ring-1 ring-cyan-200"
+                          className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-800"
                           onClick={() => setOpen(false)}
                         >
                           <ExternalLink className="h-3 w-3" />
@@ -544,7 +418,7 @@ export function HelpChatbot() {
                         <Link
                           key={l.href}
                           href={l.href}
-                          className="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200"
+                          className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700"
                           onClick={() => setOpen(false)}
                         >
                           {l.label}
@@ -552,137 +426,66 @@ export function HelpChatbot() {
                       ))}
                     </div>
                   )}
-                  {m.role === "bot" && m.canEscalate && !liveStaff && (
-                    <button
-                      type="button"
-                      onClick={() => void escalate()}
-                      className="mt-2 inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-900 ring-1 ring-amber-200"
-                    >
-                      <LifeBuoy className="h-3 w-3" />
-                      {t("helpBot.talkToStaff")}
-                    </button>
+                  {m.role === "bot" && m.id === lastBotId && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void ask(
+                            preferredLang === "gu"
+                              ? "વધુ સરળ રીતે સમજાવો"
+                              : preferredLang === "hi"
+                                ? "और आसान भाषा में समझाओ"
+                                : "Explain more simply",
+                          )
+                        }
+                        className="rounded-md bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-600 ring-1 ring-slate-200"
+                      >
+                        {t("helpBot.dontUnderstand")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void ask(
+                            preferredLang === "gu"
+                              ? "પગલાંવાર કેવી રીતે કરું?"
+                              : preferredLang === "hi"
+                                ? "चरण-दर-चरण कैसे करें?"
+                                : "Show steps",
+                          )
+                        }
+                        className="rounded-md bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-600 ring-1 ring-slate-200"
+                      >
+                        {t("helpBot.showSteps")}
+                      </button>
+                    </div>
                   )}
-                  {m.role === "bot" &&
-                    !liveStaff &&
-                    m.id === messages[messages.length - 1]?.id && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void ask(
-                              preferredLang === "gu"
-                                ? "મને સમજાયું નહીં, વધુ સરળ રીતે સમજાવો"
-                                : preferredLang === "hi"
-                                  ? "मुझे समझ नहीं आया, और आसान भाषा में समझाओ"
-                                  : "I don’t understand, explain more simply",
-                            )
-                          }
-                          className="rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-700 ring-1 ring-slate-200"
-                        >
-                          {t("helpBot.dontUnderstand")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void ask(
-                              preferredLang === "gu"
-                                ? "પગલાંવાર કેવી રીતે કરું?"
-                                : preferredLang === "hi"
-                                  ? "चरण-दर-चरण कैसे करें?"
-                                  : "Show me step by step",
-                            )
-                          }
-                          className="rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-700 ring-1 ring-slate-200"
-                        >
-                          {t("helpBot.showSteps")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void ask(
-                              preferredLang === "gu"
-                                ? "આ કામ નથી થતું, સમસ્યા તપાસો"
-                                : preferredLang === "hi"
-                                  ? "यह काम नहीं हो रहा, समस्या जाँचो"
-                                  : "This is not working, please troubleshoot",
-                            )
-                          }
-                          className="rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-900 ring-1 ring-amber-200"
-                        >
-                          {t("helpBot.notWorking")}
-                        </button>
-                      </div>
-                    )}
                 </div>
               </div>
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                   <Spinner size="sm" />
                 </div>
               </div>
             )}
           </div>
 
-          {!liveStaff && suggestions.length > 0 && (
+          {suggestions.length > 0 && (
             <div className="flex gap-1.5 overflow-x-auto border-t border-slate-100 bg-white px-3 py-2">
-              {suggestions.slice(0, 6).map((s) => (
+              {suggestions.slice(0, 5).map((s) => (
                 <button
                   key={s.id}
                   type="button"
                   onClick={() => void ask(s.query)}
-                  className="shrink-0 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-900"
+                  className="shrink-0 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-800"
                 >
                   {s.label}
                 </button>
               ))}
             </div>
           )}
-
-          <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-white px-3 py-1.5">
-            <div className="flex items-center gap-1">
-              {!rated && messages.length > 2 && (
-                <>
-                  <button
-                    type="button"
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"
-                    title={t("helpBot.feedbackUp")}
-                    onClick={() => void sendFeedback(true)}
-                  >
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                    title={t("helpBot.feedbackDown")}
-                    onClick={() => void sendFeedback(false)}
-                  >
-                    <ThumbsDown className="h-3.5 w-3.5" />
-                  </button>
-                </>
-              )}
-              {!liveStaff && (
-                <button
-                  type="button"
-                  onClick={() => void escalate()}
-                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold text-amber-800 hover:bg-amber-50"
-                >
-                  <Headphones className="h-3.5 w-3.5" />
-                  {t("helpBot.talkToStaff")}
-                </button>
-              )}
-            </div>
-            {showStaffLink && (
-              <Link
-                href="/help-desk"
-                className="text-[11px] font-bold text-cyan-800 hover:underline"
-                onClick={() => setOpen(false)}
-              >
-                {t("helpBot.openDesk")}
-              </Link>
-            )}
-          </div>
 
           <form
             className="flex items-center gap-2 border-t border-slate-200 bg-white p-2.5"
@@ -695,19 +498,15 @@ export function HelpChatbot() {
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={
-                liveStaff
-                  ? t("helpBot.placeholderStaff")
-                  : t("helpBot.placeholder")
-              }
-              className="h-11 min-w-0 flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+              placeholder={t("helpBot.placeholder")}
+              className="h-10 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-500"
               disabled={loading}
               maxLength={2000}
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-700 text-white disabled:opacity-40"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white disabled:opacity-40"
               aria-label={t("helpBot.send")}
             >
               {loading ? <Spinner size="sm" /> : <Send className="h-4 w-4" />}
