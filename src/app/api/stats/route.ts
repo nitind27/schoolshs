@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
         distinct: ["academicYear"],
       }),
       prisma.student.findMany({
-        where: { ...schoolScope, financialYear: { not: null } },
+        where: { ...schoolScope, financialYear: { not: "" } },
         select: { financialYear: true },
         distinct: ["financialYear"],
       }),

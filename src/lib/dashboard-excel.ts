@@ -363,6 +363,7 @@ export async function buildDashboardExcelBuffer(
   report: DashboardReportData,
   students: Student[] = [],
   filters: DashboardFilterValues = {
+    academicYear: "",
     standard: "",
     section: "",
     status: "",

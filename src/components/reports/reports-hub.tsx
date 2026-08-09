@@ -217,6 +217,7 @@ export function ReportsHub() {
     try {
       if (selected.id === "dashboard") {
         const dashFilters: DashboardFilterValues = {
+          academicYear: filters.academicYear || "",
           standard: filters.standard,
           section: filters.section,
           status: filters.status,
@@ -290,6 +291,7 @@ export function ReportsHub() {
     try {
       if (selected.id === "dashboard") {
         const dashFilters: DashboardFilterValues = {
+          academicYear: filters.academicYear || "",
           standard: filters.standard,
           section: filters.section,
           status: filters.status,
@@ -297,6 +299,7 @@ export function ReportsHub() {
           gender: filters.gender,
         };
         const q = new URLSearchParams();
+        if (dashFilters.academicYear) q.set("academicYear", dashFilters.academicYear);
         if (dashFilters.standard) q.set("standard", dashFilters.standard);
         if (dashFilters.section) q.set("section", dashFilters.section);
         if (dashFilters.status) q.set("status", dashFilters.status);
