@@ -2,6 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { genderDbMatchValues } from "@/lib/gender-utils";
 
 export interface DashboardFilters {
+  academicYear?: string;
   standard?: string;
   section?: string;
   status?: string;
@@ -9,12 +10,28 @@ export interface DashboardFilters {
   gender?: string;
 }
 
+/** Students linked to a school year via class assignment and/or financialYear field */
+export function academicYearStudentClause(
+  year: string,
+): Prisma.StudentWhereInput {
+  return {
+    OR: [
+      { financialYear: year },
+      { schoolClass: { is: { academicYear: year } } },
+    ],
+  };
+}
+
 export function buildStudentWhere(
   schoolId: string,
-  filters: DashboardFilters
+  filters: DashboardFilters,
 ): Prisma.StudentWhereInput {
   const where: Prisma.StudentWhereInput = { schoolId };
+  const and: Prisma.StudentWhereInput[] = [];
 
+  if (filters.academicYear) {
+    and.push(academicYearStudentClause(filters.academicYear));
+  }
   if (filters.standard) where.standard = filters.standard;
   if (filters.section) where.section = filters.section;
   if (filters.status) where.status = filters.status;
@@ -23,6 +40,16 @@ export function buildStudentWhere(
     where.gender = { in: genderDbMatchValues(filters.gender) };
   }
 
+  if (and.length) where.AND = and;
+  return where;
+}
+
+export function buildClassWhere(
+  schoolId: string,
+  academicYear?: string,
+): Prisma.SchoolClassWhereInput {
+  const where: Prisma.SchoolClassWhereInput = { schoolId };
+  if (academicYear) where.academicYear = academicYear;
   return where;
 }
 

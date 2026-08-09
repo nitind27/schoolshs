@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
 
 function filtersToValues(filters: ReturnType<typeof parseDashboardFilters>): DashboardFilterValues {
   return {
+    academicYear: filters.academicYear || "",
     standard: filters.standard || "",
     section: filters.section || "",
     status: filters.status || "",
@@ -29,6 +30,7 @@ function filtersToValues(filters: ReturnType<typeof parseDashboardFilters>): Das
 
 function buildFilterSummary(filters: DashboardFilterValues): string {
   const parts: string[] = [];
+  if (filters.academicYear) parts.push(`Year ${filters.academicYear}`);
   if (filters.standard) parts.push(`Std ${filters.standard}`);
   if (filters.section) parts.push(`Div ${filters.section}`);
   if (filters.status) parts.push(filters.status);

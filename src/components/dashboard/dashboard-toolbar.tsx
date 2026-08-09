@@ -23,6 +23,7 @@ interface Props {
 
 function filterSummary(filters: DashboardFilterValues, t: (k: string, p?: Record<string, string | number>) => string) {
   const parts: string[] = [];
+  if (filters.academicYear) parts.push(t("dashboard.yearChip", { year: filters.academicYear }));
   if (filters.standard) parts.push(t("dashboard.stdLabel", { standard: filters.standard }));
   if (filters.section) parts.push(t("dashboard.divLabel", { section: filters.section }));
   if (filters.status) parts.push(t(`status.${filters.status}`));

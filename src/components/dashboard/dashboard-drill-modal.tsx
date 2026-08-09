@@ -149,6 +149,7 @@ export function DashboardDrillModal({
         if (filters.status) params.set("status", filters.status);
         if (filters.category) params.set("category", filters.category);
         if (filters.gender && filters.gender !== "all") params.set("gender", filters.gender);
+        if (filters.academicYear) params.set("academicYear", filters.academicYear);
 
         const res = await fetch(`/api/students?${params}`, { signal: controller.signal });
         const data = await res.json();
@@ -178,7 +179,12 @@ export function DashboardDrillModal({
   };
 
   const resetFilters = () => {
-    setFilters(applyDrill(EMPTY_FILTERS, target));
+    setFilters(
+      applyDrill(
+        { ...EMPTY_FILTERS, academicYear: baseFilters.academicYear || "" },
+        target,
+      ),
+    );
     setSearch("");
     setPage(1);
   };
@@ -239,6 +245,24 @@ export function DashboardDrillModal({
           </div>
 
           <div className="ops-drill-filters">
+            <select
+              value={filters.academicYear}
+              onChange={(e) => setFilter("academicYear", e.target.value)}
+              aria-label={t("dashboard.filterAcademicYear")}
+            >
+              <option value="">{t("dashboard.allAcademicYears")}</option>
+              {(
+                filterMeta.academicYears?.length
+                  ? filterMeta.academicYears
+                  : [filters.academicYear, baseFilters.academicYear].filter(Boolean)
+              )
+                .filter((y, i, arr) => y && arr.indexOf(y) === i)
+                .map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+            </select>
             <select
               value={filters.standard}
               onChange={(e) => setFilter("standard", e.target.value)}

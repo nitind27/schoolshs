@@ -1,7 +1,7 @@
 "use client";
 
 import { Spinner, PageLoader } from "@/components/ui/loader";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, FileCheck, CheckCircle, AlertCircle, Upload, Send, ArrowRight, BookOpen, Briefcase, CreditCard, GraduationCap, Star, Calculator, CalendarDays, Award, UserPlus, Wallet, FileSpreadsheet, ClipboardCheck, Clock, Ban, ChevronDown, ChevronUp } from "lucide-react";
@@ -89,6 +89,7 @@ type MainTab = "students" | "staff";
 
 function buildQuery(filters: DashboardFilterValues): string {
   const p = new URLSearchParams();
+  if (filters.academicYear) p.set("academicYear", filters.academicYear);
   if (filters.standard) p.set("standard", filters.standard);
   if (filters.section) p.set("section", filters.section);
   if (filters.status) p.set("status", filters.status);
@@ -100,6 +101,7 @@ function buildQuery(filters: DashboardFilterValues): string {
 
 function buildFilterSummary(filters: DashboardFilterValues, t: (k: string, p?: Record<string, string | number>) => string): string {
   const parts: string[] = [];
+  if (filters.academicYear) parts.push(t("dashboard.yearChip", { year: filters.academicYear }));
   if (filters.standard) parts.push(t("dashboard.stdLabel", { standard: filters.standard }));
   if (filters.section) parts.push(t("dashboard.divLabel", { section: filters.section }));
   if (filters.status) parts.push(t(`status.${filters.status}`));
@@ -128,7 +130,10 @@ export default function SchoolOpsDashboard() {
     statuses: [],
     categories: [],
     genders: [],
+    academicYears: [],
   });
+  const [defaultAcademicYear, setDefaultAcademicYear] = useState<string>("");
+  const yearBootstrappedRef = useRef(false);
   const [insightTab, setInsightTab] = useState<InsightTab>("students");
   const [mainTab, setMainTab] = useState<MainTab>("students");
   const [showMoreCharts, setShowMoreCharts] = useState(false);
@@ -203,7 +208,10 @@ export default function SchoolOpsDashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/clerk/dashboard")
+    const q = filters.academicYear
+      ? `?academicYear=${encodeURIComponent(filters.academicYear)}`
+      : "";
+    fetch(`/api/clerk/dashboard${q}`)
       .then((r) => r.json())
       .then((d) => {
         if (!cancelled && !d?.error) setOpsOverview(d);
@@ -214,7 +222,7 @@ export default function SchoolOpsDashboard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [filters.academicYear]);
 
   const scholarshipHref = (status: string) =>
     userRole === "clerk" ? `/clerk/scholarship?status=${status}` : `/students?status=${status}`;
@@ -228,9 +236,22 @@ export default function SchoolOpsDashboard() {
       if (!res.ok) throw new Error(payload?.error || "Failed to load");
       setStats(payload);
       if (payload.filterMeta) setFilterMeta(payload.filterMeta);
+      if (payload.academicYear) setDefaultAcademicYear(payload.academicYear);
       setLastUpdated(new Date());
+
+      // First load: lock dashboard onto school settings year
+      if (!yearBootstrappedRef.current) {
+        yearBootstrappedRef.current = true;
+        if (!f.academicYear && payload.academicYear) {
+          setFilters((prev) => ({
+            ...prev,
+            academicYear: payload.academicYear,
+          }));
+        }
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load");
+      yearBootstrappedRef.current = true;
     } finally {
       setLoading(false);
     }
@@ -424,7 +445,11 @@ export default function SchoolOpsDashboard() {
         schoolName={stats?.schoolName}
         logoPath={stats?.logoPath}
         tagline={stats?.tagline}
-        academicYear={stats?.academicYear || opsOverview?.academicYear}
+        academicYear={
+          filters.academicYear ||
+          stats?.academicYear ||
+          opsOverview?.academicYear
+        }
       />
 
       <BirthdayCelebrationCard autoOpen={birthdayAutoOpen} />
@@ -581,8 +606,14 @@ export default function SchoolOpsDashboard() {
             filters={filters}
             meta={filterMeta}
             onChange={setFilters}
-            onReset={() => setFilters(EMPTY_FILTERS)}
+            onReset={() =>
+              setFilters({
+                ...EMPTY_FILTERS,
+                academicYear: defaultAcademicYear || "",
+              })
+            }
             resultCount={stats?.total}
+            defaultAcademicYear={defaultAcademicYear}
           />
           <DashboardToolbar
             report={reportData}

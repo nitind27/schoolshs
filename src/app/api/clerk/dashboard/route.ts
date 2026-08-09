@@ -1,14 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { normalizeGender } from "@/lib/gender-utils";
+import {
+  buildStudentWhere,
+  buildClassWhere,
+} from "@/lib/dashboard-analytics";
 
-/** Aggregated counts for clerk operations dashboard */
-export async function GET() {
+/** Aggregated counts for clerk/admin operations dashboard */
+export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["clerk", "school_admin"]);
     const schoolId = session.schoolId;
-    const scope = { schoolId };
+    const academicYear =
+      new URL(request.url).searchParams.get("academicYear") || undefined;
+    const studentWhere = buildStudentWhere(schoolId, { academicYear });
+    const classWhere = buildClassWhere(schoolId, academicYear);
+    const schoolScope = { schoolId };
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
@@ -38,47 +46,66 @@ export async function GET() {
       byCategory,
       school,
     ] = await Promise.all([
-      prisma.student.count({ where: scope }),
-      prisma.student.count({ where: { ...scope, status: "draft" } }),
-      prisma.student.count({ where: { ...scope, status: "ready" } }),
-      prisma.student.count({ where: { ...scope, status: "pending" } }),
-      prisma.student.count({ where: { ...scope, status: "submitted" } }),
-      prisma.student.count({ where: { ...scope, status: "approved" } }),
-      prisma.student.count({ where: { ...scope, status: "rejected" } }),
-      prisma.student.count({ where: { ...scope, admissionStatus: "pending" } }),
-      prisma.student.count({ where: { ...scope, admissionStatus: "verified" } }),
+      prisma.student.count({ where: studentWhere }),
+      prisma.student.count({ where: { ...studentWhere, status: "draft" } }),
+      prisma.student.count({ where: { ...studentWhere, status: "ready" } }),
+      prisma.student.count({ where: { ...studentWhere, status: "pending" } }),
+      prisma.student.count({ where: { ...studentWhere, status: "submitted" } }),
+      prisma.student.count({ where: { ...studentWhere, status: "approved" } }),
+      prisma.student.count({ where: { ...studentWhere, status: "rejected" } }),
       prisma.student.count({
-        where: { ...scope, admissionStatus: { in: ["rejected", "cancelled"] } },
-      }),
-      prisma.schoolClass.count({ where: scope }),
-      prisma.staff.count({ where: scope }),
-      prisma.staff.count({ where: { ...scope, isActive: true } }),
-      prisma.voucher.count({ where: { ...scope, auditStatus: "pending" } }).catch(() => 0),
-      prisma.voucher.count({ where: { ...scope, auditStatus: "verified" } }).catch(() => 0),
-      prisma.voucher.count({ where: scope }).catch(() => 0),
-      prisma.student.count({
-        where: { ...scope, OR: [{ photoPath: null }, { photoPath: "" }] },
+        where: { ...studentWhere, admissionStatus: "pending" },
       }),
       prisma.student.count({
-        where: { ...scope, NOT: { OR: [{ photoPath: null }, { photoPath: "" }] } },
+        where: { ...studentWhere, admissionStatus: "verified" },
+      }),
+      prisma.student.count({
+        where: {
+          ...studentWhere,
+          admissionStatus: { in: ["rejected", "cancelled"] },
+        },
+      }),
+      prisma.schoolClass.count({ where: classWhere }),
+      prisma.staff.count({ where: schoolScope }),
+      prisma.staff.count({ where: { ...schoolScope, isActive: true } }),
+      prisma.voucher.count({ where: { ...schoolScope, auditStatus: "pending" } }).catch(() => 0),
+      prisma.voucher.count({ where: { ...schoolScope, auditStatus: "verified" } }).catch(() => 0),
+      prisma.voucher.count({ where: schoolScope }).catch(() => 0),
+      prisma.student.count({
+        where: {
+          AND: [studentWhere, { OR: [{ photoPath: null }, { photoPath: "" }] }],
+        },
+      }),
+      prisma.student.count({
+        where: {
+          AND: [
+            studentWhere,
+            { NOT: { OR: [{ photoPath: null }, { photoPath: "" }] } },
+          ],
+        },
       }),
       prisma.bulkSubmission.findMany({
-        where: scope,
+        where: schoolScope,
         orderBy: { createdAt: "desc" },
         take: 6,
       }),
-      prisma.studentAttendanceMonth.count({
-        where: { schoolId, month, year },
-      }).catch(() => 0),
-      prisma.student.findMany({ where: scope, select: { gender: true } }),
+      prisma.studentAttendanceMonth
+        .count({
+          where: { schoolId, month, year },
+        })
+        .catch(() => 0),
+      prisma.student.findMany({ where: studentWhere, select: { gender: true } }),
       prisma.student.groupBy({
         by: ["category"],
-        where: scope,
+        where: studentWhere,
         _count: { category: true },
       }),
       prisma.school.findUnique({
         where: { id: schoolId },
-        select: { name: true, settings: { select: { schoolName: true, academicYear: true } } },
+        select: {
+          name: true,
+          settings: { select: { schoolName: true, academicYear: true } },
+        },
       }),
     ]);
 
@@ -99,6 +126,7 @@ export async function GET() {
     return NextResponse.json({
       schoolName: school?.settings?.schoolName || school?.name || "",
       academicYear: school?.settings?.academicYear || "",
+      selectedAcademicYear: academicYear || null,
       generatedAt: now.toISOString(),
       students: {
         total: totalStudents,
@@ -139,7 +167,10 @@ export async function GET() {
         needingPhoto: withoutPhoto,
       },
       byCategory: byCategory
-        .map((c) => ({ category: c.category || "Unknown", count: c._count.category }))
+        .map((c) => ({
+          category: c.category || "Unknown",
+          count: c._count.category,
+        }))
         .sort((a, b) => b.count - a.count),
       recentSubmissions,
     });
@@ -148,6 +179,9 @@ export async function GET() {
       return NextResponse.json({ error: e.message }, { status: e.status });
     }
     console.error("[clerk/dashboard]", e);
-    return NextResponse.json({ error: "Failed to load clerk dashboard" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to load clerk dashboard" },
+      { status: 500 },
+    );
   }
 }

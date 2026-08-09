@@ -8,12 +8,15 @@ import {
   Tag,
   Activity,
   Users,
+  CalendarRange,
   X,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
+import { FINANCIAL_YEARS } from "@/lib/constants";
 
 export interface DashboardFilterValues {
+  academicYear: string;
   standard: string;
   section: string;
   status: string;
@@ -27,9 +30,11 @@ export interface DashboardFilterMeta {
   statuses: string[];
   categories: string[];
   genders: string[];
+  academicYears?: string[];
 }
 
 export const EMPTY_FILTERS: DashboardFilterValues = {
+  academicYear: "",
   standard: "",
   section: "",
   status: "",
@@ -43,6 +48,8 @@ interface Props {
   onChange: (filters: DashboardFilterValues) => void;
   onReset: () => void;
   resultCount?: number;
+  /** School settings default year — reset returns here */
+  defaultAcademicYear?: string | null;
 }
 
 const selectClass = "dashboard-filter-select";
@@ -55,21 +62,44 @@ export function DashboardFiltersBar({
   onChange,
   onReset,
   resultCount,
+  defaultAcademicYear,
 }: Props) {
   const t = useT();
 
-  const hasActive =
-    filters.standard ||
-    filters.section ||
-    filters.status ||
-    filters.category ||
-    (filters.gender && filters.gender !== "all");
+  const yearOptions = (() => {
+    const set = new Set<string>([...FINANCIAL_YEARS]);
+    for (const y of meta.academicYears || []) {
+      if (y) set.add(y);
+    }
+    if (defaultAcademicYear) set.add(defaultAcademicYear);
+    if (filters.academicYear) set.add(filters.academicYear);
+    return [...set].sort((a, b) => b.localeCompare(a));
+  })();
+
+  const hasOtherFilters =
+    Boolean(filters.standard) ||
+    Boolean(filters.section) ||
+    Boolean(filters.status) ||
+    Boolean(filters.category) ||
+    (Boolean(filters.gender) && filters.gender !== "all");
+
+  const yearDiffersFromDefault =
+    Boolean(defaultAcademicYear) &&
+    filters.academicYear !== (defaultAcademicYear || "");
+
+  const hasActive = hasOtherFilters || yearDiffersFromDefault;
 
   const set = (key: keyof DashboardFilterValues, value: string) => {
     onChange({ ...filters, [key]: value });
   };
 
   const activeChips: { key: keyof DashboardFilterValues; label: string }[] = [];
+  if (filters.academicYear) {
+    activeChips.push({
+      key: "academicYear",
+      label: t("dashboard.yearChip", { year: filters.academicYear }),
+    });
+  }
   if (filters.standard) {
     activeChips.push({
       key: "standard",
@@ -98,6 +128,8 @@ export function DashboardFiltersBar({
 
   const removeChip = (key: keyof DashboardFilterValues) => {
     if (key === "gender") set("gender", "all");
+    else if (key === "academicYear")
+      set("academicYear", defaultAcademicYear || "");
     else set(key, "");
   };
 
@@ -114,7 +146,7 @@ export function DashboardFiltersBar({
         ? "draft"
         : statusOnlyPreset && filters.status === "submitted"
           ? "submitted"
-          : !hasActive
+          : !hasOtherFilters && !filters.status
             ? "all"
             : null;
 
@@ -125,6 +157,7 @@ export function DashboardFiltersBar({
     }
     onChange({
       ...EMPTY_FILTERS,
+      academicYear: filters.academicYear || defaultAcademicYear || "",
       status: id,
     });
   };
@@ -163,6 +196,33 @@ export function DashboardFiltersBar({
           ) : null}
         </div>
       </header>
+
+      {/* Prominent school year control */}
+      <div className="dashboard-year-bar">
+        <div className="dashboard-year-bar-label">
+          <CalendarRange className="h-4 w-4" />
+          <div className="min-w-0">
+            <p>{t("dashboard.filterAcademicYear")}</p>
+            <span>{t("dashboard.filterAcademicYearHint")}</span>
+          </div>
+        </div>
+        <select
+          value={filters.academicYear}
+          onChange={(e) => set("academicYear", e.target.value)}
+          className={cn(selectClass, "dashboard-year-select")}
+          aria-label={t("dashboard.filterAcademicYear")}
+        >
+          <option value="">{t("dashboard.allAcademicYears")}</option>
+          {yearOptions.map((y) => (
+            <option key={y} value={y}>
+              {y}
+              {defaultAcademicYear === y
+                ? ` (${t("dashboard.currentYearBadge")})`
+                : ""}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="dashboard-filter-presets" role="group" aria-label={t("dashboard.filterPresets")}>
         {presets.map((p) => (

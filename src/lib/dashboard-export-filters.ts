@@ -3,6 +3,7 @@ import type { DashboardFilters } from "./dashboard-analytics";
 
 export function filtersToQuery(filters: DashboardFilterValues): string {
   const p = new URLSearchParams();
+  if (filters.academicYear) p.set("academicYear", filters.academicYear);
   if (filters.standard) p.set("standard", filters.standard);
   if (filters.section) p.set("section", filters.section);
   if (filters.status) p.set("status", filters.status);
@@ -16,6 +17,7 @@ export function parseFiltersFromSearchParams(
   searchParams: URLSearchParams
 ): DashboardFilters {
   return {
+    academicYear: searchParams.get("academicYear") || undefined,
     standard: searchParams.get("standard") || undefined,
     section: searchParams.get("section") || undefined,
     status: searchParams.get("status") || undefined,
@@ -26,6 +28,7 @@ export function parseFiltersFromSearchParams(
 
 export function buildFilterSlug(filters: DashboardFilterValues): string {
   const parts: string[] = [];
+  if (filters.academicYear) parts.push(`Y${filters.academicYear}`);
   if (filters.standard) parts.push(`Std${filters.standard}`);
   if (filters.section) parts.push(`Div${filters.section}`);
   if (filters.status) parts.push(filters.status);
@@ -39,6 +42,9 @@ export function buildFilterSummaryText(
   t: (k: string, p?: Record<string, string | number>) => string
 ): string {
   const parts: string[] = [];
+  if (filters.academicYear) {
+    parts.push(t("dashboard.yearChip", { year: filters.academicYear }));
+  }
   if (filters.standard) parts.push(t("dashboard.stdLabel", { standard: filters.standard }));
   if (filters.section) parts.push(t("dashboard.divLabel", { section: filters.section }));
   if (filters.status) parts.push(t(`status.${filters.status}`));

@@ -3,13 +3,16 @@ import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import {
   buildStudentWhere,
+  buildClassWhere,
   CATEGORY_CHART_COLORS,
   type DashboardFilters,
 } from "@/lib/dashboard-analytics";
 import { normalizeGender } from "@/lib/gender-utils";
+import { FINANCIAL_YEARS } from "@/lib/constants";
 
 function parseFilters(searchParams: URLSearchParams): DashboardFilters {
   return {
+    academicYear: searchParams.get("academicYear") || undefined,
     standard: searchParams.get("standard") || undefined,
     section: searchParams.get("section") || undefined,
     status: searchParams.get("status") || undefined,
@@ -24,6 +27,11 @@ export async function GET(request: NextRequest) {
     const filters = parseFilters(new URL(request.url).searchParams);
     const where = buildStudentWhere(session.schoolId, filters);
     const schoolScope = { schoolId: session.schoolId };
+    const classWhere = buildClassWhere(session.schoolId, filters.academicYear);
+    // Meta / admissions scoped to selected year (or whole school if none)
+    const metaWhere = buildStudentWhere(session.schoolId, {
+      academicYear: filters.academicYear,
+    });
 
     const [
       total,
@@ -46,6 +54,8 @@ export async function GET(request: NextRequest) {
       recentVerified,
       staffByDesignation,
       schoolSettings,
+      classYears,
+      studentYears,
     ] = await Promise.all([
       prisma.student.count({ where }),
       prisma.student.count({ where: { ...where, status: "draft" } }),
@@ -56,7 +66,7 @@ export async function GET(request: NextRequest) {
       prisma.student.count({ where: { ...where, status: "rejected" } }),
       prisma.student.groupBy({ by: ["category"], where, _count: { category: true } }),
       prisma.bulkSubmission.findMany({ where: schoolScope, orderBy: { createdAt: "desc" }, take: 5 }),
-      prisma.schoolClass.count({ where: schoolScope }),
+      prisma.schoolClass.count({ where: classWhere }),
       prisma.staff.count({ where: { ...schoolScope, isActive: true } }),
       prisma.staff.count({ where: schoolScope }),
       prisma.student.groupBy({ by: ["standard"], where: { ...where, standard: { not: null } }, _count: { standard: true } }),
@@ -67,16 +77,16 @@ export async function GET(request: NextRequest) {
       }),
       prisma.student.findMany({ where, select: { gender: true } }),
       prisma.student.findMany({
-        where: schoolScope,
+        where: metaWhere,
         select: { standard: true, section: true, status: true, category: true, gender: true },
       }),
       prisma.student.groupBy({
         by: ["admissionStatus"],
-        where: schoolScope,
+        where: metaWhere,
         _count: true,
       }),
       prisma.student.findMany({
-        where: { ...schoolScope, admissionStatus: "verified" },
+        where: { ...metaWhere, admissionStatus: "verified" },
         orderBy: [{ verifiedAt: "desc" }, { updatedAt: "desc" }],
         take: 10,
         select: {
@@ -103,6 +113,16 @@ export async function GET(request: NextRequest) {
         where: { schoolId: session.schoolId },
         select: { schoolName: true, logoPath: true, academicYear: true, tagline: true },
       }),
+      prisma.schoolClass.findMany({
+        where: schoolScope,
+        select: { academicYear: true },
+        distinct: ["academicYear"],
+      }),
+      prisma.student.findMany({
+        where: { ...schoolScope, financialYear: { not: null } },
+        select: { financialYear: true },
+        distinct: ["financialYear"],
+      }),
     ]);
 
     const byGender = { male: 0, female: 0, other: 0, total: studentsForGender.length };
@@ -120,6 +140,16 @@ export async function GET(request: NextRequest) {
     const statuses = [...new Set(filterStudents.map((s) => s.status).filter(Boolean) as string[])];
     const categories = [...new Set(filterStudents.map((s) => s.category).filter(Boolean) as string[])].sort();
     const genders = [...new Set(filterStudents.map((s) => normalizeGender(s.gender)))];
+
+    const yearSet = new Set<string>([...FINANCIAL_YEARS]);
+    for (const c of classYears) {
+      if (c.academicYear) yearSet.add(c.academicYear);
+    }
+    for (const s of studentYears) {
+      if (s.financialYear) yearSet.add(s.financialYear);
+    }
+    if (schoolSettings?.academicYear) yearSet.add(schoolSettings.academicYear);
+    const academicYears = [...yearSet].sort((a, b) => b.localeCompare(a));
 
     const byClass = bySection
       .filter((r) => r.standard && r.section)
@@ -190,6 +220,7 @@ export async function GET(request: NextRequest) {
       schoolName: schoolSettings?.schoolName || session.schoolName,
       logoPath: schoolSettings?.logoPath || null,
       academicYear: schoolSettings?.academicYear || null,
+      selectedAcademicYear: filters.academicYear || null,
       tagline: schoolSettings?.tagline || null,
       filterMeta: {
         standards,
@@ -197,6 +228,7 @@ export async function GET(request: NextRequest) {
         statuses,
         categories,
         genders,
+        academicYears,
       },
       activeFilters: filters,
     });

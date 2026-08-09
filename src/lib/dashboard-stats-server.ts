@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import {
   buildStudentWhere,
+  buildClassWhere,
   CATEGORY_CHART_COLORS,
   type DashboardFilters,
 } from "@/lib/dashboard-analytics";
@@ -12,6 +13,7 @@ import { studentToSummaryRow } from "@/lib/dashboard-student-export";
 
 export function parseDashboardFilters(searchParams: URLSearchParams): DashboardFilters {
   return {
+    academicYear: searchParams.get("academicYear") || undefined,
     standard: searchParams.get("standard") || undefined,
     section: searchParams.get("section") || undefined,
     status: searchParams.get("status") || undefined,
@@ -28,6 +30,7 @@ export async function fetchDashboardExportPayload(
 ) {
   const where = buildStudentWhere(schoolId, filters);
   const schoolScope = { schoolId };
+  const classWhere = buildClassWhere(schoolId, filters.academicYear);
 
   const [
     total,
@@ -53,7 +56,7 @@ export async function fetchDashboardExportPayload(
     prisma.student.count({ where: { ...where, status: "approved" } }),
     prisma.student.count({ where: { ...where, status: "rejected" } }),
     prisma.student.groupBy({ by: ["category"], where, _count: { category: true } }),
-    prisma.schoolClass.count({ where: schoolScope }),
+    prisma.schoolClass.count({ where: classWhere }),
     prisma.staff.count({ where: { ...schoolScope, isActive: true } }),
     prisma.student.groupBy({ by: ["standard"], where: { ...where, standard: { not: null } }, _count: { standard: true } }),
     prisma.student.groupBy({

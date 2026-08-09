@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     const standard = searchParams.get("standard");
     const section = searchParams.get("section");
     const gender = searchParams.get("gender");
+    const academicYear = searchParams.get("academicYear");
     const institutionName = searchParams.get("institutionName");
     const scholarshipScheme = searchParams.get("scholarshipScheme");
     const idsParam = searchParams.get("ids");
@@ -110,6 +111,26 @@ export async function GET(request: NextRequest) {
       } else {
         where.OR = searchOr;
       }
+    }
+
+    if (academicYear) {
+      const yearClause = {
+        OR: [
+          { financialYear: academicYear },
+          { schoolClass: { is: { academicYear } } },
+        ],
+      };
+      const existingAnd = Array.isArray(where.AND)
+        ? [...(where.AND as object[])]
+        : where.AND
+          ? [where.AND as object]
+          : [];
+      if (where.OR) {
+        existingAnd.unshift({ OR: where.OR });
+        delete where.OR;
+      }
+      existingAnd.push(yearClause);
+      where.AND = existingAnd;
     }
 
     const [students, total] = await Promise.all([
