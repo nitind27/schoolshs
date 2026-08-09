@@ -2920,6 +2920,48 @@ const en = {
     newVoucher: "New Voucher",
     fyNotConfigured:
       'Financial year not configured. Select FY and click "Set Active FY" to begin.',
+    flowEyebrow: "Simple 5-step flow",
+    flowTitle: "How school accounting works",
+    flowIntro:
+      "Each financial year has its own ledgers and vouchers. Switching FY does not delete data — it only shows that year’s books.",
+    flow1Title: "1. Select FY",
+    flow1Desc: "Activate the year you want to work in (Apr–Mar).",
+    flow2Title: "2. Ledgers",
+    flow2Desc: "Create chart of accounts (Cash, Bank, Fees, Salary…).",
+    flow3Title: "3. Vouchers",
+    flow3Desc: "Post Receipt / Payment / Journal / Contra entries.",
+    flow4Title: "4. Check reports",
+    flow4Desc: "Day book, Trial Balance, P&L — verify totals.",
+    flow5Title: "5. Submit to CA",
+    flow5Desc: "Lock books and send to Chartered Accountant for audit.",
+    activeFyBadge: "Working in {{year}}",
+    fyPickerTitle: "Choose financial year",
+    fyPickerDesc:
+      "Vouchers stay inside their FY. If you open an empty year, standard ledgers are created automatically.",
+    fyDataCounts: "{{vouchers}} vouchers · {{accounts}} ledgers",
+    switchFyTitle: "Switch financial year?",
+    switchFyBody: "Activate FY {{year}}?\n\n{{hint}}",
+    switchFyHint:
+      "Your previous year’s vouchers stay saved. This screen will show only the selected year’s data.",
+    switchFyHintNew:
+      "If this year has no ledgers yet, we will create the standard chart of accounts for you.",
+    fyActivated: "FY {{year}} is now active",
+    ledgersReady: "{{count}} standard ledgers ready",
+    emptyFyHint:
+      "No vouchers in this FY yet. Create Receipt (fees in) or Payment (expenses out).",
+    submitToCaEasy:
+      "When entries are complete → Submit here → books lock → CA reviews in CA Portal.",
+    submitNeedVouchers: "Add at least 1 voucher before submitting to CA.",
+    submitNeedFixFlags: "Fix {{count}} flagged/query voucher(s) first.",
+    submitCheckAdmin: "Logged in as School Admin",
+    submitCheckLedgers: "Ledgers ready ({{count}})",
+    submitCheckVouchers: "Vouchers entered ({{count}})",
+    submitCheckNoFlags: "No flagged / query vouchers",
+    submitCheckBooksOpen: "Books open (not locked / not already submitted)",
+    submitCheckAlreadySent: "Already submitted to CA for this FY",
+    submitOnlyAdmin: "Only School Admin can click Submit to CA. Login as admin.",
+    submitButtonWhenReady: "Button stays disabled until all green checks above are done.",
+    submitButtonReady: "All checks green — click Submit to CA.",
     coaNotInit: "Chart of Accounts not initialized for {{year}}",
     initStandardAccounts: "Initialize Standard Accounts",
     totalVouchers: "Total Vouchers",
@@ -3791,9 +3833,12 @@ const en = {
     chooseClass: "— Select class —",
     chooseClassHint: "Select a class to manage its roll numbers",
     students: "students",
-    autoAssign: "Auto 1, 2, 3…",
+    autoAssign: "Auto by name A→Z",
+    autoAssignDone:
+      "Roll numbers set 1–{{count}} by first name (A→Z). Click Save to keep.",
     searchPlaceholder: "Search student, GR or roll…",
-    uniqueHint: "Each non-empty roll number must be unique in this class.",
+    uniqueHint:
+      "Auto assigns by first name A→Z. Each roll number must be unique in this class.",
     rollPlaceholder: "Enter roll number",
     duplicateError:
       "Duplicate roll numbers found. Give each student a unique roll number.",

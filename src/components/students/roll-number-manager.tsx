@@ -151,13 +151,35 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
         ? [student.sscSeatPrefix, student.sscSeatNumber].filter(Boolean).join("")
         : "";
 
+  const nameSortKey = (student: StudentRow) =>
+    [
+      student.firstName,
+      student.middleName || "",
+      student.surname || "",
+      student.grNumber || "",
+    ]
+      .map((part) => part.trim().toLocaleLowerCase("en"))
+      .join("\u0000");
+
   const autoAssign = () => {
+    // Roll 1, 2, 3… by first name A→Z (then middle, surname, GR)
+    const sorted = [...students].sort((a, b) =>
+      nameSortKey(a).localeCompare(nameSortKey(b), "en", {
+        sensitivity: "base",
+        numeric: true,
+      }),
+    );
+    setStudents(sorted);
     setDrafts(
       Object.fromEntries(
-        students.map((student, index) => [student.id, String(index + 1)]),
+        sorted.map((student, index) => [student.id, String(index + 1)]),
       ),
     );
-    setMessage(null);
+    setSearch("");
+    setMessage({
+      type: "ok",
+      text: t("rollNumbers.autoAssignDone", { count: sorted.length }),
+    });
   };
 
   const save = async () => {

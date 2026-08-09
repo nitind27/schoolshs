@@ -12,10 +12,21 @@ export async function GET() {
       include: { _count: { select: { vouchers: true, accounts: true } } },
     });
 
-    const allFy = await prisma.financialYear.findMany({
+    const allFyRaw = await prisma.financialYear.findMany({
       where: { schoolId },
       orderBy: { startDate: "desc" },
+      include: { _count: { select: { vouchers: true, accounts: true } } },
     });
+
+    const allFinancialYears = allFyRaw.map((y) => ({
+      id: y.id,
+      label: y.label,
+      isActive: y.isActive,
+      isLocked: y.isLocked,
+      auditStatus: y.auditStatus,
+      accounts: y._count.accounts,
+      vouchers: y._count.vouchers,
+    }));
 
     const voucherStats = fy
       ? await prisma.voucher.groupBy({
@@ -35,11 +46,22 @@ export async function GET() {
         })
       : [];
 
+    const pendingFlagged = fy
+      ? await prisma.voucher.count({
+          where: {
+            schoolId,
+            financialYearId: fy.id,
+            auditStatus: { in: ["flagged", "query"] },
+          },
+        })
+      : 0;
+
     return NextResponse.json({
       financialYear: fy,
-      allFinancialYears: allFy,
+      allFinancialYears,
       voucherStats,
       recentVouchers,
+      pendingFlagged,
       school: {
         id: schoolId,
         name: session.accountingSchoolName || session.schoolName,
@@ -54,7 +76,12 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAccountingAuth(["school_admin", "clerk"]);
-    const { label, action } = await request.json();
+    const body = await request.json();
+    const { label, action, autoInitAccounts } = body as {
+      label?: string;
+      action?: string;
+      autoInitAccounts?: boolean;
+    };
 
     if (action === "init_accounts" && label) {
       const fy = await prisma.financialYear.findFirst({
@@ -63,7 +90,9 @@ export async function POST(request: NextRequest) {
       if (!fy) return NextResponse.json({ error: "Financial year not found" }, { status: 404 });
 
       const existing = await prisma.account.count({ where: { financialYearId: fy.id } });
-      if (existing > 0) return NextResponse.json({ error: "Accounts already initialized" }, { status: 400 });
+      if (existing > 0) {
+        return NextResponse.json({ error: "Accounts already initialized", count: existing }, { status: 400 });
+      }
 
       await prisma.account.createMany({
         data: DEFAULT_ACCOUNTS.map((a) => ({
@@ -98,9 +127,39 @@ export async function POST(request: NextRequest) {
         isActive: true,
       },
       update: { isActive: true },
+      include: { _count: { select: { accounts: true, vouchers: true } } },
     });
 
-    return NextResponse.json(fy);
+    let accountsInitialized = 0;
+    // New / empty FY → auto create standard ledgers so screen is not blank
+    if (autoInitAccounts !== false && fy._count.accounts === 0) {
+      await prisma.account.createMany({
+        data: DEFAULT_ACCOUNTS.map((a) => ({
+          schoolId: session.schoolId,
+          financialYearId: fy.id,
+          code: a.code,
+          name: a.name,
+          groupType: a.groupType,
+          accountType: a.accountType,
+          balanceType: a.balanceType,
+        })),
+      });
+      accountsInitialized = DEFAULT_ACCOUNTS.length;
+    }
+
+    const refreshed = await prisma.financialYear.findUnique({
+      where: { id: fy.id },
+      include: { _count: { select: { accounts: true, vouchers: true } } },
+    });
+
+    return NextResponse.json({
+      ...refreshed,
+      accountsInitialized,
+      message:
+        accountsInitialized > 0
+          ? `FY ${label} activated · ${accountsInitialized} standard ledgers created`
+          : `FY ${label} is now active`,
+    });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Failed" }, { status: 500 });

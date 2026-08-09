@@ -2880,6 +2880,48 @@ const gu: Messages = {
     newVoucher: "નવું વાઉચર",
     fyNotConfigured:
       'નાણાકીય વર્ષ સેટ નથી. વર્ષ પસંદ કરી "સક્રિય વર્ષ સેટ કરો" દબાવો.',
+    flowEyebrow: "સરળ 5 પગલાં",
+    flowTitle: "શાળા હિસાબ કેવી રીતે ચાલે છે",
+    flowIntro:
+      "દરેક નાણાકીય વર્ષના અલગ લેજર અને વાઉચર હોય છે. FY બદલવાથી ડેટા કાઢી નથી — ફક્ત તે વર્ષના હિસાબ દેખાય છે.",
+    flow1Title: "1. FY પસંદ",
+    flow1Desc: "જે વર્ષમાં કામ કરવું છે તે સક્રિય કરો (એપ્રિલ–માર્ચ).",
+    flow2Title: "2. લેજર",
+    flow2Desc: "ખાતાઓ બનાવો (રોકડ, બેંક, ફી, પગાર…).",
+    flow3Title: "3. વાઉચર",
+    flow3Desc: "રસીદ / ચુકવણી / જર્નલ / કોન્ટ્રા એન્ટ્રી.",
+    flow4Title: "4. રિપોર્ટ",
+    flow4Desc: "ડે બુક, ટ્રાયલ બેલેન્સ, P&L ચકાસો.",
+    flow5Title: "5. CA ને મોકલો",
+    flow5Desc: "હિસાબ લૉક કરી CA પોર્ટલ પર ઓડિટ માટે મોકલો.",
+    activeFyBadge: "કામ કરી રહ્યા છો: {{year}}",
+    fyPickerTitle: "નાણાકીય વર્ષ પસંદ કરો",
+    fyPickerDesc:
+      "વાઉચર તેના FYમાં જ રહે છે. ખાલી વર્ષ ખોલો તો માનક લેજર આપમેળે બને છે.",
+    fyDataCounts: "{{vouchers}} વાઉચર · {{accounts}} લેજર",
+    switchFyTitle: "નાણાકીય વર્ષ બદલીએ?",
+    switchFyBody: "FY {{year}} સક્રિય કરીએ?\n\n{{hint}}",
+    switchFyHint:
+      "પહેલાના વર્ષના વાઉચર સેવ રહે છે. આ સ્ક્રીન પર ફક્ત પસંદ કરેલા વર્ષનો ડેટા દેખાશે.",
+    switchFyHintNew:
+      "જો આ વર્ષમાં લેજર ન હોય તો માનક ખાતાઓ આપમેળે બનશે.",
+    fyActivated: "FY {{year}} હવે સક્રિય છે",
+    ledgersReady: "{{count}} માનક લેજર તૈયાર",
+    emptyFyHint:
+      "આ FYમાં હજુ વાઉચર નથી. રસીદ (ફી આવક) અથવા ચુકવણી (ખર્ચ) બનાવો.",
+    submitToCaEasy:
+      "એન્ટ્રી પૂરી થાય → અહીં Submit → હિસાબ લૉક → CA પોર્ટલમાં રિવ્યૂ.",
+    submitNeedVouchers: "CA ને મોકલતા પહેલાં ઓછામાં ઓછું 1 વાઉચર ઉમેરો.",
+    submitNeedFixFlags: "પહેલાં {{count}} ફ્લેગ્ડ/ક્વેરી વાઉચર સુધારો.",
+    submitCheckAdmin: "School Admin તરીકે લૉગિન",
+    submitCheckLedgers: "લેજર તૈયાર ({{count}})",
+    submitCheckVouchers: "વાઉચર એન્ટ્રી ({{count}})",
+    submitCheckNoFlags: "કોઈ ફ્લેગ્ડ/ક્વેરી વાઉચર નથી",
+    submitCheckBooksOpen: "હિસાબ ખુલ્લા (લૉક/સબમિટ નથી)",
+    submitCheckAlreadySent: "આ FY માટે પહેલેથી CA ને મોકલ્યું છે",
+    submitOnlyAdmin: "Submit to CA ફક્ત School Admin કરી શકે. Admin થી લૉગિન કરો.",
+    submitButtonWhenReady: "ઉપરની બધી લીલી ચેક થાય ત્યાં સુધી બટન બંધ રહેશે.",
+    submitButtonReady: "બધી ચેક લીલી — Submit to CA દબાવો.",
     coaNotInit: "{{year}} માટે ખાતાઓની યાદી શરૂ નથી",
     initStandardAccounts: "માનક ખાતાઓ શરૂ કરો",
     totalVouchers: "કુલ વાઉચર",
@@ -3736,9 +3778,12 @@ const gu: Messages = {
     chooseClass: "— વર્ગ પસંદ કરો —",
     chooseClassHint: "રોલ નંબર મેનેજ કરવા માટે વર્ગ પસંદ કરો",
     students: "વિદ્યાર્થી",
-    autoAssign: "ઓટો 1, 2, 3…",
+    autoAssign: "નામ A→Z ઓટો",
+    autoAssignDone:
+      "રોલ 1–{{count}} પ્રથમ નામ (A→Z) પ્રમાણે સેટ. સેવ કરવા Save દબાવો.",
     searchPlaceholder: "વિદ્યાર્થી, GR અથવા રોલ શોધો…",
-    uniqueHint: "વર્ગમાં દરેક ભરેલો રોલ નંબર અલગ હોવો જરૂરી છે.",
+    uniqueHint:
+      "ઓટો પ્રથમ નામ A→Z પ્રમાણે આપે છે. વર્ગમાં દરેક રોલ અલગ હોવો જરૂરી છે.",
     rollPlaceholder: "રોલ નંબર લખો",
     duplicateError:
       "ડુપ્લિકેટ રોલ નંબર છે. દરેક વિદ્યાર્થીને અલગ રોલ નંબર આપો.",
