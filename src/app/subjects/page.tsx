@@ -46,6 +46,18 @@ type ClassRow = {
   _count: { classSubjects: number; students: number };
 };
 
+type FieldErrors = {
+  name?: string;
+  code?: string;
+  shortName?: string;
+};
+
+const CODE_RE = /^[A-Z0-9_]{2,12}$/;
+
+function normalizeCode(raw: string) {
+  return raw.trim().toUpperCase().replace(/\s+/g, "_").replace(/[^A-Z0-9_]/g, "");
+}
+
 function emptyMaster(order: number): MasterRow {
   return {
     name: "",
@@ -56,6 +68,38 @@ function emptyMaster(order: number): MasterRow {
     sortOrder: order,
     isActive: true,
   };
+}
+
+function validateSubjectRow(
+  row: Pick<MasterRow, "name" | "code" | "shortName">,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: (key: any, params?: Record<string, string | number>) => string,
+  others: Array<{ code: string }>,
+  selfIndex?: number,
+): FieldErrors {
+  const errors: FieldErrors = {};
+  const name = row.name.trim();
+  const code = normalizeCode(row.code);
+  const shortName = row.shortName.trim();
+
+  if (!name) errors.name = t("subjectsHub.errNameRequired");
+  else if (name.length > 80) errors.name = t("subjectsHub.errNameLong");
+
+  if (!code) errors.code = t("subjectsHub.errCodeRequired");
+  else if (!CODE_RE.test(code)) errors.code = t("subjectsHub.errCodeFormat");
+  else if (
+    others.some(
+      (s, i) =>
+        normalizeCode(s.code) === code &&
+        (selfIndex == null || i !== selfIndex),
+    )
+  ) {
+    errors.code = t("subjectsHub.errCodeDup");
+  }
+
+  if (shortName.length > 8) errors.shortName = t("subjectsHub.errShortLong");
+
+  return errors;
 }
 
 function mapMaster(rows: MasterRow[]): MasterRow[] {
@@ -82,6 +126,8 @@ export default function SubjectsHubPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addSaving, setAddSaving] = useState(false);
   const [draft, setDraft] = useState<MasterRow>(() => emptyMaster(0));
+  const [draftErrors, setDraftErrors] = useState<FieldErrors>({});
+  const [invalidRows, setInvalidRows] = useState<Set<number>>(new Set());
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
@@ -190,6 +236,7 @@ export default function SubjectsHubPage() {
   const openAddModal = () => {
     setEditIndex(null);
     setDraft(emptyMaster(master.length));
+    setDraftErrors({});
     setAddOpen(true);
   };
 
@@ -198,12 +245,14 @@ export default function SubjectsHubPage() {
     if (!row) return;
     setEditIndex(index);
     setDraft({ ...row });
+    setDraftErrors({});
     setAddOpen(true);
   };
 
   const closeAddModal = () => {
     setAddOpen(false);
     setEditIndex(null);
+    setDraftErrors({});
     setDraft(emptyMaster(0));
   };
 
@@ -247,25 +296,20 @@ export default function SubjectsHubPage() {
   };
 
   const submitAddModal = async () => {
-    const name = draft.name.trim();
-    const code = draft.code.trim().toUpperCase().replace(/\s+/g, "_");
-    if (!name || !code) {
-      toast.warning(t("subjectsHub.modalRequired"));
-      return;
-    }
-    const dup = master.some(
-      (s, i) => s.code.toUpperCase() === code && i !== editIndex,
-    );
-    if (dup) {
-      toast.warning(t("subjectsHub.modalDuplicateCode"));
+    const errors = validateSubjectRow(draft, t, master, editIndex ?? undefined);
+    setDraftErrors(errors);
+    if (errors.name || errors.code || errors.shortName) {
+      toast.warning(t("subjectsHub.fixHasErrors"));
       return;
     }
 
+    const name = draft.name.trim();
+    const code = normalizeCode(draft.code);
     const row: MasterRow = {
       ...draft,
       name,
       code,
-      shortName: (draft.shortName || name.slice(0, 2)).trim(),
+      shortName: (draft.shortName || name.slice(0, 2)).trim().slice(0, 8),
       type: draft.type === "grade" ? "grade" : "numeric",
       maxMarks:
         draft.type === "grade" ? 0 : Math.max(0, Number(draft.maxMarks) || 100),
@@ -286,7 +330,10 @@ export default function SubjectsHubPage() {
         : t("subjectsHub.modalAdded"),
     );
     setAddSaving(false);
-    if (ok) closeAddModal();
+    if (ok) {
+      setInvalidRows(new Set());
+      closeAddModal();
+    }
   };
 
   const confirmDeleteSubject = async () => {
@@ -306,17 +353,48 @@ export default function SubjectsHubPage() {
       if (patch.type === "grade") next.maxMarks = 0;
       if (patch.type === "numeric" && next.maxMarks === 0) next.maxMarks = 100;
       if (patch.name && !prev.code) {
-        next.code = patch.name.slice(0, 6).toUpperCase().replace(/\s+/g, "_");
+        next.code = normalizeCode(patch.name).slice(0, 6);
+      }
+      if (patch.code != null) {
+        next.code = normalizeCode(patch.code).slice(0, 12);
       }
       if (patch.name && !prev.shortName) {
         next.shortName = patch.name.slice(0, 2);
       }
+      if (patch.shortName != null) {
+        next.shortName = patch.shortName.slice(0, 8);
+      }
       return next;
     });
+    setDraftErrors({});
   };
 
   const saveMaster = async () => {
-    await persistMaster(master, t("subjectsHub.masterSaved"));
+    if (!master.length) {
+      toast.warning(t("subjectsHub.masterEmpty"));
+      return;
+    }
+    const bad = new Set<number>();
+    const normalized = master.map((row, i) => {
+      const errors = validateSubjectRow(row, t, master, i);
+      if (errors.name || errors.code || errors.shortName) bad.add(i);
+      return {
+        ...row,
+        name: row.name.trim(),
+        code: normalizeCode(row.code),
+        shortName: (row.shortName || row.name.trim().slice(0, 2)).trim().slice(0, 8),
+      };
+    });
+    setInvalidRows(bad);
+    if (bad.size) {
+      toast.warning(
+        t("subjectsHub.masterHasErrors", { count: String(bad.size) }),
+      );
+      return;
+    }
+    setMaster(normalized);
+    const ok = await persistMaster(normalized, t("subjectsHub.masterSaved"));
+    if (ok) setInvalidRows(new Set());
   };
 
   const toggleAssigned = (id: string) => {
@@ -460,7 +538,7 @@ export default function SubjectsHubPage() {
                 <h2>{t("subjectsHub.masterTitle")}</h2>
                 <p>{t("subjectsHub.masterDesc")}</p>
               </div>
-              <div className="subhub__actions">
+              <div className="subhub__actions subhub__actions--master">
                 <Button
                   variant="outline"
                   size="sm"
@@ -473,7 +551,7 @@ export default function SubjectsHubPage() {
                 <Button
                   size="sm"
                   type="button"
-                  disabled={masterSaving}
+                  disabled={masterSaving || !master.length}
                   onClick={() => void saveMaster()}
                 >
                   {masterSaving ? (
@@ -512,114 +590,170 @@ export default function SubjectsHubPage() {
                 </div>
               </div>
             ) : (
-              <div className="subhub__table-wrap">
-                <table className="subhub__table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>{t("subjectsHub.colName")}</th>
-                      <th>{t("subjectsHub.colCode")}</th>
-                      <th>{t("subjectsHub.colShort")}</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {master.map((row, i) => (
-                      <tr key={row.id || `new-${i}`}>
-                        <td className="subhub__num" data-label="#">
-                          {i + 1}
-                        </td>
-                        <td data-label={t("subjectsHub.colName")}>
-                          <Input
-                            value={row.name}
-                            onChange={(e) =>
-                              updateMaster(i, { name: e.target.value })
-                            }
-                            placeholder={t("subjectsHub.namePh")}
-                          />
-                        </td>
-                        <td data-label={t("subjectsHub.colCode")}>
-                          <Input
-                            value={row.code}
-                            onChange={(e) =>
-                              updateMaster(i, { code: e.target.value })
-                            }
-                            className="font-mono"
-                          />
-                        </td>
-                        <td data-label={t("subjectsHub.colShort")}>
-                          <Input
-                            value={row.shortName}
-                            onChange={(e) =>
-                              updateMaster(i, { shortName: e.target.value })
-                            }
-                          />
-                        </td>
-                        <td
-                          className="subhub__row-actions-cell"
-                          data-label={t("common.actions")}
-                        >
-                          <div className="subhub__row-btns">
-                            <button
-                              type="button"
-                              className="subhub__icon-btn"
-                              title={t("common.edit")}
-                              onClick={() => openEditModal(i)}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              className="subhub__icon-btn"
-                              disabled={i === 0}
-                              onClick={() => {
-                                setMaster((rows) => {
-                                  const next = [...rows];
-                                  const tmp = next[i]!;
-                                  next[i] = next[i - 1]!;
-                                  next[i - 1] = tmp;
-                                  return next.map((r, idx) => ({
-                                    ...r,
-                                    sortOrder: idx,
-                                  }));
-                                });
-                              }}
-                            >
-                              <ChevronUp className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              className="subhub__icon-btn"
-                              disabled={i === master.length - 1}
-                              onClick={() => {
-                                setMaster((rows) => {
-                                  const next = [...rows];
-                                  const tmp = next[i]!;
-                                  next[i] = next[i + 1]!;
-                                  next[i + 1] = tmp;
-                                  return next.map((r, idx) => ({
-                                    ...r,
-                                    sortOrder: idx,
-                                  }));
-                                });
-                              }}
-                            >
-                              <ChevronDown className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              className="subhub__icon-btn subhub__icon-btn--danger"
-                              onClick={() => setDeleteIndex(i)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </td>
+              <>
+                {invalidRows.size > 0 ? (
+                  <div className="subhub__banner subhub__banner--error" role="alert">
+                    {t("subjectsHub.masterHasErrors", {
+                      count: String(invalidRows.size),
+                    })}
+                  </div>
+                ) : null}
+                <div className="subhub__table-wrap">
+                  <table className="subhub__table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>{t("subjectsHub.colName")}</th>
+                        <th>{t("subjectsHub.colCode")}</th>
+                        <th>{t("subjectsHub.colShort")}</th>
+                        <th />
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {master.map((row, i) => {
+                        const bad = invalidRows.has(i);
+                        return (
+                          <tr
+                            key={row.id || `new-${i}`}
+                            className={cn(bad && "subhub__row--invalid")}
+                          >
+                            <td className="subhub__num" data-label="#">
+                              {i + 1}
+                            </td>
+                            <td data-label={t("subjectsHub.colName")}>
+                              <Input
+                                value={row.name}
+                                onChange={(e) => {
+                                  updateMaster(i, { name: e.target.value });
+                                  setInvalidRows((prev) => {
+                                    if (!prev.has(i)) return prev;
+                                    const next = new Set(prev);
+                                    next.delete(i);
+                                    return next;
+                                  });
+                                }}
+                                placeholder={t("subjectsHub.namePh")}
+                                aria-invalid={bad}
+                              />
+                            </td>
+                            <td data-label={t("subjectsHub.colCode")}>
+                              <Input
+                                value={row.code}
+                                onChange={(e) => {
+                                  updateMaster(i, {
+                                    code: normalizeCode(e.target.value).slice(
+                                      0,
+                                      12,
+                                    ),
+                                  });
+                                  setInvalidRows((prev) => {
+                                    if (!prev.has(i)) return prev;
+                                    const next = new Set(prev);
+                                    next.delete(i);
+                                    return next;
+                                  });
+                                }}
+                                className="font-mono"
+                                aria-invalid={bad}
+                              />
+                            </td>
+                            <td data-label={t("subjectsHub.colShort")}>
+                              <Input
+                                value={row.shortName}
+                                onChange={(e) =>
+                                  updateMaster(i, {
+                                    shortName: e.target.value.slice(0, 8),
+                                  })
+                                }
+                                aria-invalid={bad}
+                              />
+                            </td>
+                            <td
+                              className="subhub__row-actions-cell"
+                              data-label={t("common.actions")}
+                            >
+                              <div className="subhub__row-btns">
+                                <button
+                                  type="button"
+                                  className="subhub__icon-btn"
+                                  title={t("common.edit")}
+                                  aria-label={t("common.edit")}
+                                  onClick={() => openEditModal(i)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="subhub__icon-btn"
+                                  disabled={i === 0}
+                                  aria-label="Move up"
+                                  onClick={() => {
+                                    setMaster((rows) => {
+                                      const next = [...rows];
+                                      const tmp = next[i]!;
+                                      next[i] = next[i - 1]!;
+                                      next[i - 1] = tmp;
+                                      return next.map((r, idx) => ({
+                                        ...r,
+                                        sortOrder: idx,
+                                      }));
+                                    });
+                                  }}
+                                >
+                                  <ChevronUp className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="subhub__icon-btn"
+                                  disabled={i === master.length - 1}
+                                  aria-label="Move down"
+                                  onClick={() => {
+                                    setMaster((rows) => {
+                                      const next = [...rows];
+                                      const tmp = next[i]!;
+                                      next[i] = next[i + 1]!;
+                                      next[i + 1] = tmp;
+                                      return next.map((r, idx) => ({
+                                        ...r,
+                                        sortOrder: idx,
+                                      }));
+                                    });
+                                  }}
+                                >
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="subhub__icon-btn subhub__icon-btn--danger"
+                                  aria-label={t("common.delete")}
+                                  onClick={() => setDeleteIndex(i)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="subhub__sticky-save subhub__sticky-save--mobile">
+                  <Button
+                    type="button"
+                    disabled={masterSaving || !master.length}
+                    onClick={() => void saveMaster()}
+                    className="w-full sm:w-auto"
+                  >
+                    {masterSaving ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+                    {t("common.save")}
+                  </Button>
+                </div>
+              </>
             )}
           </section>
         )}
@@ -647,16 +781,18 @@ export default function SubjectsHubPage() {
             ) : !classId ? (
               <div className="subhub__class-pick">
                 <div className="subhub__class-pick-head">
-                  <div>
+                  <div className="min-w-0">
                     <h3>{t("subjectsHub.pickClassTitle")}</h3>
                     <p>{t("subjectsHub.pickClassHint")}</p>
                   </div>
-                  <Input
-                    value={classSearch}
-                    onChange={(e) => setClassSearch(e.target.value)}
-                    placeholder={t("subjectsHub.searchClass")}
-                    className="max-w-xs"
-                  />
+                  <div className="subhub__class-search">
+                    <Input
+                      value={classSearch}
+                      onChange={(e) => setClassSearch(e.target.value)}
+                      placeholder={t("subjectsHub.searchClass")}
+                      aria-label={t("subjectsHub.searchClass")}
+                    />
+                  </div>
                 </div>
 
                 {filteredClasses.length === 0 ? (
@@ -704,10 +840,12 @@ export default function SubjectsHubPage() {
                     }}
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
-                    {t("subjectsHub.backToClasses")}
+                    <span className="subhub__btn-label">
+                      {t("subjectsHub.backToClasses")}
+                    </span>
                   </Button>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-900">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-slate-900">
                       {selectedClass?.name}
                     </p>
                     <p className="text-xs text-slate-500">
@@ -719,7 +857,12 @@ export default function SubjectsHubPage() {
                   <Button
                     type="button"
                     size="sm"
-                    disabled={classSaving || classSubjectsLoading}
+                    className="subhub__desktop-save"
+                    disabled={
+                      classSaving ||
+                      classSubjectsLoading ||
+                      !assignedOrdered.length
+                    }
                     onClick={() => void saveClassSubjects()}
                   >
                     {classSaving ? (
@@ -736,110 +879,150 @@ export default function SubjectsHubPage() {
                     <Spinner size="lg" />
                   </div>
                 ) : (
-                  <div className="subhub__split">
-                    <div className="subhub__col">
-                      <h3>{t("subjectsHub.pickSubjects")}</h3>
-                      <p className="subhub__hint">
-                        {t("subjectsHub.pickSubjectsForClass")}
-                      </p>
-                      <div className="subhub__checklist">
-                        {master
-                          .filter((s) => s.id && s.isActive !== false)
-                          .map((s) => {
-                            const on = assignedIds.includes(s.id!);
-                            return (
-                              <button
-                                key={s.id}
-                                type="button"
-                                className={cn(
-                                  "subhub__check",
-                                  on && "subhub__check--on",
-                                )}
-                                onClick={() => toggleAssigned(s.id!)}
-                              >
-                                <CheckSquare
+                  <>
+                    <div className="subhub__split">
+                      <div className="subhub__col">
+                        <div className="subhub__col-head">
+                          <div>
+                            <h3>{t("subjectsHub.pickSubjects")}</h3>
+                            <p className="subhub__hint">
+                              {t("subjectsHub.pickSubjectsForClass")}
+                            </p>
+                          </div>
+                          <div className="subhub__quick-acts">
+                            <button
+                              type="button"
+                              className="subhub__link-btn"
+                              onClick={() =>
+                                setAssignedIds(
+                                  master
+                                    .filter((s) => s.id && s.isActive !== false)
+                                    .map((s) => s.id!),
+                                )
+                              }
+                            >
+                              {t("subjectsHub.selectAllSubjects")}
+                            </button>
+                            <button
+                              type="button"
+                              className="subhub__link-btn"
+                              onClick={() => setAssignedIds([])}
+                            >
+                              {t("subjectsHub.clearSubjects")}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="subhub__checklist">
+                          {master
+                            .filter((s) => s.id && s.isActive !== false)
+                            .map((s) => {
+                              const on = assignedIds.includes(s.id!);
+                              return (
+                                <button
+                                  key={s.id}
+                                  type="button"
                                   className={cn(
-                                    "h-4 w-4",
-                                    on ? "opacity-100" : "opacity-30",
+                                    "subhub__check",
+                                    on && "subhub__check--on",
                                   )}
-                                />
-                                <span className="subhub__check-body">
-                                  <span className="subhub__check-name">
+                                  onClick={() => toggleAssigned(s.id!)}
+                                  aria-pressed={on}
+                                >
+                                  <CheckSquare
+                                    className={cn(
+                                      "h-4 w-4 shrink-0",
+                                      on ? "opacity-100" : "opacity-30",
+                                    )}
+                                  />
+                                  <span className="subhub__check-body">
+                                    <span className="subhub__check-name">
+                                      {s.name}
+                                    </span>
+                                    <span className="subhub__check-meta">
+                                      {s.code}
+                                    </span>
+                                  </span>
+                                </button>
+                              );
+                            })}
+                        </div>
+                      </div>
+
+                      <div className="subhub__col">
+                        <h3>
+                          {t("subjectsHub.assignedOrder")}{" "}
+                          <span className="subhub__count">
+                            {assignedOrdered.length}
+                          </span>
+                        </h3>
+                        <p className="subhub__hint">
+                          {t("subjectsHub.assignedOrderHint")}
+                        </p>
+                        {assignedOrdered.length === 0 ? (
+                          <p className="subhub__muted">
+                            {t("subjectsHub.noneAssigned")}
+                          </p>
+                        ) : (
+                          <ul className="subhub__order-list">
+                            {assignedOrdered.map((s, i) => (
+                              <li key={s.id}>
+                                <span className="subhub__order-idx">
+                                  {i + 1}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate font-semibold text-slate-900">
                                     {s.name}
                                   </span>
-                                  <span className="subhub__check-meta">
+                                  <span className="text-xs text-slate-500">
                                     {s.code}
                                   </span>
                                 </span>
-                              </button>
-                            );
-                          })}
+                                <button
+                                  type="button"
+                                  className="subhub__icon-btn"
+                                  disabled={i === 0}
+                                  aria-label="Move up"
+                                  onClick={() => moveAssigned(s.id!, -1)}
+                                >
+                                  <ChevronUp className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="subhub__icon-btn"
+                                  disabled={i === assignedOrdered.length - 1}
+                                  aria-label="Move down"
+                                  onClick={() => moveAssigned(s.id!, 1)}
+                                >
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     </div>
 
-                    <div className="subhub__col">
-                      <h3>
-                        {t("subjectsHub.assignedOrder")}{" "}
-                        <span className="subhub__count">
-                          {assignedOrdered.length}
-                        </span>
-                      </h3>
-                      <p className="subhub__hint">
-                        {t("subjectsHub.assignedOrderHint")}
-                      </p>
-                      {assignedOrdered.length === 0 ? (
-                        <p className="subhub__muted">
-                          {t("subjectsHub.noneAssigned")}
+                    <div className="subhub__sticky-save">
+                      {!assignedOrdered.length ? (
+                        <p className="subhub__sticky-hint">
+                          {t("subjectsHub.pickAtLeastOne")}
                         </p>
-                      ) : (
-                        <ul className="subhub__order-list">
-                          {assignedOrdered.map((s, i) => (
-                            <li key={s.id}>
-                              <span className="subhub__order-idx">{i + 1}</span>
-                              <span className="min-w-0 flex-1">
-                                <span className="block font-semibold text-slate-900">
-                                  {s.name}
-                                </span>
-                                <span className="text-xs text-slate-500">
-                                  {s.code}
-                                </span>
-                              </span>
-                              <button
-                                type="button"
-                                className="subhub__icon-btn"
-                                disabled={i === 0}
-                                onClick={() => moveAssigned(s.id!, -1)}
-                              >
-                                <ChevronUp className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                className="subhub__icon-btn"
-                                disabled={i === assignedOrdered.length - 1}
-                                onClick={() => moveAssigned(s.id!, 1)}
-                              >
-                                <ChevronDown className="h-3.5 w-3.5" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <div className="subhub__actions subhub__actions--end mt-4">
-                        <Button
-                          type="button"
-                          disabled={classSaving}
-                          onClick={() => void saveClassSubjects()}
-                        >
-                          {classSaving ? (
-                            <Spinner size="sm" />
-                          ) : (
-                            <Save className="h-3.5 w-3.5" />
-                          )}
-                          {t("subjectsHub.saveClassSubjects")}
-                        </Button>
-                      </div>
+                      ) : null}
+                      <Button
+                        type="button"
+                        disabled={classSaving || !assignedOrdered.length}
+                        onClick={() => void saveClassSubjects()}
+                        className="w-full sm:w-auto"
+                      >
+                        {classSaving ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <Save className="h-3.5 w-3.5" />
+                        )}
+                        {t("subjectsHub.saveClassSubjects")}
+                      </Button>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             )}
@@ -862,8 +1045,10 @@ export default function SubjectsHubPage() {
             value={draft.name}
             onChange={(e) => updateDraft({ name: e.target.value })}
             placeholder={t("subjectsHub.namePh")}
+            error={draftErrors.name}
             required
             autoFocus
+            maxLength={80}
           />
           <div className="subhub__modal-grid">
             <Input
@@ -871,12 +1056,16 @@ export default function SubjectsHubPage() {
               value={draft.code}
               onChange={(e) => updateDraft({ code: e.target.value })}
               className="font-mono"
+              error={draftErrors.code}
               required
+              maxLength={12}
             />
             <Input
               label={t("subjectsHub.colShort")}
               value={draft.shortName}
               onChange={(e) => updateDraft({ shortName: e.target.value })}
+              error={draftErrors.shortName}
+              maxLength={8}
             />
           </div>
           <p className="subhub__modal-hint">{t("subjectsHub.modalHint")}</p>

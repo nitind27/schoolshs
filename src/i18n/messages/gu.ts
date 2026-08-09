@@ -444,7 +444,7 @@ const gu: Messages = {
     modalAddTitle: "વિષય ઉમેરો",
     modalEditTitle: "વિષય સંપાદન",
     modalHint:
-      "કોડ અનન્ય હોવો જોઈએ (દા.ત. GUJ, MATH). ગ્રેડ વિષયોમાં ગુણ નહીં, ગ્રેડ વપરાય.",
+      "કોડ અનન્ય, 2–12 અક્ષર (દા.ત. GUJ, MATH). ટૂંકું નામ વધુમાં વધુ 8 અક્ષર.",
     modalRequired: "નામ અને કોડ જરૂરી છે",
     modalDuplicateCode: "આ વિષય કોડ પહેલેથી છે",
     modalAdded: "વિષય ઉમેરાયો",
@@ -454,6 +454,16 @@ const gu: Messages = {
     deleteHint:
       "જે વર્ગમાં પહેલેથી છે તે ત્યાં સુધી રહેશે જ્યાં સુધી તે વર્ગ ફરી એડિટ ન કરો.",
     deleteDone: "વિષય કાઢી નાખ્યો",
+    formHasErrors: "લાલ ફીલ્ડ સુધારો",
+    masterHasErrors: "સેવ પહેલાં {{count}} પંક્તિ સુધારો",
+    errNameRequired: "વિષયનું નામ જરૂરી છે",
+    errNameLong: "નામ 80 અક્ષરથી વધુ ન હોવું જોઈએ",
+    errCodeRequired: "કોડ જરૂરી છે",
+    errCodeFormat: "કોડ: 2–12 અક્ષર/અંક/_ (દા.ત. MATH)",
+    errCodeDup: "આ કોડ પહેલેથી વપરાયેલ છે",
+    errShortLong: "ટૂંકું નામ વધુમાં વધુ 8 અક્ષર",
+    selectAllSubjects: "બધા પસંદ",
+    clearSubjects: "સાફ",
   },
   examsHub: {
     title: "પરીક્ષાઓ",

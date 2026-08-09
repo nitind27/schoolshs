@@ -449,7 +449,7 @@ const en = {
     modalAddTitle: "Add subject",
     modalEditTitle: "Edit subject",
     modalHint:
-      "Code must be unique (e.g. GUJ, MATH). Grade subjects use grade instead of marks.",
+      "Code must be unique, 2–12 chars (e.g. GUJ, MATH). Short name max 8 characters.",
     modalRequired: "Name and code are required",
     modalDuplicateCode: "This subject code already exists",
     modalAdded: "Subject added",
@@ -460,6 +460,16 @@ const en = {
     deleteHint:
       "Classes that already have this subject keep it until you edit that class again.",
     deleteDone: "Subject deleted",
+    formHasErrors: "Please fix the highlighted fields",
+    masterHasErrors: "Fix {{count}} subject row(s) before saving",
+    errNameRequired: "Subject name is required",
+    errNameLong: "Name must be 80 characters or less",
+    errCodeRequired: "Code is required",
+    errCodeFormat: "Code: 2–12 letters/numbers/underscore (e.g. MATH)",
+    errCodeDup: "This code is already used",
+    errShortLong: "Short name max 8 characters",
+    selectAllSubjects: "Select all",
+    clearSubjects: "Clear",
   },
   examsHub: {
     title: "Exams",
