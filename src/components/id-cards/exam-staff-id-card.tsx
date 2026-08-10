@@ -71,7 +71,7 @@ function ExamQr({ value }: { value: string }) {
     QRCode.toDataURL(text, {
       errorCorrectionLevel: "M",
       margin: 1,
-      width: 160,
+      width: 200,
       color: { dark: "#123a5c", light: "#ffffff" },
     })
       .then((url) => {

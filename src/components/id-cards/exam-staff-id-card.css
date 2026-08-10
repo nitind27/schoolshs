@@ -61,19 +61,19 @@
 .exam-id-card__head {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: 7.2mm 1fr auto;
-  gap: 1.5mm;
+  grid-template-columns: 9.5mm 1fr auto;
+  gap: 1.6mm;
   align-items: center;
   min-height: 0;
 }
 
 .exam-id-card__logo {
-  width: 7.2mm;
-  height: 7.2mm;
-  border-radius: 1mm;
+  width: 9.5mm;
+  height: 9.5mm;
+  border-radius: 1.2mm;
   overflow: hidden;
   background: #fff;
-  border: 0.22mm solid var(--exam-line);
+  border: 0.25mm solid var(--exam-line);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -91,7 +91,7 @@
 
 .exam-id-card__kicker {
   margin: 0;
-  font-size: 1.45mm;
+  font-size: 1.55mm;
   font-weight: 750;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -100,14 +100,14 @@
 }
 
 .exam-id-card__school-name {
-  margin: 0.2mm 0 0;
-  font-size: 2.35mm;
-  font-weight: 800;
+  margin: 0.25mm 0 0;
+  font-size: 2.95mm;
+  font-weight: 850;
   line-height: 1.15;
   letter-spacing: -0.01em;
   color: var(--exam-navy);
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -153,13 +153,13 @@
 
 .exam-id-card__title-bar {
   flex: 0 0 auto;
-  margin-top: 0.9mm;
-  padding: 0.45mm 1.4mm;
+  margin-top: 0.7mm;
+  padding: 0.5mm 1.4mm;
   border-radius: 999px;
   background: linear-gradient(90deg, rgba(201, 162, 39, 0.2), rgba(18, 58, 92, 0.08));
   border: 0.18mm solid rgba(201, 162, 39, 0.45);
   color: var(--exam-navy);
-  font-size: 1.55mm;
+  font-size: 1.7mm;
   font-weight: 800;
   letter-spacing: 0.07em;
   text-align: center;
@@ -174,18 +174,18 @@
 .exam-id-card__body {
   flex: 1 1 auto;
   min-height: 0;
-  max-height: 18.5mm;
+  max-height: 17.5mm;
   display: grid;
-  grid-template-columns: 13.5mm minmax(0, 1fr) 11mm;
-  gap: 1.5mm;
-  margin-top: 1mm;
+  grid-template-columns: 13mm minmax(0, 1fr) 13.5mm;
+  gap: 1.3mm;
+  margin-top: 0.75mm;
   align-items: start;
   overflow: hidden;
 }
 
 .exam-id-card__photo {
-  width: 13.5mm;
-  height: 16mm;
+  width: 13mm;
+  height: 15.5mm;
   border-radius: 1mm;
   overflow: hidden;
   border: 0.28mm solid var(--exam-navy);
@@ -284,14 +284,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.35mm;
-  padding-top: 0.2mm;
+  gap: 0.3mm;
+  padding-top: 0;
 }
 
 .exam-id-card__qr {
-  width: 10.5mm;
-  height: 10.5mm;
-  border-radius: 0.5mm;
+  width: 12.5mm;
+  height: 12.5mm;
+  border-radius: 0.55mm;
   border: 0.15mm solid rgba(18, 58, 92, 0.2);
   background: #fff;
   object-fit: contain;
