@@ -668,6 +668,10 @@ export function SchoolLandingPage() {
               <p>{t("common.copyright")}</p>
               <span className="lp-footer-dot" aria-hidden />
               <p className="lp-managed-by">{t("landing.managedBy")}</p>
+              <span className="lp-footer-dot" aria-hidden />
+              <Link href="/privacy" className="lp-footer-privacy">
+                Privacy Policy
+              </Link>
             </div>
             <a href="#top" className="lp-footer-top">
               {t("landing.footerBackTop")}

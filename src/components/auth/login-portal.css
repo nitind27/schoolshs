@@ -919,6 +919,18 @@ html.locale-gu .auth-portal h1 {
   transition: opacity 0.25s ease;
 }
 
+.auth-portal-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 1rem;
+}
+
+.auth-portal-footer-links .auth-portal-back {
+  margin-top: 0.15rem;
+}
+
 .auth-portal-back:hover {
   opacity: 0.8;
 }

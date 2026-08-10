@@ -1748,6 +1748,19 @@ html.locale-gu .lp-module-modal-root {
   color: rgb(215 228 223 / 0.62);
 }
 
+.lp-footer-privacy {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgb(244 250 247 / 0.88);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  transition: color 0.15s ease;
+}
+
+.lp-footer-privacy:hover {
+  color: #fbbf24;
+}
+
 .lp-footer-dot {
   width: 3px;
   height: 3px;

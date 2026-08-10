@@ -1003,10 +1003,15 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
 
             <div className="auth-portal-footer">
               <p className="auth-portal-managed">{t("landing.managedBy")}</p>
-              <Link href="/" className="auth-portal-back">
-                <ArrowLeft className="h-3.5 w-3.5" />
-                {t("landing.productName")}
-              </Link>
+              <div className="auth-portal-footer-links">
+                <Link href="/privacy" className="auth-portal-back">
+                  Privacy Policy
+                </Link>
+                <Link href="/" className="auth-portal-back">
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  {t("landing.productName")}
+                </Link>
+              </div>
             </div>
           </div>
         </div>
