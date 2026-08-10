@@ -24,21 +24,21 @@ const COMPANY = "Codeat Infotech";
 const SUPPORT_PATH = "/#contact";
 
 const SECTIONS = [
-  { id: "intro", label: "Introduction" },
-  { id: "who", label: "Who we are" },
-  { id: "scope", label: "Who this covers" },
-  { id: "data", label: "Data we collect" },
-  { id: "staff", label: "Staff panel" },
-  { id: "student", label: "Student panel" },
-  { id: "mobile", label: "Mobile app & permissions" },
-  { id: "use", label: "How we use data" },
-  { id: "share", label: "Sharing & third parties" },
-  { id: "security", label: "Security" },
-  { id: "retention", label: "Retention & deletion" },
-  { id: "children", label: "Children’s privacy" },
-  { id: "rights", label: "Your rights" },
-  { id: "changes", label: "Policy changes" },
-  { id: "contact", label: "Contact" },
+  { id: "intro", label: "Introduction", short: "Intro" },
+  { id: "who", label: "Who we are", short: "Who" },
+  { id: "scope", label: "Who this covers", short: "Scope" },
+  { id: "data", label: "Data we collect", short: "Data" },
+  { id: "staff", label: "Staff panel", short: "Staff" },
+  { id: "student", label: "Student panel", short: "Student" },
+  { id: "mobile", label: "Mobile app & permissions", short: "Mobile" },
+  { id: "use", label: "How we use data", short: "Use" },
+  { id: "share", label: "Sharing & third parties", short: "Sharing" },
+  { id: "security", label: "Security", short: "Security" },
+  { id: "retention", label: "Retention & deletion", short: "Retention" },
+  { id: "children", label: "Children’s privacy", short: "Children" },
+  { id: "rights", label: "Your rights", short: "Rights" },
+  { id: "changes", label: "Policy changes", short: "Changes" },
+  { id: "contact", label: "Contact", short: "Contact" },
 ] as const;
 
 export default function PrivacyPolicyPage() {
@@ -87,7 +87,9 @@ export default function PrivacyPolicyPage() {
             </span>
           </Link>
           <nav className="privacy-top-links" aria-label="Quick links">
-            <Link href="/login">Staff / Student Login</Link>
+            <Link href="/login" className="privacy-top-login">
+              Login
+            </Link>
             <Link href={SUPPORT_PATH} className="privacy-top-cta">
               Contact
             </Link>
@@ -136,7 +138,8 @@ export default function PrivacyPolicyPage() {
                     onClick={() => setActive(s.id)}
                   >
                     <span>{String(i + 1).padStart(2, "0")}</span>
-                    {s.label}
+                    <em className="privacy-toc-full">{s.label}</em>
+                    <em className="privacy-toc-short">{s.short}</em>
                   </a>
                 </li>
               ))}
