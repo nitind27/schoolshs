@@ -192,6 +192,7 @@ export function BonafideCertificateView({
   student: CertStudent;
   serialNo: string;
   issueDate?: string;
+  copies?: 1 | 2;
 }) {
   const school = useCertificateBrand();
   const name = studentFullName(student);
