@@ -1,0 +1,464 @@
+/* Songadh Primary — પરીક્ષા અહેવાલ (physical register scan match) */
+
+.ser-root {
+  color: #111;
+  font-family: "Noto Sans Gujarati", "Shruti", Arial, sans-serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.ser-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto 12px;
+  padding: 5mm 6mm;
+  box-sizing: border-box;
+  background: #e8efe0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.ser-sheet--student,
+.ser-sheet--student-batch {
+  display: flex;
+  flex-direction: column;
+}
+
+.ser-block-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5mm;
+  flex: 1;
+  justify-content: space-between;
+}
+
+/* ── Student block ── */
+.ser-student-block {
+  border: 1.5px solid #111;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e8efe0;
+}
+
+.ser-student-block--compact {
+  flex: 1;
+  min-height: 0;
+}
+
+.ser-student-block--compact .ser-student-inner {
+  min-height: 0;
+  height: 88mm;
+}
+
+.ser-student-block--compact .ser-name-extra--compact .ser-name-line {
+  margin-bottom: 2mm;
+}
+
+.ser-top-head {
+  display: grid;
+  grid-template-columns: 16mm 1fr 7mm minmax(0, 1.05fr);
+  border-bottom: 1px solid #111;
+  font-size: 7pt;
+  font-weight: 700;
+  text-align: center;
+  background: #e8efe0;
+  align-items: stretch;
+}
+
+.ser-th-sr {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5mm;
+  padding: 1.5mm 1mm;
+  border-right: 1px solid #111;
+  line-height: 1.15;
+}
+
+.ser-th-sr strong {
+  font-size: 9pt;
+}
+
+.ser-th-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5mm 2mm;
+  border-right: 1px solid #111;
+}
+
+.ser-th-rail {
+  border-right: 1px solid #111;
+  background: #e8efe0;
+}
+
+.ser-th-marks {
+  display: grid;
+  grid-template-columns: 1fr 11mm 14mm;
+  align-items: center;
+}
+
+.ser-th-marks > span {
+  padding: 1.5mm 1mm;
+  border-right: 1px solid #111;
+}
+
+.ser-th-marks > span:last-child {
+  border-right: none;
+}
+
+.ser-student-inner {
+  display: grid;
+  grid-template-columns: 20mm 1fr 7mm minmax(0, 1.05fr);
+  min-height: 112mm;
+}
+
+.ser-left-col {
+  border-right: 1px solid #111;
+  display: flex;
+  flex-direction: column;
+}
+
+.ser-left-box {
+  flex: 1;
+  border-bottom: 1px solid #111;
+  padding: 1.5mm 1mm;
+  font-size: 6pt;
+  line-height: 1.2;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.ser-left-box:last-child {
+  border-bottom: none;
+}
+
+.ser-left-input {
+  margin: 1mm auto 0;
+  width: 13mm;
+  height: 9mm;
+  border: 1px solid #111;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7.5pt;
+  font-weight: 700;
+}
+
+.ser-left-input--split {
+  height: 4.5mm;
+  width: 11mm;
+}
+
+.ser-left-inputs-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8mm;
+  align-items: center;
+  margin-top: 0.5mm;
+}
+
+.ser-name-col {
+  border-right: 1px solid #111;
+  padding: 2.5mm 3mm 2mm;
+  font-size: 7.5pt;
+  line-height: 1.9;
+}
+
+.ser-name-line {
+  border-bottom: 1px dotted #444;
+  min-height: 1.15em;
+  padding: 0 1mm;
+  font-weight: 600;
+  display: inline-block;
+  min-width: 55%;
+}
+
+.ser-name-extra {
+  margin-top: 3mm;
+}
+
+.ser-name-extra .ser-name-line {
+  display: block;
+  width: 100%;
+  margin-bottom: 2.5mm;
+}
+
+.ser-term-rail {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #111;
+}
+
+.ser-term-label {
+  flex: 1;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 6.5pt;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid #111;
+  padding: 1.5mm 0;
+}
+
+.ser-term-label:last-child {
+  border-bottom: none;
+}
+
+.ser-marks-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ser-marks-head {
+  display: grid;
+  grid-template-columns: 5.5mm 1fr 11mm 14mm;
+  border-bottom: 1px solid #111;
+  font-size: 6.5pt;
+  font-weight: 700;
+  text-align: center;
+  background: #e8efe0;
+}
+
+.ser-marks-head > span {
+  padding: 1.2mm 0.8mm;
+  border-right: 1px solid #111;
+}
+
+.ser-marks-head > span:last-child {
+  border-right: none;
+}
+
+.ser-term-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #111;
+}
+
+.ser-term-section:last-child {
+  border-bottom: none;
+}
+
+.ser-mark-row {
+  display: grid;
+  grid-template-columns: 5.5mm 1fr 11mm 14mm;
+  flex: 1;
+  border-bottom: 1px solid #111;
+  font-size: 6pt;
+  min-height: 0;
+}
+
+.ser-mark-row:last-child {
+  border-bottom: none;
+}
+
+.ser-mark-row > span {
+  border-right: 1px solid #111;
+  padding: 0.8mm;
+  display: flex;
+  align-items: center;
+}
+
+.ser-mark-row > span:last-child {
+  border-right: none;
+}
+
+.ser-mark-no {
+  justify-content: center;
+  font-weight: 600;
+  font-size: 6.5pt;
+}
+
+.ser-mark-label {
+  line-height: 1.15;
+  padding-left: 1mm;
+}
+
+.ser-mark-val {
+  justify-content: center;
+  font-weight: 700;
+  font-size: 6.5pt;
+}
+
+/* ── Subject grids (page 2) ── */
+.ser-grids-page {
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.ser-grid-wrap {
+  border: 1.5px solid #111;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #e8efe0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ser-grid-student-tag {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2mm 4mm;
+  align-items: center;
+  padding: 1mm 2.5mm;
+  font-size: 6pt;
+  font-weight: 700;
+  border-bottom: 1px solid #111;
+  background: #dde8d4;
+}
+
+.ser-grid-student-tag .ser-grid-term-tag {
+  margin-left: auto;
+  font-size: 6.5pt;
+  letter-spacing: 0.04em;
+}
+
+.ser-student-block--empty {
+  visibility: hidden;
+  pointer-events: none;
+  border-color: transparent;
+  min-height: 88mm;
+}
+
+.ser-grid-table {
+  width: 100%;
+  height: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 6pt;
+}
+
+.ser-grid-table th,
+.ser-grid-table td {
+  border: 1px solid #111;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.1;
+  padding: 0;
+}
+
+.ser-grid-table th {
+  font-weight: 700;
+  height: 20mm;
+  background: #e8efe0;
+}
+
+.ser-col-head {
+  width: calc(100% / 14);
+  padding: 0 !important;
+}
+
+.ser-col-head-text {
+  display: inline-block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 5pt;
+  line-height: 1.15;
+  max-height: 18mm;
+  white-space: normal;
+  text-align: center;
+  padding: 1mm 0;
+}
+
+/* First 6 subject cols slightly wider */
+.ser-grid-table th:nth-child(-n + 6),
+.ser-grid-table td:nth-child(-n + 6) {
+  width: 7.2%;
+}
+
+.ser-grid-table th:nth-child(n + 7):nth-child(-n + 11),
+.ser-grid-table td:nth-child(n + 7):nth-child(-n + 11) {
+  width: 6.8%;
+}
+
+.ser-grid-table th:nth-child(n + 12),
+.ser-grid-table td:nth-child(n + 12) {
+  width: 6%;
+}
+
+.ser-grid-table td {
+  height: calc((100% - 20mm) / 12);
+  min-height: 5.5mm;
+  font-weight: 600;
+  font-size: 6pt;
+}
+
+.ser-grids-page--dense .ser-grid-table th {
+  height: 16mm;
+}
+
+.ser-grids-page--dense .ser-col-head-text {
+  max-height: 14mm;
+  font-size: 4.8pt;
+}
+
+.ser-grids-page--dense .ser-grid-table td {
+  min-height: 3.6mm;
+  height: 3.6mm;
+  font-size: 5.5pt;
+}
+
+.ser-sheet--subjects {
+  display: flex;
+  flex-direction: column;
+}
+
+.ser-register-batch {
+  display: contents;
+}
+
+@media print {
+  .ser-sheet {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    margin: 0 !important;
+    padding: 5mm 6mm !important;
+    box-shadow: none !important;
+    background: #e8efe0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .ser-sheet--break {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .ser-root > .ser-sheet:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  .ser-student-block,
+  .ser-grid-wrap {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .ser-term-label {
+    background: #1a1a1a !important;
+    color: #fff !important;
+  }
+}
+
+@media screen {
+  .ser-root {
+    overflow-x: auto;
+    padding-bottom: 16px;
+  }
+}

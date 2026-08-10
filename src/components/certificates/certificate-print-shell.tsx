@@ -40,13 +40,14 @@ export function CertificatePrintShell({
 
   const packId =
     packIdProp ||
-    formats?.certificates ||
     (() => {
+      const assigned = (formats?.certificates || "").trim();
+      if (assigned && assigned !== "default") return assigned;
       const code = (letterhead?.code || letterhead?.udiseCode || "").trim();
       if (code === "24261004403" || code === "24261004404" || code === "24261004405") {
         return code;
       }
-      return "default";
+      return assigned || "default";
     })();
 
   return (
@@ -171,7 +172,14 @@ export function CertificatePrintShell({
             page-break-after: avoid !important;
           }
           .no-print { display: none !important; visibility: hidden !important; }
-          aside, nav, header { display: none !important; }
+          /* Hide app chrome only — not certificate/result content tags */
+          .shell-aside,
+          aside.shell-aside,
+          aside.admin-aside,
+          nav.shell-nav,
+          header.tn-shell,
+          header.shell-topbar,
+          header.app-header { display: none !important; }
           main { padding: 0 !important; margin: 0 !important; }
           .lg\\:pl-\\[260px\\] { padding-left: 0 !important; }
           .cert-preview-frame {

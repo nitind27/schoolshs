@@ -112,6 +112,11 @@ export const MODULE_FORMAT_OPTIONS: Record<ModuleFormatKey, ModuleFormatOption[]
   results: [
     { id: "default", label: "School result format", description: "Internal exam report cards" },
     { id: "gseb", label: "GSEB-style marks sheet", description: "Board-style marks register" },
+    {
+      id: "songadh-pragati",
+      label: "પ્રગતિપત્રક · Songadh Primary (403/404)",
+      description: "Only used automatically for school codes 24261004403 & 24261004404",
+    },
   ],
   board_records: [
     { id: "default", label: "Standard board panel", description: "Board records + analysis" },

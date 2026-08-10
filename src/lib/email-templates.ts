@@ -298,3 +298,213 @@ Keep this email private. Do not share your password.`;
   };
 }
 
+function detailRow(label: string, value: string | null | undefined) {
+  if (!value?.trim()) return "";
+  return `<tr>
+    <td style="padding:5px 10px 5px 0;width:38%;color:#64748b;font-size:13px;vertical-align:top;">${escapeHtml(label)}</td>
+    <td style="padding:5px 0;font-size:13px;font-weight:600;color:#0f172a;vertical-align:top;">${escapeHtml(value.trim())}</td>
+  </tr>`;
+}
+
+function detailsTable(title: string, rowsHtml: string) {
+  if (!rowsHtml.trim()) return "";
+  return `
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0 0;border-collapse:collapse;">
+  <tr>
+    <td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#475569;margin-bottom:10px;">${escapeHtml(title)}</div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">${rowsHtml}</table>
+    </td>
+  </tr>
+</table>`;
+}
+
+function formatEmailDate(value: Date | string | null | undefined): string {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+/** Welcome email when Super Admin registers a school + admin account */
+export function buildSchoolAdminWelcomeEmail(params: {
+  adminName: string;
+  loginEmail: string;
+  password: string;
+  loginUrl: string;
+  emailVerified?: boolean;
+  school: {
+    name: string;
+    code: string;
+    udiseCode?: string | null;
+    district?: string | null;
+    taluka?: string | null;
+    city?: string | null;
+    pincode?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    alternatePhone?: string | null;
+    email?: string | null;
+    website?: string | null;
+    principalName?: string | null;
+    schoolType?: string | null;
+    boardAffiliation?: string | null;
+  };
+  subscription?: {
+    planName?: string | null;
+    contractNumber?: string | null;
+    contractStartDate?: Date | string | null;
+    contractEndDate?: Date | string | null;
+    paymentStatus?: string | null;
+    totalAmount?: string | number | null;
+    paidAmount?: string | number | null;
+    nextDueDate?: Date | string | null;
+  } | null;
+  enabledFeatureLabels?: string[];
+}) {
+  const admin = escapeHtml(params.adminName);
+  const schoolName = escapeHtml(params.school.name);
+  const email = escapeHtml(params.loginEmail);
+  const password = escapeHtml(params.password);
+  const code = escapeHtml(params.school.code);
+
+  const location = [params.school.city, params.school.taluka, params.school.district]
+    .filter(Boolean)
+    .join(", ");
+
+  const credBox = `
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 4px;border-collapse:collapse;">
+  <tr>
+    <td style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px 18px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#1d4ed8;margin-bottom:10px;">Portal login credentials</div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;color:#334155;">
+        <tr>
+          <td style="padding:6px 0;width:130px;color:#64748b;">Login URL</td>
+          <td style="padding:6px 0;font-weight:600;color:#0f172a;word-break:break-all;">${escapeHtml(params.loginUrl)}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#64748b;">Username (Email)</td>
+          <td style="padding:6px 0;font-weight:700;color:#0f172a;">${email}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#64748b;">Password</td>
+          <td style="padding:6px 0;font-weight:800;font-size:20px;letter-spacing:3px;font-family:'Courier New',Courier,monospace;color:#1d4ed8;">${password}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#64748b;">School code</td>
+          <td style="padding:6px 0;font-weight:700;color:#0f172a;">${code}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#64748b;">Role</td>
+          <td style="padding:6px 0;font-weight:600;color:#0f172a;">School Admin</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+
+  const schoolRows =
+    detailRow("School name", params.school.name) +
+    detailRow("School code", params.school.code) +
+    detailRow("UDISE code", params.school.udiseCode) +
+    detailRow("School type", params.school.schoolType) +
+    detailRow("Board / affiliation", params.school.boardAffiliation) +
+    detailRow("Principal", params.school.principalName) +
+    detailRow("Address", params.school.address) +
+    detailRow("Location", location) +
+    detailRow("PIN code", params.school.pincode) +
+    detailRow("Phone", params.school.phone) +
+    detailRow("Alternate phone", params.school.alternatePhone) +
+    detailRow("School email", params.school.email) +
+    detailRow("Website", params.school.website);
+
+  const sub = params.subscription;
+  const subscriptionRows =
+    detailRow("Plan", sub?.planName) +
+    detailRow("Contract no.", sub?.contractNumber) +
+    detailRow("Contract start", formatEmailDate(sub?.contractStartDate ?? null)) +
+    detailRow("Contract end", formatEmailDate(sub?.contractEndDate ?? null)) +
+    detailRow("Payment status", sub?.paymentStatus) +
+    detailRow("Total amount", sub?.totalAmount != null ? String(sub.totalAmount) : "") +
+    detailRow("Paid amount", sub?.paidAmount != null ? String(sub.paidAmount) : "") +
+    detailRow("Next due date", formatEmailDate(sub?.nextDueDate ?? null));
+
+  const featuresBlock =
+    params.enabledFeatureLabels && params.enabledFeatureLabels.length
+      ? detailsTable(
+          "Enabled modules",
+          `<tr><td colspan="2" style="padding:4px 0;font-size:13px;color:#0f172a;line-height:1.6;">${escapeHtml(params.enabledFeatureLabels.join(" · "))}</td></tr>`,
+        )
+      : "";
+
+  const verifiedNote = params.emailVerified
+    ? `<p style="margin:14px 0 0;padding:10px 12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;color:#065f46;font-size:13px;">Your email is already verified. You can sign in immediately using the credentials above.</p>`
+    : `<p style="margin:14px 0 0;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;color:#92400e;font-size:13px;">You may receive a separate OTP email to verify your address before first login.</p>`;
+
+  const html = buildEmailHtml({
+    title: "Your school is registered on SHS Portal",
+    preheader: `${params.school.name} — login details and school profile`,
+    bodyHtml: `
+      <div style="padding:0 16px;">
+        <p style="margin:0 0 14px;color:#334155;">Hello <strong>${admin}</strong>,</p>
+        <p style="margin:0 0 14px;color:#334155;">
+          <strong>${schoolName}</strong> has been registered on the SHS Education Portal.
+          You have been assigned as <strong>School Admin</strong>. Please save this email — it contains your login credentials and school details.
+        </p>
+        ${credBox}
+        ${verifiedNote}
+        ${detailsTable("School profile", schoolRows)}
+        ${detailsTable("Subscription & contract", subscriptionRows)}
+        ${featuresBlock}
+        <p style="margin:16px 0 0;color:#64748b;font-size:13px;">
+          Keep this email private. Change your password after first login. For support, contact the SHS platform team.
+        </p>
+      </div>
+    `,
+    ctaLabel: "Open Portal Login",
+    ctaUrl: params.loginUrl,
+    footerNote:
+      "Automated message from SHS Education Portal · Super Admin school registration. Do not share your password.",
+  });
+
+  const textLines = [
+    `Hello ${params.adminName},`,
+    "",
+    `${params.school.name} has been registered on the SHS Education Portal.`,
+    "You are the School Admin. Save this email for your records.",
+    "",
+    "—— LOGIN ——",
+    `Login URL: ${params.loginUrl}`,
+    `Username: ${params.loginEmail}`,
+    `Password: ${params.password}`,
+    `School code: ${params.school.code}`,
+    "Role: School Admin",
+    "",
+    "—— SCHOOL ——",
+    `Name: ${params.school.name}`,
+    params.school.udiseCode ? `UDISE: ${params.school.udiseCode}` : "",
+    params.school.address ? `Address: ${params.school.address}` : "",
+    location ? `Location: ${location}` : "",
+    params.school.phone ? `Phone: ${params.school.phone}` : "",
+    params.school.email ? `Email: ${params.school.email}` : "",
+    "",
+    sub?.planName ? `Plan: ${sub.planName}` : "",
+    sub?.contractNumber ? `Contract: ${sub.contractNumber}` : "",
+    sub?.paymentStatus ? `Payment: ${sub.paymentStatus}` : "",
+    "",
+    params.enabledFeatureLabels?.length
+      ? `Modules: ${params.enabledFeatureLabels.join(", ")}`
+      : "",
+    "",
+    params.emailVerified
+      ? "Your email is verified — you can sign in now."
+      : "Check your inbox for OTP verification if required before login.",
+  ].filter(Boolean);
+
+  return {
+    subject: `${params.school.name} — School Admin welcome & login details`,
+    html,
+    text: textLines.join("\n"),
+  };
+}
+

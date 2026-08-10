@@ -13,6 +13,8 @@ import { ExamTermDashboard, type TermStat } from "@/components/results/exam-term
 import type { ExamTermKey } from "@/lib/results/exam-terms";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGE_SIZE, paginateSlice } from "@/lib/pagination";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
+import { shouldUsePrimaryExamReport } from "@/lib/results/songadh-exam-report";
 
 type StudentRow = {
   id: string;
@@ -38,6 +40,7 @@ function StatusIcon({ status }: { status: StudentRow["marksStatus"] }) {
 export default function ResultsClassPage() {
   const t = useT();
   const { confirm, ConfirmDialog } = useConfirm();
+  const { letterhead } = useSchoolFeatures();
   const params = useParams();
   const classId = params.classId as string;
   const [data, setData] = useState<{
@@ -200,6 +203,12 @@ export default function ResultsClassPage() {
 
   const { class: cls, exam, stats } = data;
 
+  const showExamReport = shouldUsePrimaryExamReport(
+    letterhead?.code,
+    letterhead?.udiseCode,
+    cls.standard,
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -224,9 +233,17 @@ export default function ResultsClassPage() {
               <Link href={`/results/print?examId=${exam.id}&classId=${classId}&mode=all`}>
                 <Button size="sm" className="bg-pink-600 hover:bg-pink-700">
                   <Printer className="h-4 w-4" />
-                  {t("results.printAllCount", { count: students.length })}
+                  {showExamReport ? "પ્રગતિપત્રક" : t("results.printAllCount", { count: students.length })}
                 </Button>
               </Link>
+              {showExamReport && (
+                <Link href={`/results/exam-report/print?examId=${exam.id}&classId=${classId}&mode=all`}>
+                  <Button size="sm" variant="outline" className="border-emerald-600 text-emerald-800 hover:bg-emerald-50">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    પરીક્ષા અહેવાલ (બધા)
+                  </Button>
+                </Link>
+              )}
             </>
           )}
           {exam && !stats.published && (
@@ -356,10 +373,10 @@ export default function ResultsClassPage() {
                               size="sm"
                               variant="outline"
                               className="gap-1 h-8 text-xs border-pink-300 text-pink-700 hover:bg-pink-50"
-                              title={t("results.printParticular")}
+                              title={showExamReport ? "પ્રગતિપત્રક" : t("results.printParticular")}
                             >
                               <Printer className="h-3.5 w-3.5" />
-                              {t("results.printParticular")}
+                              {showExamReport ? "પ્રગતિપત્રક" : t("results.printParticular")}
                             </Button>
                           </Link>
                         ) : (

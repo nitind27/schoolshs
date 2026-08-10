@@ -7,7 +7,10 @@ import { CertificateFilters } from "@/components/certificates/certificate-filter
 import { formatToday } from "@/lib/certificates/date-to-words";
 import { SAMPLE_BONAFIDE } from "@/lib/certificates/sample-data";
 import { getCertificateViewForType } from "@/lib/certificates/resolve-pack";
-import { useSchoolFeatures } from "@/components/school/use-school-features";
+import {
+  invalidateSchoolFeaturesCache,
+  useSchoolFeatures,
+} from "@/components/school/use-school-features";
 import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
@@ -16,11 +19,29 @@ import { studentShortNameGu } from "@/lib/student-names";
 function BonafideContent() {
   const t = useT();
   const searchParams = useSearchParams();
-  const { formats } = useSchoolFeatures();
-  const BonafideCertificateView = getCertificateViewForType(
-    formats?.certificates,
-    "bonafide",
-  ) as typeof import("@/components/certificates/bonafide-certificate").BonafideCertificateView;
+  const { formats, letterhead } = useSchoolFeatures();
+
+  // Prefer Super Admin pack; for 403/404/405 always use school-code pack when default
+  const packId = useMemo(() => {
+    const assigned = formats?.certificates?.trim();
+    if (assigned && assigned !== "default") return assigned;
+    const code = (letterhead?.code || letterhead?.udiseCode || "").trim();
+    if (code === "24261004403" || code === "24261004404" || code === "24261004405") {
+      return code;
+    }
+    return assigned || "default";
+  }, [formats?.certificates, letterhead?.code, letterhead?.udiseCode]);
+
+  const BonafideCertificateView = useMemo(
+    () =>
+      getCertificateViewForType(packId, "bonafide") as typeof import("@/components/certificates/bonafide-certificate").BonafideCertificateView,
+    [packId],
+  );
+
+  useEffect(() => {
+    invalidateSchoolFeaturesCache();
+  }, []);
+
   const lockedStudentId = searchParams.get("studentId") || "";
   const [filters, setFilters] = useState({
     classId: "",
@@ -45,6 +66,7 @@ function BonafideContent() {
   const [liveStudent, setLiveStudent] = useState<typeof SAMPLE_BONAFIDE.student | null>(null);
   const [serialNo, setSerialNo] = useState("");
   const [issueDate, setIssueDate] = useState(formatToday());
+  const [printCopies, setPrintCopies] = useState<1 | 2>(1);
   const autoLoadedRef = useRef(false);
 
   const lockedLabel = useMemo(() => {
@@ -97,6 +119,7 @@ function BonafideContent() {
 
   const student = source === "preview" ? SAMPLE_BONAFIDE.student : liveStudent;
   const isPreview = source === "preview";
+  const isPrimarySongadh = packId === "24261004403" || packId === "24261004404";
 
   return (
     <CertificatePrintShell
@@ -106,7 +129,15 @@ function BonafideContent() {
       onPreview={showPreview}
       onExitPreview={() => setSource(liveStudent ? "live" : "none")}
       canPrint={!!student}
+      packId={packId}
+      printMargin={isPrimarySongadh ? "5mm" : undefined}
     >
+      <p className="no-print mb-3 text-xs text-slate-500">
+        Format pack: <span className="font-mono">{packId}</span>
+        {isPrimarySongadh
+          ? " · Songadh Primary · full A4 · student photo"
+          : null}
+      </p>
       <CertificateFilters
         value={filters}
         onChange={setFilters}
@@ -130,8 +161,32 @@ function BonafideContent() {
           />
         </div>
       </div>
+      {student && isPrimarySongadh ? (
+        <div className="no-print flex flex-wrap items-end gap-4 mb-4">
+          <div>
+            <label className="text-sm font-medium block mb-1">Print copies</label>
+            <select
+              className="h-9 rounded-md border border-slate-300 bg-white px-3 text-sm"
+              value={printCopies}
+              onChange={(e) => setPrintCopies(Number(e.target.value) as 1 | 2)}
+            >
+              <option value={1}>1 copy — 1 A4 page</option>
+              <option value={2}>2 copies — 2 A4 pages (cut &amp; keep)</option>
+            </select>
+          </div>
+          <p className="text-xs text-slate-500 pb-1">
+            A4 Landscape · 1 full bonafide per page · Scale 100% · Fit to page OFF
+          </p>
+        </div>
+      ) : null}
       {student ? (
-        <BonafideCertificateView student={student} serialNo={serialNo} issueDate={issueDate} />
+        <BonafideCertificateView
+          key={`bonafide-${packId}-${student.grNumber || "x"}-${printCopies}`}
+          student={student}
+          serialNo={serialNo}
+          issueDate={issueDate}
+          copies={isPrimarySongadh ? printCopies : 1}
+        />
       ) : (
         <p className="no-print text-slate-500 text-center py-12">{t("certificates.previewOrLoad")}</p>
       )}

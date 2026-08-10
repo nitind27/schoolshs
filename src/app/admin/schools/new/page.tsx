@@ -126,6 +126,8 @@ export default function NewSchoolPage() {
   const [otpError, setOtpError] = useState("");
   const [stepError, setStepError] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [createdSchoolId, setCreatedSchoolId] = useState<string | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
   const [draftSummaries, setDraftSummaries] = useState<DraftSummary[]>([]);
@@ -511,6 +513,7 @@ export default function NewSchoolPage() {
       }
 
       const schoolId = data.id;
+
       if (logoFile && schoolId) {
         const fd = new FormData();
         fd.append("file", logoFile);
@@ -547,6 +550,22 @@ export default function NewSchoolPage() {
           method: "DELETE",
         }).catch(() => undefined);
       }
+
+      const adminEmail = formRef.current.adminEmail?.trim();
+      if (adminEmail) {
+        if (data.welcomeEmailSent) {
+          setSuccessMsg(
+            `School registered successfully. A welcome email with full login details and school profile has been sent to ${adminEmail}.`,
+          );
+        } else {
+          setSuccessMsg(
+            `School registered successfully. Welcome email was not sent${data.welcomeEmailError ? ` (${data.welcomeEmailError})` : ""}. Please share login credentials with the admin manually.`,
+          );
+        }
+        setCreatedSchoolId(schoolId);
+        return;
+      }
+
       router.push(`/admin/schools/${schoolId}`);
     } finally {
       setLoading(false);
@@ -1138,6 +1157,27 @@ export default function NewSchoolPage() {
         <p className="text-sm text-slate-600">{errorMsg}</p>
         <div className="mt-5 flex justify-end">
           <Button onClick={() => setErrorMsg(null)}>OK</Button>
+        </div>
+      </InfoModal>
+
+      <InfoModal
+        isOpen={!!successMsg}
+        onClose={() => {
+          setSuccessMsg(null);
+          if (createdSchoolId) router.push(`/admin/schools/${createdSchoolId}`);
+        }}
+        title="School created"
+      >
+        <p className="text-sm text-slate-600">{successMsg}</p>
+        <div className="mt-5 flex justify-end">
+          <Button
+            onClick={() => {
+              setSuccessMsg(null);
+              if (createdSchoolId) router.push(`/admin/schools/${createdSchoolId}`);
+            }}
+          >
+            OK
+          </Button>
         </div>
       </InfoModal>
     </div>

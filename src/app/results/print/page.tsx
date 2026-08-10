@@ -14,21 +14,37 @@ import {
   HigherSecondaryMidResultCards,
   type HigherSecondaryTermPrintData,
 } from "@/components/results/higher-secondary-mid-result-card";
+import {
+  SongadhPragatiPatrakCard,
+  SongadhPragatiPatrakCards,
+  type PragatiPatrakCardData,
+} from "@/components/results/songadh-pragati-patrak";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/locale-provider";
 import { studentFullNameGu } from "@/lib/student-names";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
+import {
+  isPragatiResultStandard,
+  shouldUsePragatiPatrakResult,
+} from "@/lib/results/pragati-patrak";
+import { CERTIFICATE_PACK_BRANDS } from "@/lib/certificates/school-brand";
 
-type PrintCard = ResultCardData & { hasMarks?: boolean };
+type PrintCard = ResultCardData & {
+  hasMarks?: boolean;
+  subjects: PragatiPatrakCardData["subjects"];
+};
 
 function PrintInner() {
   const t = useT();
   const params = useSearchParams();
+  const { letterhead, ready: featuresReady } = useSchoolFeatures();
   const examId = params.get("examId") || "";
   const studentId = params.get("studentId") || "";
   const classId = params.get("classId") || "";
   const termKey = params.get("term") || "";
   const mode = params.get("mode") || (studentId ? "particular" : "all");
   const [cards, setCards] = useState<PrintCard[]>([]);
+  const [schoolCode, setSchoolCode] = useState<string>("");
   const [termPrintData, setTermPrintData] =
     useState<HigherSecondaryTermPrintData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +52,9 @@ function PrintInner() {
 
   const isParticular = mode === "particular" && !!studentId;
   const isAll = mode === "all" || (!studentId && mode !== "particular");
+
+  const featureCode = (letterhead?.code || letterhead?.udiseCode || "").trim();
+  const effectiveSchoolCode = schoolCode || featureCode;
 
   useEffect(() => {
     if (!examId && !classId) return;
@@ -45,9 +64,12 @@ function PrintInner() {
       if (isParticular && studentId) q.set("studentId", studentId);
       if (classId) q.set("classId", classId);
 
-      const r = await fetch(`/api/results/print?${q}`);
+      const r = await fetch(`/api/results/print?${q}`, { cache: "no-store" });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Failed to load");
+
+      const code = String(d.school?.code || d.school?.udiseCode || "").trim();
+      if (code) setSchoolCode(code);
 
       const mapped: PrintCard[] = (d.cards || []).map((c: PrintCard) => ({
         student: c.student,
@@ -104,6 +126,23 @@ function PrintInner() {
   const printCards = isParticular
     ? cards.filter((c) => (c.student as { id?: string }).id === studentId)
     : cards;
+
+  const printStandard =
+    printCards[0]?.student.standard ||
+    (printCards[0]?.exam as { standard?: string } | undefined)?.standard ||
+    "";
+
+  const usePragatiPatrak =
+    shouldUsePragatiPatrakResult(
+      effectiveSchoolCode,
+      letterhead?.udiseCode,
+      printStandard,
+    ) &&
+    printCards.length > 0 &&
+    printCards.every((c) =>
+      isPragatiResultStandard(c.student.standard || printStandard),
+    );
+
   const visibleTermData = termPrintData
     ? {
         ...termPrintData,
@@ -123,11 +162,14 @@ function PrintInner() {
 
   const pageTitle = visibleTermData
     ? `${visibleTermData.term.labelGu} — ધોરણ ${visibleTermData.class.standard} (${visibleTermData.students.length})`
-    : isParticular
-      ? t("results.printParticularTitle", { name: studentName })
-      : t("results.printAllTitle", { count: printCards.length });
+    : usePragatiPatrak
+      ? `પ્રગતિપત્રક · ધો. ${printStandard || "1-8"} (${printCards.length})`
+      : isParticular
+        ? t("results.printParticularTitle", { name: studentName })
+        : t("results.printAllTitle", { count: printCards.length });
 
   const isStandard9Print =
+    !usePragatiPatrak &&
     printCards.length > 0 &&
     printCards.every((card) => String(card.student.standard || "") === "9");
   const isHigherSecondaryTermPrint = Boolean(
@@ -138,6 +180,21 @@ function PrintInner() {
   const canPrint = visibleTermData
     ? isHigherSecondaryTermPrint && visibleTermData.students.length > 0
     : printCards.length > 0;
+
+  const packBrand =
+    CERTIFICATE_PACK_BRANDS[effectiveSchoolCode] ||
+    CERTIFICATE_PACK_BRANDS["24261004403"];
+
+  const pragatiCards: PragatiPatrakCardData[] = printCards.map((c) => ({
+    ...c,
+    schoolCode: effectiveSchoolCode,
+    brand: {
+      nameGu: packBrand.nameGu,
+      sectionGu: "પ્રાથમિક વિભાગ - સોનગઢ",
+      diseCode: packBrand.diseCode || effectiveSchoolCode,
+      logoPath: "/shs/logo.png",
+    },
+  }));
 
   if (!examId && !classId) {
     return (
@@ -152,7 +209,9 @@ function PrintInner() {
     );
   }
 
-  if (loading) return <div className="p-8">{t("common.loading")}</div>;
+  if (loading || !featuresReady) {
+    return <div className="p-8">{t("common.loading")}</div>;
+  }
 
   if (error) {
     return (
@@ -171,7 +230,11 @@ function PrintInner() {
       canPrint={canPrint}
       landscape={isStandard9Print || isHigherSecondaryTermPrint}
       printMargin={
-        isStandard9Print || isHigherSecondaryTermPrint ? "5mm" : undefined
+        usePragatiPatrak
+          ? "0"
+          : isStandard9Print || isHigherSecondaryTermPrint
+            ? "5mm"
+            : undefined
       }
     >
       {!visibleTermData && isAll && printCards.length > 1 && (
@@ -208,6 +271,30 @@ function PrintInner() {
         <div className="result-print-bundle result-print-bundle-hs-mid">
           <HigherSecondaryMidResultCards data={visibleTermData} />
         </div>
+      ) : usePragatiPatrak ? (
+        <>
+          {printCards.some((c) => !c.hasMarks) && (
+            <div className="no-print mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {t("results.someMarksMissing")}
+            </div>
+          )}
+          {usePragatiPatrak && isPragatiResultStandard(printStandard) ? (
+            <p className="no-print mb-3 text-xs text-slate-500">
+              પરિણામ (પ્રગતિપત્રક) · ધોરણ 1–8 · A4 Portrait · Scale 100% · Fit to page OFF
+              {" · "}
+              <Link href={`/results/exam-report/print?examId=${examId}&classId=${classId}${studentId ? `&studentId=${studentId}&mode=particular` : "&mode=all"}`} className="text-blue-600 underline">
+                પરીક્ષા અહેવાલ (અલગ)
+              </Link>
+            </p>
+          ) : null}
+          <div className="result-print-bundle result-print-bundle-pragati">
+            {pragatiCards.length === 1 ? (
+              <SongadhPragatiPatrakCard data={pragatiCards[0]} />
+            ) : (
+              <SongadhPragatiPatrakCards cards={pragatiCards} />
+            )}
+          </div>
+        </>
       ) : (
         <>
           {printCards.some((c) => !c.hasMarks) && (
@@ -227,7 +314,6 @@ function PrintInner() {
 
       <style jsx global>{`
         @media print {
-          /* App shell padding/gaps otherwise push the sheet ~22mm down the page */
           main.shell-main,
           main.shell-main > div,
           main > div {
@@ -247,7 +333,13 @@ function PrintInner() {
             padding: 0 !important;
             width: 100% !important;
           }
-          .result-print-bundle .annual-result-card {
+          .result-print-bundle-pragati,
+          .result-print-bundle-pragati .pp-sheet {
+            width: 210mm !important;
+            margin: 0 !important;
+          }
+          .result-print-bundle .annual-result-card,
+          .result-print-bundle .pp-sheet {
             page-break-after: always;
             break-after: page;
           }
@@ -257,7 +349,8 @@ function PrintInner() {
             page-break-inside: avoid;
             break-inside: avoid;
           }
-          .result-print-bundle .std9-result-page:last-child {
+          .result-print-bundle .std9-result-page:last-child,
+          .result-print-bundle .pp-sheet:last-child {
             page-break-after: auto;
             break-after: auto;
           }

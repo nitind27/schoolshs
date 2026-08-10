@@ -1,9 +1,10 @@
 /**
  * School pack: 24261004403
  * Leaving Certificate = Upper Primary scan format (APAAR, DISE, bank fields, …)
+ * Bonafide = Songadh Primary official scan format
  * Super Admin may assign this pack to any school.
  */
-export { BonafideCertificateView } from "@/components/certificates/bonafide-certificate";
+export { BonafideCertificateView } from "@/components/certificates/bonafide-certificate-songadh-primary";
 export { LeavingCertificateView } from "@/components/certificates/leaving-certificate-upper-primary";
 export { CharacterCertificateView } from "@/components/certificates/character-certificate";
 export { MonthlyAttendancePatrakView } from "@/components/certificates/monthly-attendance-patrak";

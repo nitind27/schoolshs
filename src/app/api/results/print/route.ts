@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireSchoolAuth, requireStudentAuth, AuthError } from "@/lib/auth";
 import { ANNUAL_RESULT_SUBJECTS } from "@/lib/results/config";
 import { computeStudentTotals, subjectFinalMarks } from "@/lib/results/calculations";
+import { parseTermRemarks } from "@/lib/results/marks-sheet-config";
 import type { Student } from "@/generated/prisma/client";
 
 async function loadStudentsForExam(
@@ -148,6 +149,30 @@ export async function GET(request: NextRequest) {
       const rc = reportCards.find((r) => r.studentId === student.id);
       const subjectRows = exam.subjects.map((sub) => {
         const r = studentResults.find((x) => x.subjectId === sub.id);
+        const term = parseTermRemarks(r?.remarks);
+        const scoreMap = term.scores || {};
+        const pickScore = (...keys: string[]) => {
+          for (const key of keys) {
+            const v = scoreMap[key];
+            if (typeof v === "number" && !Number.isNaN(v)) return v;
+          }
+          return null;
+        };
+        const first =
+          term.first ??
+          pickScore("first", "sem1", "term1", "પ્રથમ", "mid1");
+        const second =
+          term.second ??
+          pickScore("second", "sem2", "term2", "દ્વિતીય", "mid2");
+        const formative = pickScore(
+          "formative",
+          "omr",
+          "રચનાત્મક",
+          "fa",
+          "unit",
+        );
+        const internal =
+          term.internal ?? pickScore("internal", "આંતરિક", "self", "selfstudy");
         return {
           subjectId: sub.id,
           name: sub.name,
@@ -165,6 +190,11 @@ export async function GET(request: NextRequest) {
               })
             : null,
           grade: r?.grade ?? null,
+          letterGrade: term.letterGrade ?? r?.grade ?? null,
+          first,
+          second,
+          formative,
+          internal,
           isAbsent: r?.isAbsent ?? false,
         };
       });
@@ -198,11 +228,21 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { code: true, udiseCode: true, name: true },
+    });
+
     return NextResponse.json({
       exam,
       cards,
       settings,
       template: ANNUAL_RESULT_SUBJECTS,
+      school: {
+        code: school?.code || null,
+        udiseCode: school?.udiseCode || school?.code || null,
+        name: school?.name || null,
+      },
     });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });

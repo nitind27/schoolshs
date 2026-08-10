@@ -17,6 +17,7 @@ import {
   isPendingAdminEmailVerified,
   consumePendingAdminEmailVerification,
 } from "@/lib/pending-admin-email-otp";
+import { sendSchoolAdminWelcomeEmail } from "@/lib/school-admin-welcome";
 import { Prisma } from "@/generated/prisma/client";
 import { repairEmptySubscriptionJson } from "@/lib/repair-subscription-json";
 
@@ -229,6 +230,9 @@ export async function POST(request: NextRequest) {
       return tx.school.findUniqueOrThrow({ where: { id: created.id }, include: schoolInclude });
     });
 
+    let welcomeEmailSent = false;
+    let welcomeEmailError: string | undefined;
+
     if (createdAdminUserId) {
       if (adminPreVerified) {
         await consumePendingAdminEmailVerification(adminEmail!);
@@ -242,9 +246,56 @@ export async function POST(request: NextRequest) {
           console.error("School admin verification email failed:", emailErr);
         }
       }
+
+      const loginOrigin = getRequestOriginFromHeaders(
+        request.headers,
+        request.nextUrl.origin,
+      );
+      const welcomeResult = await sendSchoolAdminWelcomeEmail({
+        adminName: adminName!,
+        loginEmail: adminEmail!,
+        password: adminPassword!,
+        loginUrl: `${loginOrigin}/login`,
+        emailVerified: adminPreVerified,
+        school: {
+          name: school.name,
+          code: school.code,
+          udiseCode: school.udiseCode,
+          district: school.district,
+          taluka: school.taluka,
+          city: school.city,
+          pincode: school.pincode,
+          address: school.address,
+          phone: school.phone,
+          alternatePhone: school.alternatePhone,
+          email: school.email,
+          website: school.website,
+          principalName: school.principalName,
+          schoolType: school.schoolType,
+          boardAffiliation: school.boardAffiliation,
+        },
+        subscription: school.subscription
+          ? {
+              planName: school.subscription.planName,
+              contractNumber: school.subscription.contractNumber,
+              contractStartDate: school.subscription.contractStartDate,
+              contractEndDate: school.subscription.contractEndDate,
+              paymentStatus: school.subscription.paymentStatus,
+              totalAmount: school.subscription.totalAmount?.toString(),
+              paidAmount: school.subscription.paidAmount?.toString(),
+              nextDueDate: school.subscription.nextDueDate,
+            }
+          : null,
+        enabledFeatures: features,
+      });
+      welcomeEmailSent = welcomeResult.sent;
+      welcomeEmailError = welcomeResult.error;
     }
 
-    return NextResponse.json(school, { status: 201 });
+    return NextResponse.json(
+      { ...school, welcomeEmailSent, welcomeEmailError },
+      { status: 201 },
+    );
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error(e);
