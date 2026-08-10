@@ -37,7 +37,14 @@ function LayoutForRole({ role, children }: { role: UserRole; children: React.Rea
 }
 
 function isPublicPath(pathname: string) {
-  return pathname === "/login" || pathname.startsWith("/m/") || pathname === "/";
+  return (
+    pathname === "/login" ||
+    pathname === "/privacy" ||
+    pathname.startsWith("/privacy/") ||
+    pathname.startsWith("/m/") ||
+    pathname === "/" ||
+    pathname === "/verify-email"
+  );
 }
 
 declare global {
