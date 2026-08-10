@@ -41,6 +41,8 @@ function isPublicPath(pathname: string) {
     pathname === "/login" ||
     pathname === "/privacy" ||
     pathname.startsWith("/privacy/") ||
+    pathname === "/contact" ||
+    pathname.startsWith("/contact/") ||
     pathname.startsWith("/m/") ||
     pathname === "/" ||
     pathname === "/verify-email"

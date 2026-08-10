@@ -6,6 +6,7 @@ import { getRoleHome, type UserRole } from "@/lib/roles";
 const PUBLIC_PATHS = [
   "/login",
   "/privacy",
+  "/contact",
   "/api/auth/login",
   "/api/auth/mobile/login",
   "/api/auth/captcha",

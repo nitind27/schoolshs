@@ -669,6 +669,10 @@ export function SchoolLandingPage() {
               <span className="lp-footer-dot" aria-hidden />
               <p className="lp-managed-by">{t("landing.managedBy")}</p>
               <span className="lp-footer-dot" aria-hidden />
+              <Link href="/contact" className="lp-footer-privacy">
+                Contact
+              </Link>
+              <span className="lp-footer-dot" aria-hidden />
               <Link href="/privacy" className="lp-footer-privacy">
                 Privacy Policy
               </Link>

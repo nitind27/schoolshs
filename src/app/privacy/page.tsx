@@ -21,7 +21,7 @@ const LAST_UPDATED = "10 August 2026";
 const EFFECTIVE_DATE = "10 August 2026";
 const APP_NAME = "Codeat Education";
 const COMPANY = "Codeat Infotech";
-const SUPPORT_PATH = "/#contact";
+const SUPPORT_PATH = "/contact";
 
 const SECTIONS = [
   { id: "intro", label: "Introduction", short: "Intro" },
@@ -485,11 +485,17 @@ export default function PrivacyPolicyPage() {
                 <div>
                   <p className="privacy-contact-title">{COMPANY} · {APP_NAME}</p>
                   <p>
-                    Use the in-app / website support form, or ask your school administrator
-                    to escalate to the platform team.
+                    Email{" "}
+                    <a href="mailto:support.codeateducation@gmail.com">
+                      support.codeateducation@gmail.com
+                    </a>
+                    {" · "}
+                    Phone{" "}
+                    <a href="tel:+918735995467">+91 8735995467</a>
+                    . Or use the contact page for the full office address and map.
                   </p>
                   <div className="privacy-contact-actions">
-                    <Link href={SUPPORT_PATH}>Open contact form</Link>
+                    <Link href={SUPPORT_PATH}>Contact support</Link>
                     <Link href="/login">Go to login</Link>
                   </div>
                 </div>
@@ -516,6 +522,7 @@ export default function PrivacyPolicyPage() {
         <p>© {new Date().getFullYear()} {COMPANY}. All rights reserved.</p>
         <div>
           <Link href="/privacy">Privacy</Link>
+          <Link href="/contact">Contact</Link>
           <Link href="/login">Login</Link>
           <Link href="/">Home</Link>
         </div>

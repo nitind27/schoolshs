@@ -557,7 +557,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
           <nav className="auth-login-nav" aria-label="Login page navigation">
             <Link href="/#modules">{t("landing.navModules")}</Link>
             <Link href="/#portals">{t("landing.navPortals")}</Link>
-            <Link href="/#contact">{t("landing.navContact")}</Link>
+            <Link href="/contact">{t("landing.navContact")}</Link>
           </nav>
 
           <div className="auth-login-navbar-actions">
