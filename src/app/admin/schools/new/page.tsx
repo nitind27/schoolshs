@@ -12,11 +12,11 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { BOARDS } from "@/lib/constants";
 import {
-  SCHOOL_TYPES,
   PAYMENT_METHODS,
   defaultFeaturesForPlan,
   DEFAULT_MODULE_FORMATS,
   normalizeModuleFormats,
+  resolveSchoolTypeForSave,
   type ModuleFormatMap,
   type SchoolFeatureKey,
 } from "@/lib/school-features";
@@ -24,6 +24,7 @@ import { FeatureToggleGrid } from "@/components/admin/feature-toggle-grid";
 import { ModuleFormatPicker } from "@/components/admin/module-format-picker";
 import { FileUploadField } from "@/components/admin/file-upload-field";
 import { SchoolLocationFields } from "@/components/admin/school-location-fields";
+import { SchoolTypeField } from "@/components/admin/school-type-field";
 import { StepWizard } from "@/components/admin/admin-ui";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { InfoModal } from "@/components/ui/info-modal";
@@ -501,10 +502,20 @@ export default function NewSchoolPage() {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       await persistToDb();
 
+      const resolvedType = resolveSchoolTypeForSave(formRef.current.schoolType);
+      if (resolvedType === null) {
+        setErrorMsg("Please specify the school type (Other).");
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch("/api/admin/schools", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formRef.current),
+        body: JSON.stringify({
+          ...formRef.current,
+          schoolType: resolvedType,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -580,6 +591,10 @@ export default function NewSchoolPage() {
     }
     if (step === 0 && !form.code.trim()) {
       setStepError("School code is required — wait for auto-generate or enter manually");
+      return;
+    }
+    if (step === 0 && resolveSchoolTypeForSave(form.schoolType) === null) {
+      setStepError("Please specify the school type in the Other field");
       return;
     }
     if (step === 1) {
@@ -802,12 +817,9 @@ export default function NewSchoolPage() {
               value={form.principalName}
               onChange={(e) => setField("principalName", e.target.value)}
             />
-            <Select
-              label="School Type"
-              options={[...SCHOOL_TYPES]}
-              emptyLabel="Select school type"
+            <SchoolTypeField
               value={form.schoolType}
-              onChange={(e) => setField("schoolType", e.target.value)}
+              onChange={(v) => setField("schoolType", v)}
             />
             <Select
               label="Board Affiliation"

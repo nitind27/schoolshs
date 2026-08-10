@@ -18,15 +18,16 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { InfoModal } from "@/components/ui/info-modal";
 import { BOARDS } from "@/lib/constants";
 import {
-  SCHOOL_TYPES,
   PAYMENT_METHODS,
   normalizeFeatureList,
   normalizeModuleFormats,
   DEFAULT_MODULE_FORMATS,
+  resolveSchoolTypeForSave,
   type ModuleFormatMap,
   type SchoolFeatureKey,
 } from "@/lib/school-features";
 import { ModuleFormatPicker } from "@/components/admin/module-format-picker";
+import { SchoolTypeField } from "@/components/admin/school-type-field";
 import { ArrowLeft, School, Save, ToggleLeft, ToggleRight, FileText, CreditCard, LayoutGrid, Users, MapPin, Phone, Mail, Globe, Pencil, Trash2 } from "lucide-react";
 
 type Tab = "overview" | "edit" | "contract" | "payments" | "features" | "admins";
@@ -217,6 +218,11 @@ export default function SchoolDetailPage() {
       setErr("School code is required");
       return;
     }
+    const resolvedType = resolveSchoolTypeForSave(editForm.schoolType);
+    if (resolvedType === null) {
+      setErr("Please specify the school type (Other).");
+      return;
+    }
     setSaving(true);
     setErr(null);
     try {
@@ -225,6 +231,7 @@ export default function SchoolDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...editForm,
+          schoolType: resolvedType,
           planName: editForm.planName || planName,
         }),
       });
@@ -591,12 +598,9 @@ export default function SchoolDetailPage() {
                 value={editForm.principalName}
                 onChange={(e) => setEdit("principalName", e.target.value)}
               />
-              <Select
-                label="School Type"
-                options={[...SCHOOL_TYPES]}
-                emptyLabel="Select school type"
+              <SchoolTypeField
                 value={editForm.schoolType}
-                onChange={(e) => setEdit("schoolType", e.target.value)}
+                onChange={(v) => setEdit("schoolType", v)}
               />
               <Select
                 label="Board Affiliation"

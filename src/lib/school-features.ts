@@ -180,6 +180,40 @@ export const PLAN_PRESETS: Record<string, { label: string; features: SchoolFeatu
 };
 
 export const SCHOOL_TYPES = ["Primary", "Secondary", "Higher Secondary", "K-12", "College", "Other"] as const;
+export const SCHOOL_TYPE_OTHER = "Other" as const;
+export const SCHOOL_TYPE_PRESETS = SCHOOL_TYPES.filter((t) => t !== SCHOOL_TYPE_OTHER);
+
+export function isPresetSchoolType(value: string | null | undefined): boolean {
+  const v = String(value || "").trim();
+  return (SCHOOL_TYPE_PRESETS as readonly string[]).includes(v);
+}
+
+/** Select value: preset name, empty, or "Other" for custom types */
+export function schoolTypeSelectValue(stored: string | null | undefined): string {
+  const v = String(stored || "").trim();
+  if (!v) return "";
+  if (isPresetSchoolType(v)) return v;
+  return SCHOOL_TYPE_OTHER;
+}
+
+/** Text shown in the Other input (empty while user still only selected Other) */
+export function schoolTypeCustomValue(stored: string | null | undefined): string {
+  const v = String(stored || "").trim();
+  if (!v || v === SCHOOL_TYPE_OTHER || isPresetSchoolType(v)) return "";
+  return v;
+}
+
+/** Final value to persist — null if Other chosen but text still empty */
+export function resolveSchoolTypeForSave(stored: string | null | undefined): string | null {
+  const select = schoolTypeSelectValue(stored);
+  if (!select) return "";
+  if (select === SCHOOL_TYPE_OTHER) {
+    const custom = schoolTypeCustomValue(stored);
+    return custom || null;
+  }
+  return select;
+}
+
 export const PAYMENT_METHODS = ["cash", "bank_transfer", "upi", "cheque", "other"] as const;
 export const PAYMENT_STATUSES = ["pending", "partial", "paid", "overdue"] as const;
 
