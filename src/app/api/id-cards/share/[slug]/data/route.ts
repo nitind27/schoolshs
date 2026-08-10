@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseIdCardShareToken, ID_CARD_SHARE_COOKIE } from "@/lib/id-card-share-token";
+import { prisma } from "@/lib/db";
 import {
   fetchStudentsForShareLink,
   getSchoolSettingsForShare,
@@ -7,6 +8,7 @@ import {
   isShareLinkValid,
   sharePhotoApiPath,
   shareLogoApiPath,
+  shareSignatureApiPath,
 } from "@/lib/id-card-share";
 
 async function requireShareAccess(request: NextRequest, slug: string) {
@@ -35,10 +37,18 @@ export async function GET(
     }
 
     const { link } = access;
-    const [students, settings] = await Promise.all([
+    const [students, settings, school] = await Promise.all([
       fetchStudentsForShareLink(link),
       getSchoolSettingsForShare(link.schoolId),
+      prisma.school.findUnique({
+        where: { id: link.schoolId },
+        select: { udiseCode: true, code: true, website: true, phone: true },
+      }),
     ]);
+
+    const diseCode = (school?.udiseCode || school?.code || "").trim();
+    const website =
+      (settings.idCardWebsite || school?.website || "").trim() || null;
 
     const studentPayload = students.map((s) => ({
       id: s.id,
@@ -65,15 +75,19 @@ export async function GET(
       settings: {
         schoolName: settings.schoolName,
         schoolAddress: settings.schoolAddress,
-        schoolPhone: settings.schoolPhone,
+        schoolPhone: settings.schoolPhone || school?.phone || null,
         academicYear: settings.academicYear,
         tagline: settings.tagline,
         idCardPrimaryColor: settings.idCardPrimaryColor,
         idCardAccentColor: settings.idCardAccentColor,
+        idCardWebsite: website,
         logoUrl: settings.logoPath ? shareLogoApiPath(slug) : null,
+        signatureUrl: settings.signaturePath ? shareSignatureApiPath(slug) : null,
       },
       total: studentPayload.length,
       label: link.label,
+      diseCode,
+      website,
     });
   } catch (error) {
     console.error("Share data error:", error);

@@ -1754,7 +1754,7 @@ const en = {
     photosAlreadyProcessed:
       "All photos already processed or no photos uploaded",
     cardsReady: "{{count}} ID cards ready",
-    sizeHint: "Standard CR-80 · 54 × 86 mm · front only",
+    sizeHint: "2.5″ × 3″ · 64 × 76 mm · front only",
     frontOnly: "Front side",
     photoProcessed: "Photo processed",
     photoPending: "Photo pending",

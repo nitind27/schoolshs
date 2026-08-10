@@ -1733,7 +1733,7 @@ const gu: Messages = {
     photosAlreadyProcessed:
       "બધા ફોટા પહેલેથી પ્રોસેસ થયા છે અથવા ફોટો અપલોડ નથી",
     cardsReady: "{{count}} આઈડી કાર્ડ તૈયાર",
-    sizeHint: "CR-80 · 54 × 86 mm · ફક્ત front",
+    sizeHint: "2.5″ × 3″ · 64 × 76 mm · ફક્ત front",
     frontOnly: "Front side",
     photoProcessed: "ફોટો પ્રોસેસ થયો",
     photoPending: "ફોટો બાકી",

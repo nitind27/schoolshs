@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { ID_CARD_BRAND } from "@/lib/id-card-brand";
 
 export async function GET() {
   try {
@@ -14,7 +15,18 @@ export async function GET() {
         },
       });
     }
-    return NextResponse.json(settings);
+
+    const school = await prisma.school.findUnique({
+      where: { id: session.schoolId },
+      select: { website: true, phone: true },
+    });
+
+    return NextResponse.json({
+      ...settings,
+      /** fallback website from School profile if id-card website empty */
+      schoolWebsite: school?.website || null,
+      schoolProfilePhone: school?.phone || null,
+    });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
     return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
@@ -35,8 +47,10 @@ export async function PUT(request: NextRequest) {
         schoolEmail: body.schoolEmail || null,
         academicYear: body.academicYear || "2025-26",
         logoPath: body.logoPath || null,
-        idCardPrimaryColor: body.idCardPrimaryColor || "#e91e8c",
-        idCardAccentColor: body.idCardAccentColor || "#1e3a8a",
+        signaturePath: body.signaturePath || null,
+        idCardWebsite: body.idCardWebsite?.trim() || null,
+        idCardPrimaryColor: body.idCardPrimaryColor || ID_CARD_BRAND.primary,
+        idCardAccentColor: body.idCardAccentColor || ID_CARD_BRAND.accent,
         tagline: body.tagline || null,
         dgSjedUsername: body.dgSjedUsername?.trim() || null,
         dgSjedPassword: body.dgSjedPassword || null,
@@ -50,9 +64,13 @@ export async function PUT(request: NextRequest) {
         schoolPhone: body.schoolPhone || null,
         schoolEmail: body.schoolEmail || null,
         academicYear: body.academicYear || "2025-26",
-        logoPath: body.logoPath || null,
-        idCardPrimaryColor: body.idCardPrimaryColor || "#e91e8c",
-        idCardAccentColor: body.idCardAccentColor || "#1e3a8a",
+        ...(body.logoPath !== undefined && { logoPath: body.logoPath || null }),
+        ...(body.signaturePath !== undefined && { signaturePath: body.signaturePath || null }),
+        ...(body.idCardWebsite !== undefined && {
+          idCardWebsite: String(body.idCardWebsite || "").trim() || null,
+        }),
+        idCardPrimaryColor: body.idCardPrimaryColor || ID_CARD_BRAND.primary,
+        idCardAccentColor: body.idCardAccentColor || ID_CARD_BRAND.accent,
         tagline: body.tagline || null,
         ...(body.dgSjedUsername !== undefined && { dgSjedUsername: body.dgSjedUsername?.trim() || null }),
         ...(body.dgSjedPassword !== undefined && body.dgSjedPassword !== "" && { dgSjedPassword: body.dgSjedPassword }),
@@ -61,7 +79,17 @@ export async function PUT(request: NextRequest) {
         ...(body.dgCitizenLoginMethod !== undefined && { dgCitizenLoginMethod: body.dgCitizenLoginMethod }),
       },
     });
-    return NextResponse.json(settings);
+
+    const school = await prisma.school.findUnique({
+      where: { id: session.schoolId },
+      select: { website: true, phone: true },
+    });
+
+    return NextResponse.json({
+      ...settings,
+      schoolWebsite: school?.website || null,
+      schoolProfilePhone: school?.phone || null,
+    });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
     return NextResponse.json({ error: "Failed to save settings" }, { status: 500 });

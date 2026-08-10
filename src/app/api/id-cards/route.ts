@@ -46,7 +46,21 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ students, settings, total: students.length, processPhotos });
+    const school = await prisma.school.findUnique({
+      where: { id: session.schoolId },
+      select: { website: true, phone: true },
+    });
+
+    return NextResponse.json({
+      students,
+      settings: {
+        ...settings,
+        schoolWebsite: school?.website || null,
+        schoolProfilePhone: school?.phone || null,
+      },
+      total: students.length,
+      processPhotos,
+    });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("GET /api/id-cards error:", error);

@@ -1,4 +1,4 @@
-/* ID card print — CR-80 front only, one card per A4 sheet */
+/* Student ID print — 70 × 88 mm, one card per A4 sheet */
 
 @page {
   size: A4 portrait;
@@ -88,19 +88,21 @@
 
   .id-card-preview-scale {
     transform: none !important;
-    width: 54mm !important;
-    height: 85.6mm !important;
+    width: 70mm !important;
+    height: 92mm !important;
   }
 
   .id-card,
   .id-card-print-size {
-    width: 54mm !important;
-    height: 85.6mm !important;
-    max-width: 54mm !important;
+    width: 70mm !important;
+    height: 92mm !important;
+    max-width: 70mm !important;
     transform: none !important;
     box-shadow: none !important;
-    border: 0.3mm solid #cbd5e1 !important;
-    border-radius: 2.4mm !important;
+    border: 0.55mm solid #e0a91a !important;
+    border-radius: 2.2mm !important;
+    padding: 0 !important;
+    background: #fff !important;
   }
 
   .id-card-print-label,
@@ -112,11 +114,14 @@
 @media screen {
   .id-card-print-sheet {
     margin-bottom: 1.5rem;
-    padding: 1.25rem;
+    padding: 1rem;
     border-radius: 1rem;
     border: 1px solid rgb(226 232 240);
     background: white;
     box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+    display: flex;
+    justify-content: center;
+    min-height: auto;
   }
 
   .id-card-print-inner {
@@ -127,11 +132,23 @@
 
   .id-cards-preview-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-    gap: 2rem 1.5rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2.25rem 1.75rem;
     justify-items: center;
     align-items: start;
     padding-bottom: 2.5rem;
+  }
+
+  @media (max-width: 1100px) {
+    .id-cards-preview-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .id-cards-preview-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   .id-cards-stage {
@@ -140,17 +157,21 @@
     align-items: center;
     gap: 0.65rem;
     width: 100%;
-    max-width: 20rem;
+    max-width: 22rem;
+    min-width: 0;
   }
 
   .id-cards-stage-inner {
     display: flex;
     justify-content: center;
+    align-items: flex-start;
     width: 100%;
-    padding: 1rem 0.5rem 1.5rem;
+    overflow: hidden;
+    min-height: calc(92mm * 1.12 + 2.5rem);
+    padding: 1.1rem 0.75rem 1.35rem;
     border-radius: 1rem;
     background:
-      radial-gradient(circle at 50% 0%, rgba(236, 72, 153, 0.08), transparent 55%),
+      radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.1), transparent 55%),
       linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
     border: 1px solid #e2e8f0;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);

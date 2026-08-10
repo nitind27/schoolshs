@@ -35,8 +35,8 @@ export async function GET(
     }
 
     const settings = await getSchoolSettingsForShare(link.schoolId);
-    const rel = normalizeSchoolAssetPath(settings.logoPath);
-    if (!rel) return NextResponse.json({ error: "No logo" }, { status: 404 });
+    const rel = normalizeSchoolAssetPath(settings.signaturePath);
+    if (!rel) return NextResponse.json({ error: "No signature" }, { status: 404 });
 
     const uploadRoot = path.join(process.cwd(), "uploads");
     const filePath = path.join(uploadRoot, ...rel.split("/"));
@@ -49,7 +49,7 @@ export async function GET(
     const buffer = await readFile(resolved);
     return new NextResponse(buffer, {
       headers: {
-        "Content-Type": MIME[ext] || "image/jpeg",
+        "Content-Type": MIME[ext] || "image/png",
         "Cache-Control": "private, max-age=3600",
       },
     });

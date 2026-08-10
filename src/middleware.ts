@@ -22,7 +22,9 @@ const PUBLIC_PATHS = [
   "/m/sms-bridge",
   "/m/forwarder-setup",
   "/m/id-cards",
+  "/m/id",
   "/api/id-cards/share",
+  "/api/id-cards/public",
 ];
 
 const ROLE_ROUTES: Record<string, UserRole[]> = {

@@ -39,7 +39,9 @@ interface ShareSettings {
   tagline: string | null;
   idCardPrimaryColor: string;
   idCardAccentColor: string;
+  idCardWebsite?: string | null;
   logoUrl: string | null;
+  signatureUrl?: string | null;
 }
 
 export function IdCardSharePortal() {
@@ -56,6 +58,7 @@ export function IdCardSharePortal() {
   const [students, setStudents] = useState<ShareStudent[]>([]);
   const [settings, setSettings] = useState<ShareSettings | null>(null);
   const [label, setLabel] = useState("");
+  const [diseCode, setDiseCode] = useState("");
 
   const loadCards = useCallback(async () => {
     const res = await fetch(`/api/id-cards/share/${slug}/data`);
@@ -64,6 +67,7 @@ export function IdCardSharePortal() {
     setStudents(data.students || []);
     setSettings(data.settings || null);
     setLabel(data.label || "");
+    setDiseCode(String(data.diseCode || "").trim());
     setMeta((m) => ({ ...m, authenticated: true }));
   }, [slug]);
 
@@ -218,6 +222,10 @@ export function IdCardSharePortal() {
                   settings={cardSettings}
                   photoUrl={s.photoUrl}
                   logoUrl={settings.logoUrl || SCHOOL_LOGO_URL}
+                  signatureUrl={settings.signatureUrl || undefined}
+                  website={settings.idCardWebsite}
+                  diseCode={diseCode}
+                  academicYear={settings.academicYear}
                   className="id-card-print-size"
                 />
                 <p className="id-card-print-label print:hidden text-xs text-slate-400 mt-2 text-center">

@@ -16,10 +16,20 @@ export function buildShareUrl(request: NextRequest, slug: string): string {
 
 export function normalizeUploadPath(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  const normalized = raw.replace(/\\/g, "/");
-  const idx = normalized.indexOf("students/");
-  if (idx >= 0) return normalized.slice(idx);
+  const normalized = raw.replace(/\\/g, "/").replace(/^uploads\//, "");
+  const studentsIdx = normalized.indexOf("students/");
+  if (studentsIdx >= 0) return normalized.slice(studentsIdx);
   if (normalized.startsWith("students/")) return normalized;
+  return null;
+}
+
+/** Logo / signature under uploads/schools/{schoolId}/… */
+export function normalizeSchoolAssetPath(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const normalized = raw.replace(/\\/g, "/").replace(/^uploads\//, "").replace(/^\/+/, "");
+  const schoolsIdx = normalized.indexOf("schools/");
+  if (schoolsIdx >= 0) return normalized.slice(schoolsIdx);
+  if (normalized.startsWith("schools/")) return normalized;
   return null;
 }
 
@@ -70,4 +80,8 @@ export function sharePhotoApiPath(slug: string, studentId: string): string {
 
 export function shareLogoApiPath(slug: string): string {
   return `/api/id-cards/share/${slug}/logo`;
+}
+
+export function shareSignatureApiPath(slug: string): string {
+  return `/api/id-cards/share/${slug}/signature`;
 }

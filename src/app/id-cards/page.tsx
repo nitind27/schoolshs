@@ -11,8 +11,10 @@ import { StudentIdCard } from "@/components/id-cards/student-id-card";
 import { IdCardShareLinkManager } from "@/components/id-cards/id-card-share-link-manager";
 import "@/components/id-cards/id-card-print.css";
 import { FINANCIAL_YEARS } from "@/lib/constants";
+import { ID_CARD_BRAND } from "@/lib/id-card-brand";
 import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import { useT } from "@/i18n/locale-provider";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 import { CreditCard, Printer, Settings, Sparkles } from "lucide-react";
 import type { Student, SchoolSettings, SchoolClass } from "@/generated/prisma/client";
 
@@ -20,8 +22,19 @@ type StudentWithClass = Student & {
   schoolClass?: Pick<SchoolClass, "id" | "name" | "standard" | "section" | "academicYear"> | null;
 };
 
+type SettingsPayload = SchoolSettings & {
+  schoolWebsite?: string | null;
+  schoolProfilePhone?: string | null;
+};
+
+function uploadUrl(path?: string | null) {
+  if (!path) return undefined;
+  return `/api/uploads/${path.replace(/^uploads\//, "")}`;
+}
+
 function IdCardsContent() {
   const t = useT();
+  const { letterhead } = useSchoolFeatures();
   const searchParams = useSearchParams();
   const initialClassId = searchParams.get("classId") || "";
   const initialStudentId = searchParams.get("studentId") || "";
@@ -30,15 +43,28 @@ function IdCardsContent() {
 
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [students, setStudents] = useState<StudentWithClass[]>([]);
-  const [settings, setSettings] = useState<SchoolSettings | null>(null);
+  const [settings, setSettings] = useState<SettingsPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [uploading, setUploading] = useState<"logo" | "signature" | null>(null);
   const [classId, setClassId] = useState(initialClassId);
   const [academicYear, setAcademicYear] = useState("2025-26");
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsForm, setSettingsForm] = useState<Partial<SchoolSettings>>({});
+  const [settingsForm, setSettingsForm] = useState<Partial<SettingsPayload>>({});
   const [logoPreview, setLogoPreview] = useState<string | undefined>(SCHOOL_LOGO_URL);
   const [signaturePreview, setSignaturePreview] = useState<string | undefined>();
+  const diseCode = (letterhead?.udiseCode || letterhead?.code || "").trim();
+
+  const applySettings = useCallback((s: SettingsPayload) => {
+    setSettings(s);
+    setSettingsForm({
+      ...s,
+      idCardWebsite: s.idCardWebsite || s.schoolWebsite || "",
+      schoolPhone: s.schoolPhone || s.schoolProfilePhone || "",
+    });
+    setLogoPreview(uploadUrl(s.logoPath) || SCHOOL_LOGO_URL);
+    setSignaturePreview(uploadUrl(s.signaturePath));
+  }, []);
 
   useEffect(() => {
     fetch("/api/classes")
@@ -47,37 +73,44 @@ function IdCardsContent() {
     fetch("/api/school/settings")
       .then((r) => r.json())
       .then((s) => {
-        setSettings(s);
-        setSettingsForm(s);
-        if (s?.logoPath) {
-          setLogoPreview(`/api/uploads/${s.logoPath}`);
-        } else {
-          setLogoPreview(SCHOOL_LOGO_URL);
-        }
+        if (s?.schoolId || s?.schoolName) applySettings(s);
       });
-  }, []);
+  }, [applySettings]);
 
   const fetchCards = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams({ academicYear });
-    if (initialStudentId) {
-      params.set("studentId", initialStudentId);
-    } else if (initialIds) {
-      params.set("ids", initialIds);
-    } else if (classId) {
-      params.set("classId", classId);
+    try {
+      const params = new URLSearchParams({ academicYear });
+      if (initialStudentId) {
+        params.set("studentId", initialStudentId);
+      } else if (initialIds) {
+        params.set("ids", initialIds);
+      } else if (classId) {
+        params.set("classId", classId);
+      }
+      const res = await fetch(`/api/id-cards?${params}`);
+      const data = await res.json();
+      setStudents(data.students || []);
+      if (data.settings) {
+        setSettings((prev) => ({ ...(prev || {}), ...data.settings } as SettingsPayload));
+        setSettingsForm((prev) => ({ ...prev, ...data.settings }));
+        if (data.settings.logoPath) {
+          setLogoPreview(uploadUrl(data.settings.logoPath) || SCHOOL_LOGO_URL);
+        }
+        if (data.settings.signaturePath) {
+          setSignaturePreview(uploadUrl(data.settings.signaturePath));
+        }
+      }
+    } finally {
+      setLoading(false);
     }
-    const res = await fetch(`/api/id-cards?${params}`);
-    const data = await res.json();
-    setStudents(data.students || []);
-    if (data.settings) {
-      setSettings(data.settings);
-      setSettingsForm(data.settings);
-    }
-    setLoading(false);
   }, [classId, academicYear, initialStudentId, initialIds]);
 
-  useEffect(() => { fetchCards(); }, [fetchCards]);
+  useEffect(() => {
+    // Load / refresh ID cards when class or year filters change
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch updates card list state
+    void fetchCards();
+  }, [fetchCards]);
 
   const photoUrl = (s: StudentWithClass) => {
     const path = s.idPhotoProcessedPath || s.photoPath;
@@ -99,6 +132,33 @@ function IdCardsContent() {
     setProcessing(false);
   };
 
+  const uploadAsset = async (kind: "logo" | "signature", file: File) => {
+    setUploading(kind);
+    try {
+      const fd = new FormData();
+      fd.append("kind", kind);
+      fd.append("file", file);
+      const res = await fetch("/api/school/settings/asset", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Upload failed");
+        return;
+      }
+      const url = data.url as string;
+      if (kind === "logo") {
+        setLogoPreview(url);
+        setSettingsForm((f) => ({ ...f, logoPath: data.path }));
+        setSettings((s) => (s ? { ...s, logoPath: data.path } : s));
+      } else {
+        setSignaturePreview(url);
+        setSettingsForm((f) => ({ ...f, signaturePath: data.path }));
+        setSettings((s) => (s ? { ...s, signaturePath: data.path } : s));
+      }
+    } finally {
+      setUploading(null);
+    }
+  };
+
   const saveSettings = async () => {
     const res = await fetch("/api/school/settings", {
       method: "PUT",
@@ -107,12 +167,19 @@ function IdCardsContent() {
     });
     const s = await res.json();
     if (res.ok) {
-      setSettings(s);
+      applySettings(s);
       setShowSettings(false);
+    } else {
+      alert(s.error || "Failed to save settings");
     }
   };
 
   const selectedClass = classes.find((c) => c.id === classId);
+  const cardWebsite =
+    settingsForm.idCardWebsite ||
+    settings?.idCardWebsite ||
+    settings?.schoolWebsite ||
+    "";
 
   const classOptions = [
     { value: "", label: t("idCards.allClassesOption") },
@@ -166,16 +233,58 @@ function IdCardsContent() {
 
       {showSettings && settings && (
         <Card className="print:hidden">
-          <CardHeader><CardTitle>{t("idCards.settingsTitle")}</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>{t("idCards.settingsTitle")}</CardTitle>
+          </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input label={t("idCards.schoolName")} value={settingsForm.schoolName || ""} onChange={(e) => setSettingsForm({ ...settingsForm, schoolName: e.target.value })} />
-            <Input label={t("idCards.tagline")} value={settingsForm.tagline || ""} onChange={(e) => setSettingsForm({ ...settingsForm, tagline: e.target.value })} />
-            <Input label={t("common.address")} value={settingsForm.schoolAddress || ""} onChange={(e) => setSettingsForm({ ...settingsForm, schoolAddress: e.target.value })} />
-            <Input label={t("common.phone")} value={settingsForm.schoolPhone || ""} onChange={(e) => setSettingsForm({ ...settingsForm, schoolPhone: e.target.value })} />
-            <Input label={t("idCards.primaryColor")} type="color" value={settingsForm.idCardPrimaryColor || "#e91e8c"} onChange={(e) => setSettingsForm({ ...settingsForm, idCardPrimaryColor: e.target.value })} />
-            <Input label={t("idCards.accentColor")} type="color" value={settingsForm.idCardAccentColor || "#1e3a8a"} onChange={(e) => setSettingsForm({ ...settingsForm, idCardAccentColor: e.target.value })} />
+            <Input
+              label={t("idCards.schoolName")}
+              value={settingsForm.schoolName || ""}
+              onChange={(e) => setSettingsForm({ ...settingsForm, schoolName: e.target.value })}
+            />
+            <Input
+              label={t("idCards.tagline")}
+              value={settingsForm.tagline || ""}
+              onChange={(e) => setSettingsForm({ ...settingsForm, tagline: e.target.value })}
+            />
+            <Input
+              label={t("common.address")}
+              value={settingsForm.schoolAddress || ""}
+              onChange={(e) => setSettingsForm({ ...settingsForm, schoolAddress: e.target.value })}
+            />
+            <Input
+              label={t("common.phone")}
+              value={settingsForm.schoolPhone || ""}
+              onChange={(e) => setSettingsForm({ ...settingsForm, schoolPhone: e.target.value })}
+              placeholder="02626-220444"
+            />
+            <Input
+              label="Website (footer + QR base URL)"
+              value={settingsForm.idCardWebsite || ""}
+              onChange={(e) => setSettingsForm({ ...settingsForm, idCardWebsite: e.target.value })}
+              placeholder="https://www.savjanhighschool.org"
+            />
+            <p className="md:col-span-2 -mt-2 text-xs text-slate-500">
+              QR scan opens <code className="rounded bg-slate-100 px-1">your-website/m/id/&lt;studentId&gt;</code> — no login.
+              Domain must point to this portal (or proxy that path).
+            </p>            <Input
+              label={t("idCards.year")}
+              value={settingsForm.academicYear || ""}
+              onChange={(e) => setSettingsForm({ ...settingsForm, academicYear: e.target.value })}
+            />
+            <Input
+              label={t("idCards.primaryColor")}
+              type="color"
+              value={settingsForm.idCardPrimaryColor || ID_CARD_BRAND.primary}
+              onChange={(e) => setSettingsForm({ ...settingsForm, idCardPrimaryColor: e.target.value })}
+            />
+            <Input
+              label={t("idCards.accentColor")}
+              type="color"
+              value={settingsForm.idCardAccentColor || ID_CARD_BRAND.accent}
+              onChange={(e) => setSettingsForm({ ...settingsForm, idCardAccentColor: e.target.value })}
+            />
 
-            {/* Logo upload */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700">School Logo</label>
               <div className="flex items-center gap-3">
@@ -189,38 +298,49 @@ function IdCardsContent() {
                 )}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  disabled={uploading === "logo"}
                   className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) setLogoPreview(URL.createObjectURL(f));
+                    if (f) void uploadAsset("logo", f);
+                    e.target.value = "";
                   }}
                 />
               </div>
               <p className="text-xs text-slate-400">
-                Default: <code className="text-[11px]">/logo/school-logo.png</code> (Sarvajanik High School crest)
+                {uploading === "logo" ? "Uploading…" : "Saved to school settings automatically"}
               </p>
             </div>
 
-            {/* Signature upload */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700">Principal Signature</label>
               <div className="flex items-center gap-3">
                 {signaturePreview && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={signaturePreview} alt="signature" className="h-10 object-contain border border-slate-200 rounded px-2 bg-white" />
+                  <img
+                    src={signaturePreview}
+                    alt="signature"
+                    className="h-10 object-contain border border-slate-200 rounded px-2 bg-white"
+                  />
                 )}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={uploading === "signature"}
                   className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) setSignaturePreview(URL.createObjectURL(f));
+                    if (f) void uploadAsset("signature", f);
+                    e.target.value = "";
                   }}
                 />
               </div>
-              <p className="text-xs text-slate-400">PNG with transparent background recommended</p>
+              <p className="text-xs text-slate-400">
+                {uploading === "signature"
+                  ? "Uploading…"
+                  : "PNG with transparent background recommended — saved automatically"}
+              </p>
             </div>
 
             <div className="md:col-span-2 flex justify-end">
@@ -233,8 +353,20 @@ function IdCardsContent() {
       {!singleStudentMode && (
         <Card className="id-cards-filters print:hidden">
           <CardContent className="p-4 flex flex-wrap gap-3">
-            <Select label={t("fields.class")} options={classOptions} value={classId} onChange={(e) => setClassId(e.target.value)} className="w-56" />
-            <Select label={t("idCards.year")} options={FINANCIAL_YEARS} value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} className="w-32" />
+            <Select
+              label={t("fields.class")}
+              options={classOptions}
+              value={classId}
+              onChange={(e) => setClassId(e.target.value)}
+              className="w-56"
+            />
+            <Select
+              label={t("idCards.year")}
+              options={FINANCIAL_YEARS}
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
+              className="w-32"
+            />
           </CardContent>
         </Card>
       )}
@@ -282,6 +414,9 @@ function IdCardsContent() {
                           photoUrl={photoUrl(s)}
                           logoUrl={logoPreview || SCHOOL_LOGO_URL}
                           signatureUrl={signaturePreview}
+                          website={cardWebsite}
+                          diseCode={diseCode}
+                          academicYear={academicYear}
                         />
                       </div>
                     </div>
@@ -305,6 +440,9 @@ function IdCardsContent() {
                       photoUrl={photoUrl(s)}
                       logoUrl={logoPreview || SCHOOL_LOGO_URL}
                       signatureUrl={signaturePreview}
+                      website={cardWebsite}
+                      diseCode={diseCode}
+                      academicYear={academicYear}
                       className="id-card-print-size"
                     />
                     <p className="id-card-print-label print:hidden text-xs text-slate-400 mt-2 text-center">
@@ -316,7 +454,6 @@ function IdCardsContent() {
           </div>
         </>
       )}
-
     </div>
   );
 }

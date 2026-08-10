@@ -288,6 +288,14 @@ model SchoolSettings {
   schoolEmail          String?
   academicYear         String  @default("2025-26")
   logoPath             String?
+  /**
+   * Principal signature image for ID cards / certificates
+   */
+  signaturePath        String?
+  /**
+   * Website shown on ID card footer + QR scan target
+   */
+  idCardWebsite        String?
   idCardPrimaryColor   String  @default("#e91e8c")
   idCardAccentColor    String  @default("#1e3a8a")
   tagline              String?
