@@ -192,20 +192,24 @@ export function MetricCard({
   const content = (
     <>
       <div className={cn("dashboard-metric-bar", a.bar)} />
-      <div className="flex items-start justify-between gap-3 pl-2">
+      <div className="flex items-start justify-between gap-2 sm:gap-3 pl-2">
         <div className="min-w-0 flex-1">
-          <p className="break-words text-xs font-semibold leading-snug text-slate-500">
+          <p className="break-words text-[11px] sm:text-xs font-semibold leading-snug text-slate-500">
             {label}
           </p>
-          <p className="mt-1.5 text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
+          <p className="mt-1 sm:mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
             {value}
           </p>
-          {sub && <p className="mt-1 break-words text-xs leading-snug text-slate-500">{sub}</p>}
+          {sub && (
+            <p className="mt-1 break-words text-[11px] sm:text-xs leading-snug text-slate-500">
+              {sub}
+            </p>
+          )}
         </div>
         {icon && (
           <div
             className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-lg transition-transform group-hover:scale-105",
+              "flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-lg transition-transform group-hover:scale-105",
               a.icon,
             )}
           >
@@ -258,27 +262,29 @@ export function DashboardSection({
   return (
     <div className={cn("dashboard-section-card", className)}>
       <div className="dashboard-section-head">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-start sm:items-center gap-2.5 sm:gap-3">
           <div
             className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-md",
+              "flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-md",
               iconClassName,
             )}
           >
             {icon}
           </div>
           <div className="min-w-0">
-            <h3 className="text-base font-bold text-slate-900 leading-tight">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
               {title}
             </h3>
             {description && (
-              <p className="mt-0.5 break-words text-sm leading-snug text-slate-500">{description}</p>
+              <p className="mt-0.5 break-words text-xs sm:text-sm leading-snug text-slate-500">
+                {description}
+              </p>
             )}
           </div>
         </div>
-        {action}
+        {action ? <div className="w-full sm:w-auto shrink-0">{action}</div> : null}
       </div>
-      <div className="p-5">{children}</div>
+      <div className="p-3 sm:p-5">{children}</div>
     </div>
   );
 }

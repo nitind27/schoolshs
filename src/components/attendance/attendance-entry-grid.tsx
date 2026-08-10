@@ -121,186 +121,345 @@ export function AttendanceEntryGrid({
     }
   };
 
+  const legend = (
+    <div className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-slate-100 bg-slate-50 px-3 py-2 text-[11px] text-slate-600 sm:px-4">
+      <span>
+        <span className="mr-1 inline-block h-3 w-3 rounded border border-emerald-300 bg-emerald-100" />
+        P = {t("attendance.present")}
+      </span>
+      <span>
+        <span className="mr-1 inline-block h-3 w-3 rounded border border-red-300 bg-red-100" />
+        A = {t("attendance.absent")}
+      </span>
+      <span>
+        <span className="mr-1 inline-block h-3 w-3 rounded border border-amber-300 bg-amber-100" />
+        H = {t("attendance.halfDay")}
+      </span>
+      <span>{t("attendance.clickHint")}</span>
+      {editableRoll && (
+        <span className="font-medium text-blue-700">{t("attendance.rollEditHint")}</span>
+      )}
+    </div>
+  );
+
   return (
-    <div ref={gridRef} className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-      {/* border-separate fixes sticky bleed; fixed left/width prevents gaps between sticky cols */}
-      <table
-        className="w-full border-separate border-spacing-0 text-xs"
-        style={{ minWidth: Math.max(640, 256 + dayIndices.length * 28 + 200) }}
-      >
-        <thead>
-          <tr className="text-white">
-            <th
-              className="px-2 py-2 text-left font-medium"
-              style={stickyStyle(LEFT_SERIAL, W_SERIAL, 40, "#1e293b")}
-            >
-              {t("attendance.serial")}
-            </th>
-            <th
-              className="px-2 py-2 text-left font-medium"
-              style={stickyStyle(LEFT_ROLL, W_ROLL, 41, "#1e293b")}
-            >
-              {t("attendance.roll")}
-            </th>
-            <th
-              className="px-2 py-2 text-left font-medium border-r border-slate-600"
-              style={{
-                ...stickyStyle(LEFT_NAME, W_NAME, 42, "#1e293b"),
-                boxShadow: "4px 0 8px -2px rgba(0,0,0,0.35)",
-              }}
-            >
-              {t("attendance.student")}
-            </th>
+    <div className="space-y-3">
+      {/* Mobile / tablet cards */}
+      <div className="space-y-2.5 lg:hidden">
+        <div className="overflow-x-auto -mx-1 px-1">
+          <div className="flex min-w-min gap-1.5 pb-1">
             {dayIndices.map((di) => {
               const d = di + 1;
               const highlighted = highlightDayIndex === di;
               return (
-                <th
+                <button
                   key={d}
+                  type="button"
                   className={cn(
-                    "px-0.5 py-1 text-center w-7 font-medium",
-                    highlighted ? "bg-teal-700" : "bg-slate-800"
+                    "h-8 min-w-8 shrink-0 rounded-lg border px-2 text-xs font-bold",
+                    highlighted
+                      ? "border-teal-400 bg-teal-600 text-white"
+                      : "border-slate-200 bg-white text-slate-700",
                   )}
+                  title={t("attendance.markAllPresent")}
+                  onClick={() => setDayForAll(di, "P")}
                 >
-                  <button
-                    type="button"
-                    className={cn(
-                      "w-full rounded py-0.5",
-                      highlighted ? "hover:bg-teal-600" : "hover:bg-slate-700"
-                    )}
-                    title={t("attendance.markAllPresent")}
-                    onClick={() => setDayForAll(di, "P")}
-                  >
-                    {d}
-                  </button>
-                </th>
+                  {d}
+                </button>
               );
             })}
-            <th className="bg-slate-800 px-2 py-2 w-12">{t("attendance.monthTotal")}</th>
-            <th className="bg-slate-800 px-2 py-2 w-12">{t("attendance.prevMonth")}</th>
-            <th className="bg-slate-800 px-2 py-2 w-12">{t("attendance.cumulative")}</th>
-            <th className="bg-slate-800 px-2 py-2 min-w-[80px]">{t("attendance.note")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, ri) => {
-            const odd = ri % 2 === 1;
-            const bg = odd ? "#f8fafc" : "#ffffff";
-            return (
-              <tr key={row.studentId}>
-                <td
-                  className="px-2 py-1.5 font-medium text-slate-600 border-t border-slate-100"
-                  style={stickyStyle(LEFT_SERIAL, W_SERIAL, 20, bg)}
-                >
-                  {row.serial}
-                </td>
-                <td
-                  className="px-1 py-1 border-t border-slate-100"
-                  style={stickyStyle(LEFT_ROLL, W_ROLL, 21, bg)}
-                >
-                  {editableRoll ? (
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      className="w-full h-7 rounded-md border border-slate-200 bg-white px-1.5 text-center text-[11px] font-semibold text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
-                      value={row.rollNumber}
-                      title={t("attendance.rollEditHint")}
-                      aria-label={t("attendance.roll")}
-                      onChange={(e) => {
-                        const rollNumber = e.target.value.replace(/[^\dA-Za-z\-]/g, "").slice(0, 8);
-                        updateRow(ri, { rollNumber });
-                      }}
-                      onBlur={async (e) => {
-                        const rollNumber = e.target.value.trim();
-                        if (onRollSave) {
-                          try {
-                            await onRollSave(row.studentId, rollNumber);
-                          } catch {
-                            // parent shows error
-                          }
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          (e.target as HTMLInputElement).blur();
-                        }
-                      }}
-                    />
-                  ) : (
-                    <span className="block px-1 text-slate-600">{row.rollNumber}</span>
-                  )}
-                </td>
-                <td
-                  className="px-2 py-1.5 font-medium text-slate-900 truncate border-t border-slate-100 border-r border-slate-200"
-                  style={{
-                    ...stickyStyle(LEFT_NAME, W_NAME, 22, bg),
-                    boxShadow: "4px 0 8px -2px rgba(15,23,42,0.14)",
-                  }}
-                  title={row.name}
-                >
-                  {row.name}
-                </td>
-                {dayIndices.map((di) => {
-                  const mark = row.attendance[di] ?? null;
-                  const highlighted = highlightDayIndex === di;
-                  return (
-                    <td
-                      key={di}
-                      className={cn(
-                        "p-0.5 border-t border-slate-100 relative z-0",
-                        highlighted && "bg-teal-50"
-                      )}
-                      style={{ backgroundColor: highlighted ? undefined : bg }}
-                    >
-                      <button
-                        type="button"
-                        data-cell={`${ri}-${di}`}
-                        className={cn(
-                          "w-7 h-7 rounded border text-[10px] font-bold transition-colors focus:ring-2 focus:ring-blue-400 focus:outline-none",
-                          cellClass(mark),
-                          highlighted && "ring-2 ring-teal-400"
-                        )}
-                        onClick={() => {
-                          const att = [...row.attendance];
-                          att[di] = cycleMark(mark);
-                          updateRow(ri, { attendance: att });
+          </div>
+          <p className="mt-1 text-[11px] text-slate-500">
+            {t("attendance.markAllPresent")}
+          </p>
+        </div>
+
+        {rows.map((row, ri) => (
+          <article
+            key={row.studentId}
+            className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-900">{row.name}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                  <span>#{row.serial}</span>
+                  <span>·</span>
+                  <span className="inline-flex items-center gap-1">
+                    {t("attendance.roll")}:
+                    {editableRoll ? (
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="h-7 w-14 rounded-md border border-slate-200 bg-white px-1.5 text-center text-[11px] font-semibold text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+                        value={row.rollNumber}
+                        aria-label={t("attendance.roll")}
+                        onChange={(e) => {
+                          const rollNumber = e.target.value.replace(/[^\dA-Za-z\-]/g, "").slice(0, 8);
+                          updateRow(ri, { rollNumber });
                         }}
-                        onKeyDown={(e) => handleKeyDown(e, ri, di)}
+                        onBlur={async (e) => {
+                          const rollNumber = e.target.value.trim();
+                          if (onRollSave) {
+                            try {
+                              await onRollSave(row.studentId, rollNumber);
+                            } catch {
+                              // parent shows error
+                            }
+                          }
+                        }}
+                      />
+                    ) : (
+                      <strong className="text-slate-700">{row.rollNumber || "—"}</strong>
+                    )}
+                  </span>
+                </div>
+              </div>
+              <div className="shrink-0 rounded-lg bg-slate-50 px-2 py-1 text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  {t("attendance.monthTotal")}
+                </p>
+                <p className="text-sm font-bold text-emerald-700">{row.monthTotal}</p>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-7 gap-1.5 min-[400px]:grid-cols-8 sm:grid-cols-10">
+              {dayIndices.map((di) => {
+                const mark = row.attendance[di] ?? null;
+                const highlighted = highlightDayIndex === di;
+                return (
+                  <button
+                    key={di}
+                    type="button"
+                    className={cn(
+                      "flex h-9 flex-col items-center justify-center rounded-lg border text-[10px] font-bold leading-none",
+                      cellClass(mark),
+                      highlighted && "ring-2 ring-teal-400",
+                    )}
+                    onClick={() => {
+                      const att = [...row.attendance];
+                      att[di] = cycleMark(mark);
+                      updateRow(ri, { attendance: att });
+                    }}
+                    aria-label={`Day ${di + 1}`}
+                  >
+                    <span className="mb-0.5 text-[9px] font-semibold opacity-60">{di + 1}</span>
+                    <span>{mark || "·"}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-2.5 grid grid-cols-2 gap-2 text-[11px] text-slate-600 sm:grid-cols-3">
+              <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                <span className="text-slate-400">{t("attendance.prevMonth")}</span>
+                <p className="font-semibold text-slate-700">{row.prevTotal || "0"}</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                <span className="text-slate-400">{t("attendance.cumulative")}</span>
+                <p className="font-semibold text-blue-700">{row.cumulative || "0"}</p>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <input
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs"
+                  placeholder={t("attendance.note")}
+                  value={row.note}
+                  onChange={(e) => updateRow(ri, { note: e.target.value })}
+                />
+              </div>
+            </div>
+          </article>
+        ))}
+
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          {legend}
+        </div>
+      </div>
+
+      {/* Desktop table */}
+      <div
+        ref={gridRef}
+        className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm lg:block"
+      >
+        <table
+          className="w-full border-separate border-spacing-0 text-xs"
+          style={{ minWidth: Math.max(640, 256 + dayIndices.length * 28 + 200) }}
+        >
+          <thead>
+            <tr className="text-white">
+              <th
+                className="px-2 py-2 text-left font-medium"
+                style={stickyStyle(LEFT_SERIAL, W_SERIAL, 40, "#1e293b")}
+              >
+                {t("attendance.serial")}
+              </th>
+              <th
+                className="px-2 py-2 text-left font-medium"
+                style={stickyStyle(LEFT_ROLL, W_ROLL, 41, "#1e293b")}
+              >
+                {t("attendance.roll")}
+              </th>
+              <th
+                className="border-r border-slate-600 px-2 py-2 text-left font-medium"
+                style={{
+                  ...stickyStyle(LEFT_NAME, W_NAME, 42, "#1e293b"),
+                  boxShadow: "4px 0 8px -2px rgba(0,0,0,0.35)",
+                }}
+              >
+                {t("attendance.student")}
+              </th>
+              {dayIndices.map((di) => {
+                const d = di + 1;
+                const highlighted = highlightDayIndex === di;
+                return (
+                  <th
+                    key={d}
+                    className={cn(
+                      "w-7 px-0.5 py-1 text-center font-medium",
+                      highlighted ? "bg-teal-700" : "bg-slate-800",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      className={cn(
+                        "w-full rounded py-0.5",
+                        highlighted ? "hover:bg-teal-600" : "hover:bg-slate-700",
+                      )}
+                      title={t("attendance.markAllPresent")}
+                      onClick={() => setDayForAll(di, "P")}
+                    >
+                      {d}
+                    </button>
+                  </th>
+                );
+              })}
+              <th className="w-12 bg-slate-800 px-2 py-2">{t("attendance.monthTotal")}</th>
+              <th className="w-12 bg-slate-800 px-2 py-2">{t("attendance.prevMonth")}</th>
+              <th className="w-12 bg-slate-800 px-2 py-2">{t("attendance.cumulative")}</th>
+              <th className="min-w-[80px] bg-slate-800 px-2 py-2">{t("attendance.note")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, ri) => {
+              const odd = ri % 2 === 1;
+              const bg = odd ? "#f8fafc" : "#ffffff";
+              return (
+                <tr key={row.studentId}>
+                  <td
+                    className="border-t border-slate-100 px-2 py-1.5 font-medium text-slate-600"
+                    style={stickyStyle(LEFT_SERIAL, W_SERIAL, 20, bg)}
+                  >
+                    {row.serial}
+                  </td>
+                  <td
+                    className="border-t border-slate-100 px-1 py-1"
+                    style={stickyStyle(LEFT_ROLL, W_ROLL, 21, bg)}
+                  >
+                    {editableRoll ? (
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="h-7 w-full rounded-md border border-slate-200 bg-white px-1.5 text-center text-[11px] font-semibold text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+                        value={row.rollNumber}
+                        title={t("attendance.rollEditHint")}
+                        aria-label={t("attendance.roll")}
+                        onChange={(e) => {
+                          const rollNumber = e.target.value.replace(/[^\dA-Za-z\-]/g, "").slice(0, 8);
+                          updateRow(ri, { rollNumber });
+                        }}
+                        onBlur={async (e) => {
+                          const rollNumber = e.target.value.trim();
+                          if (onRollSave) {
+                            try {
+                              await onRollSave(row.studentId, rollNumber);
+                            } catch {
+                              // parent shows error
+                            }
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="block px-1 text-slate-600">{row.rollNumber}</span>
+                    )}
+                  </td>
+                  <td
+                    className="truncate border-t border-r border-slate-100 border-slate-200 px-2 py-1.5 font-medium text-slate-900"
+                    style={{
+                      ...stickyStyle(LEFT_NAME, W_NAME, 22, bg),
+                      boxShadow: "4px 0 8px -2px rgba(15,23,42,0.14)",
+                    }}
+                    title={row.name}
+                  >
+                    {row.name}
+                  </td>
+                  {dayIndices.map((di) => {
+                    const mark = row.attendance[di] ?? null;
+                    const highlighted = highlightDayIndex === di;
+                    return (
+                      <td
+                        key={di}
+                        className={cn(
+                          "relative z-0 border-t border-slate-100 p-0.5",
+                          highlighted && "bg-teal-50",
+                        )}
+                        style={{ backgroundColor: highlighted ? undefined : bg }}
                       >
-                        {mark || "·"}
-                      </button>
-                    </td>
-                  );
-                })}
-                <td className="px-2 py-1 text-center font-bold text-emerald-700 border-t border-slate-100" style={{ backgroundColor: bg }}>
-                  {row.monthTotal}
-                </td>
-                <td className="px-2 py-1 text-center text-slate-600 border-t border-slate-100" style={{ backgroundColor: bg }}>
-                  {row.prevTotal}
-                </td>
-                <td className="px-2 py-1 text-center font-semibold text-blue-700 border-t border-slate-100" style={{ backgroundColor: bg }}>
-                  {row.cumulative}
-                </td>
-                <td className="px-1 py-1 border-t border-slate-100" style={{ backgroundColor: bg }}>
-                  <input
-                    className="w-full rounded border border-slate-200 px-1 py-0.5 text-[10px] bg-white"
-                    value={row.note}
-                    onChange={(e) => updateRow(ri, { note: e.target.value })}
-                  />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <div className="flex flex-wrap gap-4 border-t border-slate-100 bg-slate-50 px-4 py-2 text-[11px] text-slate-600">
-        <span><span className="inline-block w-3 h-3 rounded bg-emerald-100 border border-emerald-300 mr-1" />P = {t("attendance.present")}</span>
-        <span><span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-300 mr-1" />A = {t("attendance.absent")}</span>
-        <span><span className="inline-block w-3 h-3 rounded bg-amber-100 border border-amber-300 mr-1" />H = {t("attendance.halfDay")}</span>
-        <span>{t("attendance.clickHint")}</span>
-        {editableRoll && (
-          <span className="text-blue-700 font-medium">{t("attendance.rollEditHint")}</span>
-        )}
+                        <button
+                          type="button"
+                          data-cell={`${ri}-${di}`}
+                          className={cn(
+                            "h-7 w-7 rounded border text-[10px] font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400",
+                            cellClass(mark),
+                            highlighted && "ring-2 ring-teal-400",
+                          )}
+                          onClick={() => {
+                            const att = [...row.attendance];
+                            att[di] = cycleMark(mark);
+                            updateRow(ri, { attendance: att });
+                          }}
+                          onKeyDown={(e) => handleKeyDown(e, ri, di)}
+                        >
+                          {mark || "·"}
+                        </button>
+                      </td>
+                    );
+                  })}
+                  <td
+                    className="border-t border-slate-100 px-2 py-1 text-center font-bold text-emerald-700"
+                    style={{ backgroundColor: bg }}
+                  >
+                    {row.monthTotal}
+                  </td>
+                  <td
+                    className="border-t border-slate-100 px-2 py-1 text-center text-slate-600"
+                    style={{ backgroundColor: bg }}
+                  >
+                    {row.prevTotal}
+                  </td>
+                  <td
+                    className="border-t border-slate-100 px-2 py-1 text-center font-semibold text-blue-700"
+                    style={{ backgroundColor: bg }}
+                  >
+                    {row.cumulative}
+                  </td>
+                  <td className="border-t border-slate-100 px-1 py-1" style={{ backgroundColor: bg }}>
+                    <input
+                      className="w-full rounded border border-slate-200 bg-white px-1 py-0.5 text-[10px]"
+                      value={row.note}
+                      onChange={(e) => updateRow(ri, { note: e.target.value })}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {legend}
       </div>
     </div>
   );

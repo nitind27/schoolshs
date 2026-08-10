@@ -183,26 +183,27 @@ export default function TeacherDashboard() {
     `/teacher/attendance?classId=${classId}&month=${now.getMonth() + 1}&year=${now.getFullYear()}`;
 
   return (
-    <div className="teacher-dashboard space-y-5">
+    <div className="teacher-dashboard space-y-4 sm:space-y-5">
       <TeacherHero schoolName={data?.schoolName} />
 
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900">
               {t("teacherPortal.dashboardTitle")}
             </h2>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 break-words">
               {data?.teacherName
                 ? t("teacherPortal.welcomeTeacher", { name: data.teacherName })
                 : t("teacherPortal.dashboardSubtitle")}
               {data?.academicYear ? ` · ${data.academicYear}` : ""}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
             <Button
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto justify-center"
               onClick={() => load(true)}
               disabled={refreshing}
             >
@@ -214,6 +215,7 @@ export default function TeacherDashboard() {
             <Button
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto justify-center"
               disabled={exporting}
               onClick={() => downloadExport("xlsx")}
             >
@@ -223,6 +225,7 @@ export default function TeacherDashboard() {
             <Button
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto justify-center"
               disabled={exporting}
               onClick={() => downloadExport("pdf")}
             >
@@ -246,7 +249,7 @@ export default function TeacherDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 xl:grid-cols-4 xl:gap-3">
         <MetricCard
           label={t("teacherPortal.myClasses")}
           value={stats?.totalClasses ?? 0}
@@ -335,8 +338,8 @@ export default function TeacherDashboard() {
                 }
               >
                 {data.classes.map((cls) => (
-                  <div key={cls.id} className="teacher-class-card p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                  <div key={cls.id} className="teacher-class-card p-3 sm:p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Link
@@ -396,7 +399,7 @@ export default function TeacherDashboard() {
                           ) : null}
                         </div>
                       </div>
-                      <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
+                      <div className="grid w-full shrink-0 grid-cols-1 gap-2 min-[380px]:grid-cols-2 md:flex md:w-auto md:min-w-[11.5rem] md:flex-col">
                         <Link href={attHref(cls.id)}>
                           <Button size="sm" className={`w-full ${tp.btn}`}>
                             <ClipboardList className="h-3.5 w-3.5" />
@@ -466,7 +469,7 @@ export default function TeacherDashboard() {
                 {t("teacherPortal.noPeriodsToday")}
               </p>
             ) : (
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
                 {data.todaySchedule.map((p) => (
                   <div
                     key={`${p.classId}-${p.periodIndex}`}
@@ -504,7 +507,7 @@ export default function TeacherDashboard() {
             description={t("teacherPortal.quickActionsDesc")}
             iconClassName={tp.academicsIcon}
           >
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {[
                 {
                   href: "/teacher/attendance",

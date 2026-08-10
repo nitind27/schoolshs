@@ -245,27 +245,39 @@ function TeacherAttendanceContent() {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+    <div className="space-y-3 min-w-0">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900 md:text-xl">
-            <ClipboardList className={`h-5 w-5 ${tp.icon}`} />
-            {t("attendance.teacherPageTitle")}
+            <ClipboardList className={`h-5 w-5 shrink-0 ${tp.icon}`} />
+            <span className="break-words">{t("attendance.teacherPageTitle")}</span>
           </h1>
-          <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">{t("attendance.teacherPageSubtitle")}</p>
+          <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+            {t("attendance.teacherPageSubtitle")}
+          </p>
         </div>
         {loaded && rows.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={markAllPresent}>
+          <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3 lg:flex lg:flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-center lg:w-auto"
+              onClick={markAllPresent}
+            >
               {t("attendance.markAllStudentsPresent")}
             </Button>
-            <Link href={printRegisterUrl()} target="_blank">
-              <Button variant="outline" size="sm">
+            <Link href={printRegisterUrl()} target="_blank" className="w-full lg:w-auto">
+              <Button variant="outline" size="sm" className="w-full justify-center">
                 <Printer className="h-4 w-4" />
                 {t("attendance.printRegister")}
               </Button>
             </Link>
-            <Button size="sm" className={tp.btn} onClick={save} disabled={saving}>
+            <Button
+              size="sm"
+              className={`w-full justify-center lg:w-auto ${tp.btn}`}
+              onClick={save}
+              disabled={saving}
+            >
               {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
               {t("attendance.save")}
             </Button>

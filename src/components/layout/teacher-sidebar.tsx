@@ -114,7 +114,7 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
         roleIcon={BookMarked}
       />
       <main className="shell-main">
-        <div className="max-w-[1600px] px-4 pb-4 pt-[4.75rem] lg:px-6 lg:pb-6">
+        <div className="teacher-main-content mx-auto max-w-[1600px] w-full min-w-0 px-3 pb-6 pt-[4.75rem] sm:px-4 lg:px-6 lg:pb-8">
           {children}
         </div>
       </main>

@@ -490,8 +490,8 @@ export default function TeacherStudentsPage() {
 
       {/* Filters */}
       <div className="mb-4 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[180px] flex-1 sm:max-w-xs">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
+          <div className="relative min-w-0 w-full sm:col-span-2 lg:min-w-[180px] lg:max-w-xs lg:flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
@@ -510,7 +510,7 @@ export default function TeacherStudentsPage() {
           <select
             value={filters.classId}
             onChange={(e) => setFilter({ classId: e.target.value })}
-            className="h-9 min-w-[140px] rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            className="h-9 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 lg:w-auto lg:min-w-[140px]"
             aria-label={t("teacherPortal.myClasses")}
           >
             <option value="">
@@ -526,7 +526,7 @@ export default function TeacherStudentsPage() {
           <select
             value={filters.gender}
             onChange={(e) => setFilter({ gender: e.target.value })}
-            className="h-9 min-w-[120px] rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            className="h-9 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 lg:w-auto lg:min-w-[120px]"
             aria-label={t("fields.gender")}
           >
             <option value="">
@@ -542,7 +542,7 @@ export default function TeacherStudentsPage() {
           <select
             value={filters.category}
             onChange={(e) => setFilter({ category: e.target.value })}
-            className="h-9 min-w-[120px] rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            className="h-9 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 lg:w-auto lg:min-w-[120px]"
             aria-label={t("fields.category")}
           >
             <option value="">
@@ -558,7 +558,7 @@ export default function TeacherStudentsPage() {
           <select
             value={filters.status}
             onChange={(e) => setFilter({ status: e.target.value })}
-            className="h-9 min-w-[120px] rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            className="h-9 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 lg:w-auto lg:min-w-[120px]"
             aria-label={t("common.status")}
           >
             <option value="">
@@ -576,11 +576,11 @@ export default function TeacherStudentsPage() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-9 px-2.5"
+              className="h-9 w-full px-2.5 sm:w-auto"
               onClick={() => setFilters(EMPTY_FILTERS)}
             >
               <FilterX className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">
+              <span className="sm:inline">
                 {t("attendance.clearFilters")}
               </span>
             </Button>

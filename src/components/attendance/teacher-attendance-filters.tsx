@@ -54,7 +54,7 @@ export function TeacherAttendanceFilters({
         </div>
         <p className="text-sm font-semibold text-slate-700">{t("attendance.teacherSelectClass")}</p>
       </div>
-      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="p-3 sm:p-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Select
           label={t("attendance.classLabel")}
           options={[{ value: "", label: t("attendance.chooseClass") }, ...classOptions]}
@@ -76,7 +76,7 @@ export function TeacherAttendanceFilters({
           value={value.year}
           onChange={(e) => set({ year: e.target.value })}
         />
-        <div className="flex items-end">
+        <div className="flex items-end sm:col-span-2 lg:col-span-1">
           <Button
             className="w-full bg-emerald-600 hover:bg-emerald-700"
             onClick={handleLoad}

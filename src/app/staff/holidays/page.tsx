@@ -221,7 +221,10 @@ function BigCalendar({ year, month, holMap, festMap, today, onPrev, onNext, onDa
       {/* Weekday headers */}
       <div className="hol-cal-wd-row">
         {DAY_SHORT.map((d, i) => (
-          <div key={d} className={cn("hol-cal-wd", i===0&&"sun", i===6&&"sat")}>{d}</div>
+          <div key={d} className={cn("hol-cal-wd", i===0&&"sun", i===6&&"sat")}>
+            <span className="hol-cal-wd-full">{d}</span>
+            <span className="hol-cal-wd-short">{d.charAt(0)}</span>
+          </div>
         ))}
       </div>
 
@@ -498,15 +501,15 @@ export default function HolidaysPage() {
         { label: t("holidays.title") },
       ]}
       actions={
-        <div className="flex flex-wrap gap-2 hol-no-print">
-          <Button size="sm" variant="outline" onClick={handleDownload} disabled={loading || totalAdded===0}>
+        <div className="grid w-full grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex sm:w-auto sm:flex-wrap hol-no-print">
+          <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={handleDownload} disabled={loading || totalAdded===0}>
             <Download className="h-4 w-4"/> CSV
           </Button>
-          <Button size="sm" variant="outline" onClick={() => window.print()} disabled={loading || totalAdded===0}>
+          <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => window.print()} disabled={loading || totalAdded===0}>
             <Printer className="h-4 w-4"/> Print
           </Button>
           {!readOnly && (
-            <Button size="sm" onClick={() => openAdd()}>
+            <Button size="sm" className="w-full min-[400px]:col-span-2 sm:col-span-1 sm:w-auto" onClick={() => openAdd()}>
               <Plus className="h-4 w-4"/> {t("holidays.addHoliday")}
             </Button>
           )}
@@ -523,8 +526,10 @@ export default function HolidaysPage() {
         {/* ── Toolbar ── */}
         <div className="hol-toolbar hol-no-print">
           <div className="hol-toolbar__left">
-            <Select label={t("holidays.yearFilter")} className="w-28"
-              options={YEAR_OPTS} value={year} onChange={e => setYear(e.target.value)}/>
+            <div className="w-full sm:w-auto">
+              <Select label={t("holidays.yearFilter")} className="w-full sm:w-28"
+                options={YEAR_OPTS} value={year} onChange={e => setYear(e.target.value)}/>
+            </div>
             {loading && <Spinner size="sm"/>}
           </div>
           <div className="hol-toolbar__right">
@@ -585,14 +590,14 @@ export default function HolidaysPage() {
         {!loading && viewMode==="list" && (
           <div className="hol-list-panel">
             <div className="hol-list-panel__head hol-no-print">
-              <div>
+              <div className="min-w-0">
                 <p className="hol-list-panel__title">{t("holidays.title")} — {year}</p>
                 <p className="hol-list-panel__sub">
                   {totalAdded} added · {allFestivals.filter(f=>!holMap.has(f.date)).length} suggestions
                 </p>
               </div>
               {!readOnly && (
-                <Button size="sm" variant="outline" onClick={() => openAdd()}>
+                <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => openAdd()}>
                   <Plus className="h-4 w-4"/> {t("holidays.addHoliday")}
                 </Button>
               )}
@@ -738,7 +743,7 @@ export default function HolidaysPage() {
                   {byMonth.map(({ month, list }) => (
                     <div key={`mob-${month}`}>
                       <p className="hol-month-label px-1 mb-2">{MONTH_FULL[month]} {year}</p>
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         {list.map((entry, li) => {
                           const d   = new Date(entry.date+"T00:00:00");
                           const dow = d.getDay();
@@ -747,54 +752,57 @@ export default function HolidaysPage() {
                           return (
                             <div key={`mob-${entry.date}-${li}`}
                               className={cn(
-                                "flex items-start gap-3 rounded-xl border bg-white p-3 shadow-sm",
-                                isSug ? "border-dashed border-amber-200 opacity-75" : "border-slate-200",
+                                "rounded-xl border bg-white p-3 shadow-sm",
+                                isSug ? "border-dashed border-amber-200" : "border-slate-200",
                               )}>
-                              <div className={cn("hol-date-num shrink-0",
-                                st==="today"    && "hol-date-num--today",
-                                st==="upcoming" && "hol-date-num--upcoming",
-                                st==="past"     && "hol-date-num--past",
-                                st==="suggest"  && "hol-date-num--suggest",
-                              )}>
-                                <span className="hol-date-num__d">{d.getDate()}</span>
-                                <span className="hol-date-num__m">{MONTH_SHORT[d.getMonth()]}</span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={cn("font-semibold text-sm",
-                                  isSug ? "text-slate-500" : "text-slate-900")}>{entry.name}</p>
-                                {entry.nameGu && <p className="text-xs text-slate-400">{entry.nameGu}</p>}
-                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                  <span className={`hol-type-badge hol-type-badge--${entry.type}`}>
-                                    {t(`holidays.type${typeCap(entry.type)}` as never)}
-                                  </span>
-                                  <span className={cn("hol-day-chip",(dow===0||dow===6)&&"hol-day-chip--sun")}>
-                                    {DAY_SHORT[dow]}
-                                  </span>
-                                  {isSug && (
-                                    <span className="text-[10px] text-amber-600 font-semibold bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
-                                      suggestion
+                              <div className="flex items-start gap-3">
+                                <div className={cn("hol-date-num shrink-0",
+                                  st==="today"    && "hol-date-num--today",
+                                  st==="upcoming" && "hol-date-num--upcoming",
+                                  st==="past"     && "hol-date-num--past",
+                                  st==="suggest"  && "hol-date-num--suggest",
+                                )}>
+                                  <span className="hol-date-num__d">{d.getDate()}</span>
+                                  <span className="hol-date-num__m">{MONTH_SHORT[d.getMonth()]}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={cn("font-semibold text-sm leading-snug break-words",
+                                    isSug ? "text-slate-500" : "text-slate-900")}>{entry.name}</p>
+                                  {entry.nameGu && <p className="text-xs text-slate-400 mt-0.5 break-words">{entry.nameGu}</p>}
+                                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                    <span className={`hol-type-badge hol-type-badge--${entry.type}`}>
+                                      {t(`holidays.type${typeCap(entry.type)}` as never)}
                                     </span>
-                                  )}
+                                    <span className={cn("hol-day-chip",(dow===0||dow===6)&&"hol-day-chip--sun")}>
+                                      {DAY_SHORT[dow]}
+                                    </span>
+                                    {isSug && (
+                                      <span className="text-[10px] text-amber-600 font-semibold bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                                        suggestion
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                               {!readOnly && (
-                                <div className="flex flex-col gap-1 shrink-0">
+                                <div className="mt-3 grid grid-cols-2 gap-2">
                                   {isSug ? (
-                                    <button type="button" className="hol-add-btn"
+                                    <button type="button" className="hol-add-btn col-span-2 w-full justify-center"
                                       onClick={() => openAdd(entry.date, entry as Festival)}>
                                       <Plus className="h-3 w-3"/> Add
                                     </button>
                                   ) : (
                                     <>
-                                      <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400"
+                                      <Button size="sm" variant="outline" className="w-full"
                                         onClick={() => openEdit(entry as HolidayRow)}>
-                                        <Edit className="h-3.5 w-3.5"/>
+                                        <Edit className="h-3.5 w-3.5"/> Edit
                                       </Button>
-                                      <Button size="icon" variant="ghost" className="h-7 w-7 text-red-400"
+                                      <Button size="sm" variant="outline" className="w-full text-red-600 border-red-200 hover:bg-red-50"
                                         onClick={() => handleDelete(entry as HolidayRow)}
                                         disabled={deletingId===(entry as HolidayRow).id}>
                                         {deletingId===(entry as HolidayRow).id
                                           ? <Spinner size="sm"/> : <Trash2 className="h-3.5 w-3.5"/>}
+                                        Delete
                                       </Button>
                                     </>
                                   )}

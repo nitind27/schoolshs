@@ -65,18 +65,18 @@ export function PageShell({
           </nav>
         )}
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className={cn("flex min-w-0 items-center gap-2.5 border-l-4 pl-3", resolvedAccent)}>
-            {icon && <span className="shrink-0 text-slate-600">{icon}</span>}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className={cn("flex min-w-0 items-start gap-2.5 border-l-4 pl-3 sm:items-center", resolvedAccent)}>
+            {icon && <span className="mt-0.5 shrink-0 text-slate-600 sm:mt-0">{icon}</span>}
             <div className="min-w-0">
               <h1 className="break-words text-lg font-bold leading-tight text-slate-900 md:text-xl">{title}</h1>
               {subtitle && (
-                <p className="mt-0.5 break-words text-sm leading-snug text-slate-500">{subtitle}</p>
+                <p className="mt-0.5 break-words text-xs leading-snug text-slate-500 sm:text-sm">{subtitle}</p>
               )}
             </div>
           </div>
           {actions && (
-            <div className="flex w-full min-w-0 flex-wrap items-stretch gap-2 sm:w-auto sm:shrink-0 sm:items-center [&_a]:min-w-0 [&_button]:min-w-0 sm:[&_a]:w-auto sm:[&_button]:w-auto">
+            <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:shrink-0 sm:flex-row sm:flex-wrap sm:items-center [&_a]:min-w-0 [&_button]:min-w-0">
               {actions}
             </div>
           )}
