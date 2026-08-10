@@ -352,9 +352,9 @@
 }
 
 .id-card__qr {
-  width: 11.5mm;
-  height: 11.5mm;
-  flex: 0 0 11.5mm;
+  width: 14mm;
+  height: 14mm;
+  flex: 0 0 14mm;
   border-radius: 0.5mm;
   border: 0.18mm solid rgba(11, 43, 99, 0.18);
   background: #fff;

@@ -88,7 +88,7 @@ function IdCardQr({ value }: { value: string }) {
     QRCode.toDataURL(text, {
       errorCorrectionLevel: "M",
       margin: 1,
-      width: 160,
+      width: 200,
       color: { dark: "#0b2b63", light: "#ffffff" },
     })
       .then((url) => {
