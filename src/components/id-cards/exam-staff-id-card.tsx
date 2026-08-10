@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import { cn } from "@/lib/utils";
+import { buildPublicExamIdScanUrl } from "@/lib/id-card-public-url";
+import QRCode from "qrcode";
 import "./exam-staff-id-card.css";
 
 export type ExamStaffCardPerson = {
@@ -55,6 +58,38 @@ function formatMobile(v?: string | null) {
   return v || "—";
 }
 
+function ExamQr({ value }: { value: string }) {
+  const [src, setSrc] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    const text = value.trim();
+    if (!text) {
+      setSrc("");
+      return;
+    }
+    QRCode.toDataURL(text, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 160,
+      color: { dark: "#123a5c", light: "#ffffff" },
+    })
+      .then((url) => {
+        if (alive) setSrc(url);
+      })
+      .catch(() => {
+        if (alive) setSrc("");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [value]);
+
+  if (!src) return <div className="exam-id-card__qr exam-id-card__qr--empty" aria-hidden />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img className="exam-id-card__qr" src={src} alt="" />;
+}
+
 export function ExamStaffIdCard({
   staff,
   school,
@@ -63,6 +98,7 @@ export function ExamStaffIdCard({
   photoUrl,
   logoUrl = SCHOOL_LOGO_URL,
   signatureUrl,
+  website,
   className,
 }: {
   staff: ExamStaffCardPerson;
@@ -73,11 +109,13 @@ export function ExamStaffIdCard({
     schoolPhone?: string | null;
     tagline?: string | null;
     academicYear?: string | null;
+    idCardWebsite?: string | null;
   } | null;
   meta: ExamStaffCardMeta;
   photoUrl?: string;
   logoUrl?: string;
   signatureUrl?: string;
+  website?: string | null;
   className?: string;
 }) {
   const schoolName = settings?.schoolName || school?.name || "School";
@@ -90,6 +128,36 @@ export function ExamStaffIdCard({
   const nameGu = staffName(staff, true);
   const role = meta.roleLabel || "EXAMINER / INVIGILATOR";
   const year = meta.academicYear || settings?.academicYear || "2025-26";
+  const [pageOrigin, setPageOrigin] = useState("");
+
+  useEffect(() => {
+    setPageOrigin(window.location.origin);
+  }, []);
+
+  const qrPayload = useMemo(
+    () =>
+      buildPublicExamIdScanUrl(
+        website || settings?.idCardWebsite,
+        staff.id,
+        {
+          examTitle: meta.examTitle,
+          examSession: meta.examSession,
+          academicYear: year,
+          roleLabel: role,
+        },
+        pageOrigin,
+      ),
+    [
+      website,
+      settings?.idCardWebsite,
+      staff.id,
+      meta.examTitle,
+      meta.examSession,
+      year,
+      role,
+      pageOrigin,
+    ],
+  );
 
   return (
     <article
@@ -148,17 +216,20 @@ export function ExamStaffIdCard({
                 <dt>Emp. ID</dt>
                 <dd>{staff.employeeId || "—"}</dd>
               </div>
-              {staff.department ? (
-                <div>
-                  <dt>Department</dt>
-                  <dd>{staff.department}</dd>
-                </div>
-              ) : null}
+              <div>
+                <dt>Department</dt>
+                <dd>{staff.department || "—"}</dd>
+              </div>
               <div>
                 <dt>Mobile</dt>
                 <dd>{formatMobile(staff.mobileNumber)}</dd>
               </div>
             </dl>
+          </div>
+
+          <div className="exam-id-card__qr-wrap">
+            <ExamQr value={qrPayload} />
+            <span>Scan ID</span>
           </div>
         </div>
 
@@ -190,7 +261,7 @@ export function ExamStaffIdCard({
             ) : (
               <span className="exam-id-card__sign-line" />
             )}
-            <p>{school?.principalName || "Principal / Head"}</p>
+            <p>Principal</p>
           </div>
           <p className="exam-id-card__note">
             For examination duty only · Return after exam

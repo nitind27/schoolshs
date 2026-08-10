@@ -33,6 +33,8 @@ type SettingsLite = {
   tagline?: string | null;
   academicYear?: string | null;
   logoPath?: string | null;
+  signaturePath?: string | null;
+  idCardWebsite?: string | null;
 };
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -147,6 +149,10 @@ export default function ExamIdCardsPage() {
   const logoUrl = settings?.logoPath
     ? `/api/uploads/${settings.logoPath}`
     : SCHOOL_LOGO_URL;
+  const signatureUrl = settings?.signaturePath
+    ? `/api/uploads/${settings.signaturePath}`
+    : undefined;
+  const website = settings?.idCardWebsite || null;
 
   const selectedStaff = useMemo(
     () => staff.filter((s) => selected.has(s.id)),
@@ -454,6 +460,8 @@ export default function ExamIdCardsPage() {
                             meta={meta}
                             photoUrl={resolvePhotoUrl(s)}
                             logoUrl={logoUrl}
+                            signatureUrl={signatureUrl}
+                            website={website}
                           />
                         </div>
                       </div>
@@ -496,6 +504,8 @@ export default function ExamIdCardsPage() {
                             meta={meta}
                             photoUrl={resolvePhotoUrl(s)}
                             logoUrl={logoUrl}
+                            signatureUrl={signatureUrl}
+                            website={website}
                           />
                         </div>
                       </div>

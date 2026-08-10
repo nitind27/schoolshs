@@ -23,8 +23,10 @@ const PUBLIC_PATHS = [
   "/m/forwarder-setup",
   "/m/id-cards",
   "/m/id",
+  "/m/exam-id",
   "/api/id-cards/share",
   "/api/id-cards/public",
+  "/api/exam-id-cards/public",
 ];
 
 const ROLE_ROUTES: Record<string, UserRole[]> = {
