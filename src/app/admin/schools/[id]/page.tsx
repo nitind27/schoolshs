@@ -28,7 +28,7 @@ import {
 } from "@/lib/school-features";
 import { ModuleFormatPicker } from "@/components/admin/module-format-picker";
 import { SchoolTypeField } from "@/components/admin/school-type-field";
-import { ArrowLeft, School, Save, ToggleLeft, ToggleRight, FileText, CreditCard, LayoutGrid, Users, MapPin, Phone, Mail, Globe, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, School, Save, ToggleLeft, ToggleRight, FileText, CreditCard, LayoutGrid, Users, MapPin, Phone, Mail, Globe, Pencil, Trash2, FileDown } from "lucide-react";
 
 type Tab = "overview" | "edit" | "contract" | "payments" | "features" | "admins";
 
@@ -159,6 +159,7 @@ export default function SchoolDetailPage() {
   const [err, setErr] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [contractUploading, setContractUploading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState<"credentials" | "full" | null>(null);
 
   const load = useCallback(() => {
     fetch(`/api/admin/schools/${id}`)
@@ -266,6 +267,39 @@ export default function SchoolDetailPage() {
       load();
     } finally {
       setSaving(false);
+    }
+  };
+
+  const downloadPdf = async (variant: "credentials" | "full") => {
+    if (!school) return;
+    setPdfLoading(variant);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/schools/${id}/profile-pdf?variant=${variant}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErr(data.error || "Failed to download PDF");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        variant === "credentials"
+          ? `Codeat-School-Credentials-${String(school.code)}.pdf`
+          : `Codeat-School-Profile-${String(school.code)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setMsg(
+        variant === "credentials"
+          ? "Credentials PDF downloaded. Login password is inside the file. Open password: Codeat@2426"
+          : "Full profile PDF downloaded. Open password: Codeat@2426",
+      );
+    } catch {
+      setErr("Failed to download PDF");
+    } finally {
+      setPdfLoading(null);
     }
   };
 
@@ -391,6 +425,27 @@ export default function SchoolDetailPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge active={Boolean(school.isActive)} />
+          <Button
+            size="sm"
+            className="bg-violet-600 hover:bg-violet-700"
+            disabled={!!pdfLoading}
+            title="School details and login credentials only (no contract)"
+            onClick={() => void downloadPdf("credentials")}
+          >
+            {pdfLoading === "credentials" ? <Spinner size="sm" /> : <FileDown className="h-4 w-4" />}
+            Credentials
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-violet-200 text-violet-700 hover:bg-violet-50"
+            disabled={!!pdfLoading}
+            title="Full dossier including contract and billing"
+            onClick={() => void downloadPdf("full")}
+          >
+            {pdfLoading === "full" ? <Spinner size="sm" /> : <FileDown className="h-4 w-4" />}
+            Full PDF
+          </Button>
           <Button
             variant="outline"
             size="sm"

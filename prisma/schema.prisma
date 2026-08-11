@@ -166,6 +166,8 @@ model User {
   updatedAt                DateTime  @updatedAt
   email                    String    @unique
   passwordHash             String
+  /** AES-encrypted current portal password for Super Admin credential PDFs. */
+  passwordEnc              String?   @db.Text
   name                     String
   role                     String
   schoolId                 String?

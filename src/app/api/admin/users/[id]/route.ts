@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth, hashPassword, AuthError } from "@/lib/auth";
+import { requireAuth, AuthError } from "@/lib/auth";
+import { passwordRecord } from "@/lib/user-password";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -15,7 +16,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Admin not found" }, { status: 404 });
     }
 
-    const data: { name?: string; email?: string; schoolId?: string; isActive?: boolean; passwordHash?: string } = {};
+    const data: {
+      name?: string;
+      email?: string;
+      schoolId?: string;
+      isActive?: boolean;
+      passwordHash?: string;
+      passwordEnc?: string;
+      passwordChangedAt?: Date;
+    } = {};
 
     if (body.name !== undefined) data.name = String(body.name).trim();
     if (body.isActive !== undefined) data.isActive = Boolean(body.isActive);
@@ -34,7 +43,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       if (String(body.password).length < 8) {
         return NextResponse.json({ error: "Password min 8 characters" }, { status: 400 });
       }
-      data.passwordHash = hashPassword(String(body.password));
+      Object.assign(data, passwordRecord(String(body.password)));
     }
 
     const updated = await prisma.user.update({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { AuthError, hashPassword, requireSchoolAuth } from "@/lib/auth";
+import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { passwordRecord } from "@/lib/user-password";
 import { resolveStaffPortalRole } from "@/lib/staff-portal";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -114,7 +115,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           isActive,
           ...(password
             ? {
-                passwordHash: hashPassword(password),
+                ...passwordRecord(password),
                 failedLoginCount: 0,
                 lockedUntil: null,
               }
@@ -154,7 +155,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const created = await prisma.user.create({
       data: {
         email,
-        passwordHash: hashPassword(password),
+        ...passwordRecord(password),
         name: `${staff.firstName} ${staff.lastName}`.trim(),
         role,
         schoolId: session.schoolId,

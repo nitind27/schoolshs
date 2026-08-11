@@ -1,4 +1,5 @@
-import { AuthError, hashPassword, verifyPassword } from "@/lib/auth";
+import { AuthError, verifyPassword } from "@/lib/auth";
+import { passwordRecord } from "@/lib/user-password";
 import { prisma } from "@/lib/db";
 import {
   createVerificationOtp,
@@ -175,7 +176,7 @@ export async function completeStudentFirstLogin(input: {
     prisma.user.update({
       where: { id: user.id },
       data: {
-        passwordHash: hashPassword(newPassword),
+        ...passwordRecord(newPassword),
         emailVerified: true,
         emailVerifiedAt: new Date(),
         emailVerificationToken: null,

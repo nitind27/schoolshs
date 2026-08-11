@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@bhashaime/core": "^1.0.8",
+    "@cantoo/pdf-lib": "^2.8.1",
     "@libsql/client": "^0.17.4",
     "@prisma/adapter-libsql": "^7.8.0",
     "@prisma/adapter-mariadb": "^7.8.0",

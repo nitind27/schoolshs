@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import {
   AuthError,
-  hashPassword,
   requireSchoolAuth,
   verifyPassword,
 } from "@/lib/auth";
+import { passwordRecord } from "@/lib/user-password";
 
 /** School admin changes their own password */
 export async function PATCH(request: NextRequest) {
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest) {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        passwordHash: hashPassword(newPassword),
+        ...passwordRecord(newPassword),
         failedLoginCount: 0,
         lockedUntil: null,
       },

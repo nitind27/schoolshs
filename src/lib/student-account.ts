@@ -1,5 +1,6 @@
 import type { Student } from "@/generated/prisma/client";
-import { AuthError, hashPassword } from "@/lib/auth";
+import { AuthError } from "@/lib/auth";
+import { passwordRecord } from "@/lib/user-password";
 import { prisma } from "@/lib/db";
 
 export const STUDENT_TEMPORARY_PASSWORD = "123456";
@@ -82,7 +83,7 @@ export async function syncStudentPortalAccount(
     return prisma.user.create({
       data: {
         email,
-        passwordHash: hashPassword(STUDENT_TEMPORARY_PASSWORD),
+        ...passwordRecord(STUDENT_TEMPORARY_PASSWORD),
         name,
         role: "student",
         schoolId: student.schoolId,
@@ -105,7 +106,7 @@ export async function syncStudentPortalAccount(
       isActive: true,
       ...(emailChanged
         ? {
-            passwordHash: hashPassword(STUDENT_TEMPORARY_PASSWORD),
+            ...passwordRecord(STUDENT_TEMPORARY_PASSWORD),
             emailVerified: false,
             emailVerifiedAt: null,
             emailVerificationToken: null,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { AuthError, hashPassword, requireSchoolAuth } from "@/lib/auth";
+import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { passwordRecord } from "@/lib/user-password";
 import { fillStaffGuNames } from "@/lib/gujarati/transliterate-server";
 import {
   generateStaffNumericPassword,
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
         await tx.user.create({
           data: {
             email: data.email,
-            passwordHash: hashPassword(generatedPassword),
+            ...passwordRecord(generatedPassword),
             name: `${created.firstName} ${created.lastName}`.trim(),
             role: portalRole,
             schoolId: session.schoolId,

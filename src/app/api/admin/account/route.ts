@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import {
   AuthError,
-  hashPassword,
   requireAuth,
   verifyPassword,
 } from "@/lib/auth";
+import { passwordRecord } from "@/lib/user-password";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -100,6 +100,7 @@ export async function PATCH(request: NextRequest) {
       name?: string;
       email?: string;
       passwordHash?: string;
+      passwordEnc?: string;
       passwordChangedAt?: Date;
       emailVerified?: boolean;
       emailVerifiedAt?: Date | null;
@@ -147,8 +148,7 @@ export async function PATCH(request: NextRequest) {
           { status: 400 },
         );
       }
-      data.passwordHash = hashPassword(newPassword!);
-      data.passwordChangedAt = new Date();
+      Object.assign(data, passwordRecord(newPassword!));
       data.failedLoginCount = 0;
       data.lockedUntil = null;
     }

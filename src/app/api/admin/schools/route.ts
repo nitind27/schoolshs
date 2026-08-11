@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth, hashPassword, AuthError } from "@/lib/auth";
+import { requireAuth, AuthError } from "@/lib/auth";
+import { passwordRecord } from "@/lib/user-password";
 import { defaultFeaturesForPlan, normalizeFeatureList, normalizeModuleFormats } from "@/lib/school-features";
 import {
   isKnownCertificatePackId,
@@ -202,7 +203,7 @@ export async function POST(request: NextRequest) {
         const adminUser = await tx.user.create({
           data: {
             email: adminEmail,
-            passwordHash: hashPassword(adminPassword),
+            ...passwordRecord(adminPassword),
             name: adminName,
             role: "school_admin",
             schoolId: created.id,

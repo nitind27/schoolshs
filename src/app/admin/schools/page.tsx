@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatINR, StatusBadge } from "@/components/admin/admin-ui";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { InfoModal } from "@/components/ui/info-modal";
-import { School, Plus, Search, MapPin, Users, GraduationCap, ExternalLink, Pencil, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { School, Plus, Search, MapPin, Users, GraduationCap, ExternalLink, Pencil, Trash2, ToggleLeft, ToggleRight, FileDown } from "lucide-react";
 
 interface SchoolRow {
   id: string;
@@ -36,6 +36,7 @@ export default function SchoolsListPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pdfId, setPdfId] = useState<string | null>(null);
   const [confirmToggle, setConfirmToggle] = useState<SchoolRow | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<SchoolRow | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -88,6 +89,40 @@ export default function SchoolsListPage() {
       setMsg(school.isActive ? `${school.name} deactivated.` : `${school.name} activated.`);
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const downloadPdf = async (school: SchoolRow, variant: "credentials" | "full") => {
+    setPdfId(`${school.id}:${variant}`);
+    setErr(null);
+    try {
+      const res = await fetch(
+        `/api/admin/schools/${school.id}/profile-pdf?variant=${variant}`,
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErr(data.error || "Failed to download PDF");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        variant === "credentials"
+          ? `Codeat-School-Credentials-${school.code}.pdf`
+          : `Codeat-School-Profile-${school.code}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setMsg(
+        variant === "credentials"
+          ? `Credentials PDF downloaded for ${school.name}. Login password is inside the file. Open password: Codeat@2426`
+          : `Full profile PDF downloaded for ${school.name}. Open password: Codeat@2426`,
+      );
+    } catch {
+      setErr("Failed to download PDF");
+    } finally {
+      setPdfId(null);
     }
   };
 
@@ -218,6 +253,37 @@ export default function SchoolsListPage() {
                   </div>
                 )}
 
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    size="sm"
+                    className="w-full bg-violet-600 hover:bg-violet-700"
+                    disabled={pdfId === `${s.id}:credentials`}
+                    title="School details and login credentials only (no contract)"
+                    onClick={() => void downloadPdf(s, "credentials")}
+                  >
+                    {pdfId === `${s.id}:credentials` ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <FileDown className="h-3.5 w-3.5" />
+                    )}
+                    Credentials
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-violet-200 text-violet-700 hover:bg-violet-50"
+                    disabled={pdfId === `${s.id}:full`}
+                    title="Full dossier including contract and billing"
+                    onClick={() => void downloadPdf(s, "full")}
+                  >
+                    {pdfId === `${s.id}:full` ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <FileDown className="h-3.5 w-3.5" />
+                    )}
+                    Full PDF
+                  </Button>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <Link href={`/admin/schools/${s.id}`}>
                     <Button variant="outline" size="sm" className="w-full">

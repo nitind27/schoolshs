@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth, hashPassword, AuthError } from "@/lib/auth";
+import { requireAuth, AuthError } from "@/lib/auth";
+import { passwordRecord } from "@/lib/user-password";
 import {
   getRequestOriginFromHeaders,
   onboardSchoolAdminUser,
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.create({
       data: {
         email,
-        passwordHash: hashPassword(password),
+        ...passwordRecord(password),
         name,
         role: "school_admin",
         schoolId,
