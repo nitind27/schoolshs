@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
         { region: { contains: q } },
         { country: { contains: q } },
         { user: { name: { contains: q } } },
+        { user: { school: { name: { contains: q } } } },
+        { user: { school: { code: { contains: q } } } },
       ];
     }
 

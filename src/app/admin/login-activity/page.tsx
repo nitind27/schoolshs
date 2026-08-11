@@ -11,10 +11,8 @@ import {
   Search,
   Shield,
 } from "lucide-react";
-import { PageLoader } from "@/components/ui/loader";
+import { PageLoader, Spinner } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
-import type { ColumnDef } from "@tanstack/react-table";
-import { GlobalDataTable } from "@/components/ui/global-data-table";
 import "@/components/admin/admin-portal.css";
 
 type LoginEventRow = {
@@ -89,25 +87,38 @@ export default function AdminLoginActivityPage() {
   const [byRole, setByRole] = useState<Record<string, number>>({});
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [role, setRole] = useState("all");
   const [source, setSource] = useState("all");
+  const [page, setPage] = useState(0);
+  const pageSize = 25;
 
   const load = useCallback(async () => {
     setLoading(true);
+    setErr(null);
     try {
       const params = new URLSearchParams();
       if (q.trim()) params.set("q", q.trim());
       if (role !== "all") params.set("role", role);
       if (source !== "all") params.set("source", source);
-      params.set("limit", "120");
+      params.set("limit", "200");
       const res = await fetch(`/api/admin/login-events?${params.toString()}`, { cache: "no-store" });
-      const data = await res.json();
-      setEvents(data.events || []);
-      setTotal(data.total || 0);
-      setLast24h(data.last24h || 0);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErr(data.error || "Failed to load login activity");
+        setEvents([]);
+        return;
+      }
+      setEvents(Array.isArray(data.events) ? data.events : []);
+      setTotal(Number(data.total) || 0);
+      setLast24h(Number(data.last24h) || 0);
       setByRole(data.byRole || {});
-      setRoles(data.roles || []);
+      setRoles(Array.isArray(data.roles) ? data.roles : []);
+      setPage(0);
+    } catch {
+      setErr("Failed to load login activity");
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -121,134 +132,10 @@ export default function AdminLoginActivityPage() {
   }, [load]);
 
   const uniqueUsers = useMemo(() => new Set(events.map((e) => e.user?.id || e.email)).size, [events]);
-
-  const columns = useMemo<ColumnDef<LoginEventRow>[]>(
-    () => [
-      {
-        header: "When",
-        accessorKey: "createdAt",
-        cell: ({ row }) => (
-          <span className="whitespace-nowrap text-xs text-slate-500">
-            {new Date(row.original.createdAt).toLocaleString("en-IN", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-          </span>
-        ),
-      },
-      {
-        header: "User",
-        accessorFn: (e) => e.user?.name || e.email,
-        cell: ({ row }) => {
-          const name = row.original.user?.name || row.original.email;
-          return (
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-800">
-                {name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
-                <p className="truncate font-mono text-[11px] text-slate-500">{row.original.email}</p>
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        header: "Role",
-        accessorKey: "role",
-        cell: ({ row }) => (
-          <span
-            className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${roleBadgeClass(row.original.role)}`}
-          >
-            {ROLE_LABEL[row.original.role] || row.original.role}
-          </span>
-        ),
-      },
-      {
-        header: "School",
-        accessorFn: (e) => e.user?.school?.name || "",
-        cell: ({ row }) => {
-          const school = row.original.user?.school;
-          if (!school) return <span className="text-slate-400">—</span>;
-          return (
-            <div>
-              <p className="text-sm font-medium text-slate-800">{school.name}</p>
-              <p className="font-mono text-[11px] text-slate-500">{school.code}</p>
-            </div>
-          );
-        },
-      },
-      {
-        header: "IP",
-        accessorKey: "ip",
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-slate-600">{row.original.ip || "—"}</span>
-        ),
-      },
-      {
-        header: "Location",
-        id: "location",
-        enableSorting: false,
-        cell: ({ row }) => {
-          const e = row.original;
-          return (
-            <div className="flex max-w-[14rem] items-start gap-1.5">
-              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" />
-              <div className="min-w-0">
-                <p className="text-xs font-medium leading-snug text-slate-800">{placeLabel(e)}</p>
-                <p className="mt-0.5 text-[10px] text-slate-400">
-                  via {e.geoSource || "unknown"}
-                  {e.accuracyM != null ? ` · ±${e.accuracyM}m` : ""}
-                </p>
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        header: "Source",
-        accessorKey: "source",
-        cell: ({ row }) => (
-          <span className="text-xs font-semibold capitalize text-slate-600">{row.original.source}</span>
-        ),
-      },
-      {
-        id: "actions",
-        header: "",
-        enableSorting: false,
-        cell: ({ row }) => {
-          const e = row.original;
-          const school = e.user?.school;
-          const hasCoords = e.latitude != null && e.longitude != null;
-          return (
-            <div className="flex items-center justify-end gap-1.5">
-              {hasCoords && (
-                <a
-                  href={mapsUrl(e.latitude!, e.longitude!)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  title="Open in Google Maps"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Map
-                </a>
-              )}
-              {school && (
-                <Link
-                  href={`/admin/schools/${school.id}`}
-                  className="inline-flex items-center rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  School
-                </Link>
-              )}
-            </div>
-          );
-        },
-      },
-    ],
-    [],
+  const pageCount = Math.max(1, Math.ceil(events.length / pageSize));
+  const paged = useMemo(
+    () => events.slice(page * pageSize, page * pageSize + pageSize),
+    [events, page, pageSize],
   );
 
   return (
@@ -345,22 +232,163 @@ export default function AdminLoginActivityPage() {
           </div>
         </div>
         <div className="ad-panel-body is-flush">
-          {loading && events.length === 0 ? (
+          {err ? (
+            <div className="ad-empty">
+              <p className="font-semibold text-red-700">{err}</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
+                Retry
+              </Button>
+            </div>
+          ) : loading && events.length === 0 ? (
             <PageLoader />
-          ) : events.length === 0 && !loading ? (
+          ) : events.length === 0 ? (
             <div className="ad-empty">
               <MonitorSmartphone className="h-9 w-9 opacity-40" />
               <p>No login events yet. Ask users to sign in once.</p>
             </div>
           ) : (
-            <GlobalDataTable
-              data={events}
-              columns={columns}
-              loading={loading}
-              emptyText="No login events yet. Ask users to sign in once."
-              pageSize={25}
-              className="rounded-none border-0 shadow-none"
-            />
+            <>
+              <div className="relative overflow-x-auto">
+                {loading && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+                    <Spinner size="sm" />
+                  </div>
+                )}
+                <table className="w-full min-w-[860px] text-left text-sm">
+                  <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-3 py-3">#</th>
+                      <th className="px-3 py-3">When</th>
+                      <th className="px-3 py-3">User</th>
+                      <th className="px-3 py-3">Role</th>
+                      <th className="px-3 py-3">School</th>
+                      <th className="px-3 py-3">IP</th>
+                      <th className="px-3 py-3">Location</th>
+                      <th className="px-3 py-3">Source</th>
+                      <th className="px-3 py-3 text-right"> </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paged.map((e, idx) => {
+                      const name = e.user?.name || e.email;
+                      const school = e.user?.school;
+                      const hasCoords = e.latitude != null && e.longitude != null;
+                      return (
+                        <tr key={e.id} className="border-t border-slate-100 hover:bg-sky-50/40">
+                          <td className="px-3 py-3 text-xs tabular-nums text-slate-400">
+                            {page * pageSize + idx + 1}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-xs text-slate-500">
+                            {new Date(e.createdAt).toLocaleString("en-IN", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-800">
+                                {name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
+                                <p className="truncate font-mono text-[11px] text-slate-500">{e.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${roleBadgeClass(e.role)}`}
+                            >
+                              {ROLE_LABEL[e.role] || e.role}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3">
+                            {school ? (
+                              <div>
+                                <p className="text-sm font-medium text-slate-800">{school.name}</p>
+                                <p className="font-mono text-[11px] text-slate-500">{school.code}</p>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 font-mono text-xs text-slate-600">{e.ip || "—"}</td>
+                          <td className="px-3 py-3">
+                            <div className="flex max-w-[14rem] items-start gap-1.5">
+                              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium leading-snug text-slate-800">{placeLabel(e)}</p>
+                                <p className="mt-0.5 text-[10px] text-slate-400">
+                                  via {e.geoSource || "unknown"}
+                                  {e.accuracyM != null ? ` · ±${e.accuracyM}m` : ""}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-xs font-semibold capitalize text-slate-600">
+                            {e.source}
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {hasCoords && (
+                                <a
+                                  href={mapsUrl(e.latitude!, e.longitude!)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                  Map
+                                </a>
+                              )}
+                              {school && (
+                                <Link
+                                  href={`/admin/schools/${school.id}`}
+                                  className="inline-flex items-center rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                >
+                                  School
+                                </Link>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-3 py-2 text-xs text-slate-500">
+                <span>
+                  Showing {page * pageSize + 1}–{Math.min(events.length, page * pageSize + pageSize)} of{" "}
+                  {events.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2"
+                    disabled={page <= 0}
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  >
+                    Prev
+                  </Button>
+                  <span className="min-w-[4.5rem] text-center font-medium text-slate-600">
+                    {page + 1} / {pageCount}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2"
+                    disabled={page + 1 >= pageCount}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </section>
