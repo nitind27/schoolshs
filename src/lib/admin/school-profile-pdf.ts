@@ -45,7 +45,6 @@ type PdfUser = {
   lastLoginAt: Date | null;
   emailVerified?: boolean;
   mustChangePassword?: boolean;
-  loginPassword: string;
 };
 
 type PdfPayment = {
@@ -200,11 +199,22 @@ class Writer {
   y = 0;
   pageNo = 0;
   sectionNo = 0;
+  footerText: string;
+  showPageNo: boolean;
+  allowNewPage: boolean;
 
-  constructor(pdf: PDFDocument, font: PDFFont, bold: PDFFont) {
+  constructor(
+    pdf: PDFDocument,
+    font: PDFFont,
+    bold: PDFFont,
+    opts?: { footerText?: string; showPageNo?: boolean; allowNewPage?: boolean },
+  ) {
     this.pdf = pdf;
     this.font = font;
     this.bold = bold;
+    this.footerText = opts?.footerText ?? "Codeat Education";
+    this.showPageNo = opts?.showPageNo ?? false;
+    this.allowNewPage = opts?.allowNewPage ?? true;
     this.newPage();
   }
 
@@ -216,6 +226,7 @@ class Writer {
   }
 
   ensure(h: number) {
+    if (!this.allowNewPage) return;
     if (this.y - h < MARGIN + 28) this.newPage();
   }
 
@@ -234,22 +245,26 @@ class Writer {
       height: 22,
       color: BRAND_DEEP,
     });
-    this.page.drawText("Codeat Education  ·  Confidential school profile  ·  English", {
-      x: MARGIN,
-      y: 8,
-      size: 7,
-      font: this.font,
-      color: WHITE,
-    });
-    const label = `Page ${this.pageNo}`;
-    const w = this.font.widthOfTextAtSize(label, 7);
-    this.page.drawText(label, {
-      x: PAGE.w - MARGIN - w,
-      y: 8,
-      size: 7,
-      font: this.font,
-      color: WHITE,
-    });
+    if (this.footerText) {
+      this.page.drawText(pdfSafe(this.footerText), {
+        x: MARGIN,
+        y: 8,
+        size: 7,
+        font: this.font,
+        color: WHITE,
+      });
+    }
+    if (this.showPageNo) {
+      const label = `Page ${this.pageNo}`;
+      const w = this.font.widthOfTextAtSize(label, 7);
+      this.page.drawText(label, {
+        x: PAGE.w - MARGIN - w,
+        y: 8,
+        size: 7,
+        font: this.font,
+        color: WHITE,
+      });
+    }
   }
 
   text(str: string, x: number, y: number, size: number, font: PDFFont, color: RGB) {
@@ -387,7 +402,11 @@ export async function buildSchoolProfilePdf(input: SchoolProfilePdfInput): Promi
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const logo = await embedLogo(pdf, input.settings?.logoPath ?? null);
-  const w = new Writer(pdf, font, bold);
+  const w = new Writer(pdf, font, bold, {
+    footerText: "Codeat Education",
+    showPageNo: !isCreds,
+    allowNewPage: !isCreds,
+  });
 
   // Hero band
   const heroH = 118;
@@ -450,25 +469,26 @@ export async function buildSchoolProfilePdf(input: SchoolProfilePdfInput): Promi
   );
   w.y -= heroH + 10;
 
-  // Confidential strip
-  w.page.drawRectangle({
-    x: MARGIN,
-    y: w.y - 18,
-    width: PAGE.w - MARGIN * 2,
-    height: 22,
-    color: CREAM,
-  });
-  w.text(
-    isCreds
-      ? "CONFIDENTIAL - School details and portal login credentials. Do not forward without authorisation."
-      : "CONFIDENTIAL - Password-protected dossier for school onboarding. Do not forward without authorisation.",
-    MARGIN + 8,
-    w.y - 12,
-    7.5,
-    font,
-    rgb(0.48, 0.35, 0.05),
-  );
-  w.y -= 34;
+  if (!isCreds) {
+    w.page.drawRectangle({
+      x: MARGIN,
+      y: w.y - 18,
+      width: PAGE.w - MARGIN * 2,
+      height: 22,
+      color: CREAM,
+    });
+    w.text(
+      "CONFIDENTIAL - Password-protected dossier for school onboarding. Do not forward without authorisation.",
+      MARGIN + 8,
+      w.y - 12,
+      7.5,
+      font,
+      rgb(0.48, 0.35, 0.05),
+    );
+    w.y -= 34;
+  } else {
+    w.y -= 6;
+  }
 
   w.section("School identity");
   w.kvRow(["Registered name", dash(input.school.name)], ["Display name", dash(input.settings?.schoolName)]);
@@ -476,9 +496,11 @@ export async function buildSchoolProfilePdf(input: SchoolProfilePdfInput): Promi
   w.kvRow(["School type", dash(input.school.schoolType)], ["Board affiliation", dash(input.school.boardAffiliation)]);
   w.kvRow(["Principal", dash(input.school.principalName)], ["Academic year", dash(input.settings?.academicYear)]);
   w.kvRow(["Status", input.school.isActive ? "Active" : "Inactive"], ["Registered on", dmy(input.school.createdAt)]);
-  w.kvRow(["Last updated", dmy(input.school.updatedAt)], ["Logo on file", logo ? "Yes" : "Not uploaded"]);
-  if (input.settings?.tagline) {
-    w.kvRow(["Tagline", input.settings.tagline]);
+  if (!isCreds) {
+    w.kvRow(["Last updated", dmy(input.school.updatedAt)], ["Logo on file", logo ? "Yes" : "Not uploaded"]);
+    if (input.settings?.tagline) {
+      w.kvRow(["Tagline", input.settings.tagline]);
+    }
   }
 
   w.section("Address and contact");
@@ -494,12 +516,7 @@ export async function buildSchoolProfilePdf(input: SchoolProfilePdfInput): Promi
     ["Website", dash(input.school.website || input.settings?.idCardWebsite)],
   );
 
-  w.section("Portal login credentials");
-  w.paragraph(
-    "Use the table below on the Codeat Education login screen. Enter the school code, then the login email and password.",
-    8,
-  );
-
+  w.section("Portal login");
   const admins = input.users.filter((u) => u.role === "school_admin");
   const others = input.users.filter((u) => u.role !== "school_admin");
 
@@ -509,76 +526,24 @@ export async function buildSchoolProfilePdf(input: SchoolProfilePdfInput): Promi
       ["School code", input.school.code],
       ["Administrator", "No school administrator account is linked yet"],
       ["Login email", "-"],
-      ["Login password", "-"],
     ]);
   } else {
     for (const [i, u] of admins.entries()) {
       if (admins.length > 1) {
         w.paragraph(`School administrator ${i + 1}`, 8);
       }
-      w.detailTable(
-        [
-          ["Portal URL", input.loginUrl],
-          ["School code", input.school.code],
-          ["Administrator name", dash(u.name)],
-          ["Login email / username", u.email],
-          ["Role", roleLabel(u.role)],
-          ["Account status", u.isActive ? "Active" : "Inactive"],
-          ["Email verified", u.emailVerified ? "Yes" : "No"],
-          ["Last login", dmy(u.lastLoginAt)],
-          ["Login password", u.loginPassword],
-        ],
-        { highlightLast: true },
-      );
-    }
-  }
-
-  w.paragraph(
-    "How to sign in: (1) Open the Portal URL. (2) Enter the School code. (3) Enter the login email. (4) Enter the login password shown above.",
-    8,
-  );
-
-  if (others.length) {
-    w.section("Other portal accounts");
-    for (const u of others) {
-      const otherRows: [string, string][] = [
-        ["Name", dash(u.name)],
+      w.detailTable([
+        ["Portal URL", input.loginUrl],
+        ["School code", input.school.code],
+        ["Administrator name", dash(u.name)],
         ["Login email", u.email],
         ["Role", roleLabel(u.role)],
-        ["Status", u.isActive ? "Active" : "Inactive"],
-        ["Last login", dmy(u.lastLoginAt)],
-      ];
-      if (u.loginPassword) otherRows.push(["Login password", u.loginPassword]);
-      w.detailTable(otherRows, { highlightLast: Boolean(u.loginPassword) });
+        ["Account status", u.isActive ? "Active" : "Inactive"],
+      ]);
     }
   }
 
   if (isCreds) {
-    w.ensure(36);
-    w.page.drawRectangle({
-      x: MARGIN,
-      y: w.y - 28,
-      width: PAGE.w - MARGIN * 2,
-      height: 32,
-      color: rgb(0.996, 0.945, 0.941),
-    });
-    w.text(
-      "This PDF is encrypted. Open it with the Codeat Education standard document password.",
-      MARGIN + 8,
-      w.y - 12,
-      7.5,
-      font,
-      RED,
-    );
-    w.text(
-      "Keep login passwords confidential. Share only with authorised school staff.",
-      MARGIN + 8,
-      w.y - 24,
-      7.5,
-      font,
-      RED,
-    );
-
     pdf.encrypt({
       userPassword: SCHOOL_PROFILE_PDF_PASSWORD,
       ownerPassword: SCHOOL_PROFILE_PDF_PASSWORD,
@@ -592,8 +557,20 @@ export async function buildSchoolProfilePdf(input: SchoolProfilePdfInput): Promi
         documentAssembly: false,
       },
     });
-
     return pdf.save();
+  }
+
+  if (others.length) {
+    w.section("Other portal accounts");
+    for (const u of others) {
+      w.detailTable([
+        ["Name", dash(u.name)],
+        ["Login email", u.email],
+        ["Role", roleLabel(u.role)],
+        ["Status", u.isActive ? "Active" : "Inactive"],
+        ["Last login", dmy(u.lastLoginAt)],
+      ]);
+    }
   }
 
   w.section("Subscription and contract");
@@ -683,7 +660,7 @@ export async function buildSchoolProfilePdf(input: SchoolProfilePdfInput): Promi
     RED,
   );
   w.text(
-    "Keep login passwords confidential. Share only with authorised school staff.",
+    "Portal login passwords are never printed in this file.",
     MARGIN + 8,
     w.y - 24,
     7.5,

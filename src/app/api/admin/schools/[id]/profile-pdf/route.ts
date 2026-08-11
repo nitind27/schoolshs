@@ -6,11 +6,6 @@ import {
   buildSchoolProfilePdf,
   SCHOOL_PROFILE_PDF_PASSWORD,
 } from "@/lib/admin/school-profile-pdf";
-import {
-  decryptUserPassword,
-  generatePortalPassword,
-  passwordRecord,
-} from "@/lib/user-password";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -29,7 +24,6 @@ export async function GET(request: NextRequest, { params }: Params) {
         users: {
           where: { role: { in: ["school_admin", "clerk", "teacher", "ca"] } },
           select: {
-            id: true,
             name: true,
             email: true,
             role: true,
@@ -37,7 +31,6 @@ export async function GET(request: NextRequest, { params }: Params) {
             lastLoginAt: true,
             emailVerified: true,
             mustChangePassword: true,
-            passwordEnc: true,
           },
           orderBy: [{ role: "asc" }, { createdAt: "asc" }],
         },
@@ -59,31 +52,6 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     if (!school) {
       return NextResponse.json({ error: "School not found" }, { status: 404 });
-    }
-
-    const pdfUsers = [];
-    for (const u of school.users) {
-      let loginPassword = decryptUserPassword(u.passwordEnc);
-      if (!loginPassword && u.role === "school_admin") {
-        loginPassword = generatePortalPassword();
-        await prisma.user.update({
-          where: { id: u.id },
-          data: passwordRecord(loginPassword),
-        });
-      }
-      if (!loginPassword && variant === "credentials" && u.role !== "school_admin") {
-        continue;
-      }
-      pdfUsers.push({
-        name: u.name,
-        email: u.email,
-        role: u.role,
-        isActive: u.isActive,
-        lastLoginAt: u.lastLoginAt,
-        emailVerified: u.emailVerified,
-        mustChangePassword: u.mustChangePassword,
-        loginPassword: loginPassword || "",
-      });
     }
 
     const origin = getRequestOriginFromHeaders(request.headers, request.nextUrl.origin);
@@ -122,7 +90,7 @@ export async function GET(request: NextRequest, { params }: Params) {
           }
         : null,
       subscription: school.subscription,
-      users: pdfUsers,
+      users: school.users,
       payments: variant === "full" ? school.payments : [],
       counts: school._count,
       loginUrl: `${origin.replace(/\/$/, "")}/login`,

@@ -293,7 +293,7 @@ export default function SchoolDetailPage() {
       URL.revokeObjectURL(url);
       setMsg(
         variant === "credentials"
-          ? "Credentials PDF downloaded. Login password is inside the file. Open password: Codeat@2426"
+          ? "Credentials PDF downloaded. Open password: Codeat@2426"
           : "Full profile PDF downloaded. Open password: Codeat@2426",
       );
     } catch {
