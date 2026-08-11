@@ -21,9 +21,6 @@ import {
 } from "@/lib/school-features";
 import { normalizeSchoolAssetPath } from "@/lib/id-card-share";
 
-/** Fixed open-password for every school profile PDF. */
-export const SCHOOL_PROFILE_PDF_PASSWORD = "Codeat@2426";
-
 const PAGE = { w: 595.28, h: 841.89 };
 const MARGIN = 36;
 const BRAND = rgb(0.102, 0.396, 0.314);
@@ -35,7 +32,6 @@ const LINE = rgb(0.831, 0.875, 0.851);
 const CARD = rgb(0.965, 0.98, 0.973);
 const CREAM = rgb(1, 0.973, 0.906);
 const WHITE = rgb(1, 1, 1);
-const RED = rgb(0.596, 0.165, 0.129);
 
 type PdfUser = {
   name: string;
@@ -544,19 +540,6 @@ export async function buildSchoolProfilePdf(input: SchoolProfilePdfInput): Promi
   }
 
   if (isCreds) {
-    pdf.encrypt({
-      userPassword: SCHOOL_PROFILE_PDF_PASSWORD,
-      ownerPassword: SCHOOL_PROFILE_PDF_PASSWORD,
-      permissions: {
-        printing: "highResolution",
-        modifying: false,
-        copying: false,
-        annotating: false,
-        fillingForms: false,
-        contentAccessibility: true,
-        documentAssembly: false,
-      },
-    });
     return pdf.save();
   }
 
@@ -642,45 +625,6 @@ export async function buildSchoolProfilePdf(input: SchoolProfilePdfInput): Promi
     "Office: 3rd floor, Anupam Amenity Centre, Near Bus Depot, Hari Ichchha Industrial Society, Udhna Udhyog Nagar, T-22, Surat, Gujarat 394610. Contact page: /contact",
     8,
   );
-
-  w.ensure(36);
-  w.page.drawRectangle({
-    x: MARGIN,
-    y: w.y - 28,
-    width: PAGE.w - MARGIN * 2,
-    height: 32,
-    color: rgb(0.996, 0.945, 0.941),
-  });
-  w.text(
-    "This PDF is encrypted. Open it with the Codeat Education standard document password issued to Super Admin.",
-    MARGIN + 8,
-    w.y - 12,
-    7.5,
-    font,
-    RED,
-  );
-  w.text(
-    "Portal login passwords are never printed in this file.",
-    MARGIN + 8,
-    w.y - 24,
-    7.5,
-    font,
-    RED,
-  );
-
-  pdf.encrypt({
-    userPassword: SCHOOL_PROFILE_PDF_PASSWORD,
-    ownerPassword: SCHOOL_PROFILE_PDF_PASSWORD,
-    permissions: {
-      printing: "highResolution",
-      modifying: false,
-      copying: false,
-      annotating: false,
-      fillingForms: false,
-      contentAccessibility: true,
-      documentAssembly: false,
-    },
-  });
 
   return pdf.save();
 }

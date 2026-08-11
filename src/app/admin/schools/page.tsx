@@ -116,8 +116,8 @@ export default function SchoolsListPage() {
       URL.revokeObjectURL(url);
       setMsg(
         variant === "credentials"
-          ? `Credentials PDF downloaded for ${school.name}. Open password: Codeat@2426`
-          : `Full profile PDF downloaded for ${school.name}. Open password: Codeat@2426`,
+          ? `Credentials PDF downloaded for ${school.name}.`
+          : `Full profile PDF downloaded for ${school.name}.`,
       );
     } catch {
       setErr("Failed to download PDF");

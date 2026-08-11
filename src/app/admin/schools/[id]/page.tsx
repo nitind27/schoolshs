@@ -293,8 +293,8 @@ export default function SchoolDetailPage() {
       URL.revokeObjectURL(url);
       setMsg(
         variant === "credentials"
-          ? "Credentials PDF downloaded. Open password: Codeat@2426"
-          : "Full profile PDF downloaded. Open password: Codeat@2426",
+          ? "Credentials PDF downloaded."
+          : "Full profile PDF downloaded.",
       );
     } catch {
       setErr("Failed to download PDF");

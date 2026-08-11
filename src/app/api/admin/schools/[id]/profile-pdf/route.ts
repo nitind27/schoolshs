@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireAuth } from "@/lib/auth";
 import { getRequestOriginFromHeaders } from "@/lib/email-verification";
-import {
-  buildSchoolProfilePdf,
-  SCHOOL_PROFILE_PDF_PASSWORD,
-} from "@/lib/admin/school-profile-pdf";
+import { buildSchoolProfilePdf } from "@/lib/admin/school-profile-pdf";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -108,7 +105,6 @@ export async function GET(request: NextRequest, { params }: Params) {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
-        "X-Pdf-Password-Hint": SCHOOL_PROFILE_PDF_PASSWORD,
         "Cache-Control": "no-store",
       },
     });
