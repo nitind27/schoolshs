@@ -478,9 +478,10 @@ export default function HolidaysPage() {
       const d = new Date(e.date+"T00:00:00");
       rows.push([String(sr++), e.date, DAY_SHORT[d.getDay()], e.name, e.nameGu||"", e.type, e.description||"", "Added"]);
     });
-    const csv = rows.map(r => r.map(c => `"${c.replace(/"/g,'""')}"`).join(",")).join("\n");
+    const csv = rows.map(r => r.map(c => `"${c.replace(/"/g,'""')}"`).join(",")).join("\r\n");
+    // UTF-8 BOM so Excel (Windows) shows Gujarati correctly
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8;"}));
+    a.href = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
     a.download = `holiday-list-${year}.csv`;
     a.click(); URL.revokeObjectURL(a.href);
     showMsg("CSV downloaded");

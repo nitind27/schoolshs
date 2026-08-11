@@ -60,15 +60,29 @@ export function FooterHolidayCalendar({ extraHolidays = [], className }: Props) 
 
   const downloadList = () => {
     const rows = getPublicHolidays(cursor.y);
-    const header = "Date,Name,Name (Gujarati),Type\n";
+    const csvCell = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const gu = locale === "gu";
+    const typeLabel: Record<string, string> = gu
+      ? { public: "જાહેર રજા", school: "શાળા રજા", optional: "વૈકલ્પિક રજા" }
+      : { public: "public", school: "school", optional: "optional" };
+    const header = gu
+      ? ["તારીખ", "નામ", "ગુજરાતી નામ", "પ્રકાર"]
+      : ["Date", "Name", "Name (Gujarati)", "Type"];
     const body = rows
-      .map((h) => `${h.date},"${h.name}","${h.nameGu}",${h.type}`)
-      .join("\n");
-    const blob = new Blob([header + body], { type: "text/csv;charset=utf-8" });
+      .map((h) => {
+        const [y, m, d] = h.date.split("-");
+        const displayDate = d && m && y ? `${d}-${m}-${y}` : h.date;
+        return [displayDate, h.name, h.nameGu, typeLabel[h.type] || h.type].map(csvCell).join(",");
+      })
+      .join("\r\n");
+    // UTF-8 BOM so Excel (Windows) shows Gujarati correctly
+    const blob = new Blob([`\uFEFF${header.map(csvCell).join(",")}\r\n${body}`], {
+      type: "text/csv;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `holidays-${cursor.y}.csv`;
+    a.download = gu ? `રજાઓની-સૂચિ-${cursor.y}.csv` : `holidays-${cursor.y}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
