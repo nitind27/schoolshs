@@ -7,7 +7,7 @@ import {
   studentShortNameGu,
 } from "@/lib/student-names";
 import { useEffect, useState, useCallback, useMemo, Suspense, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -32,7 +32,6 @@ import {
   Phone,
   Calendar,
   FilePen,
-  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
@@ -260,10 +259,14 @@ export default function StudentsPage() {
 
 function StudentsContent() {
   const t = useT();
+  const router = useRouter();
+  const pathname = usePathname();
   const { confirm, ConfirmDialog } = useConfirm();
   const { has } = useSchoolFeatures();
   const canAutoApply = has("scholarship_auto_apply");
   const searchParams = useSearchParams();
+  const viewMode = searchParams.get("status") === "draft" ? "draft" : "all";
+  const isDraftView = viewMode === "draft";
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [classes, setClasses] = useState<ClassMeta[]>([]);
   const [total, setTotal] = useState(0);
@@ -286,20 +289,47 @@ function StudentsContent() {
     const std = searchParams.get("standard");
     const g = searchParams.get("gender");
     const st = searchParams.get("status");
-    if (classId) setClassFilter(classId);
-    if (cat) setCategoryFilter(cat);
-    if (std) setStandardFilter(std);
-    if (g) setGenderFilter(g);
-    if (st) setStatusFilter(st);
+    setClassFilter(classId || "");
+    setCategoryFilter(cat || "");
+    setStandardFilter(std || "");
+    setGenderFilter(g || "");
+    // Draft tab uses URL ?status=draft — other statuses use the filter dropdown only
+    setStatusFilter(st && st !== "draft" ? st : "");
   }, [searchParams]);
 
-  const isDraftView = statusFilter === "draft";
+  const switchView = useCallback(
+    (mode: "all" | "draft") => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (mode === "draft") {
+        params.set("status", "draft");
+      } else {
+        params.delete("status");
+      }
+      setPage(1);
+      setSelected(new Set());
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   useEffect(() => {
     fetch("/api/classes")
       .then((r) => r.json())
       .then((d) => setClasses(d.classes || []))
       .catch(() => setClasses([]));
+  }, []);
+
+  /** Tab badge counts — lightweight, once on mount */
+  useEffect(() => {
+    fetch("/api/students?limit=1&page=1&summary=1")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.summary) {
+          setSummary((prev) => ({ ...prev, ...d.summary }));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -325,10 +355,14 @@ function StudentsContent() {
     const params = new URLSearchParams({
       page: String(page),
       limit: String(PAGE_SIZE),
-      summary: "1",
     });
+    if (!isDraftView) params.set("summary", "1");
     if (search.trim()) params.set("search", search.trim());
-    if (statusFilter) params.set("status", statusFilter);
+    if (isDraftView) {
+      params.set("status", "draft");
+    } else if (statusFilter) {
+      params.set("status", statusFilter);
+    }
     if (categoryFilter) params.set("category", categoryFilter);
     if (classFilter) params.set("classId", classFilter);
     else if (standardFilter) params.set("standard", standardFilter);
@@ -361,6 +395,7 @@ function StudentsContent() {
     standardFilter,
     genderFilter,
     noClassOnly,
+    isDraftView,
   ]);
 
   useEffect(() => {
@@ -382,16 +417,30 @@ function StudentsContent() {
   const selectedClass = classes.find((c) => c.id === classFilter);
 
   const clearFilters = () => {
-    setStatusFilter("");
     setCategoryFilter("");
     setClassFilter("");
     setStandardFilter("");
     setGenderFilter("");
     setNoClassOnly(false);
     setSearch("");
+    setStatusFilter("");
     setPage(1);
     setSelected(new Set());
+    if (isDraftView) {
+      router.replace(`${pathname}?status=draft`, { scroll: false });
+    } else {
+      router.replace(pathname, { scroll: false });
+    }
   };
+
+  const statusFilterOptions = useMemo(
+    () =>
+      STUDENT_STATUSES.filter((s) => s.value !== "draft").map((s) => ({
+        value: s.value,
+        label: t(`status.${s.value}`),
+      })),
+    [t],
+  );
 
   const standardOptions = useMemo(
     () =>
@@ -621,52 +670,26 @@ function StudentsContent() {
 
   return (
     <PageShell
-      title={isDraftView ? t("students.draftAdmissionsTitle") : t("students.title")}
-      subtitle={isDraftView ? t("students.draftAdmissionsSubtitle") : t("students.subtitle")}
+      title={t("students.title")}
+      subtitle={
+        isDraftView ? t("students.draftAdmissionsSubtitle") : t("students.subtitle")
+      }
       breadcrumbs={[
         { label: t("nav.dashboard"), href: userRole === "clerk" ? "/clerk" : "/dashboard" },
-        { label: isDraftView ? t("students.draftAdmissions") : t("nav.students") },
+        { label: t("nav.students") },
       ]}
       icon={<Users className="h-5 w-5" />}
       actions={
         <div className="grid w-full grid-cols-1 gap-2 min-[350px]:grid-cols-[0.9fr_1.1fr] sm:flex sm:w-auto sm:flex-wrap">
-          {isDraftView ? (
-            <Link href="/students" className="w-full sm:w-auto">
-              <Button
-                variant="outline"
-                className="w-full whitespace-nowrap px-3 sm:w-auto sm:px-4"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                {t("students.backToActive")}
-              </Button>
-            </Link>
-          ) : (
-            <>
-              {(summary?.draftCount ?? 0) > 0 ? (
-                <Link href="/students?status=draft" className="w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    className="w-full whitespace-nowrap border-violet-200 bg-violet-50 px-3 text-violet-900 hover:bg-violet-100 sm:w-auto sm:px-4"
-                  >
-                    <FilePen className="h-3.5 w-3.5" />
-                    {t("students.draftAdmissions")}
-                    <span className="ml-1 rounded-full bg-violet-200/80 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
-                      {summary?.draftCount}
-                    </span>
-                  </Button>
-                </Link>
-              ) : null}
-              <Link href="/students/inactive" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  className="w-full whitespace-nowrap border-amber-200 bg-amber-50 px-3 text-amber-900 hover:bg-amber-100 sm:w-auto sm:px-4"
-                >
-                  <UserX className="h-3.5 w-3.5" />
-                  {t("students.inactiveStudents")}
-                </Button>
-              </Link>
-            </>
-          )}
+          <Link href="/students/inactive" className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              className="w-full whitespace-nowrap border-amber-200 bg-amber-50 px-3 text-amber-900 hover:bg-amber-100 sm:w-auto sm:px-4"
+            >
+              <UserX className="h-3.5 w-3.5" />
+              {t("students.inactiveStudents")}
+            </Button>
+          </Link>
           <Button
             variant="outline"
             onClick={exportSelected}
@@ -688,12 +711,76 @@ function StudentsContent() {
       }
     >
       <div className="space-y-3">
+        {/* All Students / Draft tabs */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            role="tablist"
+            aria-label={t("nav.students")}
+            className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "all"}
+              onClick={() => switchView("all")}
+              className={cn(
+                "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition",
+                viewMode === "all"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50",
+              )}
+            >
+              {t("nav.studentsAll")}
+              {viewMode === "all" && !loading ? (
+                <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                  {total.toLocaleString("en-IN")}
+                </span>
+              ) : summary?.total != null ? (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    viewMode === "all" ? "bg-white/20" : "bg-slate-100 text-slate-600",
+                  )}
+                >
+                  {summary.total.toLocaleString("en-IN")}
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "draft"}
+              onClick={() => switchView("draft")}
+              className={cn(
+                "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition",
+                viewMode === "draft"
+                  ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50",
+              )}
+            >
+              <FilePen className="h-3.5 w-3.5" />
+              {t("students.draftAdmissions")}
+              {(summary?.draftCount ?? 0) > 0 || (isDraftView && total > 0) ? (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    viewMode === "draft" ? "bg-white/20" : "bg-violet-100 text-violet-700",
+                  )}
+                >
+                  {(isDraftView ? total : summary?.draftCount ?? 0).toLocaleString("en-IN")}
+                </span>
+              ) : null}
+            </button>
+          </div>
+        </div>
+
         {isDraftView ? (
           <div className="rounded-2xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-900">
             {t("students.draftAdmissionsBanner")}
           </div>
         ) : null}
-        {/* Colorful summary strip */}
+        {!isDraftView ? (
+        /* Colorful summary strip */
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-blue-100/80 bg-gradient-to-r from-white via-sky-50/40 to-violet-50/30 px-2.5 py-2 shadow-sm">
           {[
             {
@@ -705,7 +792,8 @@ function StudentsContent() {
                 !noClassOnly &&
                 !classFilter &&
                 !standardFilter &&
-                !statusFilter,
+                !statusFilter &&
+                viewMode === "all",
               onClick: () => clearFilters(),
               idle: "border-indigo-100 bg-indigo-50/80 text-indigo-950 hover:bg-indigo-100",
               activeCls: "border-transparent bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-200/60",
@@ -765,9 +853,7 @@ function StudentsContent() {
                     label: t("students.statDrafts"),
                     value: summary?.draftCount ?? 0,
                     active: false,
-                    onClick: () => {
-                      window.location.href = "/students?status=draft";
-                    },
+                    onClick: () => switchView("draft"),
                     idle: "border-violet-100 bg-violet-50/80 text-violet-950 hover:bg-violet-100",
                     activeCls:
                       "border-transparent bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md shadow-violet-200/60",
@@ -801,6 +887,7 @@ function StudentsContent() {
             {t("students.statFiltered")}
           </div>
         </div>
+        ) : null}
 
         <Card className="overflow-hidden rounded-2xl border-slate-200/80 shadow-sm">
           <div className="border-b border-slate-100 bg-white p-3 sm:p-4">
@@ -905,11 +992,9 @@ function StudentsContent() {
               <Select
                 label={t("students.filterByStatus")}
                 emptyLabel={t("students.allStatuses")}
-                options={STUDENT_STATUSES.map((s) => ({
-                  value: s.value,
-                  label: t(`status.${s.value}`),
-                }))}
+                options={statusFilterOptions}
                 value={statusFilter}
+                disabled={isDraftView}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
                   setPage(1);
