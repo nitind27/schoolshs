@@ -12,6 +12,7 @@ import {
   type RGB,
 } from "@cantoo/pdf-lib";
 import { normalizeSchoolAssetPath } from "@/lib/id-card-share";
+import { formatSchoolDateTime } from "@/lib/school-timezone";
 
 const PAGE = { w: 595.28, h: 841.89 };
 const MARGIN = 40;
@@ -61,16 +62,6 @@ function pdfSafe(str: string): string {
 function dash(v: string | null | undefined): string {
   const s = String(v ?? "").trim();
   return s || "-";
-}
-
-function dmy(v: Date): string {
-  return v.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 async function embedLogo(pdf: PDFDocument, logoPath: string | null): Promise<PDFImage | null> {
@@ -313,7 +304,7 @@ async function drawCredentialCard(
     ["Portal role", member.roleLabel],
     ["Account status", member.isActive ? "Active" : "Inactive"],
     ["Password", member.password],
-    ["Generated on", dmy(generatedAt)],
+    ["Generated on", formatSchoolDateTime(generatedAt)],
   ];
   if (member.mobileNumber) {
     rows.splice(5, 0, ["Mobile", member.mobileNumber]);
@@ -386,7 +377,7 @@ async function drawCoverPage(
   }
 
   w.y = MARGIN + 60;
-  w.text(`Generated ${dmy(input.generatedAt)}`, MARGIN, w.y, 8, font, MUTED);
+  w.text(`Generated ${formatSchoolDateTime(input.generatedAt)}`, MARGIN, w.y, 8, font, MUTED);
   w.text(
     "Each following page contains one member's login credentials.",
     MARGIN,

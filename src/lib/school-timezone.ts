@@ -35,6 +35,29 @@ export function schoolDateKey(onDate: Date = new Date()): string {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+/** Date + time in IST for PDFs, exports, and admin panels */
+export function formatSchoolDateTime(onDate: Date = new Date()): string {
+  return onDate.toLocaleString("en-IN", {
+    timeZone: SCHOOL_TIMEZONE,
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+/** Date only in IST */
+export function formatSchoolDate(onDate: Date = new Date()): string {
+  return onDate.toLocaleDateString("en-IN", {
+    timeZone: SCHOOL_TIMEZONE,
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 /**
  * Start of "today" in Asia/Kolkata as a UTC Date
  * (for DB queries like notification createdAt >= dayStart).

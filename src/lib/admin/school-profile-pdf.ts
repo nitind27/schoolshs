@@ -20,6 +20,7 @@ import {
   normalizeModuleFormats,
 } from "@/lib/school-features";
 import { normalizeSchoolAssetPath } from "@/lib/id-card-share";
+import { formatSchoolDate } from "@/lib/school-timezone";
 
 const PAGE = { w: 595.28, h: 841.89 };
 const MARGIN = 36;
@@ -143,11 +144,7 @@ function dmy(v: Date | string | null | undefined): string {
   if (!v) return "-";
   const d = v instanceof Date ? v : new Date(v);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatSchoolDate(d);
 }
 
 function titleCase(v: string | null | undefined): string {
