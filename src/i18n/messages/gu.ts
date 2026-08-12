@@ -1252,6 +1252,12 @@ const gu: Messages = {
     confirmActivate: "આ વિદ્યાર્થીને સક્રિય યાદીમાં પાછા લાવો અને લોગિન ફરી ચાલુ કરો?",
     activateFailed: "એક્ટિવેટ નિષ્ફળ",
     inactiveStudents: "અક્રિય વિદ્યાર્થી",
+    draftAdmissions: "ડ્રાફ્ટ પ્રવેશ",
+    draftAdmissionsTitle: "ડ્રાફ્ટ પ્રવેશ",
+    draftAdmissionsSubtitle:
+      "અપૂર્ણ GR / પ્રવેશ ફોર્મ — પૂર્ણ કરી સાચવો તો All Students માં ઉમેરાશે",
+    draftAdmissionsBanner:
+      "આ વિદ્યાર્થી હજુ All Students માં નથી. ફોર્મ પૂર્ણ કરી સાચવો તો પ્રવેશ પૂર્ણ થશે.",
     inactiveTitle: "અક્રિય / ડિએક્ટિવેટ વિદ્યાર્થી",
     inactiveSubtitle: "સક્રિય યાદીમાંથી દૂર કરેલા વિદ્યાર્થી — ફિલ્ટર કરીને એક્ટિવેટ કરો",
     inactiveBanner:
@@ -1281,6 +1287,7 @@ const gu: Messages = {
     statGirls: "છોકરીઓ",
     statFiltered: "આ યાદીમાં",
     statNoClass: "વર્ગ વગર",
+    statDrafts: "ડ્રાફ્ટ",
     editTitle: "સંપાદન: {{name}}",
     personalDetails: "વ્યક્તિગત વિગતો",
     familyDetails: "પરિવાર વિગતો",

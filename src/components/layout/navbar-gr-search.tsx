@@ -152,7 +152,7 @@ export function NavbarGrSearch({
               signal: ac.signal,
             },
           ),
-          fetch(`/api/students?search=${encodeURIComponent(trimmed)}&limit=8`, {
+          fetch(`/api/students?search=${encodeURIComponent(trimmed)}&limit=8&includeDraft=1`, {
             cache: "no-store",
             signal: ac.signal,
           }),
@@ -284,7 +284,7 @@ export function NavbarGrSearch({
       await searchStudents(gr);
       // searchStudents updates hits async — re-fetch for submit path
       const listRes = await fetch(
-        `/api/students?search=${encodeURIComponent(gr)}&limit=8`,
+        `/api/students?search=${encodeURIComponent(gr)}&limit=8&includeDraft=1`,
         {
           cache: "no-store",
         },

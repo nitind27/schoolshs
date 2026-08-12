@@ -175,7 +175,7 @@ model User {
   staffId                  String?   @unique
   staff                    Staff?    @relation(fields: [staffId], references: [id], onDelete: SetNull)
   studentId                String?   @unique
-  student                  Student?  @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  student                  Student?  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   isActive                 Boolean   @default(true)
   lastLoginAt              DateTime?
   lastLoginIp              String?
@@ -902,7 +902,7 @@ model GeneralRegisterEntry {
   schoolId        String
   school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   studentId       String?
-  student         Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  student         Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
   academicYear    String
   grNumber        String
   surname         String   @default("")

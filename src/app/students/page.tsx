@@ -31,6 +31,8 @@ import {
   MoreHorizontal,
   Phone,
   Calendar,
+  FilePen,
+  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
@@ -222,6 +224,7 @@ type Summary = {
   female: number;
   other: number;
   noClass: number;
+  draftCount?: number;
 };
 
 function classLabel(student: StudentRow, t: (k: string, p?: Record<string, string>) => string) {
@@ -282,11 +285,15 @@ function StudentsContent() {
     const cat = searchParams.get("category");
     const std = searchParams.get("standard");
     const g = searchParams.get("gender");
+    const st = searchParams.get("status");
     if (classId) setClassFilter(classId);
     if (cat) setCategoryFilter(cat);
     if (std) setStandardFilter(std);
     if (g) setGenderFilter(g);
+    if (st) setStatusFilter(st);
   }, [searchParams]);
+
+  const isDraftView = statusFilter === "draft";
 
   useEffect(() => {
     fetch("/api/classes")
@@ -608,24 +615,52 @@ function StudentsContent() {
 
   return (
     <PageShell
-      title={t("students.title")}
-      subtitle={t("students.subtitle")}
+      title={isDraftView ? t("students.draftAdmissionsTitle") : t("students.title")}
+      subtitle={isDraftView ? t("students.draftAdmissionsSubtitle") : t("students.subtitle")}
       breadcrumbs={[
         { label: t("nav.dashboard"), href: userRole === "clerk" ? "/clerk" : "/dashboard" },
-        { label: t("nav.students") },
+        { label: isDraftView ? t("students.draftAdmissions") : t("nav.students") },
       ]}
       icon={<Users className="h-5 w-5" />}
       actions={
         <div className="grid w-full grid-cols-1 gap-2 min-[350px]:grid-cols-[0.9fr_1.1fr] sm:flex sm:w-auto sm:flex-wrap">
-          <Link href="/students/inactive" className="w-full sm:w-auto">
-            <Button
-              variant="outline"
-              className="w-full whitespace-nowrap border-amber-200 bg-amber-50 px-3 text-amber-900 hover:bg-amber-100 sm:w-auto sm:px-4"
-            >
-              <UserX className="h-3.5 w-3.5" />
-              {t("students.inactiveStudents")}
-            </Button>
-          </Link>
+          {isDraftView ? (
+            <Link href="/students" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                className="w-full whitespace-nowrap px-3 sm:w-auto sm:px-4"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                {t("students.backToActive")}
+              </Button>
+            </Link>
+          ) : (
+            <>
+              {(summary?.draftCount ?? 0) > 0 ? (
+                <Link href="/students?status=draft" className="w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    className="w-full whitespace-nowrap border-violet-200 bg-violet-50 px-3 text-violet-900 hover:bg-violet-100 sm:w-auto sm:px-4"
+                  >
+                    <FilePen className="h-3.5 w-3.5" />
+                    {t("students.draftAdmissions")}
+                    <span className="ml-1 rounded-full bg-violet-200/80 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                      {summary?.draftCount}
+                    </span>
+                  </Button>
+                </Link>
+              ) : null}
+              <Link href="/students/inactive" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  className="w-full whitespace-nowrap border-amber-200 bg-amber-50 px-3 text-amber-900 hover:bg-amber-100 sm:w-auto sm:px-4"
+                >
+                  <UserX className="h-3.5 w-3.5" />
+                  {t("students.inactiveStudents")}
+                </Button>
+              </Link>
+            </>
+          )}
           <Button
             variant="outline"
             onClick={exportSelected}
@@ -647,6 +682,11 @@ function StudentsContent() {
       }
     >
       <div className="space-y-3">
+        {isDraftView ? (
+          <div className="rounded-2xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-900">
+            {t("students.draftAdmissionsBanner")}
+          </div>
+        ) : null}
         {/* Colorful summary strip */}
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-blue-100/80 bg-gradient-to-r from-white via-sky-50/40 to-violet-50/30 px-2.5 py-2 shadow-sm">
           {[
@@ -654,7 +694,12 @@ function StudentsContent() {
               key: "total",
               label: t("students.statTotal"),
               value: summary?.total ?? total,
-              active: !genderFilter && !noClassOnly && !classFilter && !standardFilter,
+              active:
+                !genderFilter &&
+                !noClassOnly &&
+                !classFilter &&
+                !standardFilter &&
+                !statusFilter,
               onClick: () => clearFilters(),
               idle: "border-indigo-100 bg-indigo-50/80 text-indigo-950 hover:bg-indigo-100",
               activeCls: "border-transparent bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-200/60",
@@ -707,6 +752,24 @@ function StudentsContent() {
               labelIdle: "text-amber-700",
               labelActive: "text-amber-100",
             },
+            ...(!isDraftView && (summary?.draftCount ?? 0) > 0
+              ? [
+                  {
+                    key: "drafts",
+                    label: t("students.statDrafts"),
+                    value: summary?.draftCount ?? 0,
+                    active: false,
+                    onClick: () => {
+                      window.location.href = "/students?status=draft";
+                    },
+                    idle: "border-violet-100 bg-violet-50/80 text-violet-950 hover:bg-violet-100",
+                    activeCls:
+                      "border-transparent bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md shadow-violet-200/60",
+                    labelIdle: "text-violet-600",
+                    labelActive: "text-violet-100",
+                  },
+                ]
+              : []),
           ].map((s) => (
             <button
               key={s.key}

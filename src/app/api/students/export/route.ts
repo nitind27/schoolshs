@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { CSV_HEADERS } from "@/lib/constants";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { activeStudentStatusFilter } from "@/lib/student-list-filters";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = { schoolId: session.schoolId };
     if (status) where.status = status;
+    else if (!ids) where.status = activeStudentStatusFilter();
     if (ids) where.id = { in: ids.split(",") };
 
     const students = await prisma.student.findMany({

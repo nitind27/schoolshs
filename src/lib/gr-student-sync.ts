@@ -51,6 +51,8 @@ export async function syncGrEntryForStudent(
   schoolId: string,
   student: Student
 ): Promise<GeneralRegisterEntry | null> {
+  if (student.status === "draft") return null;
+
   const grNumber = student.grNumber?.trim();
   if (!grNumber) return null;
 

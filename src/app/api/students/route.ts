@@ -11,6 +11,7 @@ import {
   assertStudentAccountEmailAvailable,
   syncStudentPortalAccount,
 } from "@/lib/student-account";
+import { activeStudentStatusFilter } from "@/lib/student-list-filters";
 
 function studentDisplayName(s: { firstName?: string | null; surname?: string | null }) {
   return [s.firstName, s.surname].filter(Boolean).join(" ").trim() || "Student";
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
     const idsParam = searchParams.get("ids");
     const includeSummary = searchParams.get("summary") === "1";
     const includeArchived = searchParams.get("includeArchived") === "1";
+    const includeDraft = searchParams.get("includeDraft") === "1";
     const noClass = searchParams.get("noClass") === "1";
     const page = parseInt(searchParams.get("page") || "1");
     // Auto-Apply and similar screens request up to 500 ready students.
@@ -43,8 +45,15 @@ export async function GET(request: NextRequest) {
       const idList = idsParam.split(",").map((s) => s.trim()).filter(Boolean);
       if (idList.length) where.id = { in: idList };
     }
-    if (status) where.status = status;
-    else if (!includeArchived) where.status = { not: "archived" };
+    if (status) {
+      where.status = status;
+    } else if (idsParam) {
+      if (!includeArchived) where.status = { not: "archived" };
+    } else if (includeDraft || includeArchived) {
+      if (!includeArchived) where.status = { not: "archived" };
+    } else {
+      where.status = activeStudentStatusFilter();
+    }
     if (category) where.category = category;
     if (gender && gender !== "all") {
       where.gender = { in: genderDbMatchValues(gender) };
@@ -168,15 +177,16 @@ export async function GET(request: NextRequest) {
           female: number;
           other: number;
           noClass: number;
+          draftCount: number;
         }
       | undefined;
 
     if (includeSummary) {
       const base = {
         schoolId: session.schoolId,
-        status: { not: "archived" },
+        status: activeStudentStatusFilter(),
       } as const;
-      const [sumTotal, male, female, other, noClass] = await Promise.all([
+      const [sumTotal, male, female, other, noClass, draftCount] = await Promise.all([
         prisma.student.count({ where: base }),
         prisma.student.count({
           where: { ...base, gender: { in: genderDbMatchValues("Male") } },
@@ -190,8 +200,11 @@ export async function GET(request: NextRequest) {
         prisma.student.count({
           where: { ...base, classId: null },
         }),
+        prisma.student.count({
+          where: { schoolId: session.schoolId, status: "draft" },
+        }),
       ]);
-      summary = { total: sumTotal, male, female, other, noClass };
+      summary = { total: sumTotal, male, female, other, noClass, draftCount };
     }
 
     return NextResponse.json({ students, total, page, limit, summary });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { activeStudentStatusFilter } from "@/lib/student-list-filters";
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
     const students = await prisma.student.findMany({
       where: {
         schoolId: session.schoolId,
-        status: { not: "archived" },
+        status: activeStudentStatusFilter(),
         grNumber: { contains: grNumber },
         schoolClass: { classTeacherId: session.staffId },
       },

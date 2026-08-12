@@ -1267,6 +1267,12 @@ const en = {
     confirmActivate: "Restore this student to the active list and allow login again?",
     activateFailed: "Failed to activate student",
     inactiveStudents: "Inactive students",
+    draftAdmissions: "Draft admissions",
+    draftAdmissionsTitle: "Draft Admissions",
+    draftAdmissionsSubtitle:
+      "Incomplete GR / admission forms — finish and save to add to All Students",
+    draftAdmissionsBanner:
+      "These students are not in All Students yet. Complete the form and save to admit them.",
     inactiveTitle: "Inactive / Deactivated Students",
     inactiveSubtitle: "Students removed from active lists — filter and activate when needed",
     inactiveBanner:
@@ -1296,6 +1302,7 @@ const en = {
     statGirls: "Girls",
     statFiltered: "In this list",
     statNoClass: "No Class",
+    statDrafts: "Drafts",
     editTitle: "Edit: {{name}}",
     personalDetails: "Personal Details",
     familyDetails: "Family Details",

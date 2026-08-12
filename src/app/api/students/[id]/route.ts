@@ -6,6 +6,7 @@ import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { applyDraftDefaults } from "@/lib/student-draft";
 import { syncGrEntryForStudent } from "@/lib/gr-student-sync";
 import { toStudentUncheckedUpdate } from "@/lib/student-write";
+import { deleteStudentCompletely } from "@/lib/student-delete";
 import {
   assertStudentAccountEmailAvailable,
   syncStudentPortalAccount,
@@ -80,7 +81,7 @@ export async function PUT(
     });
 
     await syncStudentPortalAccount(student);
-    if (student.grNumber?.trim()) {
+    if (student.grNumber?.trim() && student.status !== "draft") {
       await syncGrEntryForStudent(session.schoolId, student);
     }
 
@@ -100,28 +101,8 @@ export async function DELETE(
     const { id } = await params;
     const existing = await getOwnedStudent(id, session.schoolId);
     if (!existing) return NextResponse.json({ error: "Student not found" }, { status: 404 });
-    const account = await prisma.user.findUnique({
-      where: { studentId: id },
-      select: { id: true },
-    });
-    await prisma.$transaction([
-      ...(account
-        ? [
-            prisma.userSession.updateMany({
-              where: { userId: account.id, revokedAt: null },
-              data: {
-                revokedAt: new Date(),
-                revokeReason: "student_deleted",
-              },
-            }),
-            prisma.user.update({
-              where: { id: account.id },
-              data: { isActive: false },
-            }),
-          ]
-        : []),
-      prisma.student.delete({ where: { id } }),
-    ]);
+
+    await deleteStudentCompletely({ studentId: id, schoolId: session.schoolId });
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
