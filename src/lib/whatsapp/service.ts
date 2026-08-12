@@ -2,13 +2,6 @@ import { mkdir } from "fs/promises";
 import path from "path";
 import QRCode from "qrcode";
 import pino from "pino";
-import makeWASocket, {
-  DisconnectReason,
-  fetchLatestBaileysVersion,
-  useMultiFileAuthState,
-  type WASocket,
-} from "@whiskeysockets/baileys";
-import { Boom } from "@hapi/boom";
 import { phoneToWhatsAppJid } from "@/lib/whatsapp/phone";
 
 export type WhatsAppConnectionStatus = "disconnected" | "connecting" | "qr" | "connected";
@@ -21,7 +14,19 @@ export type WhatsAppSessionSnapshot = {
   lastError: string | null;
 };
 
+type BaileysModule = typeof import("@whiskeysockets/baileys");
+type WASocket = import("@whiskeysockets/baileys").WASocket;
+
 const AUTH_DIR = path.join(process.cwd(), "automation", "whatsapp-auth");
+
+let baileysPromise: Promise<BaileysModule> | null = null;
+
+async function loadBaileys(): Promise<BaileysModule> {
+  if (!baileysPromise) {
+    baileysPromise = import("@whiskeysockets/baileys");
+  }
+  return baileysPromise;
+}
 
 class WhatsAppService {
   private sock: WASocket | null = null;
@@ -128,6 +133,14 @@ class WhatsAppService {
       this.sock = null;
     }
 
+    const {
+      default: makeWASocket,
+      DisconnectReason,
+      fetchLatestBaileysVersion,
+      useMultiFileAuthState,
+    } = await loadBaileys();
+    const { Boom } = await import("@hapi/boom");
+
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { version } = await fetchLatestBaileysVersion();
     const logger = pino({ level: "silent" });
@@ -176,7 +189,8 @@ class WhatsAppService {
       }
 
       if (connection === "close") {
-        const statusCode = (lastDisconnect?.error as Boom | undefined)?.output?.statusCode;
+        const statusCode = (lastDisconnect?.error as InstanceType<typeof Boom> | undefined)?.output
+          ?.statusCode;
         const loggedOut = statusCode === DisconnectReason.loggedOut;
         const message =
           lastDisconnect?.error instanceof Error

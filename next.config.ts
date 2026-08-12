@@ -15,7 +15,6 @@ const nextConfig: NextConfig = {
     "mariadb",
     "sharp",
     "@whiskeysockets/baileys",
-    "jimp",
     "pino",
   ],
 };
