@@ -12,6 +12,9 @@ export function shouldCreatePortalLogin(designation: string): boolean {
     d.includes("principal") ||
     d.includes("clerk") ||
     d.includes("accountant") ||
+    d.includes("supervisor") ||
+    d.includes("incharge") ||
+    d.includes("in-charge") ||
     d === "hm" ||
     d.includes("head master") ||
     d.includes("headmistress")
