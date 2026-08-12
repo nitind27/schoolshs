@@ -1572,7 +1572,7 @@ html.locale-gu .ops-eyebrow {
 }
 
 .ops-insights-body {
-  min-height: 12rem;
+  min-height: 8rem;
 }
 
 .ops-charts-grid {
@@ -4650,8 +4650,24 @@ html.locale-gu .dashboard-filters-heading {
 }
 
 .ops-insights-compact .ops-insights-head {
-  margin-bottom: 0.55rem;
-  gap: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  margin-bottom: 0.45rem;
+  padding-bottom: 0.45rem;
+  gap: 0.45rem;
+}
+
+.ops-insights-compact .ops-insights-intro {
+  flex: none;
+  width: 100%;
+}
+
+.ops-insights-compact .ops-insights-tabs {
+  width: 100%;
+  max-width: none;
+  flex: none;
 }
 
 .ops-flow-slim {
@@ -5956,12 +5972,21 @@ html.locale-gu .ops-main-tab-copy strong {
 .ops-dash .ops-insights-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: stretch;
   justify-content: space-between;
-  gap: 0.85rem 1rem;
-  margin-bottom: 0.85rem;
-  padding-bottom: 0.85rem;
+  gap: 0.65rem 0.75rem;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.65rem;
   border-bottom: 1px solid #e8eef4;
+}
+
+@media (min-width: 900px) {
+  .ops-dash .ops-insights-head {
+    align-items: flex-end;
+    gap: 0.85rem 1rem;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
 }
 
 .ops-dash .ops-insights-intro {
@@ -5988,26 +6013,37 @@ html.locale-gu .ops-main-tab-copy strong {
 .ops-dash .ops-insights-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.3rem;
-  flex: 1 1 16rem;
-  max-width: 24rem;
-  padding: 0.28rem;
+  gap: 0.25rem;
+  flex: none;
+  width: 100%;
+  max-width: none;
+  padding: 0.25rem;
   border-radius: 0.85rem;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
 }
 
+@media (min-width: 900px) {
+  .ops-dash .ops-insights-tabs {
+    flex: 0 1 24rem;
+    width: auto;
+    max-width: 24rem;
+    gap: 0.3rem;
+    padding: 0.28rem;
+  }
+}
+
 .ops-dash .ops-insights-tabs button {
-  min-height: 2.35rem;
-  padding: 0.4rem 0.55rem;
+  min-height: 2.15rem;
+  padding: 0.35rem 0.4rem;
   border-radius: 0.65rem;
   border: 1px solid transparent;
   background: transparent;
   color: #64748b;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-align: center;
-  line-height: 1.25;
+  line-height: 1.15;
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
@@ -6094,31 +6130,46 @@ html.locale-gu .ops-main-tab-copy strong {
 }
 
 @media (max-width: 640px) {
-  .ops-dash .ops-insights-head {
+  .ops-dash .ops-insights-head,
+  .ops-cards-v2 .ops-insights-head {
     flex-direction: column;
     align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    margin-bottom: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+
+  .ops-dash .ops-insights-intro,
+  .ops-cards-v2 .ops-insights-intro {
+    flex: none;
+    width: 100%;
   }
 
   .ops-dash .ops-insights-tabs,
   .ops-cards-v2 .ops-insights-tabs {
-    display: flex;
-    flex-direction: column;
-    max-width: none;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     width: 100%;
+    max-width: none;
     flex: none;
-    gap: 0.35rem;
-    padding: 0.35rem;
+    gap: 0.2rem;
+    padding: 0.22rem;
+    min-height: 0;
   }
 
   .ops-dash .ops-insights-tabs button,
   .ops-cards-v2 .ops-insights-tabs button {
-    width: 100%;
-    min-height: 2.75rem;
-    padding: 0.55rem 0.75rem;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: unset;
-    line-height: 1.25;
+    width: auto;
+    min-height: 2.1rem;
+    padding: 0.32rem 0.28rem;
+    font-size: 0.68rem;
+    line-height: 1.12;
+  }
+
+  .ops-dash .ops-insights-body,
+  .ops-cards-v2 .ops-insights-body {
+    min-height: 0;
   }
 
   .ops-dash .ops-main-tab-label {
@@ -6132,25 +6183,24 @@ html.locale-gu .ops-main-tab-copy strong {
     padding: 0.65rem 0.7rem;
   }
 
-  .ops-dash .ops-insights {
-    padding: 0.85rem 0.75rem 0.95rem;
+  .ops-dash .ops-insights,
+  .ops-cards-v2 .ops-insights {
+    padding: 0.75rem 0.7rem 0.85rem;
   }
 }
 
 @media (min-width: 641px) and (max-width: 899px) {
   .ops-dash .ops-insights-tabs,
   .ops-cards-v2 .ops-insights-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    max-width: none;
     width: 100%;
-    flex: 1 1 100%;
+    max-width: none;
+    flex: none;
   }
 
   .ops-dash .ops-insights-tabs button,
   .ops-cards-v2 .ops-insights-tabs button {
-    flex: 1 1 calc(33.333% - 0.25rem);
-    min-width: 6.25rem;
+    font-size: 0.74rem;
+    padding: 0.35rem 0.4rem;
   }
 }
 
@@ -6489,11 +6539,17 @@ html.locale-gu .ops-dash .ops-insights-tabs button {
 
 /* Insights tabs */
 .ops-cards-v2 .ops-insights-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   background: linear-gradient(135deg, #e0f2fe, #ccfbf1);
   border-radius: 0.75rem;
-  padding: 0.25rem;
+  padding: 0.22rem;
   gap: 0.2rem;
   border: 1px solid rgb(125 211 252 / 0.55);
+  width: 100%;
+  max-width: none;
+  flex: none;
+  min-height: 0;
 }
 
 .ops-cards-v2 .ops-insights-tabs button {
@@ -6506,7 +6562,10 @@ html.locale-gu .ops-dash .ops-insights-tabs button {
   white-space: normal !important;
   overflow: visible !important;
   text-overflow: unset !important;
-  line-height: 1.25 !important;
+  line-height: 1.15 !important;
+  min-height: 2.1rem !important;
+  padding: 0.32rem 0.28rem !important;
+  font-size: 0.68rem !important;
 }
 
 .ops-cards-v2 .ops-insights-tabs button.is-active {
