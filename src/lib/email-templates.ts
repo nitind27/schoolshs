@@ -298,6 +298,118 @@ Keep this email private. Do not share your password.`;
   };
 }
 
+/** Super Admin / resend — portal login credentials for any school member */
+export function buildPortalCredentialsEmail(params: {
+  memberName: string;
+  schoolName: string;
+  schoolCode?: string | null;
+  loginEmail: string;
+  password: string;
+  roleLabel: string;
+  designation?: string | null;
+  loginUrl: string;
+  note?: string | null;
+}) {
+  const name = escapeHtml(params.memberName);
+  const school = escapeHtml(params.schoolName);
+  const email = escapeHtml(params.loginEmail);
+  const password = escapeHtml(params.password);
+  const role = escapeHtml(params.roleLabel);
+  const designation = params.designation ? escapeHtml(params.designation) : "";
+  const code = params.schoolCode ? escapeHtml(params.schoolCode) : "";
+  const note = params.note ? escapeHtml(params.note) : "";
+
+  const credBox = `
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 20px;border-collapse:collapse;">
+  <tr>
+    <td style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px 18px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#1d4ed8;margin-bottom:10px;">Portal login credentials</div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;color:#334155;">
+        <tr>
+          <td style="padding:6px 0;width:130px;color:#64748b;">Login email</td>
+          <td style="padding:6px 0;font-weight:700;color:#0f172a;">${email}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#64748b;">Password</td>
+          <td style="padding:6px 0;font-weight:800;font-size:20px;letter-spacing:2px;font-family:'Courier New',Courier,monospace;color:#1e40af;">${password}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#64748b;">Role</td>
+          <td style="padding:6px 0;font-weight:600;color:#0f172a;">${role}</td>
+        </tr>
+        ${
+          designation
+            ? `<tr>
+          <td style="padding:6px 0;color:#64748b;">Designation</td>
+          <td style="padding:6px 0;font-weight:600;color:#0f172a;">${designation}</td>
+        </tr>`
+            : ""
+        }
+        ${
+          code
+            ? `<tr>
+          <td style="padding:6px 0;color:#64748b;">School code</td>
+          <td style="padding:6px 0;font-weight:700;font-family:monospace;color:#0f172a;">${code}</td>
+        </tr>`
+            : ""
+        }
+        <tr>
+          <td style="padding:6px 0;color:#64748b;">School</td>
+          <td style="padding:6px 0;font-weight:600;color:#0f172a;">${school}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+
+  const html = buildEmailHtml({
+    title: "Your portal login credentials",
+    preheader: `Login details for ${params.schoolName} — ${params.loginEmail}`,
+    bodyHtml: `
+      <div style="padding:0 16px;">
+        <p style="margin:0 0 14px;color:#334155;">Hello <strong>${name}</strong>,</p>
+        <p style="margin:0 0 14px;color:#334155;">
+          Your Codeat Education portal credentials for <strong>${school}</strong> are below.
+          ${note ? `<br/><span style="color:#64748b;font-size:13px;">${note}</span>` : ""}
+        </p>
+        <p style="margin:0 0 8px;color:#334155;">Sign in with these details:</p>
+        ${credBox}
+        <ol style="margin:0 0 14px;padding-left:18px;color:#475569;font-size:13px;line-height:1.7;">
+          <li>Open the portal login page</li>
+          <li>Enter school code <strong>${code || "(ask your school)"}</strong></li>
+          <li>Enter your login email and password</li>
+        </ol>
+        <p style="margin:0;color:#64748b;font-size:13px;">
+          Keep this email private. Do not forward it. Contact Codeat support or your school admin if you need help.
+        </p>
+      </div>
+    `,
+    ctaLabel: "Open Portal Login",
+    ctaUrl: params.loginUrl,
+    footerNote:
+      "Automated credentials message from Codeat Education. Keep your password confidential.",
+  });
+
+  const text = `Hello ${params.memberName},
+
+Your portal credentials for ${params.schoolName}:
+Login email: ${params.loginEmail}
+Password: ${params.password}
+Role: ${params.roleLabel}
+${params.designation ? `Designation: ${params.designation}\n` : ""}${
+    params.schoolCode ? `School code: ${params.schoolCode}\n` : ""
+  }
+Sign in: ${params.loginUrl}
+
+Keep this email private.`;
+
+  return {
+    subject: `${params.schoolName} — Portal login credentials`,
+    html,
+    text,
+  };
+}
+
 function detailRow(label: string, value: string | null | undefined) {
   if (!value?.trim()) return "";
   return `<tr>

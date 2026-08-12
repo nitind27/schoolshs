@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const sp = request.nextUrl.searchParams;
     const q = (sp.get("q") || "").trim();
     const role = (sp.get("role") || "").trim();
-    const take = Math.min(300, Math.max(1, Number(sp.get("limit") || 150) || 150));
+    const take = Math.min(2000, Math.max(1, Number(sp.get("limit") || 1000) || 1000));
 
     const roleFilter =
       role && (STAFF_ROLES as readonly string[]).includes(role)
@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
         { email: { contains: q } },
         { school: { name: { contains: q } } },
         { school: { code: { contains: q } } },
+        { staff: { designation: { contains: q } } },
       ];
     }
 
@@ -42,10 +43,10 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [users, events, totalUsers, totalEvents, changed24h] = await Promise.all([
+    const [users, events, totalUsers, totalEvents, changed24h, byRoleRaw] = await Promise.all([
       prisma.user.findMany({
         where: userWhere,
-        orderBy: [{ passwordChangedAt: "desc" }, { updatedAt: "desc" }],
+        orderBy: [{ school: { name: "asc" } }, { role: "asc" }, { name: "asc" }],
         take,
         select: {
           id: true,
@@ -57,12 +58,13 @@ export async function GET(request: NextRequest) {
           passwordChangedAt: true,
           lastLoginAt: true,
           school: { select: { id: true, name: true, code: true } },
+          staff: { select: { designation: true, employeeId: true } },
         },
       }),
       prisma.passwordChangeEvent.findMany({
         where: eventWhere,
         orderBy: { createdAt: "desc" },
-        take,
+        take: Math.min(take, 300),
         include: {
           user: {
             select: {
@@ -85,7 +87,16 @@ export async function GET(request: NextRequest) {
           createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         },
       }),
+      prisma.user.groupBy({
+        by: ["role"],
+        where: { role: { in: [...STAFF_ROLES] } },
+        _count: { _all: true },
+      }),
     ]);
+
+    const byRole: Record<string, number> = {};
+    for (const r of STAFF_ROLES) byRole[r] = 0;
+    for (const row of byRoleRaw) byRole[row.role] = row._count._all;
 
     return NextResponse.json({
       accounts: users.map((u) => ({
@@ -98,6 +109,8 @@ export async function GET(request: NextRequest) {
         passwordChangedAt: u.passwordChangedAt?.toISOString() ?? null,
         lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
         school: u.school,
+        designation: u.staff?.designation || null,
+        employeeId: u.staff?.employeeId || null,
       })),
       events: events.map((e) => ({
         id: e.id,
@@ -115,6 +128,7 @@ export async function GET(request: NextRequest) {
       totalUsers,
       totalEvents,
       changed24h,
+      byRole,
       roles: STAFF_ROLES,
     });
   } catch (e) {
