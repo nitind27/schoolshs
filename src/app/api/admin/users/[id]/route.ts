@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, AuthError } from "@/lib/auth";
-import { passwordRecord } from "@/lib/user-password";
+import { passwordRecord, recordPasswordChange } from "@/lib/user-password";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -51,6 +51,21 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       data,
       include: { school: { select: { id: true, name: true, code: true } } },
     });
+
+    if (body.password) {
+      await recordPasswordChange({
+        userId: updated.id,
+        email: updated.email,
+        name: updated.name,
+        role: updated.role,
+        schoolId: updated.schoolId,
+        password: String(body.password),
+        source: "admin_reset",
+        actorUserId: null,
+        actorRole: "super_admin",
+        actorName: "Super Admin",
+      });
+    }
 
     return NextResponse.json({
       id: updated.id,

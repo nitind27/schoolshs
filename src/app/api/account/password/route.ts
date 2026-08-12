@@ -5,12 +5,12 @@ import {
   requireSchoolAuth,
   verifyPassword,
 } from "@/lib/auth";
-import { passwordRecord } from "@/lib/user-password";
+import { passwordRecord, recordPasswordChange } from "@/lib/user-password";
 
-/** School admin changes their own password */
+/** School staff (admin / teacher / clerk / ca) change their own password */
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await requireSchoolAuth(["school_admin"]);
+    const session = await requireSchoolAuth(["school_admin", "teacher", "clerk", "ca"]);
     const body = await request.json();
     const currentPassword = String(body.currentPassword || "");
     const newPassword = String(body.newPassword || "");
@@ -34,7 +34,14 @@ export async function PATCH(request: NextRequest) {
 
     const user = await prisma.user.findFirst({
       where: { id: session.userId, schoolId: session.schoolId },
-      select: { id: true, passwordHash: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        schoolId: true,
+        passwordHash: true,
+      },
     });
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -51,6 +58,19 @@ export async function PATCH(request: NextRequest) {
         failedLoginCount: 0,
         lockedUntil: null,
       },
+    });
+
+    await recordPasswordChange({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      schoolId: user.schoolId,
+      password: newPassword,
+      source: "self_change",
+      actorUserId: user.id,
+      actorRole: user.role,
+      actorName: user.name,
     });
 
     return NextResponse.json({ success: true });

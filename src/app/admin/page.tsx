@@ -27,6 +27,7 @@ import {
   Zap,
   Eye,
   Mail,
+  KeyRound,
   Headphones,
   Bell,
   CalendarClock,
@@ -248,6 +249,7 @@ export default function AdminDashboardPage() {
     { href: "/admin/contracts", label: t("admin.manageContracts"), icon: FileText, tone: "amber" },
     { href: "/admin/contact-support", label: t("admin.manageSupport"), icon: Headphones, tone: "rose" },
     { href: "/admin/login-activity", label: t("admin.manageActivity"), icon: Activity, tone: "slate" },
+    { href: "/admin/password-activity", label: t("admin.managePasswords"), icon: KeyRound, tone: "violet" },
     { href: "/admin/settings/email", label: t("admin.manageEmail"), icon: Mail, tone: "sky" },
   ];
 

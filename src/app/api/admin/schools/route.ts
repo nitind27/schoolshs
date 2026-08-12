@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, AuthError } from "@/lib/auth";
-import { passwordRecord } from "@/lib/user-password";
+import { passwordRecord, recordPasswordChange } from "@/lib/user-password";
 import { defaultFeaturesForPlan, normalizeFeatureList, normalizeModuleFormats } from "@/lib/school-features";
 import {
   isKnownCertificatePackId,
@@ -246,6 +246,21 @@ export async function POST(request: NextRequest) {
         } catch (emailErr) {
           console.error("School admin verification email failed:", emailErr);
         }
+      }
+
+      if (adminEmail && adminPassword && adminName) {
+        await recordPasswordChange({
+          userId: createdAdminUserId,
+          email: adminEmail,
+          name: adminName,
+          role: "school_admin",
+          schoolId: school.id,
+          password: adminPassword,
+          source: "school_register",
+          actorUserId: null,
+          actorRole: "super_admin",
+          actorName: "Super Admin",
+        });
       }
 
       const loginOrigin = getRequestOriginFromHeaders(

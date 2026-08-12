@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
-import { passwordRecord } from "@/lib/user-password";
+import { passwordRecord, recordPasswordChange } from "@/lib/user-password";
 import { resolveStaffPortalRole } from "@/lib/staff-portal";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -124,11 +124,28 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         select: {
           id: true,
           email: true,
+          name: true,
           role: true,
+          schoolId: true,
           isActive: true,
           lastLoginAt: true,
         },
       });
+
+      if (password) {
+        await recordPasswordChange({
+          userId: updated.id,
+          email: updated.email,
+          name: updated.name,
+          role: updated.role,
+          schoolId: updated.schoolId,
+          password,
+          source: "staff_portal",
+          actorUserId: session.userId,
+          actorRole: session.role,
+          actorName: session.name || null,
+        });
+      }
 
       return NextResponse.json({
         success: true,
@@ -167,10 +184,25 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       select: {
         id: true,
         email: true,
+        name: true,
         role: true,
+        schoolId: true,
         isActive: true,
         lastLoginAt: true,
       },
+    });
+
+    await recordPasswordChange({
+      userId: created.id,
+      email: created.email,
+      name: created.name,
+      role: created.role,
+      schoolId: created.schoolId,
+      password,
+      source: "staff_create",
+      actorUserId: session.userId,
+      actorRole: session.role,
+      actorName: session.name || null,
     });
 
     return NextResponse.json({

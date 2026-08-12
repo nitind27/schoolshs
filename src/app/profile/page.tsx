@@ -33,7 +33,11 @@ export default function ProfilePage() {
 
   const homeHref =
     user?.role === "clerk" ? "/clerk" : user?.role === "teacher" ? "/teacher" : "/dashboard";
-  const isAdmin = user?.role === "school_admin";
+  const isStaffPortal =
+    user?.role === "school_admin" ||
+    user?.role === "teacher" ||
+    user?.role === "clerk" ||
+    user?.role === "ca";
   const staffId = user?.staffId || null;
 
   useEffect(() => {
@@ -172,7 +176,7 @@ export default function ProfilePage() {
             </Card>
           ) : null}
 
-          {isAdmin ? (
+          {isStaffPortal ? (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -252,7 +256,7 @@ export default function ProfilePage() {
             </Card>
           )}
 
-          {isAdmin && (
+          {user?.role === "school_admin" && (
             <p className="text-xs text-slate-500 mt-4">
               {t("accountSettings.adminCanResetStaff")}{" "}
               <Link href="/staff" className="text-blue-600 hover:underline font-medium">

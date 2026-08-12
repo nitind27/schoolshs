@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
-import { passwordRecord } from "@/lib/user-password";
+import { passwordRecord, recordPasswordChange } from "@/lib/user-password";
 import { fillStaffGuNames } from "@/lib/gujarati/transliterate-server";
 import {
   generateStaffNumericPassword,
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (createPortal && generatedPassword && portalRole && data.email) {
-        await tx.user.create({
+        const portalUser = await tx.user.create({
           data: {
             email: data.email,
             ...passwordRecord(generatedPassword),
@@ -175,10 +175,28 @@ export async function POST(request: NextRequest) {
             emailVerifiedAt: new Date(),
           },
         });
+        return { staff: created, portalUserId: portalUser.id };
       }
 
-      return created;
+      return { staff: created, portalUserId: null as string | null };
     });
+
+    if (createPortal && generatedPassword && portalRole && data.email && staff.portalUserId) {
+      await recordPasswordChange({
+        userId: staff.portalUserId,
+        email: data.email,
+        name: `${staff.staff.firstName} ${staff.staff.lastName}`.trim(),
+        role: portalRole,
+        schoolId: session.schoolId,
+        password: generatedPassword,
+        source: "staff_create",
+        actorUserId: session.userId,
+        actorRole: session.role,
+        actorName: session.name,
+      });
+    }
+
+    const createdStaff = staff.staff;
 
     if (createPortal && generatedPassword && portalRole && data.email) {
       try {
@@ -193,14 +211,14 @@ export async function POST(request: NextRequest) {
         const schoolName = school?.settings?.schoolName || school?.name || "Your School";
         const origin = new URL(request.url).origin;
         const mail = buildStaffCredentialsEmail({
-          staffName: `${staff.firstName} ${staff.lastName}`.trim(),
+          staffName: `${createdStaff.firstName} ${createdStaff.lastName}`.trim(),
           schoolName,
           schoolCode: school?.code,
           loginEmail: data.email,
           password: generatedPassword,
           roleLabel: roleLabel(portalRole),
-          designation: staff.designation,
-          employeeId: staff.employeeId,
+          designation: createdStaff.designation,
+          employeeId: createdStaff.employeeId,
           loginUrl: `${origin}/login`,
         });
         await sendMail({
@@ -218,7 +236,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        ...staff,
+        ...createdStaff,
         portal: createPortal
           ? {
               created: true,

@@ -208,6 +208,7 @@ model User {
   chatMessagesSent    ChatMessage[]        @relation("ChatMessageSender")
   notifications       Notification[]
   loginEvents         LoginEvent[]
+  passwordChangeEvents PasswordChangeEvent[]
   sessions            UserSession[]
   helpConversations   HelpConversation[] @relation("HelpConversationUser")
   helpAssigned        HelpConversation[] @relation("HelpConversationAssignee")
@@ -278,6 +279,39 @@ model LoginEvent {
   @@index([ip, createdAt])
   @@index([createdAt])
   @@map("loginevent")
+}
+
+/**
+ * Password set/change audit — Super Admin can review current + history.
+ */
+model PasswordChangeEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  email    String
+  name     String
+  role     String
+  schoolId String?
+
+  /**
+   * self_change | admin_reset | staff_portal | school_register | staff_create | other
+   */
+  source String @default("self_change")
+
+  actorUserId String?
+  actorRole   String?
+  actorName   String?
+
+  /** AES snapshot of the password after this change (same scheme as User.passwordEnc). */
+  passwordEnc String @db.Text
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([role, createdAt])
+  @@map("passwordchangeevent")
 }
 
 model SchoolSettings {

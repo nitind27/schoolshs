@@ -18,6 +18,7 @@ import {
   Activity,
   FolderKanban,
   UserCog,
+  KeyRound,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/admin/login-activity",
     labelKey: "admin.navLoginActivity",
     icon: Activity,
+    groupKey: "admin.navGroupSystem",
+  },
+  {
+    href: "/admin/password-activity",
+    labelKey: "admin.navPasswordActivity",
+    icon: KeyRound,
     groupKey: "admin.navGroupSystem",
   },
   {

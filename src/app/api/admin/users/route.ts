@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, AuthError } from "@/lib/auth";
-import { passwordRecord } from "@/lib/user-password";
+import { passwordRecord, recordPasswordChange } from "@/lib/user-password";
 import {
   getRequestOriginFromHeaders,
   onboardSchoolAdminUser,
@@ -38,6 +38,19 @@ export async function POST(request: NextRequest) {
         role: "school_admin",
         schoolId,
       },
+    });
+
+    await recordPasswordChange({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      schoolId: user.schoolId,
+      password,
+      source: "admin_reset",
+      actorUserId: null,
+      actorRole: "super_admin",
+      actorName: "Super Admin",
     });
 
     let verificationSent = false;
