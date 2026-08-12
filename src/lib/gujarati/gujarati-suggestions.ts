@@ -140,23 +140,68 @@ function promotePreferredLatinVariant(
 }
 
 /**
+ * Retroflex variant generation — "Dhodiya" must produce "Dhodiya" with
+ * capital D so bhashaime maps D→ડ, Dh→ઢ (retroflex) instead of d→દ, dh→ધ.
+ *
+ * Case-sensitive pairs recognised by bhashaime Gujarati engine:
+ *   d→દ  dh→ધ  (dental)       D→ડ  Dh→ઢ  (retroflex)
+ *   t→ત  th→થ  (dental)       T→ટ  Th→ઠ  (retroflex)
+ *   n→ન  (dental)              N→ણ  (retroflex)
+ *   l→લ  (dental)              L→ળ  (retroflex)
+ *   ch→ચ                       Ch→છ
+ *   sh→શ                       Sh→ષ
+ */
+function generateRetroflexVariants(word: string): string[] {
+  // For each dental consonant / digraph, produce a variant with the retroflex
+  // capitalised form, and vice-versa. Order matters: longer digraphs first.
+  const swaps: Array<[RegExp, string, RegExp, string]> = [
+    [/Dh/g, "dh", /dh/g, "Dh"],
+    [/Th/g, "th", /th/g, "Th"],
+    [/Sh/g, "sh", /sh/g, "Sh"],
+    [/Ch/g, "ch", /ch/g, "Ch"],
+    [/D/g,  "d",  /(?<![CSTs])d/g,  "D"],   // avoid matching "Sh", "Ch", "Th" leftover "d"
+    [/T(?!h)/g, "t", /(?<![CS])t(?!h)/g, "T"],
+    [/N/g,  "n",  /n/g,  "N"],
+    [/L/g,  "l",  /l/g,  "L"],
+  ];
+
+  const out = new Set<string>();
+  for (const [fromUpper, toLower, fromLower, toUpper] of swaps) {
+    if (fromUpper.test(word)) out.add(word.replace(fromUpper, toLower));
+    if (fromLower.test(word)) out.add(word.replace(fromLower, toUpper));
+  }
+
+  // Also produce the fully-lowered form (dental fallback)
+  out.add(word.toLowerCase());
+
+  out.delete(word); // remove the original — it's already in the main set
+  return [...out];
+}
+
+/**
  * Build latin spelling variants for any word — schwa insertion, vowel length,
- * common name suffixes, and Indian-English consonant swaps. No static name list.
+ * common name suffixes, retroflex consonant variants, and Indian-English
+ * consonant swaps. No static name list.  Case is preserved so that bhashaime
+ * can distinguish retroflex (D/Dh/T/Th/N/L) from dental (d/dh/t/th/n/l).
  */
 function generateLatinVariants(word: string, depth = 0): string[] {
-  const w = word.toLowerCase().trim();
+  const w = word.trim();
   if (!w) return [];
+  const wLower = w.toLowerCase();
 
-  const out = new Set<string>([w]);
+  const out = new Set<string>([w, wLower]);
   const add = (s: string) => {
-    const v = s.toLowerCase().trim();
+    const v = s.trim();
     if (v && v.length >= 1 && v.length <= 40) out.add(v);
   };
 
+  // Retroflex ↔ dental variants (case-sensitive for bhashaime)
+  for (const rv of generateRetroflexVariants(w)) add(rv);
+
   // Schwa (a / aa) between consecutive consonants — parmar → paramaar → પરમાર
-  for (let i = 1; i < w.length; i++) {
-    if (isConsonant(w[i - 1]) && isConsonant(w[i])) {
-      const pair = w[i - 1] + w[i];
+  for (let i = 1; i < wLower.length; i++) {
+    if (isConsonant(wLower[i - 1]) && isConsonant(wLower[i])) {
+      const pair = wLower[i - 1] + wLower[i];
       if (NO_SCHWA_PAIRS.has(pair)) continue;
       add(w.slice(0, i) + "a" + w.slice(i));
       add(w.slice(0, i) + "aa" + w.slice(i));
@@ -164,7 +209,7 @@ function generateLatinVariants(word: string, depth = 0): string[] {
   }
 
   // Compound name: stem + suffix (ravindrabhai → ravindra + bhai)
-  const compound = depth === 0 ? splitCompoundLatinWord(w) : null;
+  const compound = depth === 0 ? splitCompoundLatinWord(wLower) : null;
   if (compound) {
     add(compound.stem);
     add(compound.suffix);
@@ -180,13 +225,13 @@ function generateLatinVariants(word: string, depth = 0): string[] {
   }
 
   // Standalone suffix spelling fixes
-  if (SUFFIX_LATIN_VARIANTS[w]) {
-    for (const v of SUFFIX_LATIN_VARIANTS[w]) add(v);
+  if (SUFFIX_LATIN_VARIANTS[wLower]) {
+    for (const v of SUFFIX_LATIN_VARIANTS[wLower]) add(v);
   }
 
   // Schwa between doubled consonants — bhatt → bhatat / bhaatt
-  for (let i = 1; i < w.length; i++) {
-    if (w[i] === w[i - 1] && isConsonant(w[i])) {
+  for (let i = 1; i < wLower.length; i++) {
+    if (wLower[i] === wLower[i - 1] && isConsonant(wLower[i])) {
       add(w.slice(0, i) + "a" + w.slice(i));
       add(w.slice(0, i) + "aa" + w.slice(i));
     }
@@ -194,52 +239,58 @@ function generateLatinVariants(word: string, depth = 0): string[] {
 
   // Double final short 'a' — mehta → mehtaa (not narendra → narendraa)
   if (
-    w.endsWith("a") &&
-    !w.endsWith("aa") &&
-    !/(?:ndra|indr|endr|andr|esh|dev|raj|esh|ini|ani|eni)$/i.test(w)
+    wLower.endsWith("a") &&
+    !wLower.endsWith("aa") &&
+    !/(?:ndra|indr|endr|andr|esh|dev|raj|esh|ini|ani|eni)$/i.test(wLower)
   ) {
     add(w + "a");
   }
 
   // Trailing vowel only after consonant cluster at end — bhatt → bhattaa, not nitin → nitinaa
   if (
-    w.length >= 2 &&
-    isConsonant(w[w.length - 1]) &&
-    isConsonant(w[w.length - 2])
+    wLower.length >= 2 &&
+    isConsonant(wLower[wLower.length - 1]) &&
+    isConsonant(wLower[wLower.length - 2])
   ) {
     add(w + "a");
     add(w + "aa");
   }
 
   // Gujarati names often end in long 'aa' after h/t/dh sounds — mehta, shah, chauhan
-  if (/(?:ht|hd|hn|hr|sh|dh|th|bh|gh|kh|kt|tt|dd|nn|ll|mm|rr)$/i.test(w)) {
+  if (/(?:ht|hd|hn|hr|sh|dh|th|bh|gh|kh|kt|tt|dd|nn|ll|mm|rr)$/i.test(wLower)) {
     add(w + "a");
     add(w + "aa");
   }
 
   // Vowel in 'hta' names — mehta → mehataa
-  if (/hta$/i.test(w)) {
+  if (/hta$/i.test(wLower)) {
     const root = w.slice(0, -2);
     add(root + "ata");
     add(root + "ataa");
   }
 
   // Double final 'tt' — bhatt → bhaat / bhaatt
-  if (/att$/i.test(w) && w.length >= 4) {
+  if (/att$/i.test(wLower) && wLower.length >= 4) {
     const root = w.slice(0, -2);
     add(root + "aat");
     add(root + "aatt");
   }
 
   // Final 'ki' long vowel — solanki → solankee
-  if (/ki$/i.test(w)) {
+  if (/ki$/i.test(wLower)) {
     add(w.slice(0, -2) + "kee");
     add(w.slice(0, -2) + "kii");
   }
 
   // Final 'ai' — desai → desaai
-  if (/ai$/i.test(w)) {
+  if (/ai$/i.test(wLower)) {
     add(w.slice(0, -2) + "aai");
+  }
+
+  // Final 'iya' — dhodiya → dhodiyaa (ઢોડિયા)
+  if (/iya$/i.test(wLower) && wLower.length >= 4) {
+    add(w.slice(0, -1) + "aa");   // iya → iyaa
+    add(w.slice(0, -3) + "eeyaa"); // iya → eeyaa
   }
 
   // Common Gujarati / Indian name suffix alternates
@@ -261,7 +312,7 @@ function generateLatinVariants(word: string, depth = 0): string[] {
     ["devi", ["devi", "devee"]],
   ];
   for (const [suffix, replacements] of suffixRules) {
-    if (w.endsWith(suffix) && w.length > suffix.length) {
+    if (wLower.endsWith(suffix) && wLower.length > suffix.length) {
       const stem = w.slice(0, -suffix.length);
       for (const r of replacements) add(stem + r);
     }
@@ -269,59 +320,65 @@ function generateLatinVariants(word: string, depth = 0): string[] {
 
   // Vowel length at each vowel position
   for (let i = 0; i < w.length; i++) {
-    if (isVowel(w[i])) {
-      add(w.slice(0, i) + w[i] + w[i] + w.slice(i + 1));
+    if (isVowel(w[i].toLowerCase())) {
+      add(w.slice(0, i) + w[i].toLowerCase() + w[i].toLowerCase() + w.slice(i + 1));
     }
   }
 
   // Single 'a' → 'aa' (not global replace — one position at a time)
-  for (let i = 0; i < w.length; i++) {
-    if (w[i] === "a") add(w.slice(0, i) + "aa" + w.slice(i + 1));
+  for (let i = 0; i < wLower.length; i++) {
+    if (wLower[i] === "a") add(w.slice(0, i) + "aa" + w.slice(i + 1));
   }
 
   // First-syllable short 'i' → long 'ee' — nitin → neetin, nilesh → neelesh
-  if (/^ni(?=[bcdfghjklmnpqrstvwxyz])/i.test(w) && w.length >= 4) {
+  if (/^ni(?=[bcdfghjklmnpqrstvwxyz])/i.test(wLower) && wLower.length >= 4) {
     add("nee" + w.slice(2));
   }
-  if (/^ri(?=[bcdfghjklmnpqrstvwxyz])/i.test(w) && w.length >= 4) {
+  if (/^ri(?=[bcdfghjklmnpqrstvwxyz])/i.test(wLower) && wLower.length >= 4) {
     add("ree" + w.slice(2));
   }
-  if (/^si(?=[bcdfghjklmnpqrstvwxyz])/i.test(w) && w.length >= 4) {
+  if (/^si(?=[bcdfghjklmnpqrstvwxyz])/i.test(wLower) && wLower.length >= 4) {
     add("see" + w.slice(2));
   }
-  if (/^di(?=[bcdfghjklmnpqrstvwxyz])/i.test(w) && w.length >= 4) {
+  if (/^di(?=[bcdfghjklmnpqrstvwxyz])/i.test(wLower) && wLower.length >= 4) {
     add("dee" + w.slice(2));
   }
 
   // -endra / -indra names keep final 'a' — do not append extra vowel
-  if (/(?:endra|indra|andra|undra)$/i.test(w)) {
+  if (/(?:endra|indra|andra|undra)$/i.test(wLower)) {
     add(w.replace(/a$/i, "")); // narendra → narendr
   }
 
   // Safe vowel digraph swaps
-  if (/ee/.test(w)) add(w.replace(/ee/g, "i"));
-  if (/oo/.test(w)) add(w.replace(/oo/g, "u"));
-  if (/i/.test(w)) add(w.replace(/i/g, "ee"));
-  if (/u/.test(w)) add(w.replace(/u/g, "oo"));
+  if (/ee/.test(wLower)) add(w.replace(/ee/gi, "i"));
+  if (/oo/.test(wLower)) add(w.replace(/oo/gi, "u"));
+  if (/i/.test(wLower)) add(w.replace(/i/gi, "ee"));
+  if (/u/.test(wLower)) add(w.replace(/u/gi, "oo"));
 
-  // Indian-English consonant digraph swaps
+  // Indian-English consonant digraph swaps — ONLY for aspirate removal,
+  // NOT for dh↔d or th↔t which would collapse retroflex distinctions.
   const digraphSwaps: Array<[RegExp, string]> = [
-    [/ph/g, "f"],
-    [/bh/g, "b"],
-    [/dh/g, "d"],
-    [/th/g, "t"],
-    [/gh/g, "g"],
-    [/kh/g, "k"],
-    [/sh/g, "s"],
-    [/ch/g, "c"],
-    [/v/g, "w"],
-    [/w/g, "v"],
+    [/ph/gi, "f"],
+    [/bh/gi, "b"],
+    [/gh/gi, "g"],
+    [/kh/gi, "k"],
+    [/v/gi, "w"],
+    [/w/gi, "v"],
   ];
   for (const [re, repl] of digraphSwaps) {
-    if (re.test(w)) add(w.replace(re, repl));
+    if (re.test(wLower)) add(w.replace(re, repl));
   }
 
-  return [...out].filter((v) => !/[aeiou]{4,}/.test(v));
+  // Generate retroflex variants for every variant we produced so far
+  const withRetroflex = new Set<string>(out);
+  for (const variant of out) {
+    for (const rv of generateRetroflexVariants(variant)) {
+      const v = rv.trim();
+      if (v && v.length >= 1 && v.length <= 40) withRetroflex.add(v);
+    }
+  }
+
+  return [...withRetroflex].filter((v) => !/[aeiou]{4,}/.test(v));
 }
 
 /** Rank Gujarati output quality — prefer readable syllables over stacked consonants */
@@ -443,6 +500,15 @@ function scoreGujaratiOutput(
     score += 5;
   }
 
+  // Prefer '-iyaa' (િયા) over '-iya' (િય) for names ending in 'iya' —
+  // Indian names like Dhodiya/Vaghiya/Solaniya always end with long આ.
+  if (/iya$/i.test(originalLatin.toLowerCase())) {
+    // ા (aa-matra) at end = correct
+    if (gujarati.endsWith("\u0ABE")) score += 8;
+    // ends without matra = missing final vowel
+    if (/[\u0AAF]$/.test(gujarati)) score -= 4; // ends in bare ય
+  }
+
   // First syllable ni → nee (nitin → neetin → નીતિન)
   if (
     /^ni(?=[bcdfghjklmnpqrstvwxyz])/i.test(originalLatin) &&
@@ -522,6 +588,20 @@ function scoreGujaratiOutput(
 
   // Heavily distorted spellings are unlikely to be what the user meant
   if (sourceLatin.length > originalLatin.length + 3) score -= 5;
+
+  // Retroflex boost: when the ORIGINAL input contained uppercase D/T/N/L,
+  // the user explicitly chose the retroflex form — strongly prefer variants
+  // that preserve those capitals.
+  const origHasRetroflex = /[DTNL]/.test(originalLatin);
+  if (origHasRetroflex) {
+    const retroflexChars = sourceLatin.match(/[DTNL]/g);
+    if (retroflexChars) score += retroflexChars.length * 10;
+    if (!/[DTNL]/.test(sourceLatin)) score -= 12;
+  } else {
+    // User typed all-lowercase — penalize auto-generated retroflex variants
+    const retroflexChars = sourceLatin.match(/[DTNL]/g);
+    if (retroflexChars) score -= retroflexChars.length * 4;
+  }
 
   // Compound names (ravindrabhai) — prefer stem + suffix transliteration
   const compound = splitCompoundLatinWord(originalLatin);
@@ -643,11 +723,14 @@ function buildCompoundSuggestions(original: string): GujaratiSuggestion[] {
   return out;
 }
 
-/** Multiple Gujarati candidates for one latin word — fully dynamic, any input */
+/** Multiple Gujarati candidates for one latin word — fully dynamic, any input.
+ *  Case is preserved so that bhashaime can distinguish retroflex (D/Dh/T/Th/N/L)
+ *  from dental (d/dh/t/th/n/l). */
 export function getGujaratiSuggestions(latinWord: string, max = 9): GujaratiSuggestion[] {
   if (!latinWord) return [];
 
-  const original = latinWord.toLowerCase().trim();
+  const original = latinWord.trim();        // preserve case!
+  const originalLower = original.toLowerCase();
   const variants = generateLatinVariants(original);
   const raw: GujaratiSuggestion[] = [];
 
@@ -657,20 +740,21 @@ export function getGujaratiSuggestions(latinWord: string, max = 9): GujaratiSugg
     raw.push({ gujarati, latin });
   }
 
-  const syllableGu = transliterateSyllableClusterName(original);
+  const syllableGu = transliterateSyllableClusterName(originalLower);
   if (syllableGu) {
-    raw.unshift({ gujarati: syllableGu, latin: original });
+    raw.unshift({ gujarati: syllableGu, latin: originalLower });
   }
 
-  const compoundFirst = buildCompoundSuggestions(original);
+  const compoundFirst = buildCompoundSuggestions(originalLower);
+  // Pass the case-preserved original so scoring can detect retroflex intent
   const ranked = rankSuggestions(original, raw);
   const merged: GujaratiSuggestion[] = [];
   const seenGu = new Set<string>();
 
-  const canonicalSuffix = SUFFIX_GU_CANONICAL[original];
+  const canonicalSuffix = SUFFIX_GU_CANONICAL[originalLower];
   if (canonicalSuffix) {
     seenGu.add(canonicalSuffix);
-    merged.push({ gujarati: canonicalSuffix, latin: original, preferred: true });
+    merged.push({ gujarati: canonicalSuffix, latin: originalLower, preferred: true });
   }
 
   for (const item of compoundFirst) {
@@ -689,7 +773,7 @@ export function getGujaratiSuggestions(latinWord: string, max = 9): GujaratiSugg
     if (fallback) return [{ gujarati: fallback, latin: original, preferred: true }];
   }
 
-  return promotePreferredLatinVariant(original, merged).slice(0, max);
+  return promotePreferredLatinVariant(originalLower, merged).slice(0, max);
 }
 
 export function parseLatinBuffer(full: string): { committed: string; current: string } {
