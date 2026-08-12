@@ -426,54 +426,60 @@ function StudentsContent() {
     else setSelected(new Set(students.map((s) => s.id)));
   };
 
-  const deleteStudent = async (id: string) => {
-    const ok = await confirm({
-      title: t("common.delete"),
-      message: t("students.confirmDelete"),
+  const deleteStudent = async (student: StudentRow) => {
+    const name = studentFullNameGu(student) || studentShortNameGu(student) || "—";
+    const gr = student.grNumber ? ` · GR ${student.grNumber}` : "";
+    await confirm({
+      title: t("students.deleteTitle"),
+      message: t("students.confirmDeleteDetail", { name, gr }),
       confirmLabel: t("common.delete"),
       cancelLabel: t("common.cancel"),
       variant: "destructive",
+      onConfirm: async () => {
+        const res = await fetch(`/api/students/${student.id}`, { method: "DELETE" });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(
+            typeof data.error === "string" ? data.error : t("students.deleteFailed"),
+          );
+        }
+        setSelected((prev) => {
+          const next = new Set(prev);
+          next.delete(student.id);
+          return next;
+        });
+        await fetchStudents();
+      },
     });
-    if (!ok) return;
-    const res = await fetch(`/api/students/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || t("students.deleteFailed"));
-      return;
-    }
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-    fetchStudents();
   };
 
   const deactivateStudent = async (id: string) => {
-    const ok = await confirm({
+    await confirm({
       title: t("students.deactivateTitle"),
       message: t("students.confirmDeactivate"),
       confirmLabel: t("students.deactivate"),
       cancelLabel: t("common.cancel"),
       variant: "destructive",
+      onConfirm: async () => {
+        const res = await fetch(`/api/students/${id}/active`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ active: false }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(
+            typeof data.error === "string" ? data.error : t("students.deactivateFailed"),
+          );
+        }
+        setSelected((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        await fetchStudents();
+      },
     });
-    if (!ok) return;
-    const res = await fetch(`/api/students/${id}/active`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: false }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || t("students.deactivateFailed"));
-      return;
-    }
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-    fetchStudents();
   };
 
   const exportSelected = () => {
@@ -605,7 +611,7 @@ function StudentsContent() {
             studentId={row.original.id}
             showAutoApply={canAutoApply}
             onDeactivate={() => deactivateStudent(row.original.id)}
-            onDelete={() => deleteStudent(row.original.id)}
+            onDelete={() => deleteStudent(row.original)}
           />
         ),
       },
@@ -1076,7 +1082,7 @@ function StudentsContent() {
                                         compact
                                         showAutoApply={canAutoApply}
                                         onDeactivate={() => deactivateStudent(student.id)}
-                                        onDelete={() => deleteStudent(student.id)}
+                                        onDelete={() => deleteStudent(student)}
                                       />
                                     </div>
                                   </div>

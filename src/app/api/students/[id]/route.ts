@@ -106,6 +106,11 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
-    return NextResponse.json({ error: "Failed to delete student" }, { status: 500 });
+    console.error("DELETE /api/students/[id] error:", error);
+    const msg =
+      error instanceof Error && error.message && !error.message.includes("Unique constraint")
+        ? error.message
+        : "Failed to delete student";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

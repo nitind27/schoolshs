@@ -20,11 +20,13 @@ export function useConfirm() {
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<ConfirmOptions | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const resolveRef = useRef<((value: boolean) => void) | null>(null);
 
   const confirm = useCallback((opts: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
       resolveRef.current = resolve;
+      setError(null);
       setOptions(opts);
       setOpen(true);
     });
@@ -33,6 +35,7 @@ export function useConfirm() {
   const close = useCallback((result: boolean) => {
     setOpen(false);
     setLoading(false);
+    setError(null);
     resolveRef.current?.(result);
     resolveRef.current = null;
     setOptions(null);
@@ -41,11 +44,13 @@ export function useConfirm() {
   const handleConfirm = useCallback(async () => {
     if (!options) return;
     setLoading(true);
+    setError(null);
     try {
       if (options.onConfirm) await options.onConfirm();
       close(true);
-    } catch {
+    } catch (err) {
       setLoading(false);
+      setError(err instanceof Error ? err.message : "Something went wrong");
     }
   }, [close, options]);
 
@@ -57,6 +62,7 @@ export function useConfirm() {
       onClose: () => close(false),
       onConfirm: handleConfirm,
       loading,
+      error,
       title: options.title,
       message: options.message,
       confirmLabel: options.confirmLabel,
@@ -65,7 +71,7 @@ export function useConfirm() {
     };
 
     return <ConfirmModal {...modalProps} />;
-  }, [close, handleConfirm, loading, open, options]);
+  }, [close, error, handleConfirm, loading, open, options]);
 
   return { confirm, ConfirmDialog };
 }

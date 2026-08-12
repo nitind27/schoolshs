@@ -1256,6 +1256,9 @@ const en = {
     documents: "Documents",
     credentials: "DG Credentials",
     confirmDelete: "Are you sure you want to delete this student?",
+    deleteTitle: "Delete student permanently?",
+    confirmDeleteDetail:
+      "Delete {{name}}{{gr}}? All related data — GR register, exam results, attendance, documents and login — will be removed. This cannot be undone.",
     deleteFailed: "Failed to delete student",
     deactivate: "Deactivate",
     deactivateTitle: "Deactivate student",

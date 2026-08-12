@@ -20,6 +20,7 @@ export interface ConfirmModalProps {
   cancelLabel?: string;
   variant?: ConfirmVariant;
   loading?: boolean;
+  error?: string | null;
 }
 
 const variantStyles: Record<
@@ -50,6 +51,7 @@ export function ConfirmModal({
   cancelLabel,
   variant = "default",
   loading = false,
+  error = null,
 }: ConfirmModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -123,6 +125,11 @@ export function ConfirmModal({
               >
                 {message}
               </p>
+              {error ? (
+                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                  {error}
+                </p>
+              ) : null}
             </div>
             <button
               type="button"

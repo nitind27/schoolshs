@@ -97,16 +97,22 @@ async function removeStudentFromJsonIdLists(tx: Tx, schoolId: string, studentId:
 }
 
 async function deleteStudentNotifications(tx: Tx, schoolId: string, studentId: string) {
-  await tx.notification.deleteMany({
-    where: {
-      schoolId,
-      OR: [
-        { href: { contains: `/students/${studentId}` } },
-        { metaJson: { contains: `"studentId":"${studentId}"` } },
-        { metaJson: { contains: `"studentId": "${studentId}"` } },
-      ],
-    },
-  });
+  const href = `/students/${studentId}`;
+  const hrefPrefix = `${href}/`;
+  const metaNeedle1 = `%"studentId":"${studentId}"%`;
+  const metaNeedle2 = `%"studentId": "${studentId}"%`;
+
+  // Avoid Prisma `contains` (LIKE) — mixed utf8mb4 collations on production MySQL.
+  await tx.$executeRaw`
+    DELETE FROM notification
+    WHERE schoolId = ${schoolId}
+      AND (
+        href COLLATE utf8mb4_unicode_ci = ${href}
+        OR href COLLATE utf8mb4_unicode_ci LIKE ${`${hrefPrefix}%`}
+        OR metaJson COLLATE utf8mb4_unicode_ci LIKE ${metaNeedle1}
+        OR metaJson COLLATE utf8mb4_unicode_ci LIKE ${metaNeedle2}
+      )
+  `;
 }
 
 async function deleteStudentPortalUser(tx: Tx, studentId: string) {
@@ -132,6 +138,14 @@ async function deleteStudentPortalUser(tx: Tx, studentId: string) {
   await tx.voucher.updateMany({
     where: { createdById: account.id },
     data: { createdById: null },
+  });
+  await tx.financialYear.updateMany({
+    where: { submittedById: account.id },
+    data: { submittedById: null },
+  });
+  await tx.helpConversation.updateMany({
+    where: { assignedToId: account.id },
+    data: { assignedToId: null },
   });
 
   await tx.user.delete({ where: { id: account.id } });

@@ -1241,6 +1241,9 @@ const gu: Messages = {
     documents: "દસ્તાવેજો",
     credentials: "DG ઓળખપત્ર",
     confirmDelete: "શું તમે આ વિદ્યાર્થીને કાઢી નાખવા માંગો છો?",
+    deleteTitle: "વિદ્યાર્થી કાયમી કાઢી નાખો?",
+    confirmDeleteDetail:
+      "{{name}}{{gr}} કાઢી નાખો? GR રજિસ્ટર, પરીણામ, હાજરી, દસ્તાવેજ અને લોગિન — બધું દૂર થશે. પાછું લાવી શકાશે નહીં.",
     deleteFailed: "વિદ્યાર્થી કાઢી નાખવામાં નિષ્ફળ",
     deactivate: "ડિએક્ટિવેટ",
     deactivateTitle: "વિદ્યાર્થી ડિએક્ટિવેટ",
