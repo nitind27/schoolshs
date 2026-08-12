@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -118,6 +118,9 @@ export function StaffForm({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
+  const [ifscStatus, setIfscStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const ifscTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastIfsc = useRef("");
 
   const resolvedSubmitLabel = submitLabel ?? t("staffPage.saveStaff");
   const roleWork = getStaffRoleWork(String(form.designation || ""));
@@ -138,6 +141,43 @@ export function StaffForm({
     setForm((prev) => ({ ...prev, [field]: value }));
     clearError(field);
   };
+
+  const lookupIfsc = async (code: string) => {
+    if (code === lastIfsc.current) return;
+    lastIfsc.current = code;
+    setIfscStatus("loading");
+    try {
+      const res = await fetch(`/api/ifsc/${code}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "fail");
+      setForm((prev) => ({
+        ...prev,
+        ifscCode: code,
+        bankName: data.bankName || prev.bankName,
+      }));
+      clearError("ifscCode");
+      setIfscStatus("ok");
+    } catch {
+      setIfscStatus("error");
+    }
+  };
+
+  useEffect(() => {
+    const code = String(form.ifscCode || "")
+      .trim()
+      .toUpperCase()
+      .replace(/\s/g, "");
+    if (!IFSC_RE.test(code)) {
+      setIfscStatus("idle");
+      return;
+    }
+    if (ifscTimer.current) clearTimeout(ifscTimer.current);
+    ifscTimer.current = setTimeout(() => void lookupIfsc(code), 400);
+    return () => {
+      if (ifscTimer.current) clearTimeout(ifscTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.ifscCode]);
 
   const markGuTouched = (key: GuTouchKey) => {
     setGuTouched((prev) => ({ ...prev, [key]: true }));
@@ -433,24 +473,51 @@ export function StaffForm({
               value={form.pfDeduction ?? ""}
               onChange={(e) => update("pfDeduction", e.target.value)}
             />
+            <div className="staff-form__field-stack staff-form__span-2">
+              <Input
+                label={t("staffHr.ifscCode")}
+                value={form.ifscCode || ""}
+                error={errors.ifscCode}
+                placeholder="SBIN0001234"
+                maxLength={11}
+                autoComplete="off"
+                onChange={(e) =>
+                  update(
+                    "ifscCode",
+                    e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11),
+                  )
+                }
+              />
+              <p
+                className={`staff-form__hint${
+                  ifscStatus === "ok"
+                    ? " is-ok"
+                    : ifscStatus === "error"
+                      ? " is-error"
+                      : ifscStatus === "loading"
+                        ? " is-loading"
+                        : ""
+                }`}
+              >
+                {ifscStatus === "loading"
+                  ? t("staffHr.ifscLookup")
+                  : ifscStatus === "ok"
+                    ? t("staffHr.ifscFilled")
+                    : ifscStatus === "error"
+                      ? t("staffHr.ifscFailed")
+                      : t("staffHr.ifscHint")}
+              </p>
+            </div>
             <Input
-              label={t("staffHr.bankName")}
+              label={`${t("staffHr.bankName")} (${t("staffHr.bankFromIfsc")})`}
               value={form.bankName || ""}
+              placeholder="State Bank of India"
               onChange={(e) => update("bankName", e.target.value)}
             />
             <Input
               label={t("staffHr.bankAccount")}
               value={form.bankAccount || ""}
               onChange={(e) => update("bankAccount", e.target.value)}
-            />
-            <Input
-              label={t("staffHr.ifscCode")}
-              value={form.ifscCode || ""}
-              error={errors.ifscCode}
-              maxLength={11}
-              onChange={(e) =>
-                update("ifscCode", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11))
-              }
             />
           </div>
         </FormSection>

@@ -165,6 +165,18 @@
   color: #64748b;
 }
 
+.staff-form__hint.is-loading {
+  color: #0369a1;
+}
+
+.staff-form__hint.is-ok {
+  color: #047857;
+}
+
+.staff-form__hint.is-error {
+  color: #b91c1c;
+}
+
 .staff-form__banner-error {
   margin: 0 0 1rem;
   padding: 0.7rem 0.9rem;
