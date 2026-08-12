@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const sp = request.nextUrl.searchParams;
     const q = (sp.get("q") || "").trim().toLowerCase();
     const role = (sp.get("role") || "").trim();
+    const schoolId = (sp.get("schoolId") || "").trim();
     const filter =
       role === "no_login"
         ? "no_login"
@@ -24,76 +25,99 @@ export async function GET(request: NextRequest) {
           ? role
           : "all";
 
-    const [staffRows, adminOnly, events, totalEvents, changed24h] = await Promise.all([
-      prisma.staff.findMany({
-        orderBy: [{ school: { name: "asc" } }, { firstName: "asc" }, { lastName: "asc" }],
-        take: 3000,
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          designation: true,
-          employeeId: true,
-          isActive: true,
-          mobileNumber: true,
-          school: { select: { id: true, name: true, code: true } },
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              isActive: true,
-              passwordEnc: true,
-              passwordChangedAt: true,
-              lastLoginAt: true,
+    const staffWhere = schoolId ? { schoolId } : undefined;
+    const adminWhere = schoolId
+      ? { role: "school_admin" as const, staffId: null, schoolId }
+      : { role: "school_admin" as const, staffId: null };
+
+    const [staffRows, adminOnly, schoolOptions, events, totalEvents, changed24h, staffTotal] =
+      await Promise.all([
+        prisma.staff.findMany({
+          where: staffWhere,
+          orderBy: [{ school: { name: "asc" } }, { firstName: "asc" }, { lastName: "asc" }],
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            designation: true,
+            employeeId: true,
+            isActive: true,
+            mobileNumber: true,
+            schoolId: true,
+            school: { select: { id: true, name: true, code: true } },
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                isActive: true,
+                passwordEnc: true,
+                passwordChangedAt: true,
+                lastLoginAt: true,
+              },
             },
           },
-        },
-      }),
-      prisma.user.findMany({
-        where: {
-          role: "school_admin",
-          staffId: null,
-        },
-        orderBy: [{ school: { name: "asc" } }, { name: "asc" }],
-        take: 500,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          isActive: true,
-          passwordEnc: true,
-          passwordChangedAt: true,
-          lastLoginAt: true,
-          school: { select: { id: true, name: true, code: true } },
-        },
-      }),
-      prisma.passwordChangeEvent.findMany({
-        where: { role: { in: [...PORTAL_ROLES] } },
-        orderBy: { createdAt: "desc" },
-        take: 300,
-        include: {
-          user: {
-            select: {
-              id: true,
-              school: { select: { id: true, name: true, code: true } },
+        }),
+        prisma.user.findMany({
+          where: adminWhere,
+          orderBy: [{ school: { name: "asc" } }, { name: "asc" }],
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            isActive: true,
+            passwordEnc: true,
+            passwordChangedAt: true,
+            lastLoginAt: true,
+            school: { select: { id: true, name: true, code: true } },
+          },
+        }),
+        prisma.school.findMany({
+          orderBy: { name: "asc" },
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            isActive: true,
+            _count: { select: { staff: true } },
+          },
+        }),
+        prisma.passwordChangeEvent.findMany({
+          where: {
+            role: { in: [...PORTAL_ROLES] },
+            ...(schoolId ? { schoolId } : {}),
+          },
+          orderBy: { createdAt: "desc" },
+          take: 300,
+          include: {
+            user: {
+              select: {
+                id: true,
+                school: { select: { id: true, name: true, code: true } },
+              },
             },
           },
-        },
-      }),
-      prisma.passwordChangeEvent.count({
-        where: { role: { in: [...PORTAL_ROLES] } },
-      }),
-      prisma.passwordChangeEvent.count({
-        where: {
-          role: { in: [...PORTAL_ROLES] },
-          createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-        },
-      }),
-    ]);
+        }),
+        prisma.passwordChangeEvent.count({
+          where: {
+            role: { in: [...PORTAL_ROLES] },
+            ...(schoolId ? { schoolId } : {}),
+          },
+        }),
+        prisma.passwordChangeEvent.count({
+          where: {
+            role: { in: [...PORTAL_ROLES] },
+            ...(schoolId ? { schoolId } : {}),
+            createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          },
+        }),
+        prisma.staff.count({
+          ...(schoolId ? { where: { schoolId } } : {}),
+        }),
+      ]);
 
     type Member = {
       key: string;
@@ -194,14 +218,25 @@ export async function GET(request: NextRequest) {
       else if (m.role && m.role in byRole) byRole[m.role] += 1;
     }
 
+    const schools = schoolOptions.map((s) => ({
+      id: s.id,
+      name: s.name,
+      code: s.code,
+      isActive: s.isActive,
+      staffCount: s._count.staff,
+    }));
+
     return NextResponse.json({
       members: filtered,
       totalMembers: members.length,
+      staffTotal,
       shown: filtered.length,
       staffCount: staffRows.length,
       withLogin: members.filter((m) => m.hasPortalLogin).length,
       withoutLogin: members.filter((m) => !m.hasPortalLogin).length,
       byRole,
+      schools,
+      schoolId: schoolId || null,
       totalEvents,
       changed24h,
       roles: PORTAL_ROLES,

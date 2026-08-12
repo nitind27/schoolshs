@@ -9,6 +9,10 @@ import { formatINR, StatusBadge } from "@/components/admin/admin-ui";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { InfoModal } from "@/components/ui/info-modal";
 import { School, Plus, Search, MapPin, Users, GraduationCap, ExternalLink, Pencil, Trash2, ToggleLeft, ToggleRight, FileDown } from "lucide-react";
+import {
+  SchoolStaffRosterModal,
+  type SchoolStaffModalTarget,
+} from "@/components/admin/school-staff-roster-modal";
 
 interface SchoolRow {
   id: string;
@@ -20,7 +24,7 @@ interface SchoolRow {
   phone?: string | null;
   email?: string | null;
   isActive: boolean;
-  _count: { students: number; users: number; classes: number };
+  _count: { students: number; users: number; classes: number; staff: number };
   subscription?: {
     planName: string;
     paymentStatus: string;
@@ -41,6 +45,7 @@ export default function SchoolsListPage() {
   const [confirmDelete, setConfirmDelete] = useState<SchoolRow | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [staffModal, setStaffModal] = useState<SchoolStaffModalTarget>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -235,8 +240,16 @@ export default function SchoolsListPage() {
                   <span className="flex items-center gap-1">
                     <GraduationCap className="h-3 w-3" /> {s._count.students} students
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" /> {s._count.users} admins
+                  <button
+                    type="button"
+                    onClick={() => setStaffModal({ id: s.id, name: s.name, code: s.code })}
+                    className="inline-flex items-center gap-1 rounded-lg px-1 py-0.5 font-semibold text-violet-700 underline decoration-dotted underline-offset-2 transition-colors hover:bg-violet-50"
+                    title="View all staff for this school"
+                  >
+                    <Users className="h-3 w-3" /> {s._count.staff ?? 0} staff
+                  </button>
+                  <span className="flex items-center gap-1 text-slate-500">
+                    {s._count.users} admins
                   </span>
                 </div>
                 {s.subscription && (
@@ -366,6 +379,8 @@ export default function SchoolsListPage() {
         variant="destructive"
         loading={!!busyId}
       />
+
+      <SchoolStaffRosterModal school={staffModal} onClose={() => setStaffModal(null)} />
 
       <InfoModal isOpen={!!msg} onClose={() => setMsg(null)} title="Done">
         <p className="text-sm text-slate-600">{msg}</p>

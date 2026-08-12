@@ -28,6 +28,10 @@ import {
 } from "@/lib/school-features";
 import { ModuleFormatPicker } from "@/components/admin/module-format-picker";
 import { SchoolTypeField } from "@/components/admin/school-type-field";
+import {
+  SchoolStaffRosterModal,
+  type SchoolStaffModalTarget,
+} from "@/components/admin/school-staff-roster-modal";
 import { ArrowLeft, School, Save, ToggleLeft, ToggleRight, FileText, CreditCard, LayoutGrid, Users, MapPin, Phone, Mail, Globe, Pencil, Trash2, FileDown } from "lucide-react";
 
 type Tab = "overview" | "edit" | "contract" | "payments" | "features" | "admins";
@@ -160,6 +164,7 @@ export default function SchoolDetailPage() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [contractUploading, setContractUploading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState<"credentials" | "full" | null>(null);
+  const [staffModal, setStaffModal] = useState<SchoolStaffModalTarget>(null);
 
   const load = useCallback(() => {
     fetch(`/api/admin/schools/${id}`)
@@ -483,16 +488,38 @@ export default function SchoolDetailPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Students", value: counts.students },
-          { label: "Classes", value: counts.classes },
-          { label: "Staff", value: counts.staff },
-          { label: "Plan", value: String(sub?.planName || "—") },
-        ].map((s) => (
-          <div key={s.label} className="rounded-xl bg-white border border-slate-200 p-4">
-            <p className="text-xs text-slate-500">{s.label}</p>
-            <p className="text-xl font-bold text-slate-900 capitalize">{s.value}</p>
-          </div>
-        ))}
+          { label: "Students", value: counts.students, clickable: false },
+          { label: "Classes", value: counts.classes, clickable: false },
+          { label: "Staff", value: counts.staff, clickable: true },
+          { label: "Plan", value: String(sub?.planName || "—"), clickable: false },
+        ].map((s) =>
+          s.clickable ? (
+            <button
+              key={s.label}
+              type="button"
+              onClick={() =>
+                setStaffModal({
+                  id: String(school.id),
+                  name: String(school.name),
+                  code: String(school.code),
+                })
+              }
+              className="rounded-xl border border-violet-200 bg-white p-4 text-left transition-colors hover:border-violet-400 hover:bg-violet-50/60"
+              title="View staff list"
+            >
+              <p className="text-xs text-violet-700 font-medium">{s.label}</p>
+              <p className="text-xl font-bold text-violet-900 underline decoration-dotted underline-offset-4">
+                {s.value}
+              </p>
+              <p className="mt-1 text-[11px] text-violet-600">Click to view roster</p>
+            </button>
+          ) : (
+            <div key={s.label} className="rounded-xl bg-white border border-slate-200 p-4">
+              <p className="text-xs text-slate-500">{s.label}</p>
+              <p className="text-xl font-bold text-slate-900 capitalize">{s.value}</p>
+            </div>
+          ),
+        )}
       </div>
 
       <div className="flex gap-1 overflow-x-auto border-b border-slate-200 pb-px">
@@ -1037,6 +1064,8 @@ export default function SchoolDetailPage() {
           <Button onClick={() => setErr(null)}>OK</Button>
         </div>
       </InfoModal>
+
+      <SchoolStaffRosterModal school={staffModal} onClose={() => setStaffModal(null)} />
     </div>
   );
 }

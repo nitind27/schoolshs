@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Fragment, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Eye,
   EyeOff,
@@ -90,6 +91,16 @@ function fmtDate(v: string | null) {
 }
 
 export default function AdminPasswordActivityPage() {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <AdminPasswordActivityInner />
+    </Suspense>
+  );
+}
+
+function AdminPasswordActivityInner() {
+  const searchParams = useSearchParams();
+  const initialSchoolId = searchParams.get("schoolId") || "all";
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [totalMembers, setTotalMembers] = useState(0);
@@ -103,6 +114,10 @@ export default function AdminPasswordActivityPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [role, setRole] = useState("all");
+  const [schoolId, setSchoolId] = useState(initialSchoolId);
+  const [schools, setSchools] = useState<
+    { id: string; name: string; code: string; staffCount: number; isActive: boolean }[]
+  >([]);
   const [tab, setTab] = useState<"accounts" | "history">("accounts");
   const [reveal, setReveal] = useState<Record<string, boolean>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -111,6 +126,11 @@ export default function AdminPasswordActivityPage() {
   const [sendAfterChange, setSendAfterChange] = useState(true);
   const [pwdSaving, setPwdSaving] = useState(false);
 
+  useEffect(() => {
+    const fromUrl = searchParams.get("schoolId");
+    if (fromUrl) setSchoolId(fromUrl);
+  }, [searchParams]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setErr(null);
@@ -118,6 +138,7 @@ export default function AdminPasswordActivityPage() {
       const params = new URLSearchParams();
       if (q.trim()) params.set("q", q.trim());
       if (role !== "all") params.set("role", role);
+      if (schoolId !== "all") params.set("schoolId", schoolId);
       const res = await fetch(`/api/admin/password-activity?${params.toString()}`, {
         cache: "no-store",
       });
@@ -130,6 +151,7 @@ export default function AdminPasswordActivityPage() {
       }
       setMembers(Array.isArray(data.members) ? data.members : []);
       setEvents(Array.isArray(data.events) ? data.events : []);
+      setSchools(Array.isArray(data.schools) ? data.schools : []);
       setTotalMembers(Number(data.totalMembers) || 0);
       setWithLogin(Number(data.withLogin) || 0);
       setWithoutLogin(Number(data.withoutLogin) || 0);
@@ -143,7 +165,7 @@ export default function AdminPasswordActivityPage() {
     } finally {
       setLoading(false);
     }
-  }, [q, role]);
+  }, [q, role, schoolId]);
 
   useEffect(() => {
     const t = setTimeout(() => void load(), 250);
@@ -154,6 +176,30 @@ export default function AdminPasswordActivityPage() {
     () => members.filter((m) => Boolean(m.currentPassword)).length,
     [members],
   );
+
+  const membersBySchool = useMemo(() => {
+    const groups: {
+      key: string;
+      school: SchoolRef | { id: string; name: string; code: string };
+      rows: MemberRow[];
+    }[] = [];
+    const map = new Map<string, (typeof groups)[number]>();
+    for (const m of members) {
+      const id = m.school?.id || "none";
+      let g = map.get(id);
+      if (!g) {
+        g = {
+          key: id,
+          school: m.school || { id: "none", name: "No school linked", code: "—" },
+          rows: [],
+        };
+        map.set(id, g);
+        groups.push(g);
+      }
+      g.rows.push(m);
+    }
+    return groups;
+  }, [members]);
 
   const toggleReveal = (id: string) => {
     setReveal((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -287,9 +333,10 @@ export default function AdminPasswordActivityPage() {
           <div className="ad-stat-label">Total members</div>
           <div className="ad-stat-value">{totalMembers.toLocaleString("en-IN")}</div>
           <div className="ad-stat-sub">
-            Showing {members.length.toLocaleString("en-IN")} · Admin {byRole.school_admin || 0} ·
-            Teacher {byRole.teacher || 0} · Clerk {byRole.clerk || 0} · No login{" "}
-            {byRole.no_login || withoutLogin || 0}
+            Showing {members.length.toLocaleString("en-IN")}
+            {schoolId !== "all" ? " (filtered school)" : ` · ${schools.length} schools`} · Admin{" "}
+            {byRole.school_admin || 0} · Teacher {byRole.teacher || 0} · Clerk {byRole.clerk || 0} ·
+            No login {byRole.no_login || withoutLogin || 0}
           </div>
         </div>
         <div className="ad-stat is-ok">
@@ -321,6 +368,21 @@ export default function AdminPasswordActivityPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
+        <select
+          className="ad-filter-select"
+          style={{ maxWidth: 280 }}
+          value={schoolId}
+          onChange={(e) => setSchoolId(e.target.value)}
+        >
+          <option value="all">
+            All schools ({schools.reduce((n, s) => n + (s.staffCount || 0), 0)} staff)
+          </option>
+          {schools.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name} ({s.code}) — {s.staffCount} staff
+            </option>
+          ))}
+        </select>
         <select
           className="ad-filter-select"
           style={{ maxWidth: 200 }}
@@ -359,6 +421,37 @@ export default function AdminPasswordActivityPage() {
           </button>
         </div>
       </div>
+
+      {schools.length > 0 && tab === "accounts" && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setSchoolId("all")}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+              schoolId === "all"
+                ? "border-sky-700 bg-sky-700 text-white"
+                : "border-slate-200 bg-white text-slate-600 hover:border-sky-300"
+            }`}
+          >
+            All schools
+          </button>
+          {schools.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setSchoolId(s.id)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                schoolId === s.id
+                  ? "border-sky-700 bg-sky-700 text-white"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-sky-300"
+              }`}
+              title={s.name}
+            >
+              {s.code} · {s.staffCount}
+            </button>
+          ))}
+        </div>
+      )}
 
       <section className="ad-panel">
         <div className="ad-panel-head">
@@ -409,116 +502,143 @@ export default function AdminPasswordActivityPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {members.map((m) => {
-                      const shown = reveal[m.key];
-                      const busy = busyKey === m.key;
-                      return (
-                        <tr key={m.key} className="border-t border-slate-100 hover:bg-sky-50/40">
-                          <td className="px-3 py-3">
-                            <p className="font-semibold text-slate-900">{m.name}</p>
-                            <p className="font-mono text-[11px] text-slate-500">
-                              {m.email || "No email"}
-                            </p>
-                            {m.employeeId && (
-                              <p className="mt-0.5 font-mono text-[11px] text-slate-500">
-                                Emp ID {m.employeeId}
-                              </p>
-                            )}
-                            {m.mobileNumber && (
-                              <p className="text-[11px] text-slate-400">{m.mobileNumber}</p>
-                            )}
-                          </td>
-                          <td className="px-3 py-3">
-                            <p className="text-sm font-medium text-slate-800">
-                              {m.designation || "—"}
-                            </p>
-                            {m.hasPortalLogin && m.role ? (
-                              <span
-                                className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${roleBadgeClass(m.role)}`}
-                              >
-                                {ROLE_LABEL[m.role] || m.role}
-                              </span>
-                            ) : (
-                              <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">
-                                No portal login
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3">
-                            {m.school ? (
+                    {membersBySchool.map((group) => (
+                      <Fragment key={group.key}>
+                        <tr className="bg-slate-100/90">
+                          <td colSpan={6} className="px-3 py-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
                               <div>
-                                <p className="font-medium text-slate-800">{m.school.name}</p>
-                                <p className="font-mono text-[11px] text-slate-500">{m.school.code}</p>
-                                <Link
-                                  href={`/admin/schools/${m.school.id}`}
-                                  className="text-[11px] font-medium text-sky-700 hover:underline"
-                                >
-                                  Open school
-                                </Link>
+                                <span className="text-sm font-bold text-slate-900">
+                                  {group.school.name}
+                                </span>
+                                <span className="ml-2 font-mono text-[11px] text-slate-500">
+                                  {group.school.code}
+                                </span>
                               </div>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3">
-                            {m.currentPassword ? (
-                              <div className="flex items-center gap-2">
-                                <code className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-xs text-slate-800">
-                                  {shown ? m.currentPassword : "••••••••••••"}
-                                </code>
-                                <button
-                                  type="button"
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-                                  onClick={() => toggleReveal(m.key)}
-                                >
-                                  {shown ? (
-                                    <EyeOff className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <Eye className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-amber-700">
-                                {m.hasPortalLogin
-                                  ? "Not stored — change or email"
-                                  : "Create login via Change / Email"}
+                              <span className="text-xs font-semibold text-slate-600">
+                                {group.rows.length} member{group.rows.length === 1 ? "" : "s"}
                               </span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 text-xs text-slate-500">
-                            <div>{m.isActive ? "Active" : "Inactive"}</div>
-                            <div className="mt-0.5">Changed: {fmtDate(m.passwordChangedAt)}</div>
-                            <div>Login: {fmtDate(m.lastLoginAt)}</div>
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="flex flex-wrap items-center justify-end gap-1.5">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="h-8"
-                                disabled={busy || pwdSaving}
-                                onClick={() => openChangePassword(m)}
-                              >
-                                <Key className="h-3.5 w-3.5" />
-                                Change
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                className="h-8 bg-sky-700 hover:bg-sky-800"
-                                disabled={busy || pwdSaving || !m.email}
-                                onClick={() => void sendCredentials(m)}
-                              >
-                                {busy ? <Spinner size="sm" /> : <Mail className="h-3.5 w-3.5" />}
-                                Email
-                              </Button>
                             </div>
                           </td>
                         </tr>
-                      );
-                    })}
+                        {group.rows.map((m) => {
+                          const shown = reveal[m.key];
+                          const busy = busyKey === m.key;
+                          return (
+                            <tr key={m.key} className="border-t border-slate-100 hover:bg-sky-50/40">
+                              <td className="px-3 py-3">
+                                <p className="font-semibold text-slate-900">{m.name}</p>
+                                <p className="font-mono text-[11px] text-slate-500">
+                                  {m.email || "No email"}
+                                </p>
+                                {m.employeeId && (
+                                  <p className="mt-0.5 font-mono text-[11px] text-slate-500">
+                                    Emp ID {m.employeeId}
+                                  </p>
+                                )}
+                                {m.mobileNumber && (
+                                  <p className="text-[11px] text-slate-400">{m.mobileNumber}</p>
+                                )}
+                              </td>
+                              <td className="px-3 py-3">
+                                <p className="text-sm font-medium text-slate-800">
+                                  {m.designation || "—"}
+                                </p>
+                                {m.hasPortalLogin && m.role ? (
+                                  <span
+                                    className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${roleBadgeClass(m.role)}`}
+                                  >
+                                    {ROLE_LABEL[m.role] || m.role}
+                                  </span>
+                                ) : (
+                                  <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                                    No portal login
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3">
+                                {m.school ? (
+                                  <div>
+                                    <p className="font-medium text-slate-800">{m.school.name}</p>
+                                    <p className="font-mono text-[11px] text-slate-500">
+                                      {m.school.code}
+                                    </p>
+                                    <Link
+                                      href={`/admin/schools/${m.school.id}`}
+                                      className="text-[11px] font-medium text-sky-700 hover:underline"
+                                    >
+                                      Open school
+                                    </Link>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3">
+                                {m.currentPassword ? (
+                                  <div className="flex items-center gap-2">
+                                    <code className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-xs text-slate-800">
+                                      {shown ? m.currentPassword : "••••••••••••"}
+                                    </code>
+                                    <button
+                                      type="button"
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                                      onClick={() => toggleReveal(m.key)}
+                                    >
+                                      {shown ? (
+                                        <EyeOff className="h-3.5 w-3.5" />
+                                      ) : (
+                                        <Eye className="h-3.5 w-3.5" />
+                                      )}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-amber-700">
+                                    {m.hasPortalLogin
+                                      ? "Not stored — change or email"
+                                      : "Create login via Change / Email"}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3 text-xs text-slate-500">
+                                <div>{m.isActive ? "Active" : "Inactive"}</div>
+                                <div className="mt-0.5">Changed: {fmtDate(m.passwordChangedAt)}</div>
+                                <div>Login: {fmtDate(m.lastLoginAt)}</div>
+                              </td>
+                              <td className="px-3 py-3">
+                                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8"
+                                    disabled={busy || pwdSaving}
+                                    onClick={() => openChangePassword(m)}
+                                  >
+                                    <Key className="h-3.5 w-3.5" />
+                                    Change
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8 bg-sky-700 hover:bg-sky-800"
+                                    disabled={busy || pwdSaving || !m.email}
+                                    onClick={() => void sendCredentials(m)}
+                                  >
+                                    {busy ? (
+                                      <Spinner size="sm" />
+                                    ) : (
+                                      <Mail className="h-3.5 w-3.5" />
+                                    )}
+                                    Email
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </Fragment>
+                    ))}
                   </tbody>
                 </table>
               </div>
