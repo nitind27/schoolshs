@@ -13,6 +13,7 @@ import {
   Shield,
   Key,
   X,
+  FileDown,
 } from "lucide-react";
 import { PageLoader, Spinner } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
@@ -125,6 +126,7 @@ function AdminPasswordActivityInner() {
   const [newPassword, setNewPassword] = useState("");
   const [sendAfterChange, setSendAfterChange] = useState(true);
   const [pwdSaving, setPwdSaving] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState<string | null>(null);
 
   useEffect(() => {
     const fromUrl = searchParams.get("schoolId");
@@ -298,6 +300,49 @@ function AdminPasswordActivityInner() {
     }
   };
 
+  const downloadCredentialsPdf = async (opts?: { member?: MemberRow; bulk?: boolean }) => {
+    const member = opts?.member;
+    const bulk = Boolean(opts?.bulk);
+    const busyId = bulk ? "bulk" : member?.key || "pdf";
+    setPdfBusy(busyId);
+    setErr(null);
+    try {
+      const params = new URLSearchParams();
+      if (member) {
+        if (member.userId) params.set("userId", member.userId);
+        else if (member.staffId) params.set("staffId", member.staffId);
+      } else if (bulk) {
+        if (q.trim()) params.set("q", q.trim());
+        if (role !== "all") params.set("role", role);
+        if (schoolId !== "all") params.set("schoolId", schoolId);
+      }
+      const res = await fetch(`/api/admin/password-activity/credentials-pdf?${params.toString()}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErr(data.error || "Failed to download credentials PDF");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const cd = res.headers.get("Content-Disposition") || "";
+      const match = cd.match(/filename="([^"]+)"/);
+      a.download = match?.[1] || "Codeat-Credentials.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+      setMsg(
+        member
+          ? `Credentials PDF downloaded for ${member.name}.`
+          : `Credentials PDF downloaded (${withPassword} member${withPassword === 1 ? "" : "s"} with stored passwords).`,
+      );
+    } catch {
+      setErr("Failed to download credentials PDF");
+    } finally {
+      setPdfBusy(null);
+    }
+  };
+
   return (
     <div className="ad-portal space-y-5">
       <header className="ad-hero">
@@ -315,7 +360,28 @@ function AdminPasswordActivityInner() {
               </p>
             </div>
           </div>
-          <div className="ad-hero-actions">
+          <div className="ad-hero-actions flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="ad-btn is-ghost border-white/20 bg-white/10 text-white hover:bg-white/20"
+              disabled={pdfBusy === "bulk" || withPassword === 0 || role === "no_login"}
+              title={
+                role === "no_login"
+                  ? "Members without login cannot be exported"
+                  : withPassword === 0
+                    ? "No stored passwords to export"
+                    : "Download PDF for all shown members with passwords"
+              }
+              onClick={() => void downloadCredentialsPdf({ bulk: true })}
+            >
+              {pdfBusy === "bulk" ? (
+                <Spinner size="sm" />
+              ) : (
+                <FileDown className="h-4 w-4" />
+              )}
+              Download PDF
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -463,7 +529,7 @@ function AdminPasswordActivityInner() {
             </h2>
             <p>
               {tab === "accounts"
-                ? `${members.length} shown of ${totalMembers} — includes Supervisor and staff without login`
+                ? `${members.length} shown of ${totalMembers} — download formatted credential PDF per member or in bulk`
                 : "Every set or change — self, school admin, or Super Admin"}
             </p>
           </div>
@@ -608,6 +674,31 @@ function AdminPasswordActivityInner() {
                               </td>
                               <td className="px-3 py-3">
                                 <div className="flex flex-wrap items-center justify-end gap-1.5">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 border-violet-200 text-violet-700 hover:bg-violet-50"
+                                    disabled={
+                                      busy ||
+                                      pwdSaving ||
+                                      pdfBusy === m.key ||
+                                      !m.currentPassword
+                                    }
+                                    title={
+                                      m.currentPassword
+                                        ? "Download credentials PDF"
+                                        : "Set password first to download PDF"
+                                    }
+                                    onClick={() => void downloadCredentialsPdf({ member: m })}
+                                  >
+                                    {pdfBusy === m.key ? (
+                                      <Spinner size="sm" />
+                                    ) : (
+                                      <FileDown className="h-3.5 w-3.5" />
+                                    )}
+                                    PDF
+                                  </Button>
                                   <Button
                                     type="button"
                                     size="sm"
