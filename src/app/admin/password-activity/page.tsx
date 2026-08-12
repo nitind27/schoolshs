@@ -178,9 +178,10 @@ function AdminPasswordActivityInner() {
   );
 
   const membersBySchool = useMemo(() => {
+    type SchoolGroup = { id: string; name: string; code: string };
     const groups: {
       key: string;
-      school: SchoolRef | { id: string; name: string; code: string };
+      school: SchoolGroup;
       rows: MemberRow[];
     }[] = [];
     const map = new Map<string, (typeof groups)[number]>();
@@ -190,7 +191,7 @@ function AdminPasswordActivityInner() {
       if (!g) {
         g = {
           key: id,
-          school: m.school || { id: "none", name: "No school linked", code: "—" },
+          school: m.school ?? { id: "none", name: "No school linked", code: "—" },
           rows: [],
         };
         map.set(id, g);
