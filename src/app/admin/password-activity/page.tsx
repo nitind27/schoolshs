@@ -14,11 +14,13 @@ import {
   Key,
   X,
   FileDown,
+  MessageCircle,
 } from "lucide-react";
 import { PageLoader, Spinner } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InfoModal } from "@/components/ui/info-modal";
+import { WhatsAppConnectPanel } from "@/components/admin/whatsapp-connect-panel";
 import "@/components/admin/admin-portal.css";
 
 type SchoolRef = { id: string; name: string; code: string } | null;
@@ -127,6 +129,8 @@ function AdminPasswordActivityInner() {
   const [sendAfterChange, setSendAfterChange] = useState(true);
   const [pwdSaving, setPwdSaving] = useState(false);
   const [pdfBusy, setPdfBusy] = useState<string | null>(null);
+  const [waBusyKey, setWaBusyKey] = useState<string | null>(null);
+  const [waConnected, setWaConnected] = useState(false);
 
   useEffect(() => {
     const fromUrl = searchParams.get("schoolId");
@@ -300,6 +304,50 @@ function AdminPasswordActivityInner() {
     }
   };
 
+  const sendCredentialsWhatsApp = async (m: MemberRow) => {
+    if (!m.mobileNumber) {
+      setErr("Is member ka mobile number nahi hai. Staff profile mein mobile add karein.");
+      return;
+    }
+    if (!waConnected) {
+      setErr("Pehle WhatsApp connect karein — upar Connect WhatsApp par QR scan karein.");
+      return;
+    }
+    if (!m.email) {
+      setErr("Portal login ke liye email chahiye. Staff profile mein email add karein.");
+      return;
+    }
+    setWaBusyKey(m.key);
+    setErr(null);
+    try {
+      const res = await fetch("/api/admin/whatsapp/send-credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...memberPayload(m),
+          generateNew: !m.hasPortalLogin || !m.currentPassword,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErr(data.error || "WhatsApp par credentials bhejne mein fail");
+        return;
+      }
+      setMsg(
+        data.createdNewUser
+          ? `Portal login banaya aur credentials PDF WhatsApp par +${data.sentTo} par bheja (${m.name}).`
+          : data.regenerated
+            ? `Naya password generate karke PDF WhatsApp par +${data.sentTo} par bheja.`
+            : `Credentials PDF WhatsApp par +${data.sentTo} par bheja (${m.name}).`,
+      );
+      await load();
+    } catch {
+      setErr("WhatsApp par credentials bhejne mein fail");
+    } finally {
+      setWaBusyKey(null);
+    }
+  };
+
   const downloadCredentialsPdf = async (opts?: { member?: MemberRow; bulk?: boolean }) => {
     const member = opts?.member;
     const bulk = Boolean(opts?.bulk);
@@ -394,6 +442,8 @@ function AdminPasswordActivityInner() {
           </div>
         </div>
       </header>
+
+      <WhatsAppConnectPanel onConnectionChange={setWaConnected} />
 
       <div className="ad-stat-grid">
         <div className="ad-stat">
@@ -591,6 +641,7 @@ function AdminPasswordActivityInner() {
                         {group.rows.map((m) => {
                           const shown = reveal[m.key];
                           const busy = busyKey === m.key;
+                          const waBusy = waBusyKey === m.key;
                           return (
                             <tr key={m.key} className="border-t border-slate-100 hover:bg-sky-50/40">
                               <td className="px-3 py-3">
@@ -709,6 +760,36 @@ function AdminPasswordActivityInner() {
                                   >
                                     <Key className="h-3.5 w-3.5" />
                                     Change
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8 bg-emerald-600 hover:bg-emerald-700"
+                                    disabled={
+                                      busy ||
+                                      waBusy ||
+                                      pwdSaving ||
+                                      !m.mobileNumber ||
+                                      !waConnected ||
+                                      !m.email
+                                    }
+                                    title={
+                                      !waConnected
+                                        ? "Pehle WhatsApp connect karein"
+                                        : !m.mobileNumber
+                                          ? "Mobile number add karein"
+                                          : !m.email
+                                            ? "Email add karein (portal login ke liye)"
+                                            : "Credentials PDF + message WhatsApp par bhejein"
+                                    }
+                                    onClick={() => void sendCredentialsWhatsApp(m)}
+                                  >
+                                    {waBusy ? (
+                                      <Spinner size="sm" />
+                                    ) : (
+                                      <MessageCircle className="h-3.5 w-3.5" />
+                                    )}
+                                    WhatsApp
                                   </Button>
                                   <Button
                                     type="button"

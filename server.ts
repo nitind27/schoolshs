@@ -3,6 +3,7 @@ import { parse } from "url";
 import next from "next";
 import { Server as SocketIOServer } from "socket.io";
 import { initSocketServer, setIoInstance } from "./src/lib/chat/socket-server";
+import { whatsappService } from "./src/lib/whatsapp/service";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME || "0.0.0.0";
@@ -26,6 +27,10 @@ app.prepare().then(() => {
 
   initSocketServer(io);
   setIoInstance(io);
+
+  whatsappService.tryRestore().catch(() => {
+    console.log("> WhatsApp session not restored (connect from Password Activity when needed)");
+  });
 
   httpServer.listen(port, hostname, () => {
     console.log(`> Ready on http://${hostname}:${port} (WebSocket: /api/socketio)`);

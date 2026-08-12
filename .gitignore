@@ -44,5 +44,6 @@ next-env.d.ts
 
 /automation/profiles
 /automation/logs
+/automation/whatsapp-auth
 
 /src/generated/prisma

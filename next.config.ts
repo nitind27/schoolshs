@@ -14,6 +14,9 @@ const nextConfig: NextConfig = {
     "@libsql/client",
     "mariadb",
     "sharp",
+    "@whiskeysockets/baileys",
+    "jimp",
+    "pino",
   ],
 };
 
