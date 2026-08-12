@@ -21,6 +21,8 @@
 
   color: var(--ad-ink);
   -webkit-font-smoothing: antialiased;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ad-hero {
@@ -1865,6 +1867,80 @@
 
   .ad-portal-polish .ad-quicknav-items {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .ad-portal-polish .ad-hero-v2 {
+    padding: 1rem 1.05rem;
+  }
+
+  .ad-portal-polish .ad-hero-v2-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ad-portal-polish .ad-hero-v2-actions {
+    width: 100%;
+  }
+
+  .ad-portal-polish .ad-hero-v2-actions .ad-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .ad-portal-polish .ad-main-tabs > button {
+    font-size: 0.82rem;
+    padding: 0.45rem 0.55rem;
+    min-height: 2.65rem;
+  }
+
+  .ad-portal-polish .ad-main-tabs > button span {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .ad-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .ad-filter-bar .ad-filter-select {
+    max-width: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ad-filter-bar > .flex {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .ad-alert-strip {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ad-alert-chips {
+    width: 100%;
+  }
+
+  .ad-panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ad-portal-polish .ad-quicknav-items {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ad-portal-polish .ad-hkpi-val {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
   }
 }
 

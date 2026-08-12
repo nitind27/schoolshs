@@ -1324,6 +1324,13 @@ html.locale-gu .ops-eyebrow {
   background: #fff;
   box-shadow: 0 6px 14px -12px rgb(15 23 42 / 0.35);
   transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+  min-width: 0;
+}
+
+.ops-flow-action > span:last-child {
+  min-width: 0;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .ops-flow-action:hover {
@@ -1543,9 +1550,12 @@ html.locale-gu .ops-eyebrow {
   color: #475569;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.35rem 0.65rem;
+  padding: 0.45rem 0.75rem;
   border-radius: 999px;
   cursor: pointer;
+  line-height: 1.25;
+  white-space: normal;
+  text-align: center;
   transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -5997,9 +6007,11 @@ html.locale-gu .ops-main-tab-copy strong {
   font-size: 0.78rem;
   font-weight: 700;
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  word-break: break-word;
   box-shadow: none;
 }
 
@@ -6087,9 +6099,58 @@ html.locale-gu .ops-main-tab-copy strong {
     align-items: stretch;
   }
 
-  .ops-dash .ops-insights-tabs {
+  .ops-dash .ops-insights-tabs,
+  .ops-cards-v2 .ops-insights-tabs {
+    display: flex;
+    flex-direction: column;
     max-width: none;
     width: 100%;
+    flex: none;
+    gap: 0.35rem;
+    padding: 0.35rem;
+  }
+
+  .ops-dash .ops-insights-tabs button,
+  .ops-cards-v2 .ops-insights-tabs button {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.75rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    line-height: 1.25;
+  }
+
+  .ops-dash .ops-main-tab-label {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    line-height: 1.15;
+  }
+
+  .ops-dash .ops-control {
+    padding: 0.65rem 0.7rem;
+  }
+
+  .ops-dash .ops-insights {
+    padding: 0.85rem 0.75rem 0.95rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 899px) {
+  .ops-dash .ops-insights-tabs,
+  .ops-cards-v2 .ops-insights-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: none;
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .ops-dash .ops-insights-tabs button,
+  .ops-cards-v2 .ops-insights-tabs button {
+    flex: 1 1 calc(33.333% - 0.25rem);
+    min-width: 6.25rem;
   }
 }
 
@@ -6442,6 +6503,10 @@ html.locale-gu .ops-dash .ops-insights-tabs button {
   box-shadow: none !important;
   font-weight: 700 !important;
   color: #475569 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  line-height: 1.25 !important;
 }
 
 .ops-cards-v2 .ops-insights-tabs button.is-active {
