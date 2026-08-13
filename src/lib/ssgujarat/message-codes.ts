@@ -10,6 +10,7 @@ export const SSG_MSG = {
   NO_RECORD_CHILD_UID: "SSG_NO_RECORD_CHILD_UID",
   PASTE_TOO_SHORT: "SSG_PASTE_TOO_SHORT",
   PASTE_PARSE_FAILED: "SSG_PASTE_PARSE_FAILED",
+  BROWSER_UNAVAILABLE: "SSG_BROWSER_UNAVAILABLE",
 } as const;
 
 export type SsgMessageCode = (typeof SSG_MSG)[keyof typeof SSG_MSG];
@@ -25,6 +26,7 @@ export const SSG_MSG_I18N: Record<SsgMessageCode, string> = {
   SSG_NO_RECORD_CHILD_UID: "ssg.noRecordChildUid",
   SSG_PASTE_TOO_SHORT: "ssg.pasteTooShort",
   SSG_PASTE_PARSE_FAILED: "ssg.pasteParseFailed",
+  SSG_BROWSER_UNAVAILABLE: "ssg.browserUnavailable",
 };
 
 export function isSsgMessageCode(value: string): value is SsgMessageCode {

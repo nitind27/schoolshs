@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSsgujaratById, detectSsgujaratSearchType } from "@/lib/ssgujarat/fetch";
 import { mapSsgujaratToStudent, compactStudentPartial } from "@/lib/ssgujarat/map-to-student";
+import { toSsgujaratFetchError } from "@/lib/ssgujarat/browser";
 import { SSG_MSG } from "@/lib/ssgujarat/message-codes";
 
 export const maxDuration = 60;
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("SSGujarat fetch error:", error);
-    const message = error instanceof Error ? error.message : "SSGujarat fetch failed";
+    const message = toSsgujaratFetchError(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

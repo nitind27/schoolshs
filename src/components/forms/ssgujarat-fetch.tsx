@@ -11,10 +11,20 @@ import type { Student } from "@/generated/prisma/client";
 import type { SsgujaratStudentRecord } from "@/lib/ssgujarat/types";
 import { detectSsgujaratSearchType } from "@/lib/ssgujarat/id-utils";
 import { mergeStudentPartials } from "@/lib/ssgujarat/map-to-student";
-import { isSsgMessageCode, SSG_MSG_I18N } from "@/lib/ssgujarat/message-codes";
+import { isSsgMessageCode, SSG_MSG, SSG_MSG_I18N } from "@/lib/ssgujarat/message-codes";
 import { cn } from "@/lib/utils";
 
 type StudentPartial = Partial<Student>;
+
+function looksLikeBrowserCrash(raw: string) {
+  return (
+    raw.includes("browserType.launch") ||
+    raw.includes("libatk") ||
+    raw.includes("shared libraries") ||
+    raw.includes("Call log:") ||
+    raw.includes("Target page, context or browser has been closed")
+  );
+}
 
 function resolveSsgText(
   raw: string | undefined,
@@ -22,6 +32,7 @@ function resolveSsgText(
   params?: Record<string, string | number>,
 ): string {
   if (!raw) return "";
+  if (looksLikeBrowserCrash(raw)) return t(SSG_MSG_I18N[SSG_MSG.BROWSER_UNAVAILABLE], params);
   if (isSsgMessageCode(raw)) return t(SSG_MSG_I18N[raw], params);
   return raw;
 }
@@ -154,11 +165,12 @@ export function SsgujaratFetch({ onApply }: SsgujaratFetchProps) {
         resolveSsgText(data.message, t, { count: data.matchCount || list.length }) || "",
       );
     } catch (e) {
-      setError(
-        e instanceof Error
-          ? resolveSsgText(e.message, t) || e.message
-          : t("ssg.fetchFailed"),
-      );
+      const raw = e instanceof Error ? e.message : "";
+      setError(raw ? resolveSsgText(raw, t) || t("ssg.fetchFailed") : t("ssg.fetchFailed"));
+      if (!raw || looksLikeBrowserCrash(raw) || raw === SSG_MSG.BROWSER_UNAVAILABLE) {
+        setPasteUnlocked(true);
+        setPasteOpen(true);
+      }
     } finally {
       setLoading(false);
     }

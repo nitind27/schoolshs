@@ -1,5 +1,6 @@
-import { chromium, type Browser } from "playwright";
+import type { Browser } from "playwright";
 import { parseStudentProfilePage, mergeSsgRecords } from "./parse-profile";
+import { launchSsgujaratBrowser } from "./browser";
 import { SSG_MSG } from "./message-codes";
 import type { SsgujaratFetchResult, SsgujaratStudentRecord } from "./types";
 
@@ -57,7 +58,7 @@ export async function fetchSsgujaratByChildUid(childUid: string): Promise<Ssguja
     throw new Error(SSG_MSG.CHILD_UID_INVALID);
   }
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchSsgujaratBrowser();
 
   try {
     const record = await fetchProfileForChildUid(browser, searchId);
@@ -79,6 +80,6 @@ export async function fetchSsgujaratByChildUid(childUid: string): Promise<Ssguja
       records: [record],
     };
   } finally {
-    await browser.close();
+    await browser.close().catch(() => {});
   }
 }

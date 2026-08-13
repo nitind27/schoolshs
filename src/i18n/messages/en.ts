@@ -2344,6 +2344,8 @@ const en = {
       "No record found on SSGujarat for this 18-digit Child UID",
     pasteParseFailed:
       "Could not parse data — copy the full student profile from SSGujarat and paste again",
+    browserUnavailable:
+      "Online fetch is not ready on the server. Paste the student profile from SSGujarat school portal below — or ask admin to run: npm run playwright:setup",
   },
   documents: {
     title: "Documents",

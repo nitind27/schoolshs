@@ -2317,6 +2317,8 @@ const gu: Messages = {
     noRecordChildUid: "આ 18-અંક Child UID માટે SSGujarat પર રેકોર્ડ મળ્યો નથી",
     pasteParseFailed:
       "ડેટા પાર્સ ન થયો — SSGujarat થી સંપૂર્ણ પ્રોફાઇલ કોપી કરી ફરી પેસ્ટ કરો",
+    browserUnavailable:
+      "સર્વર પર ઓનલાઈન fetch તૈયાર નથી. નીચે SSGujarat શાળા પોર્ટલથી વિદ્યાર્થી પ્રોફાઇલ પેસ્ટ કરો — અથવા એડમિનને કહો: npm run playwright:setup",
   },
   documents: {
     title: "દસ્તાવેજો",

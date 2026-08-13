@@ -1,5 +1,6 @@
-import { chromium, type Page } from "playwright";
+import type { Page } from "playwright";
 import { enrichRecordsWithProfiles } from "./fetch-by-child-uid";
+import { launchSsgujaratBrowser } from "./browser";
 import { SSG_MSG } from "./message-codes";
 import type { SsgujaratFetchResult, SsgujaratStudentRecord } from "./types";
 
@@ -68,7 +69,7 @@ export async function fetchSsgujaratByAadhaar(aadhaarNumber: string): Promise<Ss
     throw new Error(SSG_MSG.AADHAAR_INVALID);
   }
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchSsgujaratBrowser();
   const page = await browser.newPage();
 
   try {
@@ -113,6 +114,6 @@ export async function fetchSsgujaratByAadhaar(aadhaarNumber: string): Promise<Ss
       matchCount: records.length > 1 ? records.length : undefined,
     };
   } finally {
-    await browser.close();
+    await browser.close().catch(() => {});
   }
 }
