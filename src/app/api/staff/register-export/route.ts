@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
-import { registerDates } from "@/lib/staff-register";
+import { staffServiceDates } from "@/lib/staff-register";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,6 @@ const HEADERS = [
   "Aadhaar No",
   "First Higher Grade",
   "Second Higher Grade",
-  "Third Higher Grade",
   "Qualification",
   "Pay Level / Scale",
 ];
@@ -69,7 +68,7 @@ export async function GET() {
     headerRow.height = 26;
 
     staff.forEach((s, idx) => {
-      const { retireDate, higherGrades } = registerDates(s.dateOfBirth, s.dateOfJoining);
+      const { retireDate, higherGradeFirst, higherGradeSecond } = staffServiceDates(s);
       const values = [
         idx + 1,
         s.employeeId || "",
@@ -83,9 +82,8 @@ export async function GET() {
         retireDate,
         s.mobileNumber || "",
         s.aadhaarNumber || "",
-        higherGrades[0],
-        higherGrades[1],
-        higherGrades[2],
+        higherGradeFirst,
+        higherGradeSecond,
         s.qualification || "",
         s.payLevel || "",
       ];
@@ -101,7 +99,7 @@ export async function GET() {
       });
     });
 
-    const widths = [5, 10, 28, 16, 16, 13, 16, 12, 12, 12, 13, 15, 12, 12, 12, 16, 20];
+    const widths = [5, 10, 28, 16, 16, 13, 16, 12, 12, 12, 13, 15, 14, 14, 16, 20];
     widths.forEach((w, i) => {
       ws.getColumn(i + 1).width = w;
     });

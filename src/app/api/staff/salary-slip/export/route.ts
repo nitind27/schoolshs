@@ -15,7 +15,7 @@ import {
   totalDeduction,
   type SlipFieldKey,
 } from "@/lib/salary-slip";
-import { registerDates } from "@/lib/staff-register";
+import { staffServiceDates } from "@/lib/staff-register";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     const byMonth = new Map(dbRows.map((r) => [r.month, r]));
     const months = slipFyMonths(financialYear);
-    const { retireDate } = registerDates(staff.dateOfBirth, staff.dateOfJoining);
+    const { retireDate } = staffServiceDates(staff);
 
     const headers = [
       "MONTH/YEAR",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireStaffAuth } from "@/lib/auth";
+import { resequenceClassRollNumbers } from "@/lib/roll-resequence";
 
 /**
  * Activate / deactivate a student.
@@ -33,6 +34,7 @@ export async function PATCH(
         previousStatus: true,
         firstName: true,
         surname: true,
+        classId: true,
         user: { select: { id: true, isActive: true } },
       },
     });
@@ -57,12 +59,24 @@ export async function PATCH(
           data: {
             previousStatus: student.status || "ready",
             status: "archived",
+            rollNumber: null,
           },
         });
         if (student.user?.id) {
           await tx.user.update({
             where: { id: student.user.id },
             data: { isActive: false },
+          });
+          await tx.userSession.updateMany({
+            where: { userId: student.user.id, revokedAt: null },
+            data: { revokedAt: new Date(), revokeReason: "student_deactivated" },
+          });
+        }
+        if (student.classId) {
+          await resequenceClassRollNumbers(tx, {
+            schoolId: session.schoolId,
+            classId: student.classId,
+            excludeStudentId: id,
           });
         }
         return row;
@@ -95,6 +109,12 @@ export async function PATCH(
         await tx.user.update({
           where: { id: student.user.id },
           data: { isActive: true },
+        });
+      }
+      if (student.classId && restoreStatus !== "draft") {
+        await resequenceClassRollNumbers(tx, {
+          schoolId: session.schoolId,
+          classId: student.classId,
         });
       }
       return row;

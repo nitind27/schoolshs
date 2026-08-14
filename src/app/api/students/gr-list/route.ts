@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
               },
               { grNumber: { not: null } },
               { NOT: { grNumber: "" } },
+              { status: { notIn: ["archived", "draft"] } },
             ],
           },
           select: {
@@ -207,6 +208,7 @@ export async function GET(request: NextRequest) {
             },
             { grNumber: { not: null } },
             { NOT: { grNumber: "" } },
+            { status: { notIn: ["archived", "draft"] } },
           ],
         },
         select: {

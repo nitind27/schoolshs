@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { assertTeacherAttendanceAccess } from "@/lib/teacher-attendance";
 import { assertStudentsInSchool } from "@/lib/school-assertions";
+import { resequenceClassRollNumbers } from "@/lib/roll-resequence";
+import { sortStudentsBySavedRoll } from "@/lib/roll-order";
 
 const ROLES = ["school_admin", "teacher", "clerk"] as const;
 
@@ -27,7 +29,11 @@ export async function GET(request: NextRequest) {
         section: true,
         stream: true,
         academicYear: true,
-        _count: { select: { students: true } },
+        _count: {
+          select: {
+            students: { where: { status: { notIn: ["archived", "draft"] } } },
+          },
+        },
       },
     });
 
@@ -42,13 +48,9 @@ export async function GET(request: NextRequest) {
       where: {
         schoolId: session.schoolId,
         classId,
-        status: { not: "archived" },
+        status: { notIn: ["archived", "draft"] },
       },
-      orderBy: [
-        { rollNumber: "asc" },
-        { surname: "asc" },
-        { firstName: "asc" },
-      ],
+      orderBy: [{ firstName: "asc" }, { surname: "asc" }],
       select: {
         id: true,
         firstName: true,
@@ -64,7 +66,10 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ classes, students });
+    return NextResponse.json({
+      classes,
+      students: sortStudentsBySavedRoll(students),
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json(
@@ -90,21 +95,41 @@ export async function PATCH(request: NextRequest) {
       rollNumber?: string | null;
     }>;
 
-    if (!classId || !updates.length) {
+    if (!classId) {
+      return NextResponse.json({ error: "classId required" }, { status: 400 });
+    }
+
+    await assertTeacherAttendanceAccess(session, classId);
+
+    if (body.autoAssign === true) {
+      const updated = await prisma.$transaction(
+        async (tx) =>
+          resequenceClassRollNumbers(tx, {
+            schoolId: session.schoolId,
+            classId,
+          }),
+        { timeout: 60_000 },
+      );
+      return NextResponse.json({ success: true, updated, autoAssign: true });
+    }
+
+    if (!updates.length) {
       return NextResponse.json(
         { error: "classId and updates required" },
         { status: 400 },
       );
     }
-
-    await assertTeacherAttendanceAccess(session, classId);
     const studentIds = updates
       .map((item) => String(item.studentId || "").trim())
       .filter(Boolean);
     await assertStudentsInSchool(session.schoolId, studentIds);
 
     const current = await prisma.student.findMany({
-      where: { schoolId: session.schoolId, classId },
+      where: {
+        schoolId: session.schoolId,
+        classId,
+        status: { notIn: ["archived", "draft"] },
+      },
       select: { id: true, rollNumber: true },
     });
     const updateMap = new Map(

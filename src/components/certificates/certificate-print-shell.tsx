@@ -171,6 +171,14 @@ export function CertificatePrintShell({
             page-break-inside: avoid !important;
             page-break-after: avoid !important;
           }
+          .print-area:has(.lc-up-sheet) {
+            width: 200mm !important;
+            height: 277mm !important;
+            max-height: 277mm !important;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+          }
           .no-print { display: none !important; visibility: hidden !important; }
           /* Hide app chrome only — not certificate/result content tags */
           .shell-aside,

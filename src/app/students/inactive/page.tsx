@@ -18,6 +18,7 @@ import {
   Users,
   ArrowLeft,
   Eye,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
@@ -134,30 +135,59 @@ export default function InactiveStudentsPage() {
     });
   }, [classes, standardFilter]);
 
-  const activateStudent = async (id: string) => {
-    const ok = await confirm({
+  const activateStudent = async (student: StudentRow) => {
+    await confirm({
       title: t("students.activateTitle"),
       message: t("students.confirmActivate"),
       confirmLabel: t("students.activate"),
       cancelLabel: t("common.cancel"),
+      onConfirm: async () => {
+        setBusyId(student.id);
+        try {
+          const res = await fetch(`/api/students/${student.id}/active`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ active: true }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(
+              typeof data.error === "string" ? data.error : t("students.activateFailed"),
+            );
+          }
+          await fetchStudents();
+        } finally {
+          setBusyId(null);
+        }
+      },
     });
-    if (!ok) return;
-    setBusyId(id);
-    try {
-      const res = await fetch(`/api/students/${id}/active`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active: true }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error || t("students.activateFailed"));
-        return;
-      }
-      await fetchStudents();
-    } finally {
-      setBusyId(null);
-    }
+  };
+
+  const deleteStudent = async (student: StudentRow) => {
+    const name = studentFullNameGu(student) || studentShortNameGu(student) || "—";
+    const gr = student.grNumber ? ` · GR ${student.grNumber}` : "";
+    await confirm({
+      title: t("students.deleteTitle"),
+      message: t("students.confirmDeleteDetail", { name, gr }),
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
+      variant: "destructive",
+      onConfirm: async () => {
+        setBusyId(student.id);
+        try {
+          const res = await fetch(`/api/students/${student.id}`, { method: "DELETE" });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(
+              typeof data.error === "string" ? data.error : t("students.deleteFailed"),
+            );
+          }
+          await fetchStudents();
+        } finally {
+          setBusyId(null);
+        }
+      },
+    });
   };
 
   const columns = useMemo<ColumnDef<StudentRow>[]>(
@@ -223,10 +253,20 @@ export default function InactiveStudentsPage() {
               size="sm"
               className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
               disabled={busyId === row.original.id}
-              onClick={() => activateStudent(row.original.id)}
+              onClick={() => activateStudent(row.original)}
             >
               <UserCheck className="h-3.5 w-3.5" />
               {t("students.activate")}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="gap-1.5"
+              disabled={busyId === row.original.id}
+              onClick={() => deleteStudent(row.original)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {t("common.delete")}
             </Button>
           </div>
         ),

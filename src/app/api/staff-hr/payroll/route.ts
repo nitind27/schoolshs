@@ -97,7 +97,19 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         monthlySalary: true,
+        da: true,
         hra: true,
+        ma: true,
+        fpa: true,
+        hndA: true,
+        suA: true,
+        caA: true,
+        wa: true,
+        prA: true,
+        bonus: true,
+        daArrears: true,
+        salaryArrears: true,
+        fullPay: true,
         conveyance: true,
         pfDeduction: true,
       },
@@ -115,7 +127,7 @@ export async function POST(request: NextRequest) {
 
     let generated = 0;
     for (const staff of staffList) {
-      if (!staff.monthlySalary || staff.monthlySalary <= 0) continue;
+      if (!(staff.monthlySalary && staff.monthlySalary > 0) && !(staff.fullPay && staff.fullPay > 0)) continue;
 
       const att = attMap.get(staff.id);
       const days = parseStaffDaysJson(att?.daysJson);

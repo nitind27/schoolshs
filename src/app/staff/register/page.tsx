@@ -7,7 +7,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { Download, Printer, Users } from "lucide-react";
 import type { Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
-import { RETIREMENT_AGE, registerDates } from "@/lib/staff-register";
+import { staffServiceDates } from "@/lib/staff-register";
 import "./staff-register.css";
 
 export default function StaffRegisterPage() {
@@ -29,7 +29,7 @@ export default function StaffRegisterPage() {
   }, []);
 
   const rows = useMemo(
-    () => staff.map((s) => ({ ...s, ...registerDates(s.dateOfBirth, s.dateOfJoining) })),
+    () => staff.map((s) => ({ ...s, ...staffServiceDates(s) })),
     [staff],
   );
 
@@ -65,7 +65,6 @@ export default function StaffRegisterPage() {
     t("staffRegister.colAadhaar"),
     t("staffRegister.colFirstHg"),
     t("staffRegister.colSecondHg"),
-    t("staffRegister.colThirdHg"),
     t("staffRegister.colQualPay"),
   ];
 
@@ -134,9 +133,8 @@ export default function StaffRegisterPage() {
                     <td className="sr-date">{s.retireDate || "—"}</td>
                     <td className="sr-mono">{s.mobileNumber || "—"}</td>
                     <td className="sr-mono">{s.aadhaarNumber || "—"}</td>
-                    <td className="sr-date">{s.higherGrades[0] || "—"}</td>
-                    <td className="sr-date">{s.higherGrades[1] || "—"}</td>
-                    <td className="sr-date">{s.higherGrades[2] || "—"}</td>
+                    <td className="sr-date">{s.higherGradeFirst || "—"}</td>
+                    <td className="sr-date">{s.higherGradeSecond || "—"}</td>
                     <td>{[s.qualification, s.payLevel].filter(Boolean).join(" · ") || "—"}</td>
                   </tr>
                 ))}
@@ -144,7 +142,7 @@ export default function StaffRegisterPage() {
             </table>
           </div>
           <p className="sr-note text-xs text-slate-500 mt-2">
-            {t("staffRegister.autoNote", { retire: RETIREMENT_AGE })}
+            {t("staffRegister.autoNote")}
           </p>
         </div>
       )}

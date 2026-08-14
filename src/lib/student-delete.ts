@@ -2,6 +2,7 @@ import { rm } from "fs/promises";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { getStudentUploadRoot } from "@/lib/student-documents.server";
+import { resequenceClassRollNumbers } from "@/lib/roll-resequence";
 
 type Tx = Prisma.TransactionClient;
 
@@ -176,14 +177,25 @@ export async function deleteStudentUploadFiles(studentId: string): Promise<void>
   }
 }
 
-/** Full student removal — DB transaction + uploaded files. */
+/** Full student removal — DB transaction + uploaded files + class roll resequence. */
 export async function deleteStudentCompletely(opts: {
   studentId: string;
   schoolId: string;
 }): Promise<void> {
+  const existing = await prisma.student.findFirst({
+    where: { id: opts.studentId, schoolId: opts.schoolId },
+    select: { classId: true },
+  });
+
   await prisma.$transaction(
     async (tx) => {
       await deleteStudentRecords(tx, opts);
+      if (existing?.classId) {
+        await resequenceClassRollNumbers(tx, {
+          schoolId: opts.schoolId,
+          classId: existing.classId,
+        });
+      }
     },
     { timeout: 60_000 },
   );

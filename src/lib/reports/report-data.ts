@@ -442,7 +442,7 @@ async function fetchStaffDirectory(
     return emptyNote(base, "Staff Directory", "No staff records found", "Staff");
   }
 
-  const headers = ["Emp ID", "Name", "Designation", "Department", "Mobile", "Email", "Join Date", "Salary", "Active"];
+  const headers = ["Emp ID", "Name", "Designation", "Department", "Mobile", "Email", "Join Date", "Retire Date", "Basic", "Full Pay", "Active"];
   const rows = staff.map((s) => [
     s.employeeId || "",
     `${s.firstName} ${s.lastName}`,
@@ -451,7 +451,9 @@ async function fetchStaffDirectory(
     s.mobileNumber,
     s.email || "",
     s.dateOfJoining || "",
+    s.retirementDate || "",
     s.monthlySalary ?? "",
+    s.fullPay ?? "",
     s.isActive ? "Yes" : "No",
   ]);
 

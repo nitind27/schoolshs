@@ -6,7 +6,19 @@ export const STAFF_ATTENDANCE_MARKS: StaffAttendanceMark[] = ["P", "A", "H", "L"
 
 export interface StaffSalaryProfile {
   monthlySalary?: number | null;
+  da?: number | null;
   hra?: number | null;
+  ma?: number | null;
+  fpa?: number | null;
+  hndA?: number | null;
+  suA?: number | null;
+  caA?: number | null;
+  wa?: number | null;
+  prA?: number | null;
+  bonus?: number | null;
+  daArrears?: number | null;
+  salaryArrears?: number | null;
+  fullPay?: number | null;
   conveyance?: number | null;
   pfDeduction?: number | null;
 }
@@ -99,11 +111,22 @@ export function daysInMonth(month: number, year: number): number {
 }
 
 export function grossMonthlySalary(profile: StaffSalaryProfile): number {
-  return (
+  const fromComponents =
     (profile.monthlySalary || 0) +
+    (profile.da || 0) +
     (profile.hra || 0) +
-    (profile.conveyance || 0)
-  );
+    (profile.ma || 0) +
+    (profile.fpa || 0) +
+    (profile.hndA || 0) +
+    (profile.suA || 0) +
+    (profile.caA || 0) +
+    (profile.wa || 0) +
+    (profile.prA || 0) +
+    (profile.bonus || 0) +
+    (profile.daArrears || 0) +
+    (profile.salaryArrears || 0);
+  const pay = profile.fullPay && profile.fullPay > 0 ? profile.fullPay : fromComponents;
+  return pay + (profile.conveyance || 0);
 }
 
 /** Pro-rata salary based on attendance */

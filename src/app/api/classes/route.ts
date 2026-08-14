@@ -69,7 +69,11 @@ export async function GET(request: NextRequest) {
       orderBy: [{ standard: "asc" }, { stream: "asc" }, { section: "asc" }],
       include: {
         classTeacher: { select: { id: true, firstName: true, lastName: true, designation: true } },
-        _count: { select: { students: true } },
+        _count: {
+          select: {
+            students: { where: { status: { notIn: ["archived", "draft"] } } },
+          },
+        },
       },
     });
 

@@ -23,7 +23,7 @@ import {
   totalDeduction,
   type SlipFieldKey,
 } from "@/lib/salary-slip";
-import { registerDates } from "@/lib/staff-register";
+import { staffServiceDates } from "@/lib/staff-register";
 import "./salary-slip.css";
 
 type Grid = Record<number, Record<SlipFieldKey, number>>; // month -> values
@@ -106,7 +106,13 @@ export default function SalarySlipPage() {
   }, [months, getValues]);
 
   const { retireDate } = useMemo(
-    () => registerDates(staff?.dateOfBirth, staff?.dateOfJoining),
+    () =>
+      staffServiceDates({
+        dateOfBirth: staff?.dateOfBirth,
+        dateOfJoining: staff?.dateOfJoining,
+        designation: staff?.designation,
+        retirementDate: staff?.retirementDate,
+      }),
     [staff],
   );
 

@@ -168,7 +168,7 @@ function LCContent() {
       onPreview={showPreview}
       onExitPreview={() => setSource(lcData ? "live" : "none")}
       canPrint={!!displayData}
-      printMargin="6mm"
+      printMargin={packId === "24261004403" || packId === "24261004404" ? "5mm" : "6mm"}
       packId={packId}
     >
       <p className="no-print text-xs text-violet-700 mb-2 font-medium">

@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { PageLoader, Spinner } from "@/components/ui/loader";
 import { useT } from "@/i18n/locale-provider";
 import { teacherTheme as tp } from "@/components/teacher/teacher-theme";
+import { assignedRollsById, sortStudentsForRollAssign } from "@/lib/roll-order";
 
 type ClassOption = {
   id: string;
@@ -78,14 +79,14 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
       .finally(() => setLoading(false));
   }, [t]);
 
-  const loadStudents = useCallback(async () => {
+  const loadStudents = useCallback(async (opts?: { keepMessage?: boolean }) => {
     if (!classId) {
       setStudents([]);
       setDrafts({});
       return;
     }
     setStudentsLoading(true);
-    setMessage(null);
+    if (!opts?.keepMessage) setMessage(null);
     try {
       const response = await fetch(`/api/roll-numbers?classId=${classId}`);
       const payload = await response.json();
@@ -152,29 +153,11 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
         ? [student.sscSeatPrefix, student.sscSeatNumber].filter(Boolean).join("")
         : "";
 
-  const nameSortKey = (student: StudentRow) =>
-    [
-      student.firstName,
-      student.middleName || "",
-      student.surname || "",
-      student.grNumber || "",
-    ]
-      .map((part) => part.trim().toLocaleLowerCase("en"))
-      .join("\u0000");
-
   const autoAssign = () => {
-    const sorted = [...students].sort((a, b) =>
-      nameSortKey(a).localeCompare(nameSortKey(b), "en", {
-        sensitivity: "base",
-        numeric: true,
-      }),
-    );
+    if (!students.length || saving) return;
+    const sorted = sortStudentsForRollAssign(students);
     setStudents(sorted);
-    setDrafts(
-      Object.fromEntries(
-        sorted.map((student, index) => [student.id, String(index + 1)]),
-      ),
-    );
+    setDrafts(assignedRollsById(sorted));
     setSearch("");
     setMessage({
       type: "ok",
@@ -205,7 +188,7 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
         type: "ok",
         text: t("rollNumbers.saved", { count: payload.updated || 0 }),
       });
-      await loadStudents();
+      await loadStudents({ keepMessage: true });
     } catch (cause) {
       setMessage({
         type: "error",
@@ -225,7 +208,7 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
         type="button"
         variant="outline"
         className="w-full sm:w-auto"
-        disabled={!students.length}
+        disabled={!students.length || saving}
         onClick={autoAssign}
       >
         <Sparkles className="h-4 w-4" />

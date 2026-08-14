@@ -542,6 +542,26 @@ html.locale-en {
     visibility: visible !important;
   }
 
+  /* Upper Primary LC (24261004403 / 24261004404) — one A4 portrait page */
+  .print-area:has(.lc-up-sheet),
+  .lc-up-print-wrap {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 200mm !important;
+    height: 277mm !important;
+    max-height: 277mm !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    z-index: 99999 !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
   .tt-print-table {
     width: 100% !important;
     border-collapse: collapse !important;

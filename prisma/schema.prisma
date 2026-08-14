@@ -457,13 +457,42 @@ model Staff {
    * e.g. "LEVEL-8 44900-142400" or "FIX PAY"
    */
   payLevel         String?
+  /**
+   * Retirement date (DD-MM-YYYY). Auto: DOB + 58 years, or + 60 for Peon/Clerk.
+   */
+  retirementDate   String?
+  /**
+   * First higher grade — joining + 5 or 9 years (selected date + year offset)
+   */
+  higherGradeFirst      String?
+  higherGradeFirstYears Int?
+  /**
+   * Second higher grade — joining + 20 or 31 years (selected date + year offset)
+   */
+  higherGradeSecond      String?
+  higherGradeSecondYears Int?
   isActive         Boolean                @default(true)
   photoPath        String?
   /**
-   * Monthly salary structure
+   * Monthly salary structure. BASIC is monthlySalary.
+   * DA / HRA amounts can be derived from daPercent / hraPercent of BASIC.
    */
   monthlySalary    Float?
+  daPercent        Float?
+  hraPercent       Float?
+  da               Float?
   hra              Float?                 @default(0)
+  ma               Float?
+  fpa              Float?
+  hndA             Float?
+  suA              Float?
+  caA              Float?
+  wa               Float?
+  prA              Float?
+  bonus            Float?
+  daArrears        Float?
+  salaryArrears    Float?
+  fullPay          Float?
   conveyance       Float?                 @default(0)
   pfDeduction      Float?                 @default(0)
   bankName         String?

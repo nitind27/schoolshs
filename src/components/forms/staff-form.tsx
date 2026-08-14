@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ComponentType, type InputHTMLAttributes, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -27,11 +27,40 @@ import {
 import {
   StaffPhotoField,
 } from "@/components/staff/staff-photo-field";
+import {
+  FIRST_HIGHER_GRADE_YEARS,
+  SECOND_HIGHER_GRADE_YEARS,
+  computeRetirementDate,
+  higherGradeDate,
+  higherGradeOptions,
+  retirementAgeForDesignation,
+  selectedHigherGradeYears,
+} from "@/lib/staff-register";
+import { applyDaHraFromPercent, computeStaffFullPay } from "@/lib/staff-salary";
 import "./staff-form.css";
 
 type StaffFormData = Partial<Staff> & {
   firstNameGu?: string | null;
   lastNameGu?: string | null;
+  daPercent?: number | string | null;
+  hraPercent?: number | string | null;
+  da?: number | string | null;
+  ma?: number | string | null;
+  fpa?: number | string | null;
+  hndA?: number | string | null;
+  suA?: number | string | null;
+  caA?: number | string | null;
+  wa?: number | string | null;
+  prA?: number | string | null;
+  bonus?: number | string | null;
+  daArrears?: number | string | null;
+  salaryArrears?: number | string | null;
+  fullPay?: number | string | null;
+  retirementDate?: string | null;
+  higherGradeFirst?: string | null;
+  higherGradeFirstYears?: number | string | null;
+  higherGradeSecond?: string | null;
+  higherGradeSecondYears?: number | string | null;
 };
 
 type GuTouchKey = "firstNameGu" | "lastNameGu";
@@ -82,6 +111,68 @@ function FormSection({
   );
 }
 
+function FieldBlock({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="staff-form__block">
+      <div className="staff-form__block-head">
+        <h3 className="staff-form__block-title">{title}</h3>
+        {hint ? <p className="staff-form__block-hint">{hint}</p> : null}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function AffixInput({
+  label,
+  prefix,
+  suffix,
+  hint,
+  badge,
+  readOnly,
+  className,
+  ...inputProps
+}: {
+  label: string;
+  prefix?: string;
+  suffix?: string;
+  hint?: string;
+  badge?: string;
+  readOnly?: boolean;
+  className?: string;
+} & Omit<InputHTMLAttributes<HTMLInputElement>, "prefix">) {
+  const id = useId();
+  return (
+    <div className={`staff-form__affix${className ? ` ${className}` : ""}`}>
+      <label htmlFor={id} className="staff-form__affix-label">
+        <span>{label}</span>
+        {badge ? <span className="staff-form__chip">{badge}</span> : null}
+      </label>
+      <div className={`staff-form__affix-box${readOnly ? " is-readonly" : ""}`}>
+        {prefix ? <span className="staff-form__affix-mark is-prefix">{prefix}</span> : null}
+        <input id={id} className="staff-form__affix-input" readOnly={readOnly} {...inputProps} />
+        {suffix ? <span className="staff-form__affix-mark is-suffix">{suffix}</span> : null}
+      </div>
+      {hint ? <p className="staff-form__hint">{hint}</p> : null}
+    </div>
+  );
+}
+
+function formatInr(value: unknown) {
+  if (value == null || value === "") return "—";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "—";
+  return n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+}
+
 function ensureStaffGuNames(data: StaffFormData): StaffFormData {
   const out = { ...data };
   const pairs: [keyof StaffFormData, keyof StaffFormData][] = [
@@ -121,6 +212,7 @@ export function StaffForm({
   const [ifscStatus, setIfscStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const ifscTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastIfsc = useRef("");
+  const retirementTouched = useRef(false);
 
   const resolvedSubmitLabel = submitLabel ?? t("staffPage.saveStaff");
   const roleWork = getStaffRoleWork(String(form.designation || ""));
@@ -140,6 +232,33 @@ export function StaffForm({
   const update = (field: string, value: unknown) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     clearError(field);
+  };
+
+  const moneyValue = (v: unknown) => (v == null || v === "" ? "" : String(v));
+  const setMoney = (field: string, raw: string) => update(field, raw === "" ? null : raw);
+  const daLocked = form.daPercent != null && String(form.daPercent) !== "";
+  const hraLocked = form.hraPercent != null && String(form.hraPercent) !== "";
+  const firstHgOptions = higherGradeOptions(form.dateOfJoining, FIRST_HIGHER_GRADE_YEARS).map((o) => ({
+    value: o.value,
+    label: t("staffPage.higherGradeOption", { years: o.years, date: o.date }),
+  }));
+  const secondHgOptions = higherGradeOptions(form.dateOfJoining, SECOND_HIGHER_GRADE_YEARS).map((o) => ({
+    value: o.value,
+    label: t("staffPage.higherGradeOption", { years: o.years, date: o.date }),
+  }));
+  const retireAge = retirementAgeForDesignation(form.designation);
+
+  const setHigherGrade = (
+    slot: "first" | "second",
+    yearsRaw: string,
+  ) => {
+    const years = yearsRaw ? Number(yearsRaw) : null;
+    const date = years ? higherGradeDate(form.dateOfJoining, years) || null : null;
+    if (slot === "first") {
+      setForm((prev) => ({ ...prev, higherGradeFirstYears: years, higherGradeFirst: date }));
+    } else {
+      setForm((prev) => ({ ...prev, higherGradeSecondYears: years, higherGradeSecond: date }));
+    }
   };
 
   const lookupIfsc = async (code: string) => {
@@ -178,6 +297,73 @@ export function StaffForm({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.ifscCode]);
+
+  useEffect(() => {
+    const computed = computeRetirementDate(initialData.dateOfBirth, initialData.designation);
+    if (initialData.retirementDate && computed && initialData.retirementDate !== computed) {
+      retirementTouched.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (retirementTouched.current) return;
+    const computed = computeRetirementDate(form.dateOfBirth, form.designation) || null;
+    setForm((prev) => {
+      if ((prev.retirementDate || null) === computed) return prev;
+      return { ...prev, retirementDate: computed };
+    });
+  }, [form.dateOfBirth, form.designation]);
+
+  useEffect(() => {
+    setForm((prev) => {
+      const first = prev.higherGradeFirstYears
+        ? higherGradeDate(prev.dateOfJoining, Number(prev.higherGradeFirstYears)) || null
+        : prev.higherGradeFirst;
+      const second = prev.higherGradeSecondYears
+        ? higherGradeDate(prev.dateOfJoining, Number(prev.higherGradeSecondYears)) || null
+        : prev.higherGradeSecond;
+      if (first === prev.higherGradeFirst && second === prev.higherGradeSecond) return prev;
+      return { ...prev, higherGradeFirst: first, higherGradeSecond: second };
+    });
+  }, [form.dateOfJoining]);
+
+  useEffect(() => {
+    setForm((prev) => {
+      const toNum = (v: unknown) => {
+        if (v == null || v === "") return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      };
+      const derived = applyDaHraFromPercent({
+        monthlySalary: toNum(prev.monthlySalary),
+        daPercent: toNum(prev.daPercent),
+        hraPercent: toNum(prev.hraPercent),
+        da: toNum(prev.da),
+        hra: toNum(prev.hra),
+      });
+      const next: StaffFormData = { ...prev, da: derived.da, hra: derived.hra };
+      const fullPay = computeStaffFullPay(next);
+      if (next.da === prev.da && next.hra === prev.hra && next.fullPay === fullPay) return prev;
+      return { ...next, fullPay };
+    });
+  }, [
+    form.monthlySalary,
+    form.daPercent,
+    form.hraPercent,
+    form.da,
+    form.hra,
+    form.ma,
+    form.fpa,
+    form.hndA,
+    form.suA,
+    form.caA,
+    form.wa,
+    form.prA,
+    form.bonus,
+    form.daArrears,
+    form.salaryArrears,
+  ]);
 
   const markGuTouched = (key: GuTouchKey) => {
     setGuTouched((prev) => ({ ...prev, [key]: true }));
@@ -380,61 +566,124 @@ export function StaffForm({
           title={t("staffRegister.serviceSection")}
           description={t("staffPage.serviceSectionDesc")}
         >
-          <div className="staff-form__grid">
-            <DateField
-              label={t("staffRegister.dateOfBirth")}
-              value={form.dateOfBirth || ""}
-              onChange={(v) => update("dateOfBirth", v)}
-              outputFormat="dmy-dash"
-            />
-            <Input
-              label={t("staffRegister.panNumber")}
-              placeholder="ABCDE1234F"
-              maxLength={10}
-              value={form.panNumber || ""}
-              error={errors.panNumber}
-              onChange={(e) =>
-                update("panNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))
-              }
-            />
-            <Input
-              label={t("staffRegister.gpfCpfNo")}
-              placeholder="TP/167/019"
-              value={form.gpfCpfNo || ""}
-              onChange={(e) => update("gpfCpfNo", e.target.value)}
-            />
-            <Input
-              label={t("staffRegister.aadhaarNumber")}
-              maxLength={12}
-              inputMode="numeric"
-              value={form.aadhaarNumber || ""}
-              error={errors.aadhaarNumber}
-              onChange={(e) =>
-                update("aadhaarNumber", e.target.value.replace(/\D/g, "").slice(0, 12))
-              }
-            />
-            <MultiSelectSearch
-              className="staff-form__span-2"
-              label={t("staffRegister.qualification")}
-              value={parseQualificationList(form.qualification)}
-              onChange={(items) => update("qualification", joinQualificationList(items) || null)}
-              options={STAFF_QUALIFICATIONS}
-              allowOther
-              otherLabel={t("staffRegister.qualificationOther")}
-              placeholder={t("staffRegister.qualificationPlaceholder")}
-              searchPlaceholder={t("staffRegister.qualificationSearch")}
-              otherPlaceholder={t("staffRegister.qualificationOtherPlaceholder")}
-              addLabel={t("staffRegister.qualificationAdd")}
-              emptyLabel={t("staffRegister.qualificationEmpty")}
-              clearAllLabel={t("staffRegister.qualificationClearAll")}
-              hint={t("staffRegister.qualificationHint")}
-            />
-            <Input
-              label={t("staffRegister.payLevel")}
-              placeholder="LEVEL-8 / FIX PAY"
-              value={form.payLevel || ""}
-              onChange={(e) => update("payLevel", e.target.value)}
-            />
+          <div className="staff-form__blocks">
+            <FieldBlock
+              title={t("staffPage.blockDates")}
+              hint={t("staffPage.retirementHint", { years: retireAge })}
+            >
+              <div className="staff-form__grid staff-form__grid--2">
+                <DateField
+                  label={t("staffRegister.dateOfBirth")}
+                  value={form.dateOfBirth || ""}
+                  onChange={(v) => update("dateOfBirth", v)}
+                  outputFormat="dmy-dash"
+                />
+                <DateField
+                  label={t("staffPage.retirementDate")}
+                  value={form.retirementDate || ""}
+                  onChange={(v) => {
+                    retirementTouched.current = true;
+                    update("retirementDate", v);
+                  }}
+                  outputFormat="dmy-dash"
+                />
+              </div>
+            </FieldBlock>
+
+            <FieldBlock
+              title={t("staffPage.blockHigherGrade")}
+              hint={t("staffPage.higherGradeBlockHint")}
+            >
+              <div className="staff-form__grid staff-form__grid--2">
+                <Select
+                  label={t("staffPage.higherGradeFirst")}
+                  options={firstHgOptions}
+                  value={selectedHigherGradeYears(
+                    form.higherGradeFirstYears,
+                    form.dateOfJoining,
+                    form.higherGradeFirst,
+                    FIRST_HIGHER_GRADE_YEARS,
+                  )}
+                  emptyLabel={
+                    form.dateOfJoining
+                      ? t("staffPage.higherGradeSelect")
+                      : t("staffPage.higherGradeNeedJoining")
+                  }
+                  onChange={(e) => setHigherGrade("first", e.target.value)}
+                  disabled={!form.dateOfJoining}
+                />
+                <Select
+                  label={t("staffPage.higherGradeSecond")}
+                  options={secondHgOptions}
+                  value={selectedHigherGradeYears(
+                    form.higherGradeSecondYears,
+                    form.dateOfJoining,
+                    form.higherGradeSecond,
+                    SECOND_HIGHER_GRADE_YEARS,
+                  )}
+                  emptyLabel={
+                    form.dateOfJoining
+                      ? t("staffPage.higherGradeSelect")
+                      : t("staffPage.higherGradeNeedJoining")
+                  }
+                  onChange={(e) => setHigherGrade("second", e.target.value)}
+                  disabled={!form.dateOfJoining}
+                />
+              </div>
+            </FieldBlock>
+
+            <FieldBlock title={t("staffPage.blockIds")}>
+              <div className="staff-form__grid">
+                <Input
+                  label={t("staffRegister.panNumber")}
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                  value={form.panNumber || ""}
+                  error={errors.panNumber}
+                  onChange={(e) =>
+                    update("panNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))
+                  }
+                />
+                <Input
+                  label={t("staffRegister.gpfCpfNo")}
+                  placeholder="TP/167/019"
+                  value={form.gpfCpfNo || ""}
+                  onChange={(e) => update("gpfCpfNo", e.target.value)}
+                />
+                <Input
+                  label={t("staffRegister.aadhaarNumber")}
+                  maxLength={12}
+                  inputMode="numeric"
+                  value={form.aadhaarNumber || ""}
+                  error={errors.aadhaarNumber}
+                  onChange={(e) =>
+                    update("aadhaarNumber", e.target.value.replace(/\D/g, "").slice(0, 12))
+                  }
+                />
+                <Input
+                  label={t("staffRegister.payLevel")}
+                  placeholder="LEVEL-8 / FIX PAY"
+                  value={form.payLevel || ""}
+                  onChange={(e) => update("payLevel", e.target.value)}
+                />
+                <MultiSelectSearch
+                  className="staff-form__span-full"
+                  label={t("staffRegister.qualification")}
+                  value={parseQualificationList(form.qualification)}
+                  onChange={(items) => update("qualification", joinQualificationList(items) || null)}
+                  options={STAFF_QUALIFICATIONS}
+                  allowOther
+                  otherLabel={t("staffRegister.qualificationOther")}
+                  placeholder={t("staffRegister.qualificationPlaceholder")}
+                  searchPlaceholder={t("staffRegister.qualificationSearch")}
+                  otherPlaceholder={t("staffRegister.qualificationOtherPlaceholder")}
+                  addLabel={t("staffRegister.qualificationAdd")}
+                  emptyLabel={t("staffRegister.qualificationEmpty")}
+                  clearAllLabel={t("staffRegister.qualificationClearAll")}
+                  hint={t("staffRegister.qualificationHint")}
+                />
+              </div>
+            </FieldBlock>
           </div>
         </FormSection>
 
@@ -444,81 +693,205 @@ export function StaffForm({
           title={t("staffHr.salarySection")}
           description={t("staffPage.salarySectionDesc")}
         >
-          <div className="staff-form__grid">
-            <Input
-              label={t("staffHr.monthlySalary")}
-              type="number"
-              min={0}
-              value={form.monthlySalary ?? ""}
-              onChange={(e) => update("monthlySalary", e.target.value)}
-            />
-            <Input
-              label={t("staffHr.hra")}
-              type="number"
-              min={0}
-              value={form.hra ?? ""}
-              onChange={(e) => update("hra", e.target.value)}
-            />
-            <Input
-              label={t("staffHr.conveyance")}
-              type="number"
-              min={0}
-              value={form.conveyance ?? ""}
-              onChange={(e) => update("conveyance", e.target.value)}
-            />
-            <Input
-              label={t("staffHr.pfDeduction")}
-              type="number"
-              min={0}
-              value={form.pfDeduction ?? ""}
-              onChange={(e) => update("pfDeduction", e.target.value)}
-            />
-            <div className="staff-form__field-stack staff-form__span-2">
-              <Input
-                label={t("staffHr.ifscCode")}
-                value={form.ifscCode || ""}
-                error={errors.ifscCode}
-                placeholder="SBIN0001234"
-                maxLength={11}
-                autoComplete="off"
-                onChange={(e) =>
-                  update(
-                    "ifscCode",
-                    e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11),
-                  )
-                }
-              />
-              <p
-                className={`staff-form__hint${
-                  ifscStatus === "ok"
-                    ? " is-ok"
-                    : ifscStatus === "error"
-                      ? " is-error"
-                      : ifscStatus === "loading"
-                        ? " is-loading"
-                        : ""
-                }`}
-              >
-                {ifscStatus === "loading"
-                  ? t("staffHr.ifscLookup")
-                  : ifscStatus === "ok"
-                    ? t("staffHr.ifscFilled")
-                    : ifscStatus === "error"
-                      ? t("staffHr.ifscFailed")
-                      : t("staffHr.ifscHint")}
-              </p>
-            </div>
-            <Input
-              label={`${t("staffHr.bankName")} (${t("staffHr.bankFromIfsc")})`}
-              value={form.bankName || ""}
-              placeholder="State Bank of India"
-              onChange={(e) => update("bankName", e.target.value)}
-            />
-            <Input
-              label={t("staffHr.bankAccount")}
-              value={form.bankAccount || ""}
-              onChange={(e) => update("bankAccount", e.target.value)}
-            />
+          <div className="staff-form__blocks">
+            <FieldBlock title={t("staffHr.blockPay")} hint={t("staffHr.basicHint")}>
+              <div className="staff-form__pay-row">
+                <AffixInput
+                  label={t("staffHr.basic")}
+                  prefix="₹"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={moneyValue(form.monthlySalary)}
+                  onChange={(e) => setMoney("monthlySalary", e.target.value)}
+                />
+                <div className="staff-form__total-card">
+                  <p className="staff-form__total-kicker">
+                    {t("staffHr.fullPay")}
+                    <span className="staff-form__chip">{t("staffHr.autoBadge")}</span>
+                  </p>
+                  <p className="staff-form__total-value">₹ {formatInr(form.fullPay)}</p>
+                  <p className="staff-form__hint">{t("staffHr.fullPayHint")}</p>
+                </div>
+              </div>
+            </FieldBlock>
+
+            <FieldBlock title={t("staffHr.blockDaHra")} hint={t("staffHr.percentHint")}>
+              <div className="staff-form__calc-grid">
+                <article className="staff-form__calc-card">
+                  <p className="staff-form__calc-title">{t("staffHr.da")}</p>
+                  <div className="staff-form__calc-row">
+                    <AffixInput
+                      label={t("staffHr.daPercent")}
+                      suffix="%"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={moneyValue(form.daPercent)}
+                      onChange={(e) => setMoney("daPercent", e.target.value)}
+                    />
+                    <AffixInput
+                      label={t("staffHr.daAmount")}
+                      prefix="₹"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder="0"
+                      readOnly={daLocked}
+                      badge={daLocked ? t("staffHr.autoBadge") : undefined}
+                      value={moneyValue(form.da)}
+                      onChange={(e) => setMoney("da", e.target.value)}
+                    />
+                  </div>
+                </article>
+                <article className="staff-form__calc-card">
+                  <p className="staff-form__calc-title">{t("staffHr.hra")}</p>
+                  <div className="staff-form__calc-row">
+                    <AffixInput
+                      label={t("staffHr.hraPercent")}
+                      suffix="%"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={moneyValue(form.hraPercent)}
+                      onChange={(e) => setMoney("hraPercent", e.target.value)}
+                    />
+                    <AffixInput
+                      label={t("staffHr.hraAmount")}
+                      prefix="₹"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder="0"
+                      readOnly={hraLocked}
+                      badge={hraLocked ? t("staffHr.autoBadge") : undefined}
+                      value={moneyValue(form.hra)}
+                      onChange={(e) => setMoney("hra", e.target.value)}
+                    />
+                  </div>
+                </article>
+              </div>
+            </FieldBlock>
+
+            <FieldBlock title={t("staffHr.blockAllowances")}>
+              <div className="staff-form__grid">
+                {(
+                  [
+                    ["ma", "staffHr.ma"],
+                    ["fpa", "staffHr.fpa"],
+                    ["hndA", "staffHr.hndA"],
+                    ["suA", "staffHr.suA"],
+                    ["caA", "staffHr.caA"],
+                    ["wa", "staffHr.wa"],
+                    ["prA", "staffHr.prA"],
+                    ["bonus", "staffHr.bonus"],
+                    ["daArrears", "staffHr.daArrears"],
+                    ["salaryArrears", "staffHr.salaryArrears"],
+                  ] as const
+                ).map(([field, key]) => (
+                  <AffixInput
+                    key={field}
+                    label={t(key)}
+                    prefix="₹"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={moneyValue(form[field])}
+                    onChange={(e) => setMoney(field, e.target.value)}
+                  />
+                ))}
+              </div>
+            </FieldBlock>
+
+            <FieldBlock title={t("staffHr.blockOther")}>
+              <div className="staff-form__grid staff-form__grid--2">
+                <AffixInput
+                  label={t("staffHr.conveyance")}
+                  prefix="₹"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={moneyValue(form.conveyance)}
+                  onChange={(e) => setMoney("conveyance", e.target.value)}
+                />
+                <AffixInput
+                  label={t("staffHr.pfDeduction")}
+                  prefix="₹"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={moneyValue(form.pfDeduction)}
+                  onChange={(e) => setMoney("pfDeduction", e.target.value)}
+                />
+              </div>
+            </FieldBlock>
+
+            <FieldBlock title={t("staffHr.blockBank")} hint={t("staffHr.ifscHint")}>
+              <div className="staff-form__grid">
+                <div className="staff-form__field-stack staff-form__span-2">
+                  <Input
+                    label={t("staffHr.ifscCode")}
+                    value={form.ifscCode || ""}
+                    error={errors.ifscCode}
+                    placeholder="SBIN0001234"
+                    maxLength={11}
+                    autoComplete="off"
+                    onChange={(e) =>
+                      update(
+                        "ifscCode",
+                        e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11),
+                      )
+                    }
+                  />
+                  {ifscStatus !== "idle" ? (
+                    <p
+                      className={`staff-form__hint${
+                        ifscStatus === "ok"
+                          ? " is-ok"
+                          : ifscStatus === "error"
+                            ? " is-error"
+                            : ifscStatus === "loading"
+                              ? " is-loading"
+                              : ""
+                      }`}
+                    >
+                      {ifscStatus === "loading"
+                        ? t("staffHr.ifscLookup")
+                        : ifscStatus === "ok"
+                          ? t("staffHr.ifscFilled")
+                          : ifscStatus === "error"
+                            ? t("staffHr.ifscFailed")
+                            : null}
+                    </p>
+                  ) : null}
+                </div>
+                <Input
+                  label={`${t("staffHr.bankName")} (${t("staffHr.bankFromIfsc")})`}
+                  value={form.bankName || ""}
+                  placeholder="State Bank of India"
+                  onChange={(e) => update("bankName", e.target.value)}
+                />
+                <Input
+                  label={t("staffHr.bankAccount")}
+                  value={form.bankAccount || ""}
+                  onChange={(e) => update("bankAccount", e.target.value)}
+                />
+              </div>
+            </FieldBlock>
           </div>
         </FormSection>
 

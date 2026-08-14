@@ -10,33 +10,22 @@ import {
 } from "@/lib/staff-portal";
 import { buildStaffCredentialsEmail } from "@/lib/email-templates";
 import { sendMail } from "@/lib/mail";
-
-function salaryFields(body: Record<string, unknown>) {
-  return {
-    monthlySalary: body.monthlySalary != null && body.monthlySalary !== "" ? Number(body.monthlySalary) : null,
-    hra: body.hra != null && body.hra !== "" ? Number(body.hra) : 0,
-    conveyance: body.conveyance != null && body.conveyance !== "" ? Number(body.conveyance) : 0,
-    pfDeduction: body.pfDeduction != null && body.pfDeduction !== "" ? Number(body.pfDeduction) : 0,
-    bankName: String(body.bankName || "").trim() || null,
-    bankAccount: String(body.bankAccount || "").trim() || null,
-    ifscCode: String(body.ifscCode || "").trim() || null,
-  };
-}
+import { staffSalaryFields } from "@/lib/staff-salary";
+import { staffServiceFields } from "@/lib/staff-register";
 
 function normalizeStaff(body: Record<string, unknown>) {
+  const designation = String(body.designation || "").trim();
   return {
     employeeId: String(body.employeeId || "").trim() || null,
     firstName: String(body.firstName || "").trim(),
     firstNameGu: String(body.firstNameGu || "").trim() || null,
     lastName: String(body.lastName || "").trim(),
     lastNameGu: String(body.lastNameGu || "").trim() || null,
-    designation: String(body.designation || "").trim(),
+    designation,
     department: String(body.department || "").trim() || null,
     mobileNumber: String(body.mobileNumber || "").replace(/\s/g, "").trim(),
     email: String(body.email || "").trim().toLowerCase() || null,
     gender: String(body.gender || "").trim() || null,
-    dateOfJoining: String(body.dateOfJoining || "").trim() || null,
-    dateOfBirth: String(body.dateOfBirth || "").trim() || null,
     panNumber: String(body.panNumber || "").trim().toUpperCase() || null,
     gpfCpfNo: String(body.gpfCpfNo || "").trim() || null,
     aadhaarNumber: String(body.aadhaarNumber || "").replace(/\s/g, "") || null,
@@ -44,7 +33,8 @@ function normalizeStaff(body: Record<string, unknown>) {
     payLevel: String(body.payLevel || "").trim() || null,
     isActive: body.isActive !== false,
     photoPath: String(body.photoPath || "").trim() || null,
-    ...salaryFields(body),
+    ...staffServiceFields(body, designation),
+    ...staffSalaryFields(body),
   };
 }
 
