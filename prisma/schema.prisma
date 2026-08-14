@@ -63,6 +63,7 @@ model School {
   examSeatAssignments    ExamSeatAssignment[]
   holidays               Holiday[]
   activities             Activity[]
+  galleryEvents          GalleryEvent[]
   helpConversations      HelpConversation[]
 
   @@index([isActive])
@@ -1670,4 +1671,50 @@ model ActivityParticipant {
   @@index([activityId])
   @@index([studentId])
   @@map("activityparticipant")
+}
+
+// ─── School Gallery (activity → title → photos, per school) ───
+model GalleryEvent {
+  id           String         @id @default(cuid())
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  schoolId     String
+  school       School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  /// e.g. Annual Day, Sports Day
+  activityName String
+  /// ISO date YYYY-MM-DD
+  eventDate    String
+  createdById  String?
+  titles       GalleryTitle[]
+
+  @@index([schoolId, eventDate])
+  @@index([schoolId])
+  @@map("galleryevent")
+}
+
+model GalleryTitle {
+  id        String         @id @default(cuid())
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  eventId   String
+  event     GalleryEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  title     String
+  images    GalleryImage[]
+
+  @@index([eventId])
+  @@map("gallerytitle")
+}
+
+model GalleryImage {
+  id             String       @id @default(cuid())
+  createdAt      DateTime     @default(now())
+  titleId        String
+  title          GalleryTitle @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  filePath       String
+  originalName   String?
+  uploadedById   String?
+  uploadedByName String?
+
+  @@index([titleId])
+  @@map("galleryimage")
 }

@@ -35,6 +35,7 @@ import {
   PartyPopper,
   Trophy,
   BadgeCheck,
+  Images,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { isFeatureEnabled } from "@/lib/school-features";
@@ -58,6 +59,12 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
       href: "/activities",
       label: t("nav.activities"),
       icon: Trophy,
+    },
+    {
+      type: "link",
+      href: "/gallery",
+      label: t("nav.gallery"),
+      icon: Images,
     },
     {
       type: "submenu",

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
-import { SLIP_ALL_FIELDS, currentSlipFy, type SlipFieldKey } from "@/lib/salary-slip";
+import { SLIP_ALL_FIELDS, buildSlipYearRows, currentSlipFy, type SlipFieldKey } from "@/lib/salary-slip";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     if (!staffId) return NextResponse.json({ error: "staffId required" }, { status: 400 });
 
-    const [staff, rows] = await Promise.all([
+    const [staff, savedRows] = await Promise.all([
       prisma.staff.findFirst({ where: { id: staffId, schoolId: session.schoolId } }),
       prisma.staffSalarySlipRow.findMany({
         where: { staffId, schoolId: session.schoolId, financialYear },
@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!staff) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
+
+    const rows = buildSlipYearRows(financialYear, staff, savedRows);
 
     return NextResponse.json({ financialYear, staff, rows });
   } catch (error) {

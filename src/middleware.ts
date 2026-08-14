@@ -57,6 +57,8 @@ const ROLE_ROUTES: Record<string, UserRole[]> = {
   "/help-desk": ["school_admin", "clerk"],
   "/exam-id-cards": ["school_admin", "clerk"],
   "/api/exam-id-cards": ["school_admin", "clerk"],
+  "/gallery": ["school_admin", "clerk", "teacher"],
+  "/api/gallery": ["school_admin", "clerk", "teacher"],
 };
 
 /** Exact segment match — avoids `/api/help` wrongly matching `/api/holidays`. */
@@ -249,10 +251,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Student / staff photos — school staff (ownership checked in /api/uploads)
+  // Student / staff / gallery photos — school staff (ownership checked in /api/uploads)
   if (
     (pathname.startsWith("/api/uploads/students/") ||
-      pathname.startsWith("/api/uploads/staff/")) &&
+      pathname.startsWith("/api/uploads/staff/") ||
+      pathname.startsWith("/api/uploads/gallery/")) &&
     session.schoolId &&
     ["school_admin", "teacher", "clerk", "ca"].includes(session.role)
   ) {
@@ -296,9 +299,12 @@ export async function middleware(request: NextRequest) {
       "/staff/payroll",
       "/staff/holidays",
       "/activities",
+      "/gallery",
       "/api/staff-hr",
       "/api/holidays",
       "/api/activities",
+      "/api/gallery",
+      "/api/uploads/gallery",
       "/chat",
       "/api/chat",
       "/api/uploads/chat",
@@ -359,6 +365,9 @@ export async function middleware(request: NextRequest) {
           pathname.startsWith("/staff/holidays") ||
           pathname.startsWith("/teacher/holidays") ||
           pathname.startsWith("/teacher/activities") ||
+          pathname.startsWith("/teacher/gallery") ||
+          pathname.startsWith("/gallery") ||
+          pathname.startsWith("/api/gallery") ||
           pathname.startsWith("/api/activities") ||
           pathname.startsWith("/api/holidays") ||
           pathname.startsWith("/api/staff/holidays") ||
@@ -370,7 +379,9 @@ export async function middleware(request: NextRequest) {
           (r) => pathname === r || pathname.startsWith(r + "/"),
         ) ||
           pathname.startsWith("/activities") ||
-          pathname.startsWith("/api/activities"))) ||
+          pathname.startsWith("/gallery") ||
+          pathname.startsWith("/api/activities") ||
+          pathname.startsWith("/api/gallery"))) ||
       (session.role === "ca" &&
         (pathname.startsWith("/accounting") ||
           pathname.startsWith("/api/accounting") ||

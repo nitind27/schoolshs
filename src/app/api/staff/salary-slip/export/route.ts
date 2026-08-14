@@ -6,6 +6,7 @@ import {
   SLIP_ALL_FIELDS,
   SLIP_DEDUCTION_FIELDS,
   SLIP_SALARY_FIELDS,
+  buildSlipYearRows,
   currentSlipFy,
   emptySlipValues,
   grossPay,
@@ -42,7 +43,9 @@ export async function GET(request: NextRequest) {
 
     if (!staff) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
 
-    const byMonth = new Map(dbRows.map((r) => [r.month, r]));
+    const byMonth = new Map(
+      buildSlipYearRows(financialYear, staff, dbRows).map((row) => [row.month, row]),
+    );
     const months = slipFyMonths(financialYear);
     const { retireDate } = staffServiceDates(staff);
 

@@ -4,6 +4,8 @@ import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import {
   calculatePayroll,
   countStaffPresent,
+  countStaffUnpaidDays,
+  daysInMonth,
   parseStaffDaysJson,
 } from "@/lib/staff-hr";
 import { assertStaffInSchool } from "@/lib/school-assertions";
@@ -135,13 +137,15 @@ export async function POST(request: NextRequest) {
       const days = parseStaffDaysJson(att?.daysJson);
       const presentDays = countStaffPresent(days);
       const absentDays = days.filter((d) => d === "A").length;
+      const unpaidDays = countStaffUnpaidDays(days, daysInMonth(month, year));
 
       const calc = calculatePayroll(
         staff,
         presentDays,
         absentDays,
         month,
-        year
+        year,
+        unpaidDays,
       );
 
       await prisma.staffPayroll.upsert({

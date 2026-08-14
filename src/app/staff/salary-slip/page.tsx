@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageShell } from "@/components/layout/page-shell";
-import { Download, Printer, Save, FileText } from "lucide-react";
+import { Download, Printer, Save, FileText, Wand2 } from "lucide-react";
 import type { Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
 import {
@@ -20,6 +20,8 @@ import {
   slipFyMonths,
   slipFyOptions,
   slipMonthLabel,
+  slipValuesFromStaff,
+  staffWorkedInMonth,
   totalDeduction,
   type SlipFieldKey,
 } from "@/lib/salary-slip";
@@ -74,6 +76,7 @@ export default function SalarySlipPage() {
       .then((d) => {
         setStaff(d.staff || null);
         const next: Grid = {};
+        for (const { month } of slipFyMonths(fy)) next[month] = emptySlipValues();
         for (const row of (d.rows || []) as ApiRow[]) {
           const values = emptySlipValues();
           for (const f of SLIP_ALL_FIELDS) values[f.key] = Number(row[f.key]) || 0;
@@ -115,6 +118,17 @@ export default function SalarySlipPage() {
       }),
     [staff],
   );
+
+  const fillFromStaff = () => {
+    if (!staff) return;
+    const defaults = slipValuesFromStaff(staff);
+    const next: Grid = {};
+    for (const { month, year } of months) {
+      next[month] = staffWorkedInMonth(staff, month, year) ? { ...defaults } : emptySlipValues();
+    }
+    setGrid(next);
+    setSavedAt(null);
+  };
 
   const save = async () => {
     if (!staffId) return;
@@ -214,6 +228,16 @@ export default function SalarySlipPage() {
               ]}
             />
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="print:hidden"
+            onClick={fillFromStaff}
+            disabled={!staff || loading}
+          >
+            <Wand2 className="h-4 w-4" />
+            {t("salarySlip.fillFromStaff")}
+          </Button>
         </CardContent>
       </Card>
 
@@ -232,6 +256,9 @@ export default function SalarySlipPage() {
         </div>
       ) : (
         <div className="salary-slip-area space-y-4">
+          <p className="print:hidden rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm text-teal-900">
+            {t("salarySlip.autoFillHint")}
+          </p>
           <div className="sl-print-header">
             <h2 className="sl-school">{schoolName}</h2>
             <p className="sl-title">

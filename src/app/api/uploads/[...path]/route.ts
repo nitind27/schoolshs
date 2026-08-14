@@ -71,6 +71,18 @@ async function assertUploadAccess(segments: string[]) {
     return;
   }
 
+  if (segments[0] === "gallery" && segments[1]) {
+    const schoolId = segments[1];
+    if (session.role === "super_admin") return;
+    if (
+      session.schoolId === schoolId &&
+      ["school_admin", "clerk", "teacher"].includes(session.role)
+    ) {
+      return;
+    }
+    throw new AuthError("Access denied", 403);
+  }
+
   if (segments[0] === "staff" && segments[1]) {
     const staffId = segments[1];
     if (session.role === "super_admin") return;
@@ -100,7 +112,7 @@ export async function GET(
 ) {
   try {
     const { path: segments } = await params;
-    const allowedRoots = new Set(["students", "chat", "schools", "staff"]);
+    const allowedRoots = new Set(["students", "chat", "schools", "staff", "gallery"]);
     if (!segments?.length || !allowedRoots.has(segments[0])) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }

@@ -104,6 +104,20 @@ export function countStaffHalf(days: (string | null)[]): number {
   return days.filter((d) => d === "H").length;
 }
 
+/**
+ * Days that cut salary within this month: Absent = 1, Half day = 0.5.
+ * Present, Leave, and unmarked days are paid in full.
+ */
+export function countStaffUnpaidDays(days: (string | null)[], workingDays: number): number {
+  const n = Math.min(Math.max(0, workingDays), days.length);
+  let unpaid = 0;
+  for (let i = 0; i < n; i++) {
+    if (days[i] === "A") unpaid += 1;
+    else if (days[i] === "H") unpaid += 0.5;
+  }
+  return unpaid;
+}
+
 export function countStaffMarked(days: (string | null)[]): number {
   return days.filter((d) => d === "P" || d === "A" || d === "H" || d === "L").length;
 }
@@ -131,25 +145,30 @@ export function grossMonthlySalary(profile: StaffSalaryProfile): number {
   return pay + (profile.conveyance || 0);
 }
 
-/** Pro-rata salary based on attendance */
+/**
+ * Payroll: full Gross minus deductions.
+ * Pay is cut only for Absent (full day) and Half-day (0.5). Unmarked days stay paid.
+ * Net Salary is always Gross − Deductions.
+ */
 export function calculatePayroll(
   profile: StaffSalaryProfile,
   presentDays: number,
   absentDays: number,
   month: number,
-  year: number
+  year: number,
+  unpaidDays?: number,
 ) {
   const totalDays = daysInMonth(month, year);
   const gross = grossMonthlySalary(profile);
   const perDay = totalDays > 0 ? gross / totalDays : 0;
-  const earned = Math.round(perDay * presentDays * 100) / 100;
-  const absentPenalty = Math.round(perDay * absentDays * 100) / 100;
+  const unpaid = unpaidDays ?? absentDays;
+  const attendanceCut = Math.round(perDay * unpaid * 100) / 100;
   const pf = profile.pfDeduction || 0;
   const professionalTax = profile.professionalTax || 0;
   const incomeTax = profile.incomeTax || 0;
   const taxDeductions = pf + professionalTax + incomeTax;
-  const deductions = Math.round((taxDeductions + absentPenalty) * 100) / 100;
-  const net = Math.max(0, Math.round((earned - taxDeductions) * 100) / 100);
+  const deductions = Math.round((taxDeductions + attendanceCut) * 100) / 100;
+  const net = Math.max(0, Math.round((gross - deductions) * 100) / 100);
 
   return {
     workingDays: totalDays,

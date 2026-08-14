@@ -31,6 +31,7 @@ import {
   Trophy,
   BadgeCheck,
   UserX,
+  Images,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -225,6 +226,13 @@ const useNavGroups = (
         label: t("nav.activities"),
         icon: Trophy,
         featureKey: "activities",
+      },
+      {
+        type: "link",
+        href: "/gallery",
+        label: t("nav.gallery"),
+        icon: Images,
+        featureKey: "gallery",
       },
       {
         type: "link",

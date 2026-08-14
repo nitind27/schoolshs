@@ -14,6 +14,7 @@ export const SCHOOL_FEATURE_KEYS = [
   "results",
   "attendance",
   "activities",
+  "gallery",
   "scholarship_add",
   "scholarship_import",
   "scholarship_bulk_submit",
@@ -49,6 +50,7 @@ export const SCHOOL_FEATURES: SchoolFeatureDef[] = [
   { key: "results", label: "Results", group: "Academics", path: "/results", description: "Exam results & report cards" },
   { key: "attendance", label: "Attendance", group: "Academics", path: "/attendance", description: "Monthly attendance" },
   { key: "activities", label: "Activities", group: "Academics", path: "/activities", description: "School activities & student participation" },
+  { key: "gallery", label: "Gallery", group: "Academics", path: "/gallery", description: "School activity photo gallery" },
   { key: "scholarship_add", label: "Add Student", group: "Scholarship", path: "/students/new", description: "New scholarship student" },
   { key: "scholarship_import", label: "Bulk Import", group: "Scholarship", path: "/import", description: "CSV/Excel import" },
   { key: "scholarship_bulk_submit", label: "Bulk Mark Submitted", group: "Scholarship", path: "/bulk-submit", description: "Mark students submitted in school records (not Digital Gujarat)" },
@@ -161,7 +163,7 @@ export const PLAN_PRESETS: Record<string, { label: string; features: SchoolFeatu
     label: "Standard",
     priceHint: "₹35,000/yr",
     features: [
-      "dashboard", "classes", "students", "staff", "admissions", "results", "attendance", "activities",
+      "dashboard", "classes", "students", "staff", "admissions", "results", "attendance", "activities", "gallery",
       "scholarship_add", "scholarship_import", "scholarship_bulk_submit", "scholarship_auto_apply",
       "scholarship_export",
       "certificates", "id_cards", "portal_teacher", "portal_clerk", "portal_student", "chat",
@@ -226,6 +228,12 @@ export function normalizeFeatureList(features: unknown): SchoolFeatureKey[] {
   if (list.includes("students") && !list.includes("activities")) {
     list.push("activities");
   }
+  if (
+    !list.includes("gallery") &&
+    (list.includes("staff") || list.includes("activities") || list.includes("students"))
+  ) {
+    list.push("gallery");
+  }
   // Legacy schools: unlock Auto Apply when other scholarship tools are already enabled
   if (
     !list.includes("scholarship_auto_apply") &&
@@ -284,6 +292,7 @@ export function hrefToFeature(href: string): SchoolFeatureKey | null {
     "/results": "results",
     "/attendance": "attendance",
     "/activities": "activities",
+    "/gallery": "gallery",
     "/timetable": "classes",
     "/students/new": "students",
     "/students/roll-numbers": "students",
@@ -306,6 +315,7 @@ export function hrefToFeature(href: string): SchoolFeatureKey | null {
     "/teacher/board-records": "board_records",
     "/teacher/holidays": "staff",
     "/teacher/activities": "activities",
+    "/teacher/gallery": "gallery",
     "/clerk/scholarship": "students",
     "/ca": "portal_ca",
     "/student": "portal_student",

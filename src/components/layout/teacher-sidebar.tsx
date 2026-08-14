@@ -17,6 +17,7 @@ import {
   CalendarDays,
   PartyPopper,
   GraduationCap,
+  Images,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { hrefToFeature, isFeatureEnabled } from "@/lib/school-features";
@@ -92,6 +93,12 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
       href: "/teacher/activities",
       label: t("teacherNav.activities"),
       icon: PartyPopper,
+      group: t("teacherNav.groupAcademics"),
+    },
+    {
+      href: "/gallery",
+      label: t("teacherNav.gallery"),
+      icon: Images,
       group: t("teacherNav.groupAcademics"),
     },
   ];
