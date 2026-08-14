@@ -495,6 +495,11 @@ model Staff {
   fullPay          Float?
   conveyance       Float?                 @default(0)
   pfDeduction      Float?                 @default(0)
+  /**
+   * Monthly deductions — Professional Tax (P.T.) and Income Tax (I.T.)
+   */
+  professionalTax  Float?
+  incomeTax        Float?
   bankName         String?
   bankAccount      String?
   ifscCode         String?

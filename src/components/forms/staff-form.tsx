@@ -56,6 +56,8 @@ type StaffFormData = Partial<Staff> & {
   daArrears?: number | string | null;
   salaryArrears?: number | string | null;
   fullPay?: number | string | null;
+  professionalTax?: number | string | null;
+  incomeTax?: number | string | null;
   retirementDate?: string | null;
   higherGradeFirst?: string | null;
   higherGradeFirstYears?: number | string | null;
@@ -813,8 +815,8 @@ export function StaffForm({
               </div>
             </FieldBlock>
 
-            <FieldBlock title={t("staffHr.blockOther")}>
-              <div className="staff-form__grid staff-form__grid--2">
+            <FieldBlock title={t("staffHr.blockOther")} hint={t("staffHr.blockOtherHint")}>
+              <div className="staff-form__grid">
                 <AffixInput
                   label={t("staffHr.conveyance")}
                   prefix="₹"
@@ -836,6 +838,28 @@ export function StaffForm({
                   placeholder="0"
                   value={moneyValue(form.pfDeduction)}
                   onChange={(e) => setMoney("pfDeduction", e.target.value)}
+                />
+                <AffixInput
+                  label={t("staffHr.professionalTax")}
+                  prefix="₹"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={moneyValue(form.professionalTax)}
+                  onChange={(e) => setMoney("professionalTax", e.target.value)}
+                />
+                <AffixInput
+                  label={t("staffHr.incomeTax")}
+                  prefix="₹"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={moneyValue(form.incomeTax)}
+                  onChange={(e) => setMoney("incomeTax", e.target.value)}
                 />
               </div>
             </FieldBlock>

@@ -20,6 +20,8 @@ const staffCols = [
   "ALTER TABLE `staff` ADD COLUMN `daArrears` DOUBLE NULL",
   "ALTER TABLE `staff` ADD COLUMN `salaryArrears` DOUBLE NULL",
   "ALTER TABLE `staff` ADD COLUMN `fullPay` DOUBLE NULL",
+  "ALTER TABLE `staff` ADD COLUMN `professionalTax` DOUBLE NULL",
+  "ALTER TABLE `staff` ADD COLUMN `incomeTax` DOUBLE NULL",
 ];
 
 async function safeExec(sql: string) {

@@ -112,6 +112,8 @@ export async function POST(request: NextRequest) {
         fullPay: true,
         conveyance: true,
         pfDeduction: true,
+        professionalTax: true,
+        incomeTax: true,
       },
     });
 

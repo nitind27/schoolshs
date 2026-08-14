@@ -21,6 +21,8 @@ export interface StaffSalaryProfile {
   fullPay?: number | null;
   conveyance?: number | null;
   pfDeduction?: number | null;
+  professionalTax?: number | null;
+  incomeTax?: number | null;
 }
 
 export interface StaffAttendanceRow {
@@ -143,8 +145,11 @@ export function calculatePayroll(
   const earned = Math.round(perDay * presentDays * 100) / 100;
   const absentPenalty = Math.round(perDay * absentDays * 100) / 100;
   const pf = profile.pfDeduction || 0;
-  const deductions = Math.round((pf + absentPenalty) * 100) / 100;
-  const net = Math.max(0, Math.round((earned - pf) * 100) / 100);
+  const professionalTax = profile.professionalTax || 0;
+  const incomeTax = profile.incomeTax || 0;
+  const taxDeductions = pf + professionalTax + incomeTax;
+  const deductions = Math.round((taxDeductions + absentPenalty) * 100) / 100;
+  const net = Math.max(0, Math.round((earned - taxDeductions) * 100) / 100);
 
   return {
     workingDays: totalDays,

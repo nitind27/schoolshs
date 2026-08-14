@@ -99,6 +99,8 @@ export function staffSalaryFields(body: Record<string, unknown>) {
     fullPay: computeStaffFullPay(amounts),
     conveyance: optionalFloat(body.conveyance) ?? 0,
     pfDeduction: optionalFloat(body.pfDeduction) ?? 0,
+    professionalTax: optionalFloat(body.professionalTax),
+    incomeTax: optionalFloat(body.incomeTax),
     bankName: optionalText(body.bankName),
     bankAccount: optionalText(body.bankAccount),
     ifscCode: optionalText(body.ifscCode)?.toUpperCase() || null,
