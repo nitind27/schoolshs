@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageShell } from "@/components/layout/page-shell";
-import { Download, Printer, Save, IndianRupee } from "lucide-react";
+import { Download, Printer, Save, IndianRupee, Wand2 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import {
   CATEGORY_LABELS,
   SALARY_CATEGORIES,
   SALARY_FIELDS,
   currentFinancialYear,
+  emptyStaffCounts,
   emptyValues,
   fyMonths,
   fyOptions,
@@ -29,6 +30,7 @@ interface ApiRow {
   category: SalaryCategory;
   month: number;
   year: number;
+  staffCount?: number;
   [key: string]: unknown;
 }
 
@@ -43,6 +45,8 @@ export default function SalaryStatementPage() {
   const [exporting, setExporting] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState("");
+  const [staffCounts, setStaffCounts] = useState(emptyStaffCounts);
+  const [monthCounts, setMonthCounts] = useState<Record<string, number>>({});
 
   const months = useMemo(() => fyMonths(fy), [fy]);
 
@@ -53,22 +57,39 @@ export default function SalaryStatementPage() {
       .catch(() => {});
   }, []);
 
+  const applyPayload = (d: { rows?: ApiRow[]; staffCounts?: Record<SalaryCategory, number> }) => {
+    const next: Grid = {};
+    const counts: Record<string, number> = {};
+    for (const row of (d.rows || []) as ApiRow[]) {
+      const values = emptyValues();
+      for (const f of SALARY_FIELDS) values[f.key] = Number(row[f.key]) || 0;
+      next[`${row.category}:${row.month}`] = values;
+      counts[`${row.category}:${row.month}`] = Number(row.staffCount) || 0;
+    }
+    setGrid(next);
+    setMonthCounts(counts);
+    if (d.staffCounts) setStaffCounts({ ...emptyStaffCounts(), ...d.staffCounts });
+    setSavedAt(null);
+  };
+
   useEffect(() => {
     setLoading(true);
     fetch(`/api/staff/salary-statement?fy=${encodeURIComponent(fy)}`)
       .then((r) => r.json())
-      .then((d) => {
-        const next: Grid = {};
-        for (const row of (d.rows || []) as ApiRow[]) {
-          const values = emptyValues();
-          for (const f of SALARY_FIELDS) values[f.key] = Number(row[f.key]) || 0;
-          next[`${row.category}:${row.month}`] = values;
-        }
-        setGrid(next);
-        setSavedAt(null);
-      })
+      .then((d) => applyPayload(d))
       .finally(() => setLoading(false));
   }, [fy]);
+
+  const fillFromStaff = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/staff/salary-statement?fy=${encodeURIComponent(fy)}&fromStaff=1`);
+      const d = await res.json();
+      applyPayload(d);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getValues = useCallback(
     (category: SalaryCategory, month: number) => grid[`${category}:${month}`] || emptyValues(),
@@ -157,6 +178,10 @@ export default function SalaryStatementPage() {
             options={fyOptions().map((y) => ({ value: y, label: y }))}
             className="w-32"
           />
+          <Button size="sm" variant="outline" onClick={fillFromStaff} disabled={loading || saving}>
+            <Wand2 className="h-4 w-4" />
+            {t("salaryStatement.fillFromStaff")}
+          </Button>
           <Button size="sm" variant="outline" onClick={downloadExcel} disabled={loading || exporting}>
             <Download className="h-4 w-4" />
             {t("dashboard.exportExcel")}
@@ -182,6 +207,9 @@ export default function SalaryStatementPage() {
         <PageLoader />
       ) : (
         <div className="salary-statement-area space-y-6">
+          <p className="print:hidden rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm text-teal-900">
+            {t("salaryStatement.autoFillHint")}
+          </p>
           <div className="ss-print-header">
             <h2 className="ss-school">{schoolName}</h2>
             <p className="ss-title">ANNUAL SALARY STATEMENT — {fy}</p>
@@ -194,6 +222,9 @@ export default function SalaryStatementPage() {
                   <IndianRupee className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-bold text-slate-800">
                     {t(`salaryStatement.cat_${category}`)}
+                    <span className="ml-2 text-xs font-semibold text-slate-500">
+                      {t("salaryStatement.staffCount", { count: staffCounts[category] })}
+                    </span>
                   </h3>
                 </div>
                 <div className="overflow-x-auto">
@@ -212,7 +243,14 @@ export default function SalaryStatementPage() {
                         const values = getValues(category, month);
                         return (
                           <tr key={month}>
-                            <td className="ss-month">{monthLabel(month, year)}</td>
+                            <td className="ss-month">
+                              {monthLabel(month, year)}
+                              {monthCounts[`${category}:${month}`] ? (
+                                <span className="ml-1 text-[10px] font-medium text-slate-400">
+                                  ({monthCounts[`${category}:${month}`]})
+                                </span>
+                              ) : null}
+                            </td>
                             {SALARY_FIELDS.map((f) => (
                               <td key={f.key}>
                                 <input

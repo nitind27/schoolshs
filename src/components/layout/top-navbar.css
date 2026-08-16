@@ -1,20 +1,19 @@
 /* Premium top navbar — calm toolbar, school brand first */
 
 .tn-shell {
-  --tn-ink: #0c1929;
+  --tn-ink: #111827;
   --tn-muted: #64748b;
-  --tn-line: rgba(12, 25, 41, 0.08);
-  --tn-soft: #f4f7f9;
-  --tn-accent: #0d7377;
-  --tn-accent-deep: #095456;
-  --tn-warm: #c45c26;
+  --tn-line: #e5e7eb;
+  --tn-soft: #f8fafc;
+  --tn-accent: #047857;
+  --tn-accent-deep: #065f46;
+  --tn-warm: #f59e0b;
 }
 
 .tn-shell {
   height: 3.5rem;
   border-bottom: 1px solid var(--tn-line);
-  background:
-    linear-gradient(180deg, #ffffff 0%, #f8fafb 100%);
+  background: #ffffff;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
 }
 

@@ -132,6 +132,7 @@ export async function GET(request: NextRequest) {
     const classId = searchParams.get("classId");
     const category = searchParams.get("category");
     const search = searchParams.get("search");
+    const lite = searchParams.get("lite") === "1";
     const page = parsePageParam(searchParams.get("page"));
     const limit = parseLimitParam(searchParams.get("limit"));
 
@@ -145,6 +146,58 @@ export async function GET(request: NextRequest) {
     });
 
     const schoolWhere = { schoolId: session.schoolId };
+
+    if (lite) {
+      const [students, total] = await Promise.all([
+        prisma.student.findMany({
+          where,
+          select: {
+            id: true,
+            grNumber: true,
+            firstName: true,
+            surname: true,
+            firstNameGu: true,
+            surnameGu: true,
+            standard: true,
+            section: true,
+            category: true,
+            admissionStatus: true,
+            verifiedAt: true,
+            verifiedBy: true,
+            createdAt: true,
+            schoolClass: {
+              select: { name: true, standard: true, section: true },
+            },
+          },
+          orderBy: [{ createdAt: "desc" }],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.student.count({ where }),
+      ]);
+
+      return NextResponse.json({
+        students: students.map((s) => ({
+          id: s.id,
+          grNumber: s.grNumber,
+          firstName: s.firstName,
+          surname: s.surname,
+          firstNameGu: s.firstNameGu,
+          surnameGu: s.surnameGu,
+          standard: s.standard,
+          section: s.section,
+          category: s.category,
+          admissionStatus: s.admissionStatus,
+          verifiedAt: s.verifiedAt,
+          verifiedBy: s.verifiedBy,
+          createdAt: s.createdAt,
+          className: s.schoolClass?.name || null,
+        })),
+        total,
+        page,
+        limit,
+      });
+    }
 
     const [students, total, stats, classStats, classes] = await Promise.all([
       prisma.student.findMany({

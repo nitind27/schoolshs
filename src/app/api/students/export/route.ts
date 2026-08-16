@@ -10,15 +10,35 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const ids = searchParams.get("ids");
+    const standard = searchParams.get("standard");
+    const classId = searchParams.get("classId");
+    const noClass = searchParams.get("noClass") === "1";
+    const pendingDivision = searchParams.get("pendingDivision") === "1";
 
     const where: Record<string, unknown> = { schoolId: session.schoolId };
     if (status) where.status = status;
     else if (!ids) where.status = activeStudentStatusFilter();
     if (ids) where.id = { in: ids.split(",") };
+    if (!ids) {
+      if (noClass) {
+        where.classId = null;
+        where.OR = [{ standard: null }, { standard: "" }];
+      } else if (pendingDivision) {
+        where.classId = null;
+        if (standard) where.standard = standard;
+        else {
+          where.AND = [{ standard: { not: null } }, { NOT: { standard: "" } }];
+        }
+      } else if (classId) {
+        where.classId = classId;
+      } else if (standard) {
+        where.standard = standard;
+      }
+    }
 
     const students = await prisma.student.findMany({
       where,
-      orderBy: { surname: "asc" },
+      orderBy: [{ standard: "asc" }, { surname: "asc" }],
     });
 
     const headers = CSV_HEADERS.join(",");

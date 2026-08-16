@@ -15,6 +15,7 @@ import {
   ArrowRight,
   UserRoundX,
   UserPlus,
+  Users,
   Wallet,
   ClipboardList,
 } from "lucide-react";
@@ -32,6 +33,7 @@ export type OpsOverview = {
   };
   classes?: { total: number };
   staff?: { total: number; active: number };
+  subjects?: { total: number };
   accounting?: { pending: number; verified: number; vouchersTotal: number };
   attendance?: { monthsMarkedThisMonth: number };
   idCards?: { needingPhoto: number; withPhoto: number };
@@ -49,6 +51,7 @@ export type HrOverview = {
 type AttentionItem = {
   id: string;
   label: string;
+  hint: string;
   count: number;
   href?: string;
   onClick?: () => void;
@@ -111,6 +114,7 @@ export function DashboardCommandCenter({
       {
         id: "adm",
         label: t("dashboard.attnAdmissionPending"),
+        hint: t("dashboard.attnHintAdmission"),
         count: ops?.admissions?.pending || 0,
         href: "/admissions",
         onClick: onOpenAdmissionPending,
@@ -120,6 +124,7 @@ export function DashboardCommandCenter({
       {
         id: "draft",
         label: t("dashboard.attnDraftStudents"),
+        hint: t("dashboard.attnHintDraft"),
         count: ops?.scholarship?.draft || 0,
         onClick: onOpenDraftStudents,
         tone: "rose" as const,
@@ -128,6 +133,7 @@ export function DashboardCommandCenter({
       {
         id: "staffAttn",
         label: t("dashboard.attnStaffAttendance"),
+        hint: t("dashboard.attnHintStaffAttn"),
         count: attnUnmarked,
         href: "/staff/attendance",
         onClick: onOpenStaffAttendance,
@@ -137,6 +143,7 @@ export function DashboardCommandCenter({
       {
         id: "pay",
         label: t("dashboard.attnPayrollPending"),
+        hint: t("dashboard.attnHintPayroll"),
         count: hr?.payrollPending || 0,
         href: "/staff/payroll",
         onClick: onOpenPayrollPending,
@@ -146,6 +153,7 @@ export function DashboardCommandCenter({
       {
         id: "photo",
         label: t("dashboard.attnNeedPhoto"),
+        hint: t("dashboard.attnHintPhoto"),
         count: ops?.idCards?.needingPhoto || ops?.students?.withoutPhoto || 0,
         href: "/id-cards",
         tone: "blue" as const,
@@ -154,6 +162,7 @@ export function DashboardCommandCenter({
       {
         id: "voucher",
         label: t("dashboard.attnVouchers"),
+        hint: t("dashboard.attnHintVoucher"),
         count: ops?.accounting?.pending || 0,
         href: "/accounting/vouchers",
         tone: "amber" as const,
@@ -161,11 +170,12 @@ export function DashboardCommandCenter({
       },
     ] satisfies AttentionItem[]
   ).filter((a) => {
-    if (a.count <= 0) return false;
     if (focus === "students") return ["adm", "draft", "photo"].includes(a.id);
     if (focus === "staff") return ["staffAttn", "pay", "voucher"].includes(a.id);
     return true;
   });
+
+  const pendingTotal = attention.reduce((sum, item) => sum + item.count, 0);
 
   const hubs: HubCard[] = [
     {
@@ -341,38 +351,64 @@ export function DashboardCommandCenter({
           <div className="ops-quick-add">
             <div className="ops-quick-add-label">
               <UserPlus className="h-4 w-4" />
-              <span>{t("dashboard.priorityQuickAdd")}</span>
+              <span>{t("dashboard.quickActions")}</span>
             </div>
-            <div
-              className={
-                studentFocus && staffFocus
-                  ? "ops-quick-add-grid"
-                  : "ops-quick-add-grid is-single"
-              }
-            >
+            <div className="ops-quick-add-grid">
               {studentFocus ? (
-                <Link href="/students/new" className="ops-quick-add-card is-student">
-                  <span className="ops-quick-add-ico">
-                    <UserPlus className="h-5 w-5" />
-                  </span>
-                  <span className="ops-quick-add-copy">
-                    <strong>{t("nav.addStudent")}</strong>
-                    <small>{t("dashboard.featuredAddStudent")}</small>
-                  </span>
-                  <ArrowRight className="ops-quick-add-arrow h-4 w-4" />
-                </Link>
+                <>
+                  <Link href="/students/new" className="ops-quick-add-card is-student">
+                    <span className="ops-quick-add-ico">
+                      <UserPlus className="h-5 w-5" />
+                    </span>
+                    <span className="ops-quick-add-copy">
+                      <strong>{t("nav.addStudent")}</strong>
+                      <small>{t("dashboard.featuredAddStudent")}</small>
+                    </span>
+                    <span className="ops-quick-add-go" aria-hidden>
+                      <ArrowRight className="ops-quick-add-arrow h-4 w-4" />
+                    </span>
+                  </Link>
+                  <Link href="/students" className="ops-quick-add-card is-list">
+                    <span className="ops-quick-add-ico">
+                      <Users className="h-5 w-5" />
+                    </span>
+                    <span className="ops-quick-add-copy">
+                      <strong>{t("dashboard.shortcutAllStudents")}</strong>
+                      <small>{t("dashboard.featuredAllStudents")}</small>
+                    </span>
+                    <span className="ops-quick-add-go" aria-hidden>
+                      <ArrowRight className="ops-quick-add-arrow h-4 w-4" />
+                    </span>
+                  </Link>
+                </>
               ) : null}
               {staffFocus ? (
-                <Link href="/staff/new" className="ops-quick-add-card is-staff">
-                  <span className="ops-quick-add-ico">
-                    <Briefcase className="h-5 w-5" />
-                  </span>
-                  <span className="ops-quick-add-copy">
-                    <strong>{t("nav.staffAdd")}</strong>
-                    <small>{t("dashboard.featuredAddStaff")}</small>
-                  </span>
-                  <ArrowRight className="ops-quick-add-arrow h-4 w-4" />
-                </Link>
+                <>
+                  <Link href="/staff/new" className="ops-quick-add-card is-staff">
+                    <span className="ops-quick-add-ico">
+                      <Briefcase className="h-5 w-5" />
+                    </span>
+                    <span className="ops-quick-add-copy">
+                      <strong>{t("nav.staffAdd")}</strong>
+                      <small>{t("dashboard.featuredAddStaff")}</small>
+                    </span>
+                    <span className="ops-quick-add-go" aria-hidden>
+                      <ArrowRight className="ops-quick-add-arrow h-4 w-4" />
+                    </span>
+                  </Link>
+                  <Link href="/staff" className="ops-quick-add-card is-list">
+                    <span className="ops-quick-add-ico">
+                      <Users className="h-5 w-5" />
+                    </span>
+                    <span className="ops-quick-add-copy">
+                      <strong>{t("dashboard.shortcutAllStaff")}</strong>
+                      <small>{t("dashboard.featuredAllStaff")}</small>
+                    </span>
+                    <span className="ops-quick-add-go" aria-hidden>
+                      <ArrowRight className="ops-quick-add-arrow h-4 w-4" />
+                    </span>
+                  </Link>
+                </>
               ) : null}
             </div>
           </div>
@@ -382,7 +418,14 @@ export function DashboardCommandCenter({
               <div className="ops-attention-label">
                 <AlertTriangle className="h-4 w-4" />
                 <span>{t("dashboard.commandAttention")}</span>
-                <em>{attention.length}</em>
+                <em>{pendingTotal.toLocaleString("en-IN")}</em>
+                <Link
+                  href={focus === "staff" ? "/staff/attendance" : "/admissions"}
+                  className="ops-attention-view"
+                >
+                  {t("dashboard.viewAll")}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
               <div className="ops-attention-chips">
                 {attention.map((item) => {
@@ -393,16 +436,20 @@ export function DashboardCommandCenter({
                       <span className="ops-attn-meta">
                         <strong>{item.count.toLocaleString("en-IN")}</strong>
                         <span>{item.label}</span>
+                        <small>{item.hint}</small>
                       </span>
-                      <ArrowRight className="ops-attn-arrow h-4 w-4" />
+                      <span className="ops-attn-go" aria-hidden>
+                        <ArrowRight className="ops-attn-arrow h-4 w-4" />
+                      </span>
                     </>
                   );
+                  const chipClass = `ops-attention-chip is-${item.tone}${item.count <= 0 ? " is-zero" : ""}`;
                   if (item.onClick) {
                     return (
                       <button
                         key={item.id}
                         type="button"
-                        className={`ops-attention-chip is-${item.tone}`}
+                        className={chipClass}
                         onClick={item.onClick}
                       >
                         {body}
@@ -413,7 +460,7 @@ export function DashboardCommandCenter({
                     <Link
                       key={item.id}
                       href={item.href || "/dashboard"}
-                      className={`ops-attention-chip is-${item.tone}`}
+                      className={chipClass}
                     >
                       {body}
                     </Link>

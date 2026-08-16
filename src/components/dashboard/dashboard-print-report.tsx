@@ -100,7 +100,10 @@ export function DashboardPrintReport({
 
   return (
     <div
-      className={cn("dashboard-print-root", locale === "gu" && "dashboard-print-locale-gu")}
+      className={cn(
+        "dashboard-print-root dashboard-print-students",
+        locale === "gu" && "dashboard-print-locale-gu",
+      )}
       aria-hidden="true"
       lang={locale === "gu" ? "gu" : "en"}
     >

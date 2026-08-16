@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/loader";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useT } from "@/i18n/locale-provider";
 import { PAGE_SIZE } from "@/lib/pagination";
+import { cachedGetJson, peekCachedJson } from "@/lib/client-fetch-cache";
 import { studentShortNameGu } from "@/lib/student-names";
 import {
   EMPTY_FILTERS,
@@ -21,7 +22,7 @@ import type { DashboardReportData } from "@/lib/dashboard-export";
 import type { ExportStudentRow } from "@/lib/dashboard-student-export";
 import type { DashboardExportOptions } from "@/lib/dashboard-export-options";
 
-export type DrillDimension = "category" | "standard" | "status" | "gender" | "class";
+export type DrillDimension = "category" | "standard" | "status" | "gender" | "class" | "all";
 
 export type DrillTarget = {
   dimension: DrillDimension;
@@ -37,6 +38,7 @@ type StudentRow = {
   category?: string | null;
   gender?: string | null;
   status?: string | null;
+  admissionStatus?: string | null;
   standard?: string | null;
   section?: string | null;
   firstName?: string | null;
@@ -54,7 +56,7 @@ function applyDrill(
 ): DashboardFilterValues {
   const next = { ...base };
   if (!target) return next;
-  if (target.dimension === "category") next.category = target.value;
+  if (target.dimension === "category" && target.value) next.category = target.value;
   if (target.dimension === "standard") next.standard = target.value;
   if (target.dimension === "status") next.status = target.value;
   if (target.dimension === "gender") next.gender = target.value;
@@ -118,8 +120,6 @@ export function DashboardDrillModal({
     setFilters(applyDrill(baseFilters, target));
     setSearch("");
     setPage(1);
-    setStudents([]);
-    setTotal(0);
     setError(null);
     setReady(true);
   }, [open, target, baseFilters]);
@@ -136,7 +136,6 @@ export function DashboardDrillModal({
     const delay = search.trim() ? 280 : 0;
 
     const timer = window.setTimeout(async () => {
-      setLoading(true);
       setError(null);
       try {
         const params = new URLSearchParams({
@@ -147,14 +146,28 @@ export function DashboardDrillModal({
         if (filters.standard) params.set("standard", filters.standard);
         if (filters.section) params.set("section", filters.section);
         if (filters.status) params.set("status", filters.status);
+        else params.set("includeDraft", "1");
         if (filters.category) params.set("category", filters.category);
         if (filters.gender && filters.gender !== "all") params.set("gender", filters.gender);
         if (filters.academicYear) params.set("academicYear", filters.academicYear);
+        params.set("lite", "1");
 
-        const res = await fetch(`/api/students?${params}`, { signal: controller.signal });
-        const data = await res.json();
+        const url = `/api/students?${params}`;
+        const cached = peekCachedJson<{ students?: StudentRow[]; total?: number; error?: string }>(url);
+        if (cached?.students) {
+          setStudents(cached.students);
+          setTotal(Number(cached.total) || 0);
+        } else {
+          setLoading(true);
+        }
+
+        const { ok, json: data } = await cachedGetJson<{
+          students?: StudentRow[];
+          total?: number;
+          error?: string;
+        }>(url, controller.signal);
         if (seq !== fetchSeq.current) return;
-        if (!res.ok) throw new Error(data?.error || "Failed to load");
+        if (!ok) throw new Error(data?.error || "Failed to load");
         setStudents(data.students ?? []);
         setTotal(Number(data.total) || 0);
       } catch (e: unknown) {
@@ -221,6 +234,12 @@ export function DashboardDrillModal({
             </div>
 
             <div className="ops-drill-exports">
+              <Link
+                href="/students"
+                className="text-xs font-bold text-blue-700 hover:underline whitespace-nowrap"
+              >
+                {t("dashboard.openFullPage")}
+              </Link>
               <Button
                 type="button"
                 variant="outline"
@@ -365,11 +384,15 @@ export function DashboardDrillModal({
                     <th>{t("dashboard.drillColGender")}</th>
                     <th>{t("dashboard.drillColMobile")}</th>
                     <th>{t("dashboard.drillColStatus")}</th>
+                    <th>{t("dashboard.admissionColStatus")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {students.map((s, i) => (
-                    <tr key={s.id}>
+                    <tr
+                      key={s.id}
+                      className={s.admissionStatus === "pending" ? "is-admission-pending" : undefined}
+                    >
                       <td className="ops-drill-sr">{(page - 1) * PAGE_SIZE + i + 1}</td>
                       <td className="ops-drill-gr">{s.grNumber?.trim() || "—"}</td>
                       <td>{s.rollNumber || "—"}</td>
@@ -391,6 +414,11 @@ export function DashboardDrillModal({
                       <td>{s.mobileNumber || "—"}</td>
                       <td>
                         <Badge status={s.status || "draft"} />
+                      </td>
+                      <td>
+                        <span className={`ops-pill is-${s.admissionStatus || "pending"}`}>
+                          {t(`admissionStatus.${s.admissionStatus || "pending"}`)}
+                        </span>
                       </td>
                     </tr>
                   ))}

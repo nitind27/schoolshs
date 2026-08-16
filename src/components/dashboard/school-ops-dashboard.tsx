@@ -2,21 +2,16 @@
 
 import { Spinner, PageLoader } from "@/components/ui/loader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Users, FileCheck, CheckCircle, AlertCircle, Upload, Send, ArrowRight, BookOpen, Briefcase, CreditCard, GraduationCap, Star, Calculator, CalendarDays, Award, UserPlus, Wallet, FileSpreadsheet, ClipboardCheck, Clock, Ban, ChevronDown, ChevronUp } from "lucide-react";
+import { Users, FileCheck, CheckCircle, AlertCircle, Upload, Send, BookOpen, Briefcase, CreditCard, Star, CalendarDays, Award, Wallet, FileSpreadsheet, ClipboardCheck, Clock, BarChart3, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/i18n/locale-provider";
 import {
-  DashboardFiltersBar,
   EMPTY_FILTERS,
   type DashboardFilterMeta,
   type DashboardFilterValues,
 } from "@/components/dashboard/dashboard-filters";
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
-import { DashboardToolbar } from "@/components/dashboard/dashboard-toolbar";
 import { DashboardPrintReport } from "@/components/dashboard/dashboard-print-report";
-import { DashboardSummaryTable } from "@/components/dashboard/dashboard-summary-table";
 import { DoughnutChart, VerticalBarChart, type ChartSegment } from "@/components/dashboard/charts";
 import {
   DashboardDrillModal,
@@ -43,6 +38,8 @@ import {
   type DashboardExportOptions,
 } from "@/lib/dashboard-export-options";
 import { BirthdayCelebrationCard } from "@/components/dashboard/birthday-celebration";
+import { DashboardReportsPanel } from "@/components/dashboard/dashboard-reports-panel";
+import { prefetchJson } from "@/lib/client-fetch-cache";
 import "@/components/dashboard/dashboard.css";
 
 interface Stats {
@@ -84,8 +81,38 @@ interface Stats {
 
 const STATUS_KEYS = ["draft", "ready", "pending", "submitted", "approved", "rejected"] as const;
 
-type InsightTab = "students" | "admission" | "staff" | "details";
-type MainTab = "students" | "staff";
+type MainTab = "students" | "staff" | "reports";
+
+function pulseSparkPoints(seed: number): string {
+  const n = 9;
+  const pts: string[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const t = i / (n - 1);
+    const wave =
+      0.38 +
+      0.26 * Math.sin(seed * 0.13 + i * 0.85) +
+      0.12 * Math.sin(seed * 0.07 + i * 1.65);
+    const x = t * 80;
+    const y = 28 - Math.max(0.14, Math.min(0.9, wave)) * 24;
+    pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+  return pts.join(" ");
+}
+
+function PulseSpark({ seed, color }: { seed: number; color: string }) {
+  return (
+    <svg className="ops-pulse-spark" viewBox="0 0 80 32" preserveAspectRatio="none" aria-hidden>
+      <polyline
+        points={pulseSparkPoints(Math.max(1, seed))}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function buildQuery(filters: DashboardFilterValues): string {
   const p = new URLSearchParams();
@@ -134,9 +161,7 @@ export default function SchoolOpsDashboard() {
   });
   const [defaultAcademicYear, setDefaultAcademicYear] = useState<string>("");
   const yearBootstrappedRef = useRef(false);
-  const [insightTab, setInsightTab] = useState<InsightTab>("students");
   const [mainTab, setMainTab] = useState<MainTab>("students");
-  const [showMoreCharts, setShowMoreCharts] = useState(false);
   const [drillTarget, setDrillTarget] = useState<DrillTarget | null>(null);
   const [drillOpen, setDrillOpen] = useState(false);
   const [quickList, setQuickList] = useState<{
@@ -144,6 +169,8 @@ export default function SchoolOpsDashboard() {
     value: string;
     label: string;
   } | null>(null);
+  const [hrMonth, setHrMonth] = useState(() => new Date().getMonth() + 1);
+  const [hrYear, setHrYear] = useState(() => new Date().getFullYear());
   const [hrSummary, setHrSummary] = useState<{
     month: number;
     year: number;
@@ -166,7 +193,7 @@ export default function SchoolOpsDashboard() {
   }, []);
 
   const openAllStudents = useCallback(() => {
-    setDrillTarget({ dimension: "category", value: "", label: t("dashboard.totalStudents") });
+    setDrillTarget({ dimension: "all", value: "", label: t("dashboard.totalStudents") });
     setDrillOpen(true);
   }, [t]);
 
@@ -193,7 +220,7 @@ export default function SchoolOpsDashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/staff-hr/summary")
+    fetch(`/api/staff-hr/summary?month=${hrMonth}&year=${hrYear}`)
       .then((r) => r.json())
       .then((d) => {
         if (!cancelled && !d?.error) setHrSummary(d);
@@ -204,7 +231,7 @@ export default function SchoolOpsDashboard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [hrMonth, hrYear]);
 
   useEffect(() => {
     let cancelled = false;
@@ -223,6 +250,31 @@ export default function SchoolOpsDashboard() {
       cancelled = true;
     };
   }, [filters.academicYear]);
+
+  useEffect(() => {
+    if (!stats && !hrSummary) return;
+    const run = () => {
+      prefetchJson(`/api/staff-hr/attendance?month=${hrMonth}&year=${hrYear}&lite=1`);
+      prefetchJson(`/api/staff-hr/payroll?month=${hrMonth}&year=${hrYear}&lite=1`);
+      prefetchJson("/api/staff?page=1&limit=10&active=true&lite=1");
+      prefetchJson("/api/admissions?status=pending&page=1&limit=10&lite=1");
+      const studentQ = new URLSearchParams({ page: "1", limit: "10", includeDraft: "1", lite: "1" });
+      if (filters.academicYear) studentQ.set("academicYear", filters.academicYear);
+      prefetchJson(`/api/students?${studentQ.toString()}`);
+    };
+    const idle =
+      typeof window !== "undefined" && "requestIdleCallback" in window
+        ? window.requestIdleCallback
+        : (cb: () => void) => window.setTimeout(cb, 350);
+    const id = idle(run);
+    return () => {
+      if (typeof window !== "undefined" && "cancelIdleCallback" in window && typeof id === "number") {
+        window.cancelIdleCallback(id);
+      } else {
+        window.clearTimeout(id as number);
+      }
+    };
+  }, [stats, hrSummary, hrMonth, hrYear, filters.academicYear]);
 
   const scholarshipHref = (status: string) =>
     userRole === "clerk" ? `/clerk/scholarship?status=${status}` : `/students?status=${status}`;
@@ -321,7 +373,7 @@ export default function SchoolOpsDashboard() {
       { id: "pending", label: t("admissionStatus.pending"), value: a.pending, color: "#f59e0b" },
       { id: "verified", label: t("admissionStatus.verified"), value: a.verified, color: "#059669" },
       { id: "rejected", label: t("admissionStatus.rejected"), value: a.rejected, color: "#e11d48" },
-    ].filter((s) => s.value > 0);
+    ];
   }, [stats, t]);
 
   const staffSegments = useMemo(() => {
@@ -350,7 +402,7 @@ export default function SchoolOpsDashboard() {
     return [
       { id: "paid", label: t("dashboard.hrPaid"), value: hrSummary.payrollPaid, color: "#059669" },
       { id: "pending", label: t("dashboard.hrPayPending"), value: hrSummary.payrollPending, color: "#d97706" },
-    ].filter((s) => s.value > 0);
+    ];
   }, [hrSummary, t]);
 
   const staffAttnSegments = useMemo(() => {
@@ -362,7 +414,7 @@ export default function SchoolOpsDashboard() {
     return [
       { id: "marked", label: t("dashboard.hrMarked"), value: marked, color: "#0d9488" },
       { id: "unmarked", label: t("dashboard.hrUnmarked"), value: unmarked, color: "#f59e0b" },
-    ].filter((s) => s.value > 0);
+    ];
   }, [hrSummary, t]);
 
   const reportData = useMemo((): DashboardReportData | null => {
@@ -467,19 +519,18 @@ export default function SchoolOpsDashboard() {
         aria-label={t("dashboard.mainTabsLabel")}
         role="tablist"
       >
-        <span className="ops-main-tabs-thumb" aria-hidden />
         <button
           type="button"
           role="tab"
           className={mainTab === "students" ? "is-active" : undefined}
           aria-selected={mainTab === "students"}
-          onClick={() => {
-            setMainTab("students");
-            if (insightTab === "staff") setInsightTab("students");
-          }}
+          onClick={() => setMainTab("students")}
         >
           <span className="ops-main-tab-ico is-student"><Users className="h-4 w-4" /></span>
-          <span className="ops-main-tab-label">{t("dashboard.mainTabStudents")}</span>
+          <span className="ops-main-tab-copy">
+            <span className="ops-main-tab-label">{t("dashboard.mainTabStudents")}</span>
+            <small>{t("dashboard.mainTabStudentsShort")}</small>
+          </span>
           <em className="ops-main-tab-count">{(stats?.total || 0).toLocaleString("en-IN")}</em>
         </button>
         <button
@@ -490,15 +541,32 @@ export default function SchoolOpsDashboard() {
           onClick={() => setMainTab("staff")}
         >
           <span className="ops-main-tab-ico is-staff"><Briefcase className="h-4 w-4" /></span>
-          <span className="ops-main-tab-label">{t("dashboard.mainTabStaff")}</span>
+          <span className="ops-main-tab-copy">
+            <span className="ops-main-tab-label">{t("dashboard.mainTabStaff")}</span>
+            <small>{t("dashboard.mainTabStaffShort")}</small>
+          </span>
           <em className="ops-main-tab-count">
             {(hrSummary?.totalStaff ?? stats?.totalStaff ?? 0).toLocaleString("en-IN")}
           </em>
         </button>
+        <button
+          type="button"
+          role="tab"
+          className={mainTab === "reports" ? "is-active" : undefined}
+          aria-selected={mainTab === "reports"}
+          onClick={() => setMainTab("reports")}
+        >
+          <span className="ops-main-tab-ico is-reports"><BarChart3 className="h-4 w-4" /></span>
+          <span className="ops-main-tab-copy">
+            <span className="ops-main-tab-label">{t("dashboard.mainTabReports")}</span>
+            <small>{t("dashboard.mainTabReportsShort")}</small>
+          </span>
+          <em className="ops-main-tab-count">{(stats?.totalClasses || 0).toLocaleString("en-IN")}</em>
+        </button>
       </nav>
 
       <div key={mainTab} className="ops-panel-view" data-panel={mainTab}>
-      {mainTab === "students" ? (
+      {mainTab === "students" && (
       <>
       <div className="ops-desk ops-desk-compact">
         <DashboardCommandCenter
@@ -529,498 +597,80 @@ export default function SchoolOpsDashboard() {
             >
               <span className="ops-pulse-ico"><Users className="h-4 w-4" /></span>
               <span className="ops-pulse-copy">
+                <span className="ops-pulse-kicker">{t("dashboard.totalStudents")}</span>
                 <strong>{(stats?.total || 0).toLocaleString("en-IN")}</strong>
-                <span>{t("dashboard.totalStudents")}</span>
+                <span className="ops-pulse-hint">{t("dashboard.pulseHintStudents")}</span>
               </span>
+              <PulseSpark seed={stats?.total || 1} color="#2563EB" />
             </button>
             <button
               type="button"
               className="ops-pulse-tile is-emerald"
-              onClick={() =>
-                openDrill("status", {
-                  id: "ready",
-                  label: t("status.ready"),
-                  value: stats?.byStatus?.ready || 0,
-                  color: "#059669",
-                })
-              }
+              onClick={() => setMainTab("staff")}
             >
-              <span className="ops-pulse-ico"><FileCheck className="h-4 w-4" /></span>
+              <span className="ops-pulse-ico"><Briefcase className="h-4 w-4" /></span>
               <span className="ops-pulse-copy">
-                <strong>{(stats?.byStatus?.ready || 0).toLocaleString("en-IN")}</strong>
-                <span>{t("dashboard.readyToSubmit")}</span>
+                <span className="ops-pulse-kicker">{t("dashboard.totalStaff")}</span>
+                <strong>{(hrSummary?.totalStaff ?? stats?.totalStaff ?? opsOverview?.staff?.total ?? 0).toLocaleString("en-IN")}</strong>
+                <span className="ops-pulse-hint">{t("dashboard.pulseHintStaff")}</span>
               </span>
+              <PulseSpark seed={hrSummary?.totalStaff ?? stats?.totalStaff ?? 2} color="#047857" />
             </button>
-            <button
-              type="button"
-              className="ops-pulse-tile is-amber"
-              onClick={() =>
-                openDrill("status", {
-                  id: "draft",
-                  label: t("status.draft"),
-                  value: stats?.byStatus?.draft || 0,
-                  color: "#d97706",
-                })
-              }
-            >
-              <span className="ops-pulse-ico"><AlertCircle className="h-4 w-4" /></span>
+            <Link href="/classes" className="ops-pulse-tile is-amber">
+              <span className="ops-pulse-ico"><BookOpen className="h-4 w-4" /></span>
               <span className="ops-pulse-copy">
-                <strong>{(stats?.byStatus?.draft || 0).toLocaleString("en-IN")}</strong>
-                <span>{t("dashboard.incomplete")}</span>
+                <span className="ops-pulse-kicker">{t("dashboard.totalClasses")}</span>
+                <strong>{(stats?.totalClasses || opsOverview?.classes?.total || 0).toLocaleString("en-IN")}</strong>
+                <span className="ops-pulse-hint">{t("dashboard.pulseHintClasses")}</span>
               </span>
-            </button>
-            <button
-              type="button"
-              className="ops-pulse-tile is-violet"
-              onClick={() =>
-                openDrill("status", {
-                  id: "submitted",
-                  label: t("status.submitted"),
-                  value: stats?.byStatus?.submitted || 0,
-                  color: "#7c3aed",
-                })
-              }
-            >
-              <span className="ops-pulse-ico"><CheckCircle className="h-4 w-4" /></span>
+              <PulseSpark seed={stats?.totalClasses || 3} color="#D97706" />
+            </Link>
+            <Link href="/subjects" className="ops-pulse-tile is-violet">
+              <span className="ops-pulse-ico"><Award className="h-4 w-4" /></span>
               <span className="ops-pulse-copy">
-                <strong>{(stats?.byStatus?.submitted || 0).toLocaleString("en-IN")}</strong>
-                <span>{t("dashboard.submitted")}</span>
+                <span className="ops-pulse-kicker">{t("dashboard.totalSubjects")}</span>
+                <strong>{(opsOverview?.subjects?.total || 0).toLocaleString("en-IN")}</strong>
+                <span className="ops-pulse-hint">{t("dashboard.pulseHintSubjects")}</span>
               </span>
-            </button>
-            <div className="ops-pulse-tile is-slate is-static">
+              <PulseSpark seed={opsOverview?.subjects?.total || 4} color="#7C3AED" />
+            </Link>
+            <Link href="/attendance" className="ops-pulse-tile is-slate">
+              <span className="ops-pulse-ico"><CalendarDays className="h-4 w-4" /></span>
               <span className="ops-pulse-copy">
-                <strong className="ops-pulse-rate">{stats?.completionRate || 0}%</strong>
-                <span>{t("dashboard.completionRate")}</span>
+                <span className="ops-pulse-kicker">{t("dashboard.attendanceMonth")}</span>
+                <strong>
+                  {(opsOverview?.attendance?.monthsMarkedThisMonth || 0).toLocaleString("en-IN")}
+                </strong>
+                <span className="ops-pulse-hint">{t("dashboard.pulseHintAttendance")}</span>
               </span>
-              <span className="ops-pulse-bar" aria-hidden>
-                <i style={{ width: `${Math.min(100, Math.max(0, stats?.completionRate || 0))}%` }} />
-              </span>
-            </div>
+              <PulseSpark seed={opsOverview?.attendance?.monthsMarkedThisMonth || 5} color="#0891B2" />
+            </Link>
           </div>
         </section>
       </div>
 
-      <section className="ops-control ops-control-compact" aria-label={t("dashboard.controlCenterTitle")}>
-        <div className="ops-top ops-top-tools">
-          <DashboardFiltersBar
-            filters={filters}
-            meta={filterMeta}
-            onChange={setFilters}
-            onReset={() =>
-              setFilters({
-                ...EMPTY_FILTERS,
-                academicYear: defaultAcademicYear || "",
-              })
-            }
-            resultCount={stats?.total}
-            defaultAcademicYear={defaultAcademicYear}
-          />
-          <DashboardToolbar
-            report={reportData}
-            filters={filters}
-            loading={loading}
-            onRefresh={() => loadStats(filters)}
-            onPrintReady={(rows, options) => {
-              setPrintStudents(rows);
-              setPrintOptions(options);
-            }}
-            lastUpdated={lastUpdated}
-          />
-        </div>
-      </section>
-
-      <section className="ops-insights ops-insights-compact">
-        <header className="ops-insights-head">
-          <div className="ops-insights-intro">
-            <p className="ops-eyebrow">{t("dashboard.insightsEyebrow")}</p>
-            <h2>{t("dashboard.insightsTitle")}</h2>
-            <p>{t("dashboard.insightsDesc")}</p>
-          </div>
-          <div className="ops-insights-tabs" role="tablist" aria-label={t("dashboard.insightsTitle")}>
+      <section className="ops-insights ops-insights-compact ops-student-manage">
+        <div className="ops-flow-more ops-staff-shortcuts">
+          <span className="ops-flow-more-label">{t("dashboard.studentShortcuts")}</span>
+          <div className="ops-flow-actions">
             {(
               [
-                ["students", t("dashboard.tabStudents")],
-                ["admission", t("dashboard.tabAdmission")],
-                ["details", t("dashboard.tabDetails")],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={insightTab === id}
-                className={insightTab === id ? "is-active" : undefined}
-                onClick={() => setInsightTab(id)}
-              >
-                {label}
-              </button>
-            ))}
+                { href: "/import", label: t("dashboard.shortcutImport"), icon: Upload, tone: "teal" as const },
+                { href: "/id-cards", label: t("dashboard.shortcutIdCards"), icon: CreditCard, tone: "violet" as const },
+                { href: "/attendance", label: t("dashboard.shortcutStudentAttn"), icon: CalendarDays, tone: "amber" as const },
+                { href: "/admissions", label: t("dashboard.shortcutVerifyDesk"), icon: ClipboardCheck, tone: "sky" as const },
+                { href: scholarshipHref("ready"), label: t("dashboard.readyToSubmit"), icon: Send, tone: "indigo" as const },
+              ]
+            ).map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.href + item.label} href={item.href} className="ops-flow-action" data-tone={item.tone}>
+                  <span className="ops-flow-action-ico"><Icon className="h-4 w-4" /></span>
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
           </div>
-        </header>
-
-        <div className="ops-insights-body" role="tabpanel">
-          {insightTab === "students" && (
-            <div className="ops-students-panel">
-              <div className="ops-flow-more ops-staff-shortcuts">
-                <span className="ops-flow-more-label">{t("dashboard.studentShortcuts")}</span>
-                <div className="ops-flow-actions">
-                  {(
-                    [
-                      { href: "/import", label: t("dashboard.shortcutImport"), icon: Upload, tone: "teal" as const },
-                      { href: "/id-cards", label: t("dashboard.shortcutIdCards"), icon: CreditCard, tone: "violet" as const },
-                      { href: "/attendance", label: t("dashboard.shortcutStudentAttn"), icon: CalendarDays, tone: "amber" as const },
-                      { href: "/students", label: t("dashboard.shortcutAllStudents"), icon: Users, tone: "indigo" as const },
-                      { href: scholarshipHref("ready"), label: t("dashboard.readyToSubmit"), icon: Send, tone: "sky" as const },
-                    ]
-                  ).map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link key={item.href + item.label} href={item.href} className="ops-flow-action" data-tone={item.tone}>
-                        <span className="ops-flow-action-ico"><Icon className="h-4 w-4" /></span>
-                        <span>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="ops-charts-grid">
-                <article className="ops-chart-card" data-tone="violet">
-                  <header>
-                    <h3>{t("dashboard.categoryChart")}</h3>
-                    <p>{t("dashboard.chartClickHint")}</p>
-                  </header>
-                  <DoughnutChart
-                    segments={categorySegments}
-                    centerValue={stats?.total || 0}
-                    centerLabel={t("dashboard.totalLabel")}
-                    size={148}
-                    onSegmentClick={(seg) => openDrill("category", seg)}
-                  />
-                </article>
-
-                <article className="ops-chart-card" data-tone="blue">
-                  <header>
-                    <h3>{t("dashboard.standardBarChart")}</h3>
-                    <p>{t("dashboard.chartClickHint")}</p>
-                  </header>
-                  {standardSegments.length > 0 ? (
-                    <VerticalBarChart
-                      segments={standardSegments}
-                      onSegmentClick={(seg) => openDrill("standard", seg)}
-                    />
-                  ) : (
-                    <div className="ops-insights-empty-box">
-                      <GraduationCap className="h-7 w-7 opacity-40" />
-                      <p>{t("dashboard.noClassData")}</p>
-                    </div>
-                  )}
-                </article>
-
-                {showMoreCharts ? (
-                  <>
-                    <article className="ops-chart-card" data-tone="teal">
-                      <header>
-                        <h3>{t("dashboard.statusChart")}</h3>
-                        <p>{t("dashboard.statusChartDesc")}</p>
-                      </header>
-                      {statusSegments.length > 0 ? (
-                        <VerticalBarChart
-                          segments={statusSegments}
-                          onSegmentClick={(seg) => openDrill("status", seg)}
-                        />
-                      ) : (
-                        <div className="ops-insights-empty-box">
-                          <p>{t("dashboard.noClassData")}</p>
-                        </div>
-                      )}
-                    </article>
-
-                    <article className="ops-chart-card" data-tone="pink">
-                      <header>
-                        <h3>{t("dashboard.genderChart")}</h3>
-                        <p>{t("dashboard.chartClickHint")}</p>
-                      </header>
-                      <DoughnutChart
-                        segments={genderSegments}
-                        centerValue={stats?.byGender?.total || 0}
-                        centerLabel={t("dashboard.totalLabel")}
-                        size={148}
-                        onSegmentClick={(seg) => openDrill("gender", seg)}
-                      />
-                    </article>
-
-                    <article className="ops-chart-card ops-chart-wide" data-tone="blue">
-                      <header>
-                        <h3>{t("dashboard.classBarChart")}</h3>
-                        <p>{t("dashboard.chartClickHint")}</p>
-                      </header>
-                      {classSegments.length > 0 ? (
-                        <VerticalBarChart
-                          segments={classSegments}
-                          onSegmentClick={(seg) => openDrill("class", seg)}
-                        />
-                      ) : (
-                        <div className="ops-insights-empty-box">
-                          <p>{t("dashboard.noClassData")}</p>
-                        </div>
-                      )}
-                    </article>
-                  </>
-                ) : null}
-              </div>
-
-              <div className="ops-charts-more">
-                <button
-                  type="button"
-                  className="ops-charts-more-btn"
-                  onClick={() => setShowMoreCharts((v) => !v)}
-                >
-                  {showMoreCharts ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                  {showMoreCharts
-                    ? t("dashboard.hideMoreCharts")
-                    : t("dashboard.showMoreCharts")}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {insightTab === "admission" && (
-            <div className="ops-admit">
-              {(() => {
-                const a = stats?.admissions;
-                const total = a?.total || 0;
-                const pending = a?.pending || 0;
-                const verified = a?.verified || 0;
-                const rejected = a?.rejected || 0;
-                const verifiedPct = total > 0 ? Math.round((verified / total) * 100) : 0;
-                const pendingPct = total > 0 ? Math.round((pending / total) * 100) : 0;
-                const rejectedPct = total > 0 ? Math.round((rejected / total) * 100) : 0;
-                return (
-                  <>
-                    <div className="ops-admit-hero">
-                      <div className="ops-admit-hero-text">
-                        <h3>{t("dashboard.admissionHeroTitle")}</h3>
-                        <p>{t("dashboard.admissionHeroDesc")}</p>
-                      </div>
-                      <div className="ops-admit-hero-stat">
-                        <strong>{verifiedPct}%</strong>
-                        <span>{t("dashboard.admissionVerifiedPct")}</span>
-                      </div>
-                      <div className="ops-admit-progress" aria-hidden>
-                        <span className="is-verified" style={{ width: `${verifiedPct}%` }} />
-                        <span className="is-pending" style={{ width: `${pendingPct}%` }} />
-                        <span className="is-rejected" style={{ width: `${rejectedPct}%` }} />
-                      </div>
-                    </div>
-
-                    <div className="ops-admit-kpis ops-admit-kpis-rich">
-                      <button
-                        type="button"
-                        className="ops-admit-kpi is-amber"
-                        onClick={() => openQuickList("admission", "pending", t("admissionStatus.pending"))}
-                      >
-                        <span className="ops-admit-kpi-ico"><Clock className="h-4 w-4" /></span>
-                        <span>{t("admissionStatus.pending")}</span>
-                        <strong>{pending.toLocaleString("en-IN")}</strong>
-                        <em>{pendingPct}%</em>
-                        <small>{t("dashboard.tapToOpenList")}</small>
-                      </button>
-                      <button
-                        type="button"
-                        className="ops-admit-kpi is-green"
-                        onClick={() => openQuickList("admission", "verified", t("admissionStatus.verified"))}
-                      >
-                        <span className="ops-admit-kpi-ico"><CheckCircle className="h-4 w-4" /></span>
-                        <span>{t("admissionStatus.verified")}</span>
-                        <strong>{verified.toLocaleString("en-IN")}</strong>
-                        <em>{verifiedPct}%</em>
-                        <small>{t("dashboard.tapToOpenList")}</small>
-                      </button>
-                      <button
-                        type="button"
-                        className="ops-admit-kpi is-rose"
-                        onClick={() => openQuickList("admission", "rejected", t("admissionStatus.rejected"))}
-                      >
-                        <span className="ops-admit-kpi-ico"><Ban className="h-4 w-4" /></span>
-                        <span>{t("admissionStatus.rejected")}</span>
-                        <strong>{rejected.toLocaleString("en-IN")}</strong>
-                        <em>{rejectedPct}%</em>
-                        <small>{t("dashboard.tapToOpenList")}</small>
-                      </button>
-                      <div className="ops-admit-kpi is-blue is-total">
-                        <span className="ops-admit-kpi-ico"><Users className="h-4 w-4" /></span>
-                        <span>{t("dashboard.admissionTotal")}</span>
-                        <strong>{total.toLocaleString("en-IN")}</strong>
-                        <small>{t("dashboard.admissionTotalHint")}</small>
-                      </div>
-                    </div>
-
-                    <div className="ops-flow-more ops-staff-shortcuts">
-                      <span className="ops-flow-more-label">{t("dashboard.admissionShortcuts")}</span>
-                      <div className="ops-flow-actions">
-                        <Link href="/admissions" className="ops-flow-action" data-tone="teal">
-                          <span className="ops-flow-action-ico"><ClipboardCheck className="h-4 w-4" /></span>
-                          <span>{t("dashboard.shortcutVerifyDesk")}</span>
-                        </Link>
-                        <button
-                          type="button"
-                          className="ops-flow-action"
-                          data-tone="amber"
-                          onClick={() => openQuickList("admission", "pending", t("admissionStatus.pending"))}
-                        >
-                          <span className="ops-flow-action-ico"><Clock className="h-4 w-4" /></span>
-                          <span>{t("dashboard.shortcutPendingList")}</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="ops-flow-action"
-                          data-tone="sky"
-                          onClick={() => openQuickList("admission", "verified", t("admissionStatus.verified"))}
-                        >
-                          <span className="ops-flow-action-ico"><CheckCircle className="h-4 w-4" /></span>
-                          <span>{t("dashboard.shortcutVerifiedList")}</span>
-                        </button>
-                        <Link href="/students/new" className="ops-flow-action" data-tone="violet">
-                          <span className="ops-flow-action-ico"><UserPlus className="h-4 w-4" /></span>
-                          <span>{t("dashboard.shortcutAddStudent")}</span>
-                        </Link>
-                      </div>
-                    </div>
-
-                    <div className="ops-admit-main">
-                      <article className="ops-chart-card ops-admit-chart" data-tone="teal">
-                        <header>
-                          <h3>{t("dashboard.admissionChartTitle")}</h3>
-                          <p>{t("dashboard.admissionChartDesc")}</p>
-                        </header>
-                        {admissionSegments.length > 0 ? (
-                          <DoughnutChart
-                            segments={admissionSegments}
-                            centerValue={total}
-                            centerLabel={t("dashboard.totalLabel")}
-                            size={152}
-                            onSegmentClick={(seg) =>
-                              openQuickList("admission", seg.id || "pending", seg.label)
-                            }
-                          />
-                        ) : (
-                          <div className="ops-insights-empty-box">
-                            <p>{t("dashboard.noClassData")}</p>
-                          </div>
-                        )}
-                      </article>
-
-                      <article className="ops-chart-card ops-admit-feed" data-tone="blue">
-                        <header className="ops-admit-feed-head">
-                          <div>
-                            <h3>{t("dashboard.admissionRecentTitle")}</h3>
-                            <p>{t("dashboard.admissionRecentDesc")}</p>
-                          </div>
-                          <button
-                            type="button"
-                            className="ops-admit-feed-all"
-                            onClick={() => openQuickList("admission", "verified", t("admissionStatus.verified"))}
-                          >
-                            {t("dashboard.viewAll")}
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </button>
-                        </header>
-                        {(stats?.admissionRecent || []).length > 0 ? (
-                          <div className="ops-admit-recent">
-                            {(stats?.admissionRecent || []).map((row) => {
-                              const initial = (row.name || "?").trim().charAt(0).toUpperCase();
-                              return (
-                                <Link key={row.id} href={`/students/${row.id}`} className="ops-admit-row">
-                                  <span className="ops-admit-avatar" aria-hidden>{initial}</span>
-                                  <div className="ops-admit-row-main">
-                                    <strong>{row.name || "—"}</strong>
-                                    <small>
-                                      {row.classLabel}
-                                      {row.category ? ` · ${row.category}` : ""}
-                                    </small>
-                                  </div>
-                                  <div className="ops-admit-meta">
-                                    <span>{row.verifiedBy}</span>
-                                    <em>
-                                      {row.verifiedAt
-                                        ? new Date(row.verifiedAt).toLocaleString("en-IN", {
-                                            dateStyle: "medium",
-                                            timeStyle: "short",
-                                          })
-                                        : "—"}
-                                    </em>
-                                  </div>
-                                </Link>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="ops-insights-empty-box">
-                            <ClipboardCheck className="h-7 w-7 opacity-40" />
-                            <p>{t("dashboard.admissionRecentEmpty")}</p>
-                            <Link href="/admissions" className="text-sm font-bold text-blue-700 hover:underline">
-                              {t("dashboard.shortcutVerifyDesk")}
-                            </Link>
-                          </div>
-                        )}
-                      </article>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          )}
-
-          {insightTab === "details" && (
-            <div className="ops-details-stack">
-              <DashboardSummaryTable
-                total={stats?.total || 0}
-                byStandard={tableByStandard}
-                byClass={tableByClass}
-                byCategory={tableByCategory}
-                byStatus={tableByStatus}
-                byGender={tableByGender}
-              />
-              <div className="ops-recent-panel">
-                <div className="ops-recent-actions">
-                  <h3 className="ops-details-subhead">{t("dashboard.recentSubmissions")}</h3>
-                  <Link href="/bulk-submit">
-                    <Button variant="ghost" size="sm" className="text-xs font-semibold text-violet-700 hover:bg-violet-50 hover:text-violet-800">
-                      {t("dashboard.newBatch")}
-                      <ArrowRight className="h-3 w-3" />
-                    </Button>
-                  </Link>
-                </div>
-                {stats?.recentSubmissions && stats.recentSubmissions.length > 0 ? (
-                  <div className="ops-recent-list">
-                    {stats.recentSubmissions.slice(0, 6).map((sub) => (
-                      <div key={sub.id} className="dashboard-submission-item">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-800">
-                            {t("dashboard.submissionStudentCount", { count: sub.totalCount })}
-                          </p>
-                          <p className="mt-0.5 text-xs text-slate-500">
-                            {new Date(sub.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
-                          </p>
-                        </div>
-                        <Badge status={sub.status === "completed" ? "submitted" : "pending"} />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="ops-insights-empty-box">
-                    <Send className="h-7 w-7 opacity-40" />
-                    <p>{t("dashboard.noSubmissions")}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </section>
 
@@ -1054,7 +704,9 @@ export default function SchoolOpsDashboard() {
       </section>
       ) : null}
       </>
-      ) : (
+      )}
+
+      {mainTab === "staff" && (
       <>
       <div className="ops-desk ops-desk-staff ops-desk-compact">
         <DashboardCommandCenter
@@ -1071,28 +723,33 @@ export default function SchoolOpsDashboard() {
           <div className="ops-pulse-grid ops-pulse-grid-staff">
             <button
               type="button"
-              className="ops-pulse-tile is-blue"
+              className="ops-pulse-tile is-emerald"
               onClick={() => openQuickList("staff", "", t("dashboard.staffActive"))}
             >
               <span className="ops-pulse-ico"><Briefcase className="h-4 w-4" /></span>
               <span className="ops-pulse-copy">
+                <span className="ops-pulse-kicker">{t("dashboard.staffActive")}</span>
                 <strong>{(hrSummary?.totalStaff ?? stats?.totalStaff ?? 0).toLocaleString("en-IN")}</strong>
-                <span>{t("dashboard.staffActive")}</span>
+                <span className="ops-pulse-hint">{t("dashboard.pulseHintStaff")}</span>
               </span>
+              <PulseSpark seed={hrSummary?.totalStaff ?? stats?.totalStaff ?? 1} color="#047857" />
             </button>
-            <button type="button" className="ops-pulse-tile is-emerald" onClick={() => setHrModal("attendance")}>
+            <button type="button" className="ops-pulse-tile is-slate" onClick={() => setHrModal("attendance")}>
               <span className="ops-pulse-ico"><ClipboardCheck className="h-4 w-4" /></span>
               <span className="ops-pulse-copy">
+                <span className="ops-pulse-kicker">{t("dashboard.hrAttendanceMarked")}</span>
                 <strong>
                   {(hrSummary?.attendanceMarked || 0).toLocaleString("en-IN")}
                   <small className="ops-pulse-of">/{(hrSummary?.totalStaff || stats?.totalStaff || 0).toLocaleString("en-IN")}</small>
                 </strong>
-                <span>{t("dashboard.hrAttendanceMarked")}</span>
+                <span className="ops-pulse-hint">{t("dashboard.pulseHintAttnMarked")}</span>
               </span>
+              <PulseSpark seed={hrSummary?.attendanceMarked || 2} color="#0891B2" />
             </button>
             <button type="button" className="ops-pulse-tile is-amber" onClick={() => setHrModal("attendanceUnmarked")}>
               <span className="ops-pulse-ico"><Clock className="h-4 w-4" /></span>
               <span className="ops-pulse-copy">
+                <span className="ops-pulse-kicker">{t("dashboard.hrAttendanceUnmarked")}</span>
                 <strong>
                   {(
                     hrSummary?.attendanceUnmarked ??
@@ -1102,22 +759,27 @@ export default function SchoolOpsDashboard() {
                     )
                   ).toLocaleString("en-IN")}
                 </strong>
-                <span>{t("dashboard.hrAttendanceUnmarked")}</span>
+                <span className="ops-pulse-hint">{t("dashboard.pulseHintAttnUnmarked")}</span>
               </span>
+              <PulseSpark seed={hrSummary?.attendanceUnmarked || 3} color="#D97706" />
             </button>
-            <button type="button" className="ops-pulse-tile is-violet" onClick={() => setHrModal("payrollPaid")}>
+            <button type="button" className="ops-pulse-tile is-blue" onClick={() => setHrModal("payrollPaid")}>
               <span className="ops-pulse-ico"><Wallet className="h-4 w-4" /></span>
               <span className="ops-pulse-copy">
+                <span className="ops-pulse-kicker">{t("dashboard.hrPaid")}</span>
                 <strong>{(hrSummary?.payrollPaid || 0).toLocaleString("en-IN")}</strong>
-                <span>{t("dashboard.hrPaid")}</span>
+                <span className="ops-pulse-hint">{t("dashboard.pulseHintPaid")}</span>
               </span>
+              <PulseSpark seed={hrSummary?.payrollPaid || 4} color="#2563EB" />
             </button>
             <button type="button" className="ops-pulse-tile is-rose" onClick={() => setHrModal("payrollPending")}>
               <span className="ops-pulse-ico"><AlertCircle className="h-4 w-4" /></span>
               <span className="ops-pulse-copy">
+                <span className="ops-pulse-kicker">{t("dashboard.hrPayPending")}</span>
                 <strong>{(hrSummary?.payrollPending || 0).toLocaleString("en-IN")}</strong>
-                <span>{t("dashboard.hrPayPending")}</span>
+                <span className="ops-pulse-hint">{t("dashboard.pulseHintPayPending")}</span>
               </span>
+              <PulseSpark seed={hrSummary?.payrollPending || 5} color="#E11D48" />
             </button>
           </div>
         </section>
@@ -1134,7 +796,9 @@ export default function SchoolOpsDashboard() {
                     { href: "/staff/attendance", label: t("dashboard.shortcutAttendance"), icon: CalendarDays, tone: "teal" as const },
                     { href: "/staff/payroll", label: t("dashboard.shortcutPayroll"), icon: Wallet, tone: "amber" as const },
                     { href: "/staff/salary-slip", label: t("dashboard.shortcutSalarySlip"), icon: FileSpreadsheet, tone: "violet" as const },
-                    { href: "/staff", label: t("dashboard.shortcutAllStaff"), icon: Briefcase, tone: "sky" as const },
+                    { href: "/staff/salary-statement", label: t("dashboard.shortcutStatement"), icon: FileSpreadsheet, tone: "indigo" as const },
+                    { href: "/staff/income-tax", label: t("dashboard.hubLinkTax"), icon: Receipt, tone: "sky" as const },
+                    { href: "/staff", label: t("dashboard.shortcutAllStaff"), icon: Briefcase, tone: "teal" as const },
                   ]
                 ).map((item) => {
                   const Icon = item.icon;
@@ -1224,6 +888,49 @@ export default function SchoolOpsDashboard() {
         hr={hrSummary}
       />
       </>
+      )}
+
+      {mainTab === "reports" && (
+        <DashboardReportsPanel
+          filters={filters}
+          filterMeta={filterMeta}
+          defaultAcademicYear={defaultAcademicYear}
+          onFiltersChange={setFilters}
+          stats={stats}
+          ops={opsOverview}
+          report={reportData}
+          loading={loading}
+          lastUpdated={lastUpdated}
+          onRefresh={() => loadStats(filters)}
+          onPrintReady={(rows, options) => {
+            setPrintStudents(rows);
+            setPrintOptions(options);
+          }}
+          categorySegments={categorySegments}
+          standardSegments={standardSegments}
+          statusSegments={statusSegments}
+          genderSegments={genderSegments}
+          classSegments={classSegments}
+          admissionSegments={admissionSegments}
+          staffSegments={staffSegments}
+          staffAttnSegments={staffAttnSegments}
+          payrollSegments={payrollSegments}
+          tableByStandard={tableByStandard}
+          tableByClass={tableByClass}
+          tableByCategory={tableByCategory}
+          tableByStatus={tableByStatus}
+          tableByGender={tableByGender}
+          onDrill={openDrill}
+          hr={hrSummary}
+          onHrPeriodChange={(month, year) => {
+            setHrMonth(month);
+            setHrYear(year);
+          }}
+          onOpenAllStudents={openAllStudents}
+          onOpenAdmission={(status, label) => openQuickList("admission", status, label)}
+          onOpenStaffList={(value, label) => openQuickList("staff", value, label)}
+          onOpenHr={setHrModal}
+        />
       )}
       </div>
 

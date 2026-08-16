@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
       withIdPhoto,
       recentSubmissions,
       attendanceMonths,
+      totalSubjects,
       studentsGender,
       byCategory,
       school,
@@ -94,6 +95,7 @@ export async function GET(request: NextRequest) {
           where: { schoolId, month, year },
         })
         .catch(() => 0),
+      prisma.schoolSubject.count({ where: { schoolId, isActive: true } }).catch(() => 0),
       prisma.student.findMany({ where: studentWhere, select: { gender: true } }),
       prisma.student.groupBy({
         by: ["category"],
@@ -154,6 +156,7 @@ export async function GET(request: NextRequest) {
       },
       classes: { total: totalClasses },
       staff: { total: totalStaff, active: activeStaff },
+      subjects: { total: totalSubjects },
       accounting: {
         vouchersTotal,
         pending: vouchersPending,

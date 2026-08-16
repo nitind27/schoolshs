@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Badge, CategoryBadge } from "@/components/ui/badge";
 import { CATEGORIES, STUDENT_STATUSES, GENDERS } from "@/lib/constants";
+import { MANAGE_STANDARDS } from "@/lib/class-structure";
 import {
   Search,
   Plus,
@@ -224,15 +225,19 @@ type Summary = {
   other: number;
   noClass: number;
   draftCount?: number;
+  byStandard?: Record<string, { total: number; pendingDivision: number }>;
 };
 
 function classLabel(student: StudentRow, t: (k: string, p?: Record<string, string>) => string) {
   if (student.schoolClass?.name) return student.schoolClass.name;
-  if (student.standard) {
+  if (student.standard && student.section) {
     return t("students.classLabel", {
       standard: student.standard,
       section: student.section || "",
     });
+  }
+  if (student.standard) {
+    return t("students.stdPendingDivision", { standard: student.standard });
   }
   return student.courseName || "—";
 }
@@ -280,6 +285,7 @@ function StudentsContent() {
   const [genderFilter, setGenderFilter] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [noClassOnly, setNoClassOnly] = useState(false);
+  const [pendingDivisionOnly, setPendingDivisionOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -346,6 +352,7 @@ function StudentsContent() {
       const cls = classes.find((c) => c.id === classId);
       if (cls?.standard) setStandardFilter(cls.standard);
     }
+    setPendingDivisionOnly(false);
     setPage(1);
     setSelected(new Set());
   };
@@ -368,6 +375,7 @@ function StudentsContent() {
     else if (standardFilter) params.set("standard", standardFilter);
     if (genderFilter) params.set("gender", genderFilter);
     if (noClassOnly) params.set("noClass", "1");
+    if (pendingDivisionOnly) params.set("pendingDivision", "1");
 
     try {
       const res = await fetch(`/api/students?${params}`);
@@ -395,6 +403,7 @@ function StudentsContent() {
     standardFilter,
     genderFilter,
     noClassOnly,
+    pendingDivisionOnly,
     isDraftView,
   ]);
 
@@ -412,6 +421,7 @@ function StudentsContent() {
     genderFilter,
     standardFilter && !classFilter ? standardFilter : "",
     noClassOnly ? "noClass" : "",
+    pendingDivisionOnly ? "pendingDivision" : "",
   ].filter(Boolean).length;
 
   const selectedClass = classes.find((c) => c.id === classFilter);
@@ -422,6 +432,7 @@ function StudentsContent() {
     setStandardFilter("");
     setGenderFilter("");
     setNoClassOnly(false);
+    setPendingDivisionOnly(false);
     setSearch("");
     setStatusFilter("");
     setPage(1);
@@ -442,13 +453,7 @@ function StudentsContent() {
     [t],
   );
 
-  const standardOptions = useMemo(
-    () =>
-      [...new Set(classes.map((c) => c.standard).filter(Boolean))].sort(
-        (a, b) => Number(a) - Number(b),
-      ),
-    [classes],
-  );
+  const standardOptions = [...MANAGE_STANDARDS];
 
   const classesForFilter = useMemo(() => {
     const list = standardFilter
@@ -532,8 +537,17 @@ function StudentsContent() {
   };
 
   const exportSelected = () => {
-    const ids = selected.size > 0 ? Array.from(selected).join(",") : "";
-    window.open(`/api/students/export?${ids ? `ids=${ids}` : ""}`, "_blank");
+    const params = new URLSearchParams();
+    if (selected.size > 0) {
+      params.set("ids", Array.from(selected).join(","));
+    } else {
+      if (classFilter) params.set("classId", classFilter);
+      else if (standardFilter) params.set("standard", standardFilter);
+      if (noClassOnly) params.set("noClass", "1");
+      if (pendingDivisionOnly) params.set("pendingDivision", "1");
+    }
+    const q = params.toString();
+    window.open(`/api/students/export${q ? `?${q}` : ""}`, "_blank");
   };
 
   const columns = useMemo<ColumnDef<StudentRow>[]>(
@@ -699,7 +713,13 @@ function StudentsContent() {
             {t("common.export")}
           </Button>
           <Link
-            href={classFilter ? `/students/new?classId=${classFilter}` : "/students/new"}
+            href={
+              classFilter
+                ? `/students/new?classId=${classFilter}`
+                : standardFilter
+                  ? `/students/new?standard=${encodeURIComponent(standardFilter)}`
+                  : "/students/new"
+            }
             className="w-full sm:w-auto"
           >
             <Button className="w-full whitespace-nowrap px-3 sm:w-auto sm:px-4">
@@ -790,6 +810,7 @@ function StudentsContent() {
               active:
                 !genderFilter &&
                 !noClassOnly &&
+                !pendingDivisionOnly &&
                 !classFilter &&
                 !standardFilter &&
                 !statusFilter &&
@@ -839,6 +860,7 @@ function StudentsContent() {
                 setNoClassOnly((v) => !v);
                 setClassFilter("");
                 setStandardFilter("");
+                setPendingDivisionOnly(false);
                 setPage(1);
               },
               idle: "border-amber-100 bg-amber-50/80 text-amber-950 hover:bg-amber-100",
@@ -889,6 +911,80 @@ function StudentsContent() {
         </div>
         ) : null}
 
+        {!isDraftView ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {MANAGE_STANDARDS.map((std) => {
+              const meta = summary?.byStandard?.[std];
+              const count = meta?.total ?? 0;
+              const pending = meta?.pendingDivision ?? 0;
+              const active = standardFilter === std && !noClassOnly;
+              return (
+                <button
+                  key={std}
+                  type="button"
+                  onClick={() => {
+                    setStandardFilter(std);
+                    setClassFilter("");
+                    setNoClassOnly(false);
+                    setPendingDivisionOnly(false);
+                    setPage(1);
+                    setSelected(new Set());
+                  }}
+                  className={cn(
+                    "rounded-2xl border px-3 py-3 text-left transition",
+                    active
+                      ? "border-teal-500 bg-teal-50"
+                      : "border-slate-200 bg-white hover:border-teal-200 hover:bg-teal-50/40",
+                  )}
+                >
+                  <p className="text-xs font-bold uppercase tracking-wide text-teal-800">
+                    {t("students.stdShort", { standard: std })}
+                  </p>
+                  <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+                    {count.toLocaleString("en-IN")}
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-medium text-slate-500">
+                    {t("students.stdBoardStudents", { count: String(count) })}
+                  </p>
+                  {pending > 0 ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setStandardFilter(std);
+                        setClassFilter("");
+                        setNoClassOnly(false);
+                        setPendingDivisionOnly(true);
+                        setPage(1);
+                        setSelected(new Set());
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setStandardFilter(std);
+                          setClassFilter("");
+                          setNoClassOnly(false);
+                          setPendingDivisionOnly(true);
+                          setPage(1);
+                        }
+                      }}
+                      className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800"
+                    >
+                      {t("students.stdBoardPending", { count: String(pending) })}
+                    </span>
+                  ) : (
+                    <span className="mt-2 inline-block text-[10px] font-semibold text-slate-400">
+                      {t("students.allInStandard")}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
         <Card className="overflow-hidden rounded-2xl border-slate-200/80 shadow-sm">
           <div className="border-b border-slate-100 bg-white p-3 sm:p-4">
             {/* Search + clear */}
@@ -922,6 +1018,7 @@ function StudentsContent() {
                     setStandardFilter("");
                     setClassFilter("");
                     setNoClassOnly(false);
+                    setPendingDivisionOnly(false);
                     setPage(1);
                   }}
                   className={cn(
@@ -941,11 +1038,12 @@ function StudentsContent() {
                       setStandardFilter(std);
                       setClassFilter("");
                       setNoClassOnly(false);
+                      setPendingDivisionOnly(false);
                       setPage(1);
                     }}
                     className={cn(
                       "min-h-9 cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold transition min-[380px]:px-3 min-[380px]:text-xs",
-                      standardFilter === std
+                      standardFilter === std && !pendingDivisionOnly
                         ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm shadow-blue-200"
                         : "bg-slate-50 text-slate-600 hover:bg-sky-50 hover:text-sky-700 border border-slate-200 hover:border-sky-200",
                     )}
@@ -953,6 +1051,25 @@ function StudentsContent() {
                     {t("students.stdShort", { standard: std })}
                   </button>
                 ))}
+                {standardFilter ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingDivisionOnly((v) => !v);
+                      setClassFilter("");
+                      setNoClassOnly(false);
+                      setPage(1);
+                    }}
+                    className={cn(
+                      "min-h-9 cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold transition min-[380px]:px-3 min-[380px]:text-xs",
+                      pendingDivisionOnly
+                        ? "bg-amber-500 text-white shadow-sm"
+                        : "bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-100",
+                    )}
+                  >
+                    {t("students.pendingDivision")}
+                  </button>
+                ) : null}
               </div>
             )}
 

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
@@ -25,13 +25,18 @@ const HEADERS = [
   "Pay Level / Scale",
 ];
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth();
+    const designation = new URL(request.url).searchParams.get("designation")?.trim() || "";
 
     const [staff, school] = await Promise.all([
       prisma.staff.findMany({
-        where: { schoolId: session.schoolId, isActive: true },
+        where: {
+          schoolId: session.schoolId,
+          isActive: true,
+          ...(designation ? { designation } : {}),
+        },
         orderBy: [{ designation: "asc" }, { firstName: "asc" }],
       }),
       prisma.school.findUnique({

@@ -1,7 +1,8 @@
 import { normalizeGender, parseImportDate } from "@/lib/import/import-formats";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { CSV_HEADERS, CSV_HEADER_LABELS } from "@/lib/constants";
+import { CSV_HEADERS, CSV_HEADER_LABELS, standardToCourseName, standardToCurrentYear } from "@/lib/constants";
+import { defaultCourseTypeForStandard } from "@/lib/student-academic-rules";
 import {
   normalizeStudentRow,
   validateStudent,
@@ -202,7 +203,59 @@ export function applyColumnMap(
         continue;
       row[fieldKey] = coerceFieldValue(fieldKey, val);
     }
-    return row;
+    return fillImportDefaults(row);
+  });
+}
+
+/** Fill names, address copy, course from standard — so a filled template can save. */
+export function fillImportDefaults(row: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...row };
+  const first = String(out.firstName || "").trim();
+  const middle = String(out.middleName || "").trim();
+  const surname = String(out.surname || "").trim();
+  if (!String(out.aadhaarName || "").trim()) {
+    out.aadhaarName = [first, middle, surname].filter(Boolean).join(" ");
+  }
+  if (!String(out.permanentAddress || "").trim() && String(out.currentAddress || "").trim()) {
+    out.permanentAddress = out.currentAddress;
+    out.permanentDistrict = out.permanentDistrict || out.currentDistrict;
+    out.permanentCity = out.permanentCity || out.currentCity;
+    out.permanentPincode = out.permanentPincode || out.currentPincode;
+  }
+  const std = String(out.standard || "").replace(/^class\s+/i, "").trim();
+  if (std) {
+    out.standard = std;
+    if (!String(out.courseName || "").trim()) out.courseName = standardToCourseName(std);
+    if (!String(out.courseType || "").trim()) out.courseType = defaultCourseTypeForStandard(std);
+    if (!String(out.currentYear || "").trim()) out.currentYear = standardToCurrentYear(std);
+  }
+  if (!String(out.financialYear || "").trim()) out.financialYear = "2025-26";
+  if (!String(out.maritalStatus || "").trim()) out.maritalStatus = "Unmarried";
+  if (!String(out.habitationType || "").trim()) out.habitationType = "Own";
+  if (!String(out.residentType || "").trim()) out.residentType = "Rural";
+  if (!String(out.admissionType || "").trim()) out.admissionType = "Regular";
+  return out;
+}
+
+function isSampleImportRow(row: Record<string, unknown>): boolean {
+  const aadhaar = String(row.aadhaarNumber || "").replace(/\s/g, "");
+  const first = String(row.firstName || "").trim().toUpperCase();
+  if (aadhaar === "123456789012") return true;
+  if (first === "FIRST NAME") return true;
+  const labels = new Set(Object.values(CSV_HEADER_LABELS).map((l) => l.toLowerCase()));
+  if (first && labels.has(first.toLowerCase())) return true;
+  return false;
+}
+
+function dropGuideAndSampleRows(
+  rawRows: Record<string, unknown>[],
+  columnMap: Record<string, ImportFieldKey | "">,
+): Record<string, unknown>[] {
+  const mapped = applyColumnMap(rawRows, columnMap);
+  return rawRows.filter((_, i) => {
+    const row = mapped[i];
+    if (!row) return false;
+    return !isSampleImportRow(row);
   });
 }
 
@@ -246,10 +299,14 @@ export async function parseStudentImportFile(
       transformHeader: (h) => h.trim(),
     });
     const fileHeaders = parsed.meta.fields || [];
-    const rawRows = (parsed.data || []).filter((r) =>
-      Object.values(r).some(
-        (v) => v !== null && v !== undefined && String(v).trim() !== "",
+    const columnMap = autoMapColumns(fileHeaders);
+    const rawRows = dropGuideAndSampleRows(
+      (parsed.data || []).filter((r) =>
+        Object.values(r).some(
+          (v) => v !== null && v !== undefined && String(v).trim() !== "",
+        ),
       ),
+      columnMap,
     );
     return {
       fileName: file.name,
@@ -257,7 +314,7 @@ export async function parseStudentImportFile(
       selectedSheet: "CSV",
       fileHeaders,
       rawRows,
-      columnMap: autoMapColumns(fileHeaders),
+      columnMap,
     };
   }
 
@@ -267,7 +324,7 @@ export async function parseStudentImportFile(
     cellDates: false,
   });
   const sheetNames = workbook.SheetNames.filter(
-    (n) => !/^instructions?$/i.test(n),
+    (n) => !/^(instructions?|read me|lists|column guide)$/i.test(n),
   );
   const selectedSheet =
     sheetName && sheetNames.includes(sheetName) ? sheetName : sheetNames[0];
@@ -309,13 +366,14 @@ export async function parseStudentImportFile(
   );
 
   const fileHeaders = filtered.length > 0 ? Object.keys(filtered[0]) : [];
+  const columnMap = autoMapColumns(fileHeaders);
   return {
     fileName: file.name,
     sheetNames,
     selectedSheet,
     fileHeaders,
-    rawRows: filtered,
-    columnMap: autoMapColumns(fileHeaders),
+    rawRows: dropGuideAndSampleRows(filtered, columnMap),
+    columnMap,
   };
 }
 
@@ -519,4 +577,149 @@ export const REQUIRED_IMPORT_FIELDS: ImportFieldKey[] = [
   "gender",
   "aadhaarNumber",
   "mobileNumber",
+  "standard",
 ];
+
+export const IMPORT_FIELD_GROUPS: { id: string; title: string; fields: ImportFieldKey[] }[] = [
+  {
+    id: "personal",
+    title: "Personal",
+    fields: [
+      "firstName",
+      "middleName",
+      "surname",
+      "aadhaarName",
+      "dateOfBirth",
+      "gender",
+      "aadhaarNumber",
+      "mobileNumber",
+      "email",
+      "bloodGroup",
+      "apaarId",
+      "panNumber",
+      "rationCardNumber",
+    ],
+  },
+  {
+    id: "family",
+    title: "Family",
+    fields: [
+      "motherName",
+      "fatherName",
+      "guardianName",
+      "category",
+      "caste",
+      "religion",
+      "parentOccupation",
+      "annualFamilyIncome",
+      "isOrphan",
+      "familySize",
+    ],
+  },
+  {
+    id: "address",
+    title: "Address",
+    fields: [
+      "currentAddress",
+      "currentDistrict",
+      "currentCity",
+      "currentPincode",
+      "permanentAddress",
+      "permanentDistrict",
+      "permanentCity",
+      "permanentPincode",
+      "residentType",
+      "habitationType",
+    ],
+  },
+  {
+    id: "academic",
+    title: "Academic",
+    fields: [
+      "standard",
+      "section",
+      "rollNumber",
+      "grNumber",
+      "financialYear",
+      "scholarshipScheme",
+      "courseType",
+      "courseName",
+      "institutionName",
+      "institutionDistrict",
+      "currentYear",
+      "board10th",
+      "percentage10th",
+      "year10th",
+      "board12th",
+      "percentage12th",
+      "year12th",
+      "previousQualification",
+      "admissionType",
+      "startDate",
+      "completionDate",
+    ],
+  },
+  {
+    id: "hostel",
+    title: "Hostel",
+    fields: ["isHosteler", "hostelType", "hostelName", "maritalStatus", "childUid"],
+  },
+  {
+    id: "bank",
+    title: "Bank",
+    fields: ["bankName", "branchName", "accountNumber", "ifscCode", "accountHolderName"],
+  },
+];
+
+export const IMPORT_PRESETS: Record<string, ImportFieldKey[]> = {
+  essential: [
+    "firstName",
+    "middleName",
+    "surname",
+    "aadhaarName",
+    "dateOfBirth",
+    "gender",
+    "aadhaarNumber",
+    "mobileNumber",
+    "standard",
+    "grNumber",
+  ],
+  admission: [
+    "firstName",
+    "middleName",
+    "surname",
+    "aadhaarName",
+    "dateOfBirth",
+    "gender",
+    "aadhaarNumber",
+    "mobileNumber",
+    "motherName",
+    "fatherName",
+    "category",
+    "religion",
+    "parentOccupation",
+    "annualFamilyIncome",
+    "currentAddress",
+    "currentDistrict",
+    "currentCity",
+    "currentPincode",
+    "standard",
+    "grNumber",
+    "financialYear",
+  ],
+  full: [...CSV_HEADERS],
+};
+
+export function resolveImportTemplateFields(requested: string[]): ImportFieldKey[] {
+  const allowed = new Set<string>(CSV_HEADERS);
+  const picked = requested.filter((k): k is ImportFieldKey => allowed.has(k));
+  const ordered: ImportFieldKey[] = [];
+  const seen = new Set<ImportFieldKey>();
+  for (const k of [...REQUIRED_IMPORT_FIELDS, ...picked]) {
+    if (!seen.has(k)) {
+      seen.add(k);
+      ordered.push(k);
+    }
+  }
+  return ordered;
+}

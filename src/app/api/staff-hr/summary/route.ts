@@ -1,13 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
     const now = new Date();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
+    const { searchParams } = new URL(request.url);
+    const monthRaw = parseInt(searchParams.get("month") || "", 10);
+    const yearRaw = parseInt(searchParams.get("year") || "", 10);
+    const month =
+      Number.isFinite(monthRaw) && monthRaw >= 1 && monthRaw <= 12
+        ? monthRaw
+        : now.getMonth() + 1;
+    const year =
+      Number.isFinite(yearRaw) && yearRaw >= 2000 && yearRaw <= 2100
+        ? yearRaw
+        : now.getFullYear();
 
     const [totalStaff, withSalary, attendanceMarked, payrollPending, payrollPaid] = await Promise.all([
       prisma.staff.count({ where: { schoolId: session.schoolId, isActive: true } }),

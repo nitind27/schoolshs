@@ -16,6 +16,7 @@ import {
   CURRENT_YEARS,
   BOARDS,
   BLOOD_GROUPS,
+  SENIOR_STREAMS,
   standardToCourseName,
   standardToCurrentYear,
 } from "@/lib/constants";
@@ -32,6 +33,7 @@ import { CategoryBadge } from "@/components/ui/badge";
 import { useT } from "@/i18n/locale-provider";
 import { StudentDocumentsSection } from "@/components/documents/student-documents-section";
 import { GrSetupPanel } from "@/components/forms/gr-setup-panel";
+import { MANAGE_STANDARDS } from "@/lib/class-structure";
 import { hasDraftContent, isDraftDobPlaceholder, stripDraftPlaceholdersForForm } from "@/lib/student-draft";
 import { getCompletionPercentage } from "@/lib/validation";
 import { DateField } from "@/components/ui/date-field";
@@ -97,6 +99,7 @@ function ensureGuNameFields(data: FormData): FormData {
 interface StudentFormProps {
   initialData?: FormData;
   initialClassId?: string;
+  initialStandard?: string;
   studentId?: string;
   onSubmit: (data: FormData) => Promise<string | void>;
   onFinish?: () => void;
@@ -106,6 +109,7 @@ interface StudentFormProps {
 export function StudentForm({
   initialData = {},
   initialClassId,
+  initialStandard,
   studentId: studentIdProp,
   onSubmit,
   onFinish,
@@ -167,9 +171,10 @@ export function StudentForm({
     classId: isEditMode
       ? initialData.classId || initialClassId || undefined
       : undefined,
+    standard: isEditMode ? initialData.standard : initialStandard || initialData.standard,
     ...initialData,
     // New student: never start with a class (assign on final step)
-    ...(isEditMode ? {} : { classId: undefined }),
+    ...(isEditMode ? {} : { classId: undefined, ...(initialStandard ? { standard: initialStandard } : {}) }),
     familySize:
       initialData.familySize !== undefined && initialData.familySize !== null
         ? Number(initialData.familySize)
@@ -650,9 +655,14 @@ export function StudentForm({
   };
 
   const handleSubmit = async (): Promise<string | void> => {
-    if (!form.classId) {
-      alert(t("studentForm.assignClassRequired"));
-      setStep(deferClassAssignment ? 5 : 1);
+    if (deferClassAssignment && !form.standard) {
+      alert(t("studentForm.assignStandardRequired"));
+      setStep(5);
+      return;
+    }
+    if (!deferClassAssignment && !form.classId && !form.standard) {
+      alert(t("studentForm.assignStandardRequired"));
+      setStep(1);
       return;
     }
     setLoading(true);
@@ -1128,7 +1138,7 @@ export function StudentForm({
                 {grLocked && (
                   <p className="sf-hint">{t("studentForm.grClassLockedHint")}</p>
                 )}
-                {classes.length === 0 && (
+                {classes.length === 0 && !deferClassAssignment && (
                   <div className="sf-note sf-note--warn" style={{ marginTop: "0.75rem" }}>
                     No classes configured. Admin must create classes/divisions first in Classes module.
                   </div>
@@ -1505,9 +1515,9 @@ export function StudentForm({
               {deferClassAssignment && (
                 <div className="sf-block sf-block--academic">
                   <div className="sf-block__head">
-                    <h4 className="sf-block__title">{t("studentForm.assignClassFinalTitle")}</h4>
+                    <h4 className="sf-block__title">{t("studentForm.assignStandardFinalTitle")}</h4>
                     <p className="sf-hint" style={{ marginTop: "0.25rem" }}>
-                      {t("studentForm.assignClassFinalDesc")}
+                      {t("studentForm.assignStandardFinalDesc")}
                     </p>
                   </div>
                   <div className="sf-grid">
@@ -1526,21 +1536,58 @@ export function StudentForm({
                       }}
                     />
                     <Select
-                      label={t("fields.assignClass")}
+                      label={t("fields.standard")}
                       required
-                      emptyLabel={t("common.selectClass")}
-                      options={classes
-                        .filter((c) => c.academicYear === (form.financialYear || "2025-26"))
-                        .map((c) => ({ value: c.id, label: c.name }))}
-                      value={form.classId || ""}
-                      onChange={(e) => update("classId", e.target.value || null)}
+                      emptyLabel={t("studentForm.selectStandard")}
+                      options={MANAGE_STANDARDS.map((std) => ({
+                        value: std,
+                        label: t("students.stdShort", { standard: std }),
+                      }))}
+                      value={form.standard || ""}
+                      onChange={(e) => {
+                        const std = e.target.value;
+                        setForm((prev) => ({
+                          ...prev,
+                          standard: std || null,
+                          classId: null,
+                          section: "",
+                          courseName: std ? standardToCourseName(std) : prev.courseName,
+                          currentYear: std ? standardToCurrentYear(std) : prev.currentYear,
+                          courseType: std
+                            ? defaultCourseTypeForStandard(std)
+                            : prev.courseType,
+                        }));
+                      }}
                     />
+                    {form.standard === "11" || form.standard === "12" ? (
+                      <Select
+                        label={t("students.stream")}
+                        emptyLabel={t("common.select")}
+                        options={SENIOR_STREAMS.map((s) => ({ value: s, label: s }))}
+                        value={
+                          SENIOR_STREAMS.includes(form.courseType as (typeof SENIOR_STREAMS)[number])
+                            ? form.courseType || ""
+                            : ""
+                        }
+                        onChange={(e) =>
+                          update(
+                            "courseType",
+                            e.target.value || defaultCourseTypeForStandard(form.standard),
+                          )
+                        }
+                      />
+                    ) : null}
                   </div>
-                  {!form.classId && (
+                  {!form.standard && (
                     <p className="sf-note sf-note--warn" style={{ marginTop: "0.75rem" }}>
-                      {t("studentForm.assignClassRequired")}
+                      {t("studentForm.assignStandardRequired")}
                     </p>
                   )}
+                  {form.standard ? (
+                    <p className="sf-note sf-note--ok" style={{ marginTop: "0.75rem" }}>
+                      {t("studentForm.divisionLaterHint", { standard: form.standard })}
+                    </p>
+                  ) : null}
                 </div>
               )}
 
@@ -1559,10 +1606,13 @@ export function StudentForm({
                   [t("fields.mobile"), form.mobileNumber],
                   [t("fields.category"), form.category],
                   [t("fields.dob"), form.dateOfBirth],
-                  [t("fields.class"), form.classId
-                    ? (classes.find((c) => c.id === form.classId)?.name ||
-                      (form.standard ? `Class ${form.standard}-${form.section || ""}` : "—"))
-                    : "—"],
+                  [t("fields.class"),
+                    form.classId
+                      ? (classes.find((c) => c.id === form.classId)?.name ||
+                        (form.standard ? `Class ${form.standard}-${form.section || ""}` : "—"))
+                      : form.standard
+                        ? t("students.stdPendingDivision", { standard: form.standard })
+                        : "—"],
                   [t("fields.roll"), form.rollNumber],
                   [t("fields.childUid"), form.childUid],
                   [t("fields.apaarId"), form.apaarId],

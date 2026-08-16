@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import type { UserRole } from "@/lib/roles";
 import { canUseChat } from "@/lib/chat/types";
+import { schoolDayStartUtc } from "@/lib/school-timezone";
 
 export type NotificationType =
   | "chat"
@@ -107,10 +108,30 @@ export async function getChatUnreadTotal(userId: string): Promise<number> {
 
 export async function listUserNotifications(
   userId: string,
-  take = 20
+  take = 20,
+  schoolId?: string | null,
 ): Promise<NotificationItem[]> {
+  const dayStart = schoolId ? schoolDayStartUtc() : null;
+
   const rows = await prisma.notification.findMany({
-    where: { userId },
+    where: {
+      userId,
+      ...(schoolId
+        ? {
+            OR: [
+              {
+                type: { not: "birthday" },
+                OR: [{ schoolId }, { schoolId: null }],
+              },
+              {
+                type: "birthday",
+                schoolId,
+                createdAt: { gte: dayStart! },
+              },
+            ],
+          }
+        : {}),
+    },
     orderBy: { createdAt: "desc" },
     take,
   });
@@ -126,9 +147,31 @@ export async function listUserNotifications(
   }));
 }
 
-export async function getUnreadNotificationCount(userId: string): Promise<number> {
+export async function getUnreadNotificationCount(
+  userId: string,
+  schoolId?: string | null,
+): Promise<number> {
+  const dayStart = schoolId ? schoolDayStartUtc() : null;
   return prisma.notification.count({
-    where: { userId, readAt: null },
+    where: {
+      userId,
+      readAt: null,
+      ...(schoolId
+        ? {
+            OR: [
+              {
+                type: { not: "birthday" },
+                OR: [{ schoolId }, { schoolId: null }],
+              },
+              {
+                type: "birthday",
+                schoolId,
+                createdAt: { gte: dayStart! },
+              },
+            ],
+          }
+        : {}),
+    },
   });
 }
 
@@ -154,24 +197,19 @@ export async function buildNotificationFeed(
 ) {
   const take = opts?.take ?? 20;
 
-  // Ensure today's birthday notification exists for school staff
+  // Ensure today's birthday notification exists for this school only
   if (opts?.schoolId) {
     try {
-      const { getTodayBirthdays, ensureBirthdayNotification } = await import(
-        "@/lib/birthdays"
-      );
+      const {
+        getTodayBirthdays,
+        ensureBirthdayNotification,
+        cleanupBirthdayNotifications,
+        birthdayNotificationCopy,
+      } = await import("@/lib/birthdays");
+      await cleanupBirthdayNotifications(userId, opts.schoolId);
       const bdays = await getTodayBirthdays(opts.schoolId);
       if (bdays.total > 0) {
-        const names = bdays.all
-          .slice(0, 3)
-          .map((p) => p.name)
-          .join(", ");
-        const more = bdays.total > 3 ? ` +${bdays.total - 3}` : "";
-        const title =
-          bdays.total === 1
-            ? `Birthday today · ${names}`
-            : `${bdays.total} birthdays today`;
-        const body = `${names}${more} · ${bdays.staff.length} staff · ${bdays.students.length} students`;
+        const { title, body } = birthdayNotificationCopy(bdays);
         await ensureBirthdayNotification({
           userId,
           schoolId: opts.schoolId,
@@ -186,8 +224,8 @@ export async function buildNotificationFeed(
   }
 
   const [items, eventUnread, chatUnread] = await Promise.all([
-    listUserNotifications(userId, take),
-    getUnreadNotificationCount(userId),
+    listUserNotifications(userId, take, opts?.schoolId),
+    getUnreadNotificationCount(userId, opts?.schoolId),
     canUseChat(role) ? getChatUnreadTotal(userId) : Promise.resolve(0),
   ]);
 

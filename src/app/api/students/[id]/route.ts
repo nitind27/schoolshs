@@ -6,6 +6,7 @@ import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { applyDraftDefaults } from "@/lib/student-draft";
 import { syncGrEntryForStudent } from "@/lib/gr-student-sync";
 import { toStudentUncheckedUpdate } from "@/lib/student-write";
+import { applyStudentPlacement } from "@/lib/student-placement";
 import { deleteStudentCompletely } from "@/lib/student-delete";
 import {
   assertStudentAccountEmailAvailable,
@@ -48,11 +49,21 @@ export async function PUT(
       isDraft ? applyDraftDefaults(normalizeStudentRow({ ...existing, ...body })) : normalizeStudentRow(body),
     );
 
-    if (!data.classId && !isDraft) {
-      return NextResponse.json({ error: "Class is required. Please assign a class before updating student." }, { status: 400 });
-    }
-
-    if (data.classId) {
+    if (!isDraft) {
+      let assignedClass = null;
+      if (data.classId) {
+        assignedClass = await prisma.schoolClass.findFirst({
+          where: { id: data.classId, schoolId: session.schoolId },
+        });
+        if (!assignedClass) {
+          return NextResponse.json({ error: "Selected class not found for this school" }, { status: 400 });
+        }
+      }
+      const placed = applyStudentPlacement(data as Record<string, unknown>, assignedClass);
+      if (placed.error) {
+        return NextResponse.json({ error: placed.error }, { status: 400 });
+      }
+    } else if (data.classId) {
       const assignedClass = await prisma.schoolClass.findFirst({
         where: { id: data.classId, schoolId: session.schoolId },
       });

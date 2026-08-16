@@ -7,6 +7,8 @@ import { applyDraftDefaults } from "@/lib/student-draft";
 import { findStudentByGrNumber, syncGrEntryForStudent } from "@/lib/gr-student-sync";
 import { genderDbMatchValues } from "@/lib/gender-utils";
 import { toStudentUncheckedCreate, toStudentUncheckedUpdate } from "@/lib/student-write";
+import { applyStudentPlacement } from "@/lib/student-placement";
+import { MANAGE_STANDARDS } from "@/lib/class-structure";
 import {
   assertStudentAccountEmailAvailable,
   syncStudentPortalAccount,
@@ -36,6 +38,8 @@ export async function GET(request: NextRequest) {
     const includeArchived = searchParams.get("includeArchived") === "1";
     const includeDraft = searchParams.get("includeDraft") === "1";
     const noClass = searchParams.get("noClass") === "1";
+    const pendingDivision = searchParams.get("pendingDivision") === "1";
+    const lite = searchParams.get("lite") === "1";
     const page = parseInt(searchParams.get("page") || "1");
     // Auto-Apply and similar screens request up to 500 ready students.
     const limit = Math.min(parseInt(searchParams.get("limit") || "25") || 25, 500);
@@ -63,6 +67,14 @@ export async function GET(request: NextRequest) {
 
     if (noClass) {
       where.classId = null;
+      where.AND = [{ OR: [{ standard: null }, { standard: "" }] }];
+    } else if (pendingDivision) {
+      where.classId = null;
+      where.AND = [
+        { standard: { not: null } },
+        { NOT: { standard: "" } },
+      ];
+      if (standard) where.standard = standard;
     } else if (classId) {
       const cls = await prisma.schoolClass.findFirst({
         where: { id: classId, schoolId: session.schoolId },
@@ -142,31 +154,59 @@ export async function GET(request: NextRequest) {
       where.AND = existingAnd;
     }
 
+    const classSelect = {
+      id: true,
+      name: true,
+      standard: true,
+      section: true,
+      stream: true,
+      academicYear: true,
+    } as const;
+
+    const listSelect = {
+      id: true,
+      grNumber: true,
+      rollNumber: true,
+      mobileNumber: true,
+      category: true,
+      gender: true,
+      status: true,
+      admissionStatus: true,
+      standard: true,
+      section: true,
+      firstName: true,
+      middleName: true,
+      surname: true,
+      firstNameGu: true,
+      middleNameGu: true,
+      surnameGu: true,
+      schoolClass: { select: classSelect },
+    } as const;
+
+    const skip = (page - 1) * limit;
+    const orderBy = [
+      { standard: "asc" as const },
+      { section: "asc" as const },
+      { rollNumber: "asc" as const },
+      { surname: "asc" as const },
+      { firstName: "asc" as const },
+    ];
     const [students, total] = await Promise.all([
-      prisma.student.findMany({
-        where,
-        orderBy: [
-          { standard: "asc" },
-          { section: "asc" },
-          { rollNumber: "asc" },
-          { surname: "asc" },
-          { firstName: "asc" },
-        ],
-        skip: (page - 1) * limit,
-        take: limit,
-        include: {
-          schoolClass: {
-            select: {
-              id: true,
-              name: true,
-              standard: true,
-              section: true,
-              stream: true,
-              academicYear: true,
-            },
-          },
-        },
-      }),
+      lite
+        ? prisma.student.findMany({
+            where,
+            orderBy,
+            skip,
+            take: limit,
+            select: listSelect,
+          })
+        : prisma.student.findMany({
+            where,
+            orderBy,
+            skip,
+            take: limit,
+            include: { schoolClass: { select: classSelect } },
+          }),
       prisma.student.count({ where }),
     ]);
 
@@ -178,6 +218,7 @@ export async function GET(request: NextRequest) {
           other: number;
           noClass: number;
           draftCount: number;
+          byStandard: Record<string, { total: number; pendingDivision: number }>;
         }
       | undefined;
 
@@ -186,7 +227,15 @@ export async function GET(request: NextRequest) {
         schoolId: session.schoolId,
         status: activeStudentStatusFilter(),
       } as const;
-      const [sumTotal, male, female, other, noClass, draftCount] = await Promise.all([
+      const stdCounts = MANAGE_STANDARDS.map((std) =>
+        prisma.student.count({ where: { ...base, standard: std } }),
+      );
+      const stdPending = MANAGE_STANDARDS.map((std) =>
+        prisma.student.count({
+          where: { ...base, standard: std, classId: null },
+        }),
+      );
+      const [sumTotal, male, female, other, noClassCount, draftCount, ...rest] = await Promise.all([
         prisma.student.count({ where: base }),
         prisma.student.count({
           where: { ...base, gender: { in: genderDbMatchValues("Male") } },
@@ -198,13 +247,34 @@ export async function GET(request: NextRequest) {
           where: { ...base, gender: { in: genderDbMatchValues("Other") } },
         }),
         prisma.student.count({
-          where: { ...base, classId: null },
+          where: {
+            ...base,
+            classId: null,
+            OR: [{ standard: null }, { standard: "" }],
+          },
         }),
         prisma.student.count({
           where: { schoolId: session.schoolId, status: "draft" },
         }),
+        ...stdCounts,
+        ...stdPending,
       ]);
-      summary = { total: sumTotal, male, female, other, noClass, draftCount };
+      const byStandard: Record<string, { total: number; pendingDivision: number }> = {};
+      MANAGE_STANDARDS.forEach((std, i) => {
+        byStandard[std] = {
+          total: rest[i] ?? 0,
+          pendingDivision: rest[MANAGE_STANDARDS.length + i] ?? 0,
+        };
+      });
+      summary = {
+        total: sumTotal,
+        male,
+        female,
+        other,
+        noClass: noClassCount,
+        draftCount,
+        byStandard,
+      };
     }
 
     return NextResponse.json({ students, total, page, limit, summary });
@@ -293,23 +363,19 @@ export async function POST(request: NextRequest) {
 
     const data = await fillStudentGuNames(normalizeStudentRow(body));
 
-    if (!data.classId) {
-      return NextResponse.json({ error: "Class is required. Please assign a class before saving student." }, { status: 400 });
+    let assignedClass = null;
+    if (data.classId) {
+      assignedClass = await prisma.schoolClass.findFirst({
+        where: { id: data.classId, schoolId: session.schoolId },
+      });
+      if (!assignedClass) {
+        return NextResponse.json({ error: "Selected class not found for this school" }, { status: 400 });
+      }
     }
-
-    const assignedClass = await prisma.schoolClass.findFirst({
-      where: { id: data.classId, schoolId: session.schoolId },
-    });
-    if (!assignedClass) {
-      return NextResponse.json({ error: "Selected class not found for this school" }, { status: 400 });
+    const placed = applyStudentPlacement(data as Record<string, unknown>, assignedClass);
+    if (placed.error) {
+      return NextResponse.json({ error: placed.error }, { status: 400 });
     }
-
-    data.standard = assignedClass.standard;
-    data.section = assignedClass.section;
-    data.institutionName = assignedClass.institutionName || data.institutionName;
-    data.institutionDistrict = assignedClass.institutionDistrict || data.institutionDistrict;
-    data.financialYear = assignedClass.academicYear || data.financialYear;
-    data.courseName = data.courseName || `Class ${assignedClass.standard}`;
 
     const errors = validateStudent(data);
 

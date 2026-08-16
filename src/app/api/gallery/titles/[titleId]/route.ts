@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { rm } from "fs/promises";
-import path from "path";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { requireSchoolFeature } from "@/lib/school-feature-access";
 import { GALLERY_ROLES, canDeleteGallery } from "@/lib/gallery";
+import { removeGalleryFolder, unlinkGalleryFile } from "@/lib/gallery-upload";
 
 type RouteParams = { params: Promise<{ titleId: string }> };
 
 async function loadOwnedTitle(schoolId: string, titleId: string) {
   return prisma.galleryTitle.findFirst({
     where: { id: titleId, event: { schoolId } },
-    include: { event: { select: { id: true, schoolId: true } } },
+    include: {
+      event: { select: { id: true, schoolId: true } },
+      images: { select: { id: true, filePath: true } },
+    },
   });
 }
 
@@ -51,21 +53,21 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     const existing = await loadOwnedTitle(session.schoolId, titleId);
     if (!existing) return NextResponse.json({ error: "Title not found" }, { status: 404 });
 
-    await prisma.galleryTitle.delete({ where: { id: titleId } });
-    const dir = path.join(
-      process.cwd(),
-      "uploads",
-      "gallery",
-      session.schoolId,
-      existing.event.id,
-      titleId,
-    );
-    await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    const filePaths = existing.images.map((img) => img.filePath);
+
+    await prisma.$transaction([
+      prisma.galleryImage.deleteMany({ where: { titleId } }),
+      prisma.galleryTitle.delete({ where: { id: titleId } }),
+    ]);
+
+    await Promise.all(filePaths.map((fp) => unlinkGalleryFile(fp)));
+    await removeGalleryFolder(session.schoolId, existing.event.id, titleId);
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
+    console.error("[gallery title DELETE]", error);
     return NextResponse.json({ error: "Failed to delete title" }, { status: 500 });
   }
 }

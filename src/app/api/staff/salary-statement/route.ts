@@ -8,6 +8,7 @@ import {
   type SalaryCategory,
   type SalaryFieldKey,
 } from "@/lib/salary-statement";
+import { loadSchoolSalaryStatement } from "@/lib/salary-statement-server";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +17,13 @@ export async function GET(request: NextRequest) {
     const session = await requireSchoolAuth();
     const { searchParams } = new URL(request.url);
     const financialYear = searchParams.get("fy") || currentFinancialYear();
+    const fromStaff = searchParams.get("fromStaff") === "1";
 
-    const rows = await prisma.salaryStatementRow.findMany({
-      where: { schoolId: session.schoolId, financialYear },
-      orderBy: [{ category: "asc" }, { year: "asc" }, { month: "asc" }],
+    const { rows, staffCounts } = await loadSchoolSalaryStatement(session.schoolId, financialYear, {
+      fromStaff,
     });
 
-    return NextResponse.json({ financialYear, rows });
+    return NextResponse.json({ financialYear, rows, staffCounts });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
     return NextResponse.json({ error: "Failed to fetch salary statement", rows: [] }, { status: 500 });

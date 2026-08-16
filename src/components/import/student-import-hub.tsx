@@ -10,10 +10,11 @@ import {
   applyColumnMap,
   autoMapColumns,
   downloadFailedRows,
-  downloadImportTemplate,
   getMappedFieldCount,
   parseStudentImportFile,
   REQUIRED_IMPORT_FIELDS,
+  IMPORT_FIELD_GROUPS,
+  IMPORT_PRESETS,
   runBulkImport,
   validateImportRows,
   type ImportFieldKey,
@@ -26,29 +27,6 @@ import { useT } from "@/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 
 type Step = "upload" | "map" | "validate" | "importing" | "done";
-
-const FIELD_GROUPS: { title: string; fields: ImportFieldKey[] }[] = [
-  {
-    title: "Personal",
-    fields: ["firstName", "middleName", "surname", "aadhaarName", "dateOfBirth", "gender", "aadhaarNumber", "mobileNumber", "email", "bloodGroup"],
-  },
-  {
-    title: "Family",
-    fields: ["motherName", "fatherName", "guardianName", "category", "caste", "religion", "parentOccupation", "annualFamilyIncome", "isOrphan", "familySize"],
-  },
-  {
-    title: "Address",
-    fields: ["currentAddress", "currentDistrict", "currentCity", "currentPincode", "permanentAddress", "permanentDistrict", "permanentCity", "permanentPincode", "residentType", "habitationType"],
-  },
-  {
-    title: "Academic",
-    fields: ["standard", "section", "rollNumber", "grNumber", "scholarshipScheme", "financialYear", "courseType", "courseName", "institutionName", "currentYear", "board10th", "percentage10th", "year10th"],
-  },
-  {
-    title: "Bank",
-    fields: ["bankName", "branchName", "accountNumber", "ifscCode", "accountHolderName"],
-  },
-];
 
 export function StudentImportHub() {
   const t = useT();
@@ -64,8 +42,13 @@ export function StudentImportHub() {
   const [importProgress, setImportProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showGuide, setShowGuide] = useState(false);
+  const [showGuide, setShowGuide] = useState(true);
   const [previewFilter, setPreviewFilter] = useState<"all" | "valid" | "warning" | "error">("all");
+  const [templateFields, setTemplateFields] = useState<Set<ImportFieldKey>>(
+    () => new Set(IMPORT_PRESETS.admission),
+  );
+  const [includeSample, setIncludeSample] = useState(true);
+  const [templateBusy, setTemplateBusy] = useState(false);
 
   const stats = useMemo(() => {
     const valid = validations.filter((v) => v.status === "valid").length;
@@ -153,7 +136,7 @@ export function StudentImportHub() {
     try {
       const res = await runBulkImport(
         rowsToImport,
-        { skipInvalid, validRowIndexes: skipInvalid ? validIndexes : undefined },
+        { skipInvalid: false },
         (done, total) => setImportProgress(Math.round((done / total) * 100))
       );
       setResult(res);
@@ -166,6 +149,52 @@ export function StudentImportHub() {
 
   const updateColumnMap = (fileHeader: string, field: string) => {
     setColumnMap((prev) => ({ ...prev, [fileHeader]: field as ImportFieldKey | "" }));
+  };
+
+  const toggleTemplateField = (key: ImportFieldKey) => {
+    if (REQUIRED_IMPORT_FIELDS.includes(key)) return;
+    setTemplateFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      REQUIRED_IMPORT_FIELDS.forEach((f) => next.add(f));
+      return next;
+    });
+  };
+
+  const applyPreset = (id: keyof typeof IMPORT_PRESETS) => {
+    const next = new Set(IMPORT_PRESETS[id]);
+    REQUIRED_IMPORT_FIELDS.forEach((f) => next.add(f));
+    setTemplateFields(next);
+  };
+
+  const downloadTemplate = async (format: "xlsx" | "csv") => {
+    setTemplateBusy(true);
+    setError(null);
+    try {
+      const fields = [...templateFields];
+      REQUIRED_IMPORT_FIELDS.forEach((f) => {
+        if (!fields.includes(f)) fields.unshift(f);
+      });
+      const qs = new URLSearchParams({
+        format,
+        fields: fields.join(","),
+        sample: includeSample ? "1" : "0",
+      });
+      const res = await fetch(`/api/students/import-template?${qs}`);
+      if (!res.ok) throw new Error(t("importPage.templateFailed"));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = format === "csv" ? "student_import_template.csv" : "student_import_template.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("importPage.templateFailed"));
+    } finally {
+      setTemplateBusy(false);
+    }
   };
 
   const fieldOptions = CSV_HEADERS.map((k) => ({
@@ -242,36 +271,85 @@ export function StudentImportHub() {
               <CardTitle>{t("importPage.downloadTemplate")}</CardTitle>
               <CardDescription>{t("importPage.downloadTemplateDesc")}</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => downloadImportTemplate("csv")}>
-                <Download className="h-4 w-4" /> {t("importPage.csvTemplate")}
-              </Button>
-              <Button variant="outline" onClick={() => downloadImportTemplate("xlsx")}>
-                <FileSpreadsheet className="h-4 w-4" /> {t("importPage.excelTemplate")}
-              </Button>
-              <Button variant="ghost" onClick={() => setShowGuide((v) => !v)}>
-                {showGuide ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                {t("importPage.columnGuide")}
-              </Button>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="secondary" onClick={() => applyPreset("essential")}>
+                  {t("importPage.presetEssential")}
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => applyPreset("admission")}>
+                  {t("importPage.presetAdmission")}
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => applyPreset("full")}>
+                  {t("importPage.presetFull")}
+                </Button>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3">
+                {IMPORT_FIELD_GROUPS.map((g) => (
+                  <div key={g.id}>
+                    <p className="text-xs font-bold uppercase tracking-wide text-teal-800 mb-1.5">{g.title}</p>
+                    <ul className="space-y-1">
+                      {g.fields.map((f) => {
+                        const locked = REQUIRED_IMPORT_FIELDS.includes(f);
+                        const checked = templateFields.has(f) || locked;
+                        return (
+                          <li key={f}>
+                            <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                className="mt-0.5 rounded border-slate-300"
+                                checked={checked}
+                                disabled={locked}
+                                onChange={() => toggleTemplateField(f)}
+                              />
+                              <span>
+                                {CSV_HEADER_LABELS[f]}
+                                {locked ? <span className="text-amber-700 font-semibold"> *</span> : null}
+                              </span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-xs text-slate-500">
+                {t("importPage.templateFieldCount", { count: templateFields.size })}
+              </p>
+
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={includeSample}
+                  onChange={(e) => setIncludeSample(e.target.checked)}
+                  className="rounded border-slate-300"
+                />
+                {t("importPage.includeSampleRow")}
+              </label>
+
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={() => void downloadTemplate("xlsx")} disabled={templateBusy}>
+                  <FileSpreadsheet className="h-4 w-4" />
+                  {templateBusy ? t("common.loading") : t("importPage.excelTemplate")}
+                </Button>
+                <Button variant="outline" onClick={() => void downloadTemplate("csv")} disabled={templateBusy}>
+                  <Download className="h-4 w-4" /> {t("importPage.csvTemplate")}
+                </Button>
+                <Button variant="ghost" onClick={() => setShowGuide((v) => !v)}>
+                  {showGuide ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {t("importPage.columnGuide")}
+                </Button>
+              </div>
             </CardContent>
             {showGuide && (
               <CardContent className="pt-0">
-                <div className="grid sm:grid-cols-2 gap-4 max-h-72 overflow-y-auto border rounded-lg p-3 bg-slate-50">
-                  {FIELD_GROUPS.map((g) => (
-                    <div key={g.title}>
-                      <p className="text-xs font-semibold text-slate-700 mb-1">{g.title}</p>
-                      <ul className="text-xs text-slate-600 space-y-0.5">
-                        {g.fields.map((f) => (
-                          <li key={f}>
-                            <span className="font-medium">{CSV_HEADER_LABELS[f]}</span>
-                            {REQUIRED_IMPORT_FIELDS.includes(f) && (
-                              <span className="text-red-500 ml-1">*</span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+                <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600 space-y-1">
+                  <p>{t("importPage.guideYellow")}</p>
+                  <p>{t("importPage.guideDate")}</p>
+                  <p>{t("importPage.guideStd")}</p>
+                  <p>{t("importPage.guideDraft")}</p>
                 </div>
               </CardContent>
             )}

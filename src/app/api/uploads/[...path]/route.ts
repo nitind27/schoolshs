@@ -139,7 +139,8 @@ export async function GET(
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": mime,
-        "Cache-Control": "private, max-age=3600",
+        "Cache-Control":
+          segments[0] === "gallery" ? "private, no-cache" : "private, max-age=3600",
         "Content-Disposition": mime.startsWith("image/")
           ? "inline"
           : `inline; filename="${encodeURIComponent(fileName)}"`,

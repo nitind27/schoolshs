@@ -14,6 +14,7 @@ function NewStudentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const classId = searchParams.get("classId") || undefined;
+  const standard = searchParams.get("standard") || undefined;
   const [dashHref, setDashHref] = useState("/dashboard");
 
   useEffect(() => {
@@ -75,6 +76,7 @@ function NewStudentContent() {
         onSubmit={handleSubmit}
         onFinish={() => handleFinish(classId)}
         initialClassId={classId}
+        initialStandard={standard}
       />
     </PageShell>
   );

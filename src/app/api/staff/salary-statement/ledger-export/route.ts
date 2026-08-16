@@ -11,6 +11,7 @@ import {
   monthLabel,
   type SalaryCategory,
 } from "@/lib/salary-statement";
+import { loadSchoolSalaryStatement } from "@/lib/salary-statement-server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +26,10 @@ export async function GET(request: NextRequest) {
     const financialYear = searchParams.get("fy") || currentFinancialYear();
     const category = searchParams.get("category") || "";
 
-    const rows = await prisma.salaryStatementRow.findMany({
-      where: {
-        schoolId: session.schoolId,
-        financialYear,
-        ...(category && SALARY_CATEGORIES.includes(category as SalaryCategory) ? { category } : {}),
-      },
-    });
+    const built = await loadSchoolSalaryStatement(session.schoolId, financialYear);
+    const rows = category && SALARY_CATEGORIES.includes(category as SalaryCategory)
+      ? built.rows.filter((r) => r.category === category)
+      : built.rows;
     const school = await prisma.school.findUnique({
       where: { id: session.schoolId },
       select: { name: true },

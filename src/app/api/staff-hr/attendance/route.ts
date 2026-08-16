@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1), 10);
     const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()), 10);
     const designation = searchParams.get("designation");
+    const lite = searchParams.get("lite") === "1";
 
     const where: Record<string, unknown> = { schoolId: session.schoolId, isActive: true };
     if (designation) where.designation = designation;
@@ -44,7 +45,22 @@ export async function GET(request: NextRequest) {
       : [];
 
     const saved = new Map(records.map((r) => [r.staffId, { daysJson: r.daysJson, note: r.note }]));
-    const rows = buildStaffAttendanceRows(staffList, saved);
+    const rows = buildStaffAttendanceRows(staffList, saved).map((row) =>
+      lite
+        ? {
+            staffId: row.staffId,
+            employeeId: row.employeeId,
+            name: row.name,
+            designation: row.designation,
+            presentDays: row.presentDays,
+            absentDays: row.absentDays,
+            leaveDays: row.leaveDays,
+            halfDays: row.halfDays,
+            monthlySalary: row.monthlySalary,
+            marked: row.marked,
+          }
+        : row,
+    );
 
     return NextResponse.json({ rows, month, year, staffCount: staffList.length });
   } catch (e) {

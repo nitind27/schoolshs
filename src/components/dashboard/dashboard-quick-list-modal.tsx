@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/loader";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useT } from "@/i18n/locale-provider";
 import { PAGE_SIZE } from "@/lib/pagination";
+import { cachedGetJson, peekCachedJson } from "@/lib/client-fetch-cache";
 import { studentShortNameGu } from "@/lib/student-names";
 
 export type QuickListKind = "admission" | "staff";
@@ -66,9 +67,6 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
     if (!open) return;
     setSearch("");
     setPage(1);
-    setTotal(0);
-    setAdmissionRows([]);
-    setStaffRows([]);
     setError(null);
   }, [open, kind, value]);
 
@@ -79,7 +77,6 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
     const delay = search.trim() ? 280 : 0;
 
     const timer = window.setTimeout(async () => {
-      setLoading(true);
       setError(null);
       try {
         if (kind === "admission") {
@@ -87,12 +84,24 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
             status: value || "pending",
             page: String(page),
             limit: String(PAGE_SIZE),
+            lite: "1",
           });
           if (search.trim()) params.set("search", search.trim());
-          const res = await fetch(`/api/admissions?${params}`, { signal: controller.signal });
-          const data = await res.json();
+          const url = `/api/admissions?${params}`;
+          const cached = peekCachedJson<{ students?: AdmissionRow[]; total?: number; error?: string }>(url);
+          if (cached?.students) {
+            setAdmissionRows(cached.students);
+            setTotal(Number(cached.total) || 0);
+          } else {
+            setLoading(true);
+          }
+          const { ok, json: data } = await cachedGetJson<{
+            students?: AdmissionRow[];
+            total?: number;
+            error?: string;
+          }>(url, controller.signal);
           if (id !== seq.current) return;
-          if (!res.ok) throw new Error(data?.error || "Failed");
+          if (!ok) throw new Error(data?.error || "Failed");
           setAdmissionRows(data.students ?? []);
           setTotal(Number(data.total) || 0);
         } else {
@@ -100,13 +109,25 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
             page: String(page),
             limit: String(PAGE_SIZE),
             active: "true",
+            lite: "1",
           });
           if (value) params.set("designation", value);
           if (search.trim()) params.set("search", search.trim());
-          const res = await fetch(`/api/staff?${params}`, { signal: controller.signal });
-          const data = await res.json();
+          const url = `/api/staff?${params}`;
+          const cached = peekCachedJson<{ staff?: StaffRow[]; total?: number; error?: string }>(url);
+          if (cached?.staff) {
+            setStaffRows(cached.staff);
+            setTotal(Number(cached.total) || 0);
+          } else {
+            setLoading(true);
+          }
+          const { ok, json: data } = await cachedGetJson<{
+            staff?: StaffRow[];
+            total?: number;
+            error?: string;
+          }>(url, controller.signal);
           if (id !== seq.current) return;
-          if (!res.ok) throw new Error(data?.error || "Failed");
+          if (!ok) throw new Error(data?.error || "Failed");
           setStaffRows(data.staff ?? []);
           setTotal(Number(data.total) || 0);
         }
@@ -173,6 +194,11 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
           <span>{t("dashboard.drillCount", { count: total })}</span>
           <span className="ops-drill-chip">{label}</span>
         </div>
+        {kind === "admission" && (value || "pending") === "pending" ? (
+          <p className="ops-drill-banner is-pending">
+            {t("dashboard.admissionPendingBanner", { count: total })}
+          </p>
+        ) : null}
 
         <div className="ops-drill-table-wrap">
           {loading ? (
@@ -201,7 +227,14 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
                 </thead>
                 <tbody>
                   {admissionRows.map((s, i) => (
-                    <tr key={s.id}>
+                    <tr
+                      key={s.id}
+                      className={
+                        (s.admissionStatus || "pending") === "pending"
+                          ? "is-admission-pending"
+                          : undefined
+                      }
+                    >
                       <td className="ops-drill-sr">{(page - 1) * PAGE_SIZE + i + 1}</td>
                       <td className="ops-drill-gr">{s.grNumber?.trim() || "—"}</td>
                       <td>

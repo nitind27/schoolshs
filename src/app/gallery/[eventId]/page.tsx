@@ -21,6 +21,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { GalleryImageEditor, type GalleryEditorItem, type GalleryEditorOutput } from "@/components/gallery/gallery-image-editor";
 import "../gallery.css";
 
 type GalleryImage = {
@@ -74,6 +75,10 @@ export default function GalleryEventPage() {
   const [renameVal, setRenameVal] = useState("");
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ titleId: string; index: number } | null>(null);
+  const [editor, setEditor] = useState<{
+    titleId: string;
+    items: GalleryEditorItem[];
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -243,21 +248,76 @@ export default function GalleryEventPage() {
 
   const uploadFiles = async (titleId: string, files: FileList | null) => {
     if (!files?.length) return;
+    const items: GalleryEditorItem[] = Array.from(files)
+      .filter((f) => f.type.startsWith("image/"))
+      .slice(0, 20)
+      .map((f) => ({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: f.name,
+        src: URL.createObjectURL(f),
+      }));
+    if (!items.length) {
+      setErr(t("gallery.uploadFailed"));
+      return;
+    }
+    setEditor({ titleId, items });
+  };
+
+  const openEditImage = (titleId: string, image: GalleryImage) => {
+    setLightbox(null);
+    setEditor({
+      titleId,
+      items: [
+        {
+          id: image.id,
+          name: image.originalName || "photo.jpg",
+          src: image.url,
+          imageId: image.id,
+        },
+      ],
+    });
+  };
+
+  const finishEditor = async (outputs: GalleryEditorOutput[]) => {
+    if (!editor || !outputs.length) {
+      setEditor(null);
+      return;
+    }
+    const titleId = editor.titleId;
+    const objectUrls = editor.items.map((it) => it.src).filter((s) => s.startsWith("blob:"));
     setUploadingId(titleId);
     setErr("");
     try {
-      const fd = new FormData();
-      Array.from(files).forEach((f) => fd.append("files", f));
-      const res = await fetch(`/api/gallery/titles/${titleId}/images`, {
-        method: "POST",
-        body: fd,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setErr(data.error || t("gallery.uploadFailed"));
-        return;
+      const replace = outputs.filter((o) => o.imageId);
+      const create = outputs.filter((o) => !o.imageId);
+      if (replace.length) {
+        await Promise.all(
+          replace.map(async (item) => {
+            const fd = new FormData();
+            fd.append("file", item.blob, item.name);
+            const res = await fetch(`/api/gallery/images/${item.imageId}`, { method: "PATCH", body: fd });
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error || t("gallery.uploadFailed"));
+            }
+          }),
+        );
       }
-      await load();
+      if (create.length) {
+        const fd = new FormData();
+        create.forEach((o) => fd.append("files", o.blob, o.name));
+        const res = await fetch(`/api/gallery/titles/${titleId}/images`, { method: "POST", body: fd });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || t("gallery.uploadFailed"));
+        }
+      }
+      objectUrls.forEach((u) => URL.revokeObjectURL(u));
+      setEditor(null);
+      void load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : t("gallery.uploadFailed"));
+      throw e;
     } finally {
       setUploadingId(null);
     }
@@ -463,6 +523,14 @@ export default function GalleryEventPage() {
                             <X className="h-3.5 w-3.5" />
                           </button>
                         ) : null}
+                        <button
+                          type="button"
+                          className="gal-photo__edit"
+                          aria-label={t("gallery.editPhoto")}
+                          onClick={() => openEditImage(album.id, img)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -477,7 +545,7 @@ export default function GalleryEventPage() {
                   ) : (
                     <>
                       <Upload className="h-5 w-5" />
-                      {t("gallery.addPhotos")}
+                      {t("gallery.addPhotosHint")}
                     </>
                   )}
                   <input
@@ -553,7 +621,33 @@ export default function GalleryEventPage() {
               ? `  ${lightbox.index + 1} / ${flatPhotos.length}`
               : ""}
           </p>
+          <button
+            type="button"
+            className="gal-lightbox__edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              const titleId = lightbox.titleId;
+              setLightbox(null);
+              openEditImage(titleId, currentPhoto);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+            {t("gallery.editPhoto")}
+          </button>
         </div>
+      ) : null}
+
+      {editor ? (
+        <GalleryImageEditor
+          items={editor.items}
+          onClose={() => {
+            editor.items.forEach((it) => {
+              if (it.src.startsWith("blob:")) URL.revokeObjectURL(it.src);
+            });
+            setEditor(null);
+          }}
+          onComplete={(out) => void finishEditor(out)}
+        />
       ) : null}
     </PageShell>
   );

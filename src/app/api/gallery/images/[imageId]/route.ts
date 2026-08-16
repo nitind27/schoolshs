@@ -1,12 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
-import { unlink } from "fs/promises";
-import path from "path";
+import { writeFile } from "fs/promises";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { requireSchoolFeature } from "@/lib/school-feature-access";
-import { GALLERY_ROLES, canDeleteGalleryImage } from "@/lib/gallery";
+import { GALLERY_ROLES, canDeleteGalleryImage, galleryImagePublicUrl } from "@/lib/gallery";
+import {
+  compressGalleryImage,
+  GALLERY_ALLOWED_TYPES,
+  GALLERY_MAX_INPUT,
+  galleryFileAbs,
+  unlinkGalleryFile,
+} from "@/lib/gallery-upload";
 
 type RouteParams = { params: Promise<{ imageId: string }> };
+
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await requireSchoolAuth(GALLERY_ROLES);
+    await requireSchoolFeature(session.schoolId, "gallery");
+    const { imageId } = await params;
+
+    const image = await prisma.galleryImage.findFirst({
+      where: { id: imageId, title: { event: { schoolId: session.schoolId } } },
+      select: { id: true, filePath: true, uploadedById: true, originalName: true },
+    });
+    if (!image) return NextResponse.json({ error: "Image not found" }, { status: 404 });
+
+    const form = await request.formData();
+    const file = form.get("file") || form.get("files");
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "Select an image" }, { status: 400 });
+    }
+    if (file.type && !GALLERY_ALLOWED_TYPES.has(file.type)) {
+      return NextResponse.json({ error: "Use JPG, PNG or WEBP" }, { status: 400 });
+    }
+    if (file.size > GALLERY_MAX_INPUT * 3) {
+      return NextResponse.json({ error: "Image is too large" }, { status: 400 });
+    }
+
+    const jpeg = await compressGalleryImage(Buffer.from(await file.arrayBuffer()));
+    const abs = galleryFileAbs(image.filePath);
+    await writeFile(abs, jpeg);
+
+    const updated = await prisma.galleryImage.update({
+      where: { id: imageId },
+      data: { originalName: file.name || image.originalName },
+    });
+
+    return NextResponse.json({
+      image: {
+        id: updated.id,
+        url: `${galleryImagePublicUrl(updated.filePath)}?v=${Date.now()}`,
+        originalName: updated.originalName,
+      },
+    });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    console.error("[gallery image PATCH]", error);
+    return NextResponse.json({ error: "Failed to save edited image" }, { status: 500 });
+  }
+}
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
@@ -24,8 +79,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     }
 
     await prisma.galleryImage.delete({ where: { id: imageId } });
-    const abs = path.join(process.cwd(), "uploads", image.filePath.replace(/^uploads\//, ""));
-    await unlink(abs).catch(() => undefined);
+    await unlinkGalleryFile(image.filePath);
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {

@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { rm } from "fs/promises";
-import path from "path";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { requireSchoolFeature } from "@/lib/school-feature-access";
@@ -9,6 +7,7 @@ import {
   canDeleteGallery,
   galleryImagePublicUrl,
 } from "@/lib/gallery";
+import { removeGalleryFolder, unlinkGalleryFile } from "@/lib/gallery-upload";
 
 type RouteParams = { params: Promise<{ eventId: string }> };
 
@@ -112,13 +111,23 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     const { eventId } = await params;
     const existing = await prisma.galleryEvent.findFirst({
       where: { id: eventId, schoolId: session.schoolId },
-      select: { id: true },
+      include: {
+        titles: { select: { id: true, images: { select: { filePath: true } } } },
+      },
     });
     if (!existing) return NextResponse.json({ error: "Activity not found" }, { status: 404 });
 
-    await prisma.galleryEvent.delete({ where: { id: eventId } });
-    const dir = path.join(process.cwd(), "uploads", "gallery", session.schoolId, eventId);
-    await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    const filePaths = existing.titles.flatMap((t) => t.images.map((img) => img.filePath));
+    const titleIds = existing.titles.map((t) => t.id);
+
+    await prisma.$transaction([
+      prisma.galleryImage.deleteMany({ where: { titleId: { in: titleIds } } }),
+      prisma.galleryTitle.deleteMany({ where: { eventId } }),
+      prisma.galleryEvent.delete({ where: { id: eventId } }),
+    ]);
+
+    await Promise.all(filePaths.map((fp) => unlinkGalleryFile(fp)));
+    await removeGalleryFolder(session.schoolId, eventId);
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof AuthError) {

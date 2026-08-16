@@ -87,7 +87,7 @@ export function SidebarNavLink({
       title={collapsed ? item.label : undefined}
       className={cn(
         "shell-nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 group",
-        isActive ? "bg-white/[.12] text-white shadow-sm" : cn(inactiveTextClass, "hover:bg-white/[.07] hover:text-white"),
+        isActive ? "bg-[#047857] text-[#F9FAFB] shadow-sm hover:bg-[#065F46]" : cn(inactiveTextClass, "hover:bg-[#1F2937] hover:text-[#F9FAFB]"),
         collapsed && "justify-center px-2",
       )}
     >
@@ -154,8 +154,8 @@ export function SidebarNavSubmenu({
           className={cn(
             "shell-nav-btn w-full flex items-center justify-center rounded-xl px-2 py-2.5 text-sm font-medium transition-all duration-150 group cursor-pointer",
             groupActive || flyout
-              ? "bg-white/[.12] text-white"
-              : cn(inactiveTextClass, "hover:bg-white/[.07] hover:text-white"),
+              ? "bg-[#047857] text-[#F9FAFB] hover:bg-[#065F46]"
+              : cn(inactiveTextClass, "hover:bg-[#1F2937] hover:text-[#F9FAFB]"),
           )}
         >
           <span
@@ -186,8 +186,8 @@ export function SidebarNavSubmenu({
                     className={cn(
                       "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all cursor-pointer",
                       childActive
-                        ? "bg-white/[.12] text-white"
-                        : "text-slate-300 hover:bg-white/[.08] hover:text-white",
+                        ? "bg-[#047857] text-[#F9FAFB] hover:bg-[#065F46]"
+                        : "text-[#9CA3AF] hover:bg-[#1F2937] hover:text-[#F9FAFB]",
                     )}
                   >
                     <ChildIcon className="h-4 w-4 shrink-0 opacity-80" />
@@ -209,7 +209,7 @@ export function SidebarNavSubmenu({
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "shell-nav-btn w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 group cursor-pointer",
-          groupActive ? "bg-white/[.08] text-white" : cn(inactiveTextClass, "hover:bg-white/[.07] hover:text-white"),
+          groupActive ? "bg-[#047857] text-[#F9FAFB] hover:bg-[#065F46]" : cn(inactiveTextClass, "hover:bg-[#1F2937] hover:text-[#F9FAFB]"),
         )}
       >
         <span
@@ -243,8 +243,8 @@ export function SidebarNavSubmenu({
                 className={cn(
                   "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all cursor-pointer",
                   childActive
-                    ? "bg-white/[.12] text-white"
-                    : cn(inactiveTextClass, "opacity-80 hover:bg-white/[.06] hover:text-white hover:opacity-100"),
+                    ? "bg-[#047857] text-[#F9FAFB] hover:bg-[#065F46]"
+                    : cn(inactiveTextClass, "opacity-80 hover:bg-[#1F2937] hover:text-[#F9FAFB] hover:opacity-100"),
                 )}
               >
                 <ChildIcon className="h-4 w-4 shrink-0 opacity-80" />
@@ -262,8 +262,8 @@ export function SidebarNavEntries({
   items,
   pathname,
   onNavigate,
-  accentColor = "rgba(59,130,246,.3)",
-  inactiveTextClass = "text-blue-200",
+  accentColor = "rgba(255,255,255,.18)",
+  inactiveTextClass = "text-[#9CA3AF]",
   collapsed: collapsedProp,
 }: {
   items: NavEntry[];

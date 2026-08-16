@@ -1,36 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import sharp from "sharp";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { requireSchoolFeature } from "@/lib/school-feature-access";
 import { GALLERY_ROLES, galleryImagePublicUrl } from "@/lib/gallery";
+import {
+  compressGalleryImage,
+  GALLERY_ALLOWED_TYPES,
+  GALLERY_MAX_FILES,
+  GALLERY_MAX_INPUT,
+} from "@/lib/gallery-upload";
 
 type RouteParams = { params: Promise<{ titleId: string }> };
-
-const MAX_INPUT = 8 * 1024 * 1024;
-const MAX_FILES = 20;
-const ALLOWED = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"]);
-
-async function compressGalleryImage(input: Buffer) {
-  let quality = 84;
-  let buffer = await sharp(input)
-    .rotate()
-    .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
-    .jpeg({ quality, mozjpeg: true })
-    .toBuffer();
-
-  while (buffer.length > 900 * 1024 && quality > 52) {
-    quality -= 8;
-    buffer = await sharp(input)
-      .rotate()
-      .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality, mozjpeg: true })
-      .toBuffer();
-  }
-  return buffer;
-}
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -53,8 +35,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!files.length) {
       return NextResponse.json({ error: "Select at least one image" }, { status: 400 });
     }
-    if (files.length > MAX_FILES) {
-      return NextResponse.json({ error: `You can upload up to ${MAX_FILES} images at once` }, { status: 400 });
+    if (files.length > GALLERY_MAX_FILES) {
+      return NextResponse.json({ error: `You can upload up to ${GALLERY_MAX_FILES} images at once` }, { status: 400 });
     }
 
     const dir = path.join(
@@ -69,8 +51,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const created = [];
     for (const file of files) {
-      if (!ALLOWED.has(file.type)) continue;
-      if (file.size > MAX_INPUT) continue;
+      if (file.type && !GALLERY_ALLOWED_TYPES.has(file.type)) continue;
+      if (file.size > GALLERY_MAX_INPUT * 3) continue;
       const raw = Buffer.from(await file.arrayBuffer());
       const jpeg = await compressGalleryImage(raw);
       const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;

@@ -32,6 +32,8 @@ export function DoughnutChart({
   size = 200,
   className,
   onSegmentClick,
+  showZero = false,
+  legendTiles = false,
 }: {
   segments: ChartSegment[];
   centerLabel?: string;
@@ -39,12 +41,15 @@ export function DoughnutChart({
   size?: number;
   className?: string;
   onSegmentClick?: (segment: ChartSegment) => void;
+  showZero?: boolean;
+  legendTiles?: boolean;
 }) {
   const total = segments.reduce((s, x) => s + x.value, 0);
   const enriched = segments.map((s) => ({
     ...s,
     percent: total > 0 ? Math.round((s.value / total) * 100) : 0,
   }));
+  const legend = showZero ? enriched : enriched.filter((s) => s.value > 0);
 
   return (
     <div className={cn("flex flex-col gap-4 sm:flex-row sm:items-center", className)}>
@@ -66,33 +71,51 @@ export function DoughnutChart({
         </div>
       </div>
 
-      <div className="min-w-0 flex-1 space-y-2">
-        {enriched.filter((s) => s.value > 0).map((s) =>
-          onSegmentClick ? (
+      <div
+        className={cn(
+          "min-w-0 flex-1",
+          legendTiles ? "ops-doughnut-legend is-tiles" : "space-y-2",
+        )}
+      >
+        {legend.map((s) => {
+          const inner = legendTiles ? (
+            <>
+              <span className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full shadow-sm" style={{ background: s.color }} />
+                <span className="truncate text-xs font-semibold text-slate-600">{s.label}</span>
+              </span>
+              <strong className="text-xl font-extrabold tabular-nums tracking-tight text-slate-900">
+                {s.value.toLocaleString("en-IN")}
+              </strong>
+              <span className="text-xs font-semibold text-slate-400">{s.percent}%</span>
+            </>
+          ) : (
+            <>
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full shadow-sm" style={{ background: s.color }} />
+              <span className="min-w-0 flex-1 truncate font-semibold text-slate-700">{s.label}</span>
+              <span className="shrink-0 font-extrabold tabular-nums text-slate-900">{s.value}</span>
+              <span className="w-10 shrink-0 text-right text-xs font-semibold text-slate-400">{s.percent}%</span>
+            </>
+          );
+          const itemClass = legendTiles
+            ? "flex w-full min-h-[5rem] cursor-pointer flex-col items-start justify-center gap-1 rounded-xl bg-white/80 px-3.5 py-3 text-left ring-1 ring-slate-100 transition hover:bg-white hover:shadow-sm hover:ring-slate-300"
+            : "flex w-full cursor-pointer items-center gap-2 rounded-lg bg-white/70 px-2 py-1.5 text-left text-sm ring-1 ring-slate-100 transition hover:bg-white hover:shadow-sm hover:ring-slate-300";
+          return onSegmentClick ? (
             <button
               key={s.id || s.label}
               type="button"
               onClick={() => onSegmentClick(s)}
-              className="flex w-full cursor-pointer items-center gap-2 rounded-lg bg-white/70 px-2 py-1.5 text-left text-sm ring-1 ring-slate-100 transition hover:bg-white hover:shadow-sm hover:ring-slate-300"
+              className={itemClass}
             >
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full shadow-sm" style={{ background: s.color }} />
-              <span className="min-w-0 flex-1 truncate font-semibold text-slate-700">{s.label}</span>
-              <span className="shrink-0 font-extrabold tabular-nums text-slate-900">{s.value}</span>
-              <span className="w-10 shrink-0 text-right text-xs font-semibold text-slate-400">{s.percent}%</span>
+              {inner}
             </button>
           ) : (
-            <div
-              key={s.id || s.label}
-              className="flex w-full items-center gap-2 rounded-lg bg-white/70 px-2 py-1.5 text-sm ring-1 ring-slate-100"
-            >
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full shadow-sm" style={{ background: s.color }} />
-              <span className="min-w-0 flex-1 truncate font-semibold text-slate-700">{s.label}</span>
-              <span className="shrink-0 font-extrabold tabular-nums text-slate-900">{s.value}</span>
-              <span className="w-10 shrink-0 text-right text-xs font-semibold text-slate-400">{s.percent}%</span>
+            <div key={s.id || s.label} className={itemClass.replace("cursor-pointer ", "")}>
+              {inner}
             </div>
-          ),
-        )}
-        {total === 0 && <p className="py-4 text-center text-sm text-slate-400">No data</p>}
+          );
+        })}
+        {legend.length === 0 && <p className="py-4 text-center text-sm text-slate-400">No data</p>}
       </div>
     </div>
   );

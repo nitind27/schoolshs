@@ -1,5 +1,7 @@
 /** Annual salary statement — shared constants & helpers (page + APIs) */
 
+import { staffWorkedInMonth } from "@/lib/salary-slip";
+
 export const SALARY_CATEGORIES = [
   "secondary",
   "higher_secondary",
@@ -79,4 +81,139 @@ export function fyOptions(count = 6): string[] {
     const y = current - i;
     return `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
   });
+}
+
+function n(value: unknown): number {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+export type StatementStaffSource = {
+  designation?: string | null;
+  department?: string | null;
+  dateOfJoining?: string | null;
+  retirementDate?: string | null;
+  dateOfBirth?: string | null;
+  monthlySalary?: number | null;
+  da?: number | null;
+  hra?: number | null;
+  ma?: number | null;
+  fpa?: number | null;
+  hndA?: number | null;
+  suA?: number | null;
+  caA?: number | null;
+  wa?: number | null;
+  prA?: number | null;
+  bonus?: number | null;
+  daArrears?: number | null;
+  salaryArrears?: number | null;
+};
+
+/** Map designation / department onto the 4 statement categories */
+export function staffSalaryStatementCategory(staff: StatementStaffSource): SalaryCategory {
+  const d = String(staff.designation || "").trim().toLowerCase();
+  const dept = String(staff.department || "").trim().toLowerCase();
+  const blob = `${d} ${dept}`;
+
+  if (/\bpeon\b|\bpuen\b|પટાવાળ|watchman|security|sweeper|driver/.test(blob)) return "peon";
+
+  const nonTeaching =
+    /\bclerk\b|accountant|librarian|lab assistant|computer operator|typist|receptionist|\badmin\b|store keeper/.test(d);
+  const teaching =
+    /teacher|principal|head master|headmistress|head teacher|\bhm\b|supervisor|lecturer|shikshak|acharya/.test(d);
+  if (nonTeaching && !teaching) return "non_teaching";
+
+  if (/higher secondary|higher-secondary|\bh\.?\s*s\.?\b|\b11\b|\b12\b|\bhsc\b|ઉચ્ચતર/.test(blob)) {
+    return "higher_secondary";
+  }
+  if (teaching || !d) return "secondary";
+  return "non_teaching";
+}
+
+export function staffToStatementValues(staff: StatementStaffSource): Record<SalaryFieldKey, number> {
+  return {
+    basic: n(staff.monthlySalary),
+    da: n(staff.da),
+    hra: n(staff.hra),
+    ma: n(staff.ma),
+    fpa: n(staff.fpa),
+    hndA: n(staff.hndA),
+    suA: n(staff.suA),
+    caA: n(staff.caA),
+    wa: n(staff.wa),
+    prA: n(staff.prA),
+    bonus: n(staff.bonus),
+    daArrears: n(staff.daArrears),
+    salaryArrears: n(staff.salaryArrears),
+  };
+}
+
+export function addStatementValues(
+  a: Record<SalaryFieldKey, number>,
+  b: Record<SalaryFieldKey, number>,
+): Record<SalaryFieldKey, number> {
+  const out = emptyValues();
+  for (const f of SALARY_FIELDS) {
+    out[f.key] = Math.round((n(a[f.key]) + n(b[f.key])) * 100) / 100;
+  }
+  return out;
+}
+
+export function isStatementRowEmpty(row: Partial<Record<SalaryFieldKey, number | null>> | null | undefined): boolean {
+  if (!row) return true;
+  return SALARY_FIELDS.every((f) => !n(row[f.key]));
+}
+
+export function emptyStaffCounts(): Record<SalaryCategory, number> {
+  return { secondary: 0, higher_secondary: 0, non_teaching: 0, peon: 0 };
+}
+
+/**
+ * Category × month grid: saved non-empty rows win; otherwise sum of staff
+ * salaries in that category for months they actually worked.
+ */
+export function buildStatementYearRows(
+  financialYear: string,
+  staffList: StatementStaffSource[],
+  saved: ReadonlyArray<{ category: string; month: number } & Partial<Record<SalaryFieldKey, number | null>>>,
+) {
+  const months = fyMonths(financialYear);
+  const computed = new Map<string, Record<SalaryFieldKey, number>>();
+  const staffCounts = emptyStaffCounts();
+  const monthCounts = new Map<string, number>();
+
+  for (const staff of staffList) {
+    const category = staffSalaryStatementCategory(staff);
+    staffCounts[category] += 1;
+    const pay = staffToStatementValues(staff);
+    if (isStatementRowEmpty(pay)) continue;
+    for (const { month, year } of months) {
+      if (!staffWorkedInMonth(staff, month, year)) continue;
+      const key = `${category}:${month}`;
+      computed.set(key, addStatementValues(computed.get(key) || emptyValues(), pay));
+      monthCounts.set(key, (monthCounts.get(key) || 0) + 1);
+    }
+  }
+
+  const savedMap = new Map(saved.map((r) => [`${r.category}:${r.month}`, r]));
+  const rows = SALARY_CATEGORIES.flatMap((category) =>
+    months.map(({ month, year }) => {
+      const key = `${category}:${month}`;
+      const existing = savedMap.get(key);
+      const savedValues = existing
+        ? (Object.fromEntries(SALARY_FIELDS.map((f) => [f.key, n(existing[f.key])])) as Record<SalaryFieldKey, number>)
+        : emptyValues();
+      const auto = computed.get(key) || emptyValues();
+      const values = isStatementRowEmpty(savedValues) ? auto : savedValues;
+      return {
+        category,
+        month,
+        year,
+        ...values,
+        staffCount: monthCounts.get(key) || 0,
+      };
+    }),
+  );
+
+  return { rows, staffCounts };
 }

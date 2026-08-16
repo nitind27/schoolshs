@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1), 10);
     const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()), 10);
+    const lite = searchParams.get("lite") === "1";
 
     const payrolls = await prisma.staffPayroll.findMany({
       where: { schoolId: session.schoolId, month, year },
@@ -43,14 +44,14 @@ export async function GET(request: NextRequest) {
       designation: p.staff.designation,
       presentDays: p.presentDays,
       absentDays: p.absentDays,
-      workingDays: p.workingDays,
+      workingDays: lite ? undefined : p.workingDays,
       grossSalary: p.grossSalary,
-      deductions: p.deductions,
+      deductions: lite ? undefined : p.deductions,
       netSalary: p.netSalary,
       paymentStatus: p.paymentStatus,
       paidAt: p.paidAt?.toISOString() || null,
-      bankAccount: p.staff.bankAccount || "",
-      ifscCode: p.staff.ifscCode || "",
+      bankAccount: lite ? undefined : p.staff.bankAccount || "",
+      ifscCode: lite ? undefined : p.staff.ifscCode || "",
     }));
 
     const summary = {

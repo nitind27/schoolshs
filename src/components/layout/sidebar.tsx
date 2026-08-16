@@ -463,12 +463,13 @@ export function Sidebar() {
         data-collapsed={collapsed && !mobileOpen ? "true" : "false"}
         className={cn(
           "shell-aside fixed inset-y-0 left-0 z-50 flex h-screen flex-col overflow-hidden",
-          "bg-gradient-to-b from-slate-900 via-blue-950 to-indigo-950 text-white",
+          "text-white",
           "transform transition-transform duration-300 ease-in-out lg:translate-x-0",
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
         )}
         style={{
           width: mobileOpen ? SIDEBAR_EXPANDED_W : width,
+          background: "#111827",
           borderRight: "1px solid rgba(255,255,255,.06)",
         }}
       >
@@ -484,17 +485,17 @@ export function Sidebar() {
             <div
               className="shrink-0 rounded-xl p-2.5 flex items-center justify-center"
               style={{
-                background: "rgba(59,130,246,.25)",
-                border: "1px solid rgba(59,130,246,.4)",
+                background: "rgba(4,120,87,.35)",
+                border: "1px solid rgba(13,148,136,.45)",
               }}
             >
               <GraduationCap className="h-5 w-5 text-white" />
             </div>
             <div className="shell-brand-text min-w-0">
-              <h1 className="truncate text-sm font-bold text-white leading-tight">
+              <h1 className="truncate text-sm font-bold text-[#F9FAFB] leading-tight">
                 {user?.schoolName || t("landing.productName")}
               </h1>
-              <p className="truncate text-xs text-blue-300 leading-tight mt-0.5">
+              <p className="truncate text-xs text-[#9CA3AF] leading-tight mt-0.5">
                 {user?.schoolName
                   ? t("landing.productName")
                   : t("landing.productTag")}
@@ -516,7 +517,7 @@ export function Sidebar() {
         <nav className="shell-nav min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3 space-y-4">
           {filteredGroups.map(({ group, items }) => (
             <div key={group}>
-              <p className="shell-group-label px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-blue-400/60">
+              <p className="shell-group-label px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#9CA3AF]">
                 {group}
               </p>
               <div className="space-y-0.5">
@@ -554,7 +555,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   }, [width]);
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-[#F8FAFC]">
       <TopNavbar profileHref="/profile" showProfile sidebarWidth={width} />
       <Sidebar />
       <main className="shell-main">

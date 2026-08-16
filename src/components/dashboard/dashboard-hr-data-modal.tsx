@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/loader";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useT } from "@/i18n/locale-provider";
 import { PAGE_SIZE } from "@/lib/pagination";
+import { cachedGetJson, peekCachedJson } from "@/lib/client-fetch-cache";
 
 export type HrModalKind =
   | "attendance"
@@ -77,25 +78,41 @@ export function DashboardHrDataModal({ open, onClose, kind, month, year }: Props
     const controller = new AbortController();
 
     (async () => {
-      setLoading(true);
       setError(null);
       try {
         if (isAttendance) {
-          const res = await fetch(`/api/staff-hr/attendance?month=${month}&year=${year}`, {
-            signal: controller.signal,
-          });
-          const data = await res.json();
+          const url = `/api/staff-hr/attendance?month=${month}&year=${year}&lite=1`;
+          const cached = peekCachedJson<{ rows?: AttnRow[]; error?: string }>(url);
+          if (!cached) setLoading(true);
+          else {
+            setAttnRows(cached.rows ?? []);
+            setPayRows([]);
+          }
+          const { ok, json: data } = await cachedGetJson<{ rows?: AttnRow[]; error?: string }>(
+            url,
+            controller.signal,
+          );
           if (id !== seq.current) return;
-          if (!res.ok) throw new Error(data?.error || "Failed");
+          if (!ok) throw new Error(data?.error || "Failed");
           setAttnRows(data.rows ?? []);
           setPayRows([]);
         } else {
-          const res = await fetch(`/api/staff-hr/payroll?month=${month}&year=${year}`, {
-            signal: controller.signal,
-          });
-          const data = await res.json();
+          const url = `/api/staff-hr/payroll?month=${month}&year=${year}&lite=1`;
+          const cached = peekCachedJson<{ rows?: PayRow[]; error?: string }>(url);
+          if (!cached) setLoading(true);
+          else {
+            let rows: PayRow[] = cached.rows ?? [];
+            if (kind === "payrollPaid") rows = rows.filter((r) => r.paymentStatus === "paid");
+            if (kind === "payrollPending") rows = rows.filter((r) => r.paymentStatus === "pending");
+            setPayRows(rows);
+            setAttnRows([]);
+          }
+          const { ok, json: data } = await cachedGetJson<{ rows?: PayRow[]; error?: string }>(
+            url,
+            controller.signal,
+          );
           if (id !== seq.current) return;
-          if (!res.ok) throw new Error(data?.error || "Failed");
+          if (!ok) throw new Error(data?.error || "Failed");
           let rows: PayRow[] = data.rows ?? [];
           if (kind === "payrollPaid") rows = rows.filter((r) => r.paymentStatus === "paid");
           if (kind === "payrollPending") rows = rows.filter((r) => r.paymentStatus === "pending");

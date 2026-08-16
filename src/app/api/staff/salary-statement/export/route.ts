@@ -14,6 +14,7 @@ import {
   type SalaryCategory,
   type SalaryFieldKey,
 } from "@/lib/salary-statement";
+import { loadSchoolSalaryStatement } from "@/lib/salary-statement-server";
 
 export const dynamic = "force-dynamic";
 
@@ -29,14 +30,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const financialYear = searchParams.get("fy") || currentFinancialYear();
 
-    const [dbRows, school] = await Promise.all([
-      prisma.salaryStatementRow.findMany({
-        where: { schoolId: session.schoolId, financialYear },
-      }),
+    const [built, school] = await Promise.all([
+      loadSchoolSalaryStatement(session.schoolId, financialYear),
       prisma.school.findUnique({ where: { id: session.schoolId }, select: { name: true } }),
     ]);
 
-    const byKey = new Map(dbRows.map((r) => [`${r.category}:${r.month}`, r]));
+    const byKey = new Map(built.rows.map((r) => [`${r.category}:${r.month}`, r]));
     const months = fyMonths(financialYear);
     const headers = ["MONTH", ...SALARY_FIELDS.map((f) => f.label), "TOTAL"];
 

@@ -4,6 +4,9 @@ import { validateStudent, normalizeStudentRow } from "@/lib/validation";
 import { fillStudentGuNames } from "@/lib/gujarati/transliterate-server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { toStudentUncheckedCreate, toStudentUncheckedUpdate } from "@/lib/student-write";
+import { applyStudentPlacement } from "@/lib/student-placement";
+import { fillImportDefaults } from "@/lib/import/student-import";
+import { standardToCourseName } from "@/lib/constants";
 import {
   assertStudentAccountEmailAvailable,
   syncStudentPortalAccount,
@@ -40,25 +43,35 @@ export async function POST(request: NextRequest) {
     };
 
     for (let i = 0; i < rows.length; i++) {
-      const data = await fillStudentGuNames(normalizeStudentRow(rows[i]));
+      const data = await fillStudentGuNames(
+        normalizeStudentRow(fillImportDefaults(rows[i] as Record<string, unknown>)),
+      );
 
-      if (data.classId) {
-        const assignedClass = classById.get(data.classId);
-        if (!assignedClass) {
-          results.failed++;
-          results.errors.push({
-            row: i + 1,
-            aadhaarNumber: data.aadhaarNumber || "N/A",
-            errors: ["Class not found for this school"],
-          });
-          continue;
-        }
-        data.standard = assignedClass.standard;
-        data.section = assignedClass.section;
-        data.institutionName = assignedClass.institutionName || data.institutionName;
-        data.institutionDistrict = assignedClass.institutionDistrict || data.institutionDistrict;
-        data.financialYear = assignedClass.academicYear || data.financialYear;
-        data.courseName = data.courseName || `Class ${assignedClass.standard}`;
+      let assignedClass = data.classId ? classById.get(data.classId) : undefined;
+      if (!assignedClass && data.standard && data.section) {
+        assignedClass = schoolClasses.find(
+          (c) =>
+            c.standard === data.standard &&
+            c.section === data.section &&
+            (!data.financialYear || c.academicYear === data.financialYear),
+        );
+      }
+      const placed = applyStudentPlacement(
+        data as Record<string, unknown>,
+        assignedClass
+          ? {
+              id: assignedClass.id,
+              standard: assignedClass.standard,
+              section: assignedClass.section,
+              academicYear: assignedClass.academicYear,
+              institutionName: assignedClass.institutionName,
+              institutionDistrict: assignedClass.institutionDistrict,
+            }
+          : null,
+      );
+      void placed;
+      if (!data.courseName && data.standard) {
+        data.courseName = standardToCourseName(data.standard);
       }
 
       const validationErrors = validateStudent(data);

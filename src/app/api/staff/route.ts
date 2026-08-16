@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const designation = searchParams.get("designation");
     const activeOnly = searchParams.get("active") !== "false";
+    const lite = searchParams.get("lite") === "1";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
 
@@ -67,14 +68,35 @@ export async function GET(request: NextRequest) {
       ];
     }
 
+    const skip = (page - 1) * limit;
+    const orderBy = [{ designation: "asc" as const }, { firstName: "asc" as const }];
     const [staff, total] = await Promise.all([
-      prisma.staff.findMany({
-        where,
-        orderBy: [{ designation: "asc" }, { firstName: "asc" }],
-        include: { _count: { select: { classes: true } } },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
+      lite
+        ? prisma.staff.findMany({
+            where,
+            orderBy,
+            skip,
+            take: limit,
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              firstNameGu: true,
+              lastNameGu: true,
+              designation: true,
+              department: true,
+              mobileNumber: true,
+              employeeId: true,
+              isActive: true,
+            },
+          })
+        : prisma.staff.findMany({
+            where,
+            orderBy,
+            skip,
+            take: limit,
+            include: { _count: { select: { classes: true } } },
+          }),
       prisma.staff.count({ where }),
     ]);
 

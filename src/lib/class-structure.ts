@@ -2,6 +2,9 @@ import { SENIOR_STREAMS } from "./constants";
 
 export const SECONDARY_DIVISIONS = ["A", "B", "C", "D", "E"] as const;
 
+/** High school standards this portal manages (not only board 10/12). */
+export const MANAGE_STANDARDS = ["9", "10", "11", "12"] as const;
+
 export { SENIOR_STREAMS };
 
 export interface ClassSeed {

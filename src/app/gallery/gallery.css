@@ -317,6 +317,28 @@
   cursor: pointer;
 }
 
+.gal-photo__edit {
+  position: absolute;
+  top: 0.35rem;
+  left: 0.35rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: #0d9488;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(15, 118, 110, 0.35);
+}
+
+.gal-photo__edit:hover {
+  background: #0f766e;
+}
+
 .gal-drop {
   display: flex;
   flex-direction: column;
@@ -389,10 +411,28 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0.75rem;
+  bottom: 3.2rem;
   text-align: center;
   color: #e2e8f0;
   font-size: 0.8rem;
+}
+
+.gal-lightbox__edit {
+  position: absolute;
+  left: 50%;
+  bottom: 0.85rem;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  background: #0f766e;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .gal-head__actions {
