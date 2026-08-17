@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { activeStudentStatusFilter } from "@/lib/student-list-filters";
-import { studentSearchWhere } from "@/lib/student-search";
+import { searchStudentIds } from "@/lib/student-search";
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,15 +24,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ students: [] });
     }
 
-    const searchClause = studentSearchWhere(q);
+    const ids = await searchStudentIds(prisma, {
+      schoolId: session.schoolId,
+      query: q,
+      classTeacherId: session.staffId,
+      take: 8,
+    });
+    if (ids.length === 0) {
+      return NextResponse.json({ students: [] });
+    }
+
     const students = await prisma.student.findMany({
       where: {
+        id: { in: ids },
         schoolId: session.schoolId,
         status: activeStudentStatusFilter(),
-        schoolClass: { classTeacherId: session.staffId },
-        ...(searchClause || {}),
       },
-      orderBy: [{ grNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
+      orderBy: [{ surname: "asc" }, { firstName: "asc" }],
       take: 8,
       select: {
         id: true,

@@ -14,7 +14,7 @@ import {
   syncStudentPortalAccount,
 } from "@/lib/student-account";
 import { activeStudentStatusFilter } from "@/lib/student-list-filters";
-import { studentSearchWhere } from "@/lib/student-search";
+import { searchStudentIds } from "@/lib/student-search";
 
 function studentDisplayName(s: { firstName?: string | null; surname?: string | null }) {
   return [s.firstName, s.surname].filter(Boolean).join(" ").trim() || "Student";
@@ -96,20 +96,24 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      const searchClause = studentSearchWhere(search);
-      if (searchClause) {
-        const extraAnd: object[] = [];
-        if (where.OR) {
-          extraAnd.push({ OR: where.OR });
-          delete where.OR;
-        }
-        extraAnd.push(searchClause);
-        const existingAnd = Array.isArray(where.AND)
-          ? [...(where.AND as object[])]
-          : where.AND
-            ? [where.AND as object]
-            : [];
-        where.AND = [...existingAnd, ...extraAnd];
+      const ids = await searchStudentIds(prisma, {
+        schoolId: session.schoolId,
+        query: search,
+        take: Math.max(limit * page, 80),
+      });
+      if (ids.length === 0) {
+        return NextResponse.json({ students: [], total: 0, page, limit });
+      }
+      const existingIn =
+        where.id && typeof where.id === "object" && "in" in (where.id as object)
+          ? ((where.id as { in: string[] }).in || [])
+          : null;
+      if (existingIn) {
+        const allow = new Set(ids);
+        const next = existingIn.filter((id) => allow.has(id));
+        where.id = { in: next.length ? next : ["__no_search_match__"] };
+      } else {
+        where.id = { in: ids };
       }
     }
 

@@ -1,87 +1,39 @@
-/** Navbar + student list search: GR, roll, and full name (EN + GU). */
+import { Prisma } from "@/generated/prisma/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 
-const NAME_FIELDS = [
-  "firstName",
-  "middleName",
-  "surname",
-  "firstNameGu",
-  "middleNameGu",
-  "surnameGu",
-  "aadhaarName",
-  "aadhaarNameGu",
-  "fatherName",
-  "fatherNameGu",
-  "motherName",
-  "motherNameGu",
-  "guardianName",
-  "guardianNameGu",
-] as const;
-
-const ID_FIELDS = [
-  "grNumber",
-  "rollNumber",
-  "aadhaarNumber",
-  "mobileNumber",
-  "childUid",
-  "apaarId",
-  "panNumber",
-] as const;
-
-function uniqueStrings(values: string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const v of values) {
-    const t = v.trim();
-    if (!t || seen.has(t)) continue;
-    seen.add(t);
-    out.push(t);
-  }
-  return out;
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&");
 }
 
-function tokenVariants(token: string): string[] {
-  const lower = token.toLowerCase();
-  const upper = token.toUpperCase();
-  const titled = token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
-  return uniqueStrings([token, lower, upper, titled]);
+/** CONCAT of name + GR + IDs — COLLATE avoids utf8mb4_bin vs unicode_ci LIKE errors. */
+function studentHaystackSql(alias: string) {
+  return Prisma.raw(`CONCAT_WS(' ',
+    IFNULL(${alias}.firstName, ''),
+    IFNULL(${alias}.middleName, ''),
+    IFNULL(${alias}.surname, ''),
+    IFNULL(${alias}.firstNameGu, ''),
+    IFNULL(${alias}.middleNameGu, ''),
+    IFNULL(${alias}.surnameGu, ''),
+    IFNULL(${alias}.aadhaarName, ''),
+    IFNULL(${alias}.aadhaarNameGu, ''),
+    IFNULL(${alias}.fatherName, ''),
+    IFNULL(${alias}.fatherNameGu, ''),
+    IFNULL(${alias}.motherName, ''),
+    IFNULL(${alias}.motherNameGu, ''),
+    IFNULL(${alias}.guardianName, ''),
+    IFNULL(${alias}.guardianNameGu, ''),
+    IFNULL(${alias}.grNumber, ''),
+    IFNULL(${alias}.rollNumber, ''),
+    IFNULL(${alias}.mobileNumber, ''),
+    IFNULL(${alias}.aadhaarNumber, ''),
+    IFNULL(${alias}.childUid, ''),
+    IFNULL(${alias}.apaarId, '')
+  )`);
 }
 
-function fieldContains(field: string, value: string) {
-  return { [field]: { contains: value } };
-}
-
-function tokenClause(token: string): Record<string, unknown> {
-  const or: Record<string, unknown>[] = [];
-  for (const variant of tokenVariants(token)) {
-    for (const field of NAME_FIELDS) {
-      or.push(fieldContains(field, variant));
-    }
-  }
-  for (const field of ID_FIELDS) {
-    or.push(fieldContains(field, token));
-    or.push({ [field]: token });
-  }
-
-  const digits = token.replace(/\D/g, "");
-  if (digits) {
-    or.push({ grNumber: digits }, { grNumber: { contains: digits } });
-    or.push({ rollNumber: digits }, { rollNumber: { contains: digits } });
-    const stripped = digits.replace(/^0+/, "") || "0";
-    if (stripped !== digits) {
-      or.push({ grNumber: stripped }, { grNumber: { contains: stripped } });
-    }
-  }
-
-  return { OR: or };
-}
-
-/** Prisma `where` fragment for student text search (name, GR, roll, IDs). */
-export function studentSearchWhere(search: string): Record<string, unknown> | null {
-  const q = String(search || "").trim();
-  if (!q) return null;
-  const tokens = q.split(/\s+/).filter(Boolean).slice(0, 6);
-  if (tokens.length === 1) return tokenClause(tokens[0]);
-  return { AND: tokens.map(tokenClause) };
+function tokenMatchSql(alias: string, token: string) {
+  const pattern = `%${escapeLike(token)}%`;
+  return Prisma.sql`${studentHaystackSql(alias)} COLLATE utf8mb4_unicode_ci LIKE ${pattern}`;
 }
 
 export function looksLikeGrQuery(search: string): boolean {
@@ -91,4 +43,48 @@ export function looksLikeGrQuery(search: string): boolean {
   if (!digits) return false;
   const letters = q.replace(/[0-9\s./-]/g, "");
   return digits.length >= 1 && letters.length === 0;
+}
+
+/**
+ * Find student IDs by GR or name (English + Gujarati).
+ * Do not use Prisma `contains` here — production MySQL mixed collations throw on LIKE.
+ */
+export async function searchStudentIds(
+  db: PrismaClient,
+  opts: {
+    schoolId: string;
+    query: string;
+    classTeacherId?: string;
+    take?: number;
+  },
+): Promise<string[]> {
+  const q = String(opts.query || "").trim();
+  if (!q) return [];
+  const tokens = q.split(/\s+/).filter(Boolean).slice(0, 6);
+  if (!tokens.length) return [];
+
+  const take = Math.min(Math.max(opts.take ?? 50, 1), 500);
+  const matchAll = Prisma.join(
+    tokens.map((token) => tokenMatchSql("s", token)),
+    " AND ",
+  );
+  const joinClass = opts.classTeacherId
+    ? Prisma.sql`INNER JOIN schoolclass c ON c.id = s.classId AND c.classTeacherId = ${opts.classTeacherId}`
+    : Prisma.empty;
+
+  try {
+    const rows = await db.$queryRaw<{ id: string }[]>`
+      SELECT s.id
+      FROM student s
+      ${joinClass}
+      WHERE s.schoolId = ${opts.schoolId}
+        AND (${matchAll})
+      ORDER BY s.surname ASC, s.firstName ASC
+      LIMIT ${Prisma.raw(String(take))}
+    `;
+    return rows.map((r) => r.id).filter(Boolean);
+  } catch (error) {
+    console.error("searchStudentIds failed:", error);
+    throw error;
+  }
 }
