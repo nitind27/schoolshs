@@ -368,6 +368,8 @@ const gu: Messages = {
     openProfile: "પૂર્ણ પ્રોફાઇલ",
     resultsPrint: "પરિણામ / માર્કશીટ",
     printReport: "વિશ્લેષણ પ્રિન્ટ",
+    printedOn: "પ્રિન્ટ તારીખ {{date}}",
+    printSchoolFallback: "શાળા",
     manageDocs: "પ્રોફાઇલ દસ્તાવેજ ખોલો",
     attendanceTitle: "હાજરી રિપોર્ટ",
     attendanceMonthLabel: "આ મહિનો · {{month}}",

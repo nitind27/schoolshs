@@ -420,6 +420,33 @@ html.locale-en {
     pointer-events: none;
   }
 
+  /* Student analysis report */
+  .sa-print-root,
+  .sa-print-root * {
+    visibility: visible !important;
+  }
+
+  .sa-print-root {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    z-index: 99999 !important;
+  }
+
+  .sa-print-root .sa-no-print,
+  .sa-print-root .sa-no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
   /* Board exam result sheet register */
   .exam-result-sheet-print,
   .exam-result-sheet-print * {

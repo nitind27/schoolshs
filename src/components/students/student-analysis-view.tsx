@@ -144,14 +144,16 @@ function Section({
   icon: Icon,
   children,
   action,
+  className,
 }: {
   title: string;
   icon: typeof User;
   children: ReactNode;
   action?: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="sa-section">
+    <section className={cn("sa-section", className)}>
       <div className="sa-section__head">
         <div className="sa-section__title">
           <span className="sa-section__icon">
@@ -206,6 +208,7 @@ export function StudentAnalysisView({ student, id }: { student: Student; id: str
   const { locale } = useLocale();
   const [data, setData] = useState<AnalysisPayload | null>(null);
   const [loading, setLoading] = useState(true);
+  const [schoolName, setSchoolName] = useState("");
 
   const englishName = [student.firstName, student.middleName, student.surname].filter(Boolean).join(" ");
   const gujaratiName = studentFullNameGu(student);
@@ -250,6 +253,36 @@ export function StudentAnalysisView({ student, id }: { student: Student; id: str
       alive = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setSchoolName(String(d?.user?.schoolName || "").trim()))
+      .catch(() => setSchoolName(""));
+  }, []);
+
+  const handlePrint = () => {
+    document.body.classList.add("sa-printing");
+    const restore = () => {
+      document.body.classList.remove("sa-printing");
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    window.print();
+    window.setTimeout(restore, 1500);
+  };
+
+  const printedOn = useMemo(() => {
+    try {
+      return now.toLocaleDateString(locale === "gu" ? "gu-IN" : "en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return now.toISOString().slice(0, 10);
+    }
+  }, [locale, now]);
 
   const classId = data?.gr.classId || student.classId || "";
   const month = data?.attendance.month || now.getMonth() + 1;
@@ -340,7 +373,7 @@ export function StudentAnalysisView({ student, id }: { student: Student; id: str
       icon={<FileBadge className="h-5 w-5" />}
       actions={
         <>
-          <Button variant="outline" size="sm" type="button" onClick={() => window.print()}>
+          <Button variant="outline" size="sm" type="button" onClick={handlePrint}>
             <Printer className="h-4 w-4" />
             {t("studentAnalysis.printReport")}
           </Button>
@@ -353,7 +386,16 @@ export function StudentAnalysisView({ student, id }: { student: Student; id: str
         </>
       }
     >
-      <div className="sa-page">
+      <div className="sa-page sa-print-root">
+        <div className="sa-print-letter">
+          <p className="sa-print-letter__school">
+            {schoolName || t("studentAnalysis.printSchoolFallback")}
+          </p>
+          <p className="sa-print-letter__title">{t("studentAnalysis.title")}</p>
+          <p className="sa-print-letter__meta">
+            {t("studentAnalysis.printedOn", { date: printedOn })}
+          </p>
+        </div>
         <div className="sa-hero">
           <div className="sa-hero__photo">
             {photoUrl ? (
@@ -610,7 +652,7 @@ export function StudentAnalysisView({ student, id }: { student: Student; id: str
         </Section>
 
         {/* Certificates */}
-        <Section title={t("studentAnalysis.certsTitle")} icon={Award}>
+        <Section title={t("studentAnalysis.certsTitle")} icon={Award} className="sa-no-print">
           <p className="sa-lead">{t("studentAnalysis.certsDesc")}</p>
           <div className="sa-cert-grid">
             {certLinks.map((c) => (
@@ -776,6 +818,7 @@ export function StudentAnalysisView({ student, id }: { student: Student; id: str
         <Section
           title={t("students.documents")}
           icon={FolderOpen}
+          className="sa-no-print"
           action={
             <Link href={`/students/${id}`} className="sa-section__link">
               {t("studentAnalysis.manageDocs")}

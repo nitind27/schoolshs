@@ -373,6 +373,8 @@ const en = {
     openProfile: "Full profile",
     resultsPrint: "Results / marksheet",
     printReport: "Print analysis",
+    printedOn: "Printed on {{date}}",
+    printSchoolFallback: "School",
     manageDocs: "Open profile documents",
     attendanceTitle: "Attendance report",
     attendanceMonthLabel: "This month · {{month}}",

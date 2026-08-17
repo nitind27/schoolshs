@@ -436,22 +436,134 @@
   margin-top: 0.85rem;
 }
 
+.sa-print-letter {
+  display: none;
+}
+
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .sa-print-root,
+  .sa-print-root * {
+    visibility: visible !important;
+  }
+
+  .sa-print-root {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    color: #111827 !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    z-index: 99999 !important;
+    gap: 0.7rem;
+  }
+
+  .sa-print-root .sa-no-print,
+  .sa-print-root .sa-no-print *,
   .sa-cert-grid,
   .sa-section__link,
   .sa-cert-card__ext,
   .sa-gr-embed {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .sa-print-letter {
+    display: block !important;
+    margin-bottom: 0.65rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 2px solid #047857;
+    text-align: center;
+  }
+
+  .sa-print-letter__school {
+    margin: 0;
+    font-size: 14pt;
+    font-weight: 800;
+    color: #047857;
+    line-height: 1.25;
+  }
+
+  .sa-print-letter__title {
+    margin: 0.15rem 0 0;
+    font-size: 11pt;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .sa-print-letter__meta {
+    margin: 0.2rem 0 0;
+    font-size: 8.5pt;
+    color: #64748b;
   }
 
   .sa-section {
     break-inside: avoid;
     box-shadow: none;
+    border: 1px solid #d1d5db !important;
+    background: #fff !important;
   }
 
   .sa-hero {
     box-shadow: none;
+    background: #ecfdf5 !important;
+    color: #111827 !important;
+    border: 1px solid #047857 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .sa-hero__eyebrow,
+  .sa-hero__name,
+  .sa-hero__gu,
+  .sa-hero__meta,
+  .sa-pill {
+    color: #111827 !important;
+  }
+
+  .sa-hero__eyebrow {
+    color: #047857 !important;
+  }
+
+  .sa-pill {
+    border-color: #d1d5db !important;
+    background: #fff !important;
+  }
+
+  .sa-stat,
+  .sa-field,
+  .sa-table {
+    break-inside: avoid;
+  }
+
+  .sa-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .sa-table th,
+  .sa-table td {
+    border: 1px solid #d1d5db !important;
+    padding: 4px 6px !important;
+    font-size: 8.5pt;
   }
 }
