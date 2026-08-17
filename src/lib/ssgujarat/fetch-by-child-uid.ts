@@ -1,6 +1,5 @@
-import type { Browser } from "playwright";
 import { parseStudentProfilePage, mergeSsgRecords } from "./parse-profile";
-import { launchSsgujaratBrowser } from "./browser";
+import { launchSsgujaratBrowser, type SsgujaratBrowser } from "./browser";
 import { SSG_MSG } from "./message-codes";
 import type { SsgujaratFetchResult, SsgujaratStudentRecord } from "./types";
 
@@ -13,7 +12,7 @@ function normalizeId(value: string): string {
 }
 
 export async function fetchProfileForChildUid(
-  browser: Browser,
+  browser: SsgujaratBrowser,
   childUid: string
 ): Promise<SsgujaratStudentRecord | null> {
   const page = await browser.newPage();
@@ -34,7 +33,7 @@ export async function fetchProfileForChildUid(
 }
 
 export async function enrichRecordsWithProfiles(
-  browser: Browser,
+  browser: SsgujaratBrowser,
   records: SsgujaratStudentRecord[],
   maxEnrich = 1
 ): Promise<SsgujaratStudentRecord[]> {

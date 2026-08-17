@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { activeStudentStatusFilter } from "@/lib/student-list-filters";
-import { searchStudentIds } from "@/lib/student-search";
+import { searchStudentIds } from "@/lib/student-search.server";
 
 export async function GET(request: NextRequest) {
   try {

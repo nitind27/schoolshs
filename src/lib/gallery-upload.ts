@@ -3,6 +3,7 @@ import "server-only";
 import { rm, unlink } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
+import { projectResolve } from "@/lib/project-path";
 
 export const GALLERY_MAX_INPUT = 8 * 1024 * 1024;
 export const GALLERY_MAX_FILES = 20;
@@ -34,7 +35,7 @@ export async function compressGalleryImage(input: Buffer) {
 }
 
 function uploadsRoot() {
-  return path.resolve(process.cwd(), "uploads");
+  return projectResolve("uploads");
 }
 
 /** Absolute path under /uploads for a stored gallery filePath. */

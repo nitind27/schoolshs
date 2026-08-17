@@ -14,7 +14,7 @@ import {
   syncStudentPortalAccount,
 } from "@/lib/student-account";
 import { activeStudentStatusFilter } from "@/lib/student-list-filters";
-import { searchStudentIds } from "@/lib/student-search";
+import { searchStudentIds } from "@/lib/student-search.server";
 
 function studentDisplayName(s: { firstName?: string | null; surname?: string | null }) {
   return [s.firstName, s.surname].filter(Boolean).join(" ").trim() || "Student";

@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import { prisma } from "@/lib/db";
+import { projectPath } from "@/lib/project-path";
 import { AuthError, getSession } from "@/lib/auth";
 import { canUseChat } from "@/lib/chat/types";
 
@@ -119,7 +120,7 @@ export async function GET(
 
     await assertUploadAccess(segments);
 
-    const uploadRoot = path.join(process.cwd(), "uploads");
+    const uploadRoot = projectPath("uploads");
     const filePath = path.join(uploadRoot, ...segments);
     const resolved = path.resolve(filePath);
 

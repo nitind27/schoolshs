@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
     "sharp",
     "@whiskeysockets/baileys",
     "pino",
+    "playwright",
+    "playwright-core",
   ],
 };
 

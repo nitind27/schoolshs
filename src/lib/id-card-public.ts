@@ -4,6 +4,7 @@ import path from "path";
 import { existsSync } from "fs";
 import { prisma } from "@/lib/db";
 import { normalizeSchoolAssetPath, normalizeUploadPath } from "@/lib/id-card-share";
+import { projectPath } from "@/lib/project-path";
 
 const MIME: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -14,7 +15,7 @@ const MIME: Record<string, string> = {
 };
 
 export async function serveUploadRelative(relativePath: string, cache = "public, max-age=3600") {
-  const uploadRoot = path.join(process.cwd(), "uploads");
+  const uploadRoot = projectPath("uploads");
   const filePath = path.join(uploadRoot, ...relativePath.split("/"));
   const resolved = path.resolve(filePath);
   if (!resolved.startsWith(path.resolve(uploadRoot)) || !existsSync(resolved)) {

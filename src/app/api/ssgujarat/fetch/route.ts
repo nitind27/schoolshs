@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSsgujaratById, detectSsgujaratSearchType } from "@/lib/ssgujarat/fetch";
 import { mapSsgujaratToStudent, compactStudentPartial } from "@/lib/ssgujarat/map-to-student";
-import { toSsgujaratFetchError } from "@/lib/ssgujarat/browser";
+import { toSsgujaratFetchError } from "@/lib/ssgujarat/fetch-error";
 import { SSG_MSG } from "@/lib/ssgujarat/message-codes";
 
 export const maxDuration = 60;

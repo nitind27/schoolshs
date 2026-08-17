@@ -1,6 +1,5 @@
-import type { Page } from "playwright";
 import { enrichRecordsWithProfiles } from "./fetch-by-child-uid";
-import { launchSsgujaratBrowser } from "./browser";
+import { launchSsgujaratBrowser, type SsgujaratPage } from "./browser";
 import { SSG_MSG } from "./message-codes";
 import type { SsgujaratFetchResult, SsgujaratStudentRecord } from "./types";
 
@@ -24,7 +23,7 @@ function maskedMatchesAadhaar(masked: string, aadhaar: string): boolean {
   return digits.endsWith(last4);
 }
 
-async function parseGrid(page: Page): Promise<SsgujaratStudentRecord[]> {
+async function parseGrid(page: SsgujaratPage): Promise<SsgujaratStudentRecord[]> {
   const grid = page.locator(GRID_SELECTOR);
   const visible = await grid.isVisible({ timeout: 8000 }).catch(() => false);
   if (!visible) return [];

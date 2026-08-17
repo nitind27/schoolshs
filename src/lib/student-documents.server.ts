@@ -1,14 +1,16 @@
+import "server-only";
 import path from "path";
 import { existsSync } from "fs";
 import { type DocType } from "@/lib/student-documents";
+import { projectPath } from "@/lib/project-path";
 
 export function getStudentUploadRoot(studentId: string): string {
-  return path.join(process.cwd(), "uploads", "students", studentId);
+  return projectPath("uploads", "students", studentId);
 }
 
 export function buildDocAbsolutePath(relativePath: string): string {
   const normalized = relativePath.replace(/^uploads[/\\]/, "").replace(/\\/g, "/");
-  return path.join(process.cwd(), "uploads", ...normalized.split("/"));
+  return projectPath("uploads", ...normalized.split("/"));
 }
 
 export function resolveDocAbsolutePath(
@@ -24,7 +26,7 @@ export function resolveDocAbsolutePath(
     candidates.push(stored);
   } else {
     candidates.push(buildDocAbsolutePath(stored));
-    candidates.push(path.join(process.cwd(), stored));
+    candidates.push(projectPath(stored));
   }
 
   // Legacy flat path: only the requested document type, never another file.
@@ -42,7 +44,7 @@ export function resolveDocAbsolutePath(
 }
 
 export function relativePathFromAbsolute(absolutePath: string): string {
-  const uploadsRoot = path.join(process.cwd(), "uploads");
+  const uploadsRoot = projectPath("uploads");
   const resolved = path.resolve(absolutePath);
   if (resolved.startsWith(uploadsRoot)) {
     return path.relative(uploadsRoot, resolved).replace(/\\/g, "/");

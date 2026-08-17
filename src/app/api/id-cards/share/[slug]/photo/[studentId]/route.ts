@@ -5,6 +5,7 @@ import { existsSync } from "fs";
 import { prisma } from "@/lib/db";
 import { parseIdCardShareToken, ID_CARD_SHARE_COOKIE } from "@/lib/id-card-share-token";
 import { getShareLinkBySlug, isShareLinkValid, normalizeUploadPath } from "@/lib/id-card-share";
+import { projectPath } from "@/lib/project-path";
 
 const MIME: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -25,7 +26,7 @@ async function requireShareAccess(request: NextRequest, slug: string) {
 }
 
 async function serveFile(relativePath: string) {
-  const uploadRoot = path.join(process.cwd(), "uploads");
+  const uploadRoot = projectPath("uploads");
   const filePath = path.join(uploadRoot, ...relativePath.split("/"));
   const resolved = path.resolve(filePath);
 

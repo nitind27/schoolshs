@@ -1,13 +1,12 @@
-import fs from "fs";
-import { chromium, type Browser } from "playwright";
-import { SSG_MSG } from "./message-codes";
+import "server-only";
+import { toSsgujaratFetchError } from "./fetch-error";
 
 const LINUX_CHROME_CANDIDATES = [
   "/usr/bin/google-chrome-stable",
   "/usr/bin/google-chrome",
   "/usr/bin/chromium-browser",
   "/usr/bin/chromium",
-];
+] as const;
 
 function linuxLaunchArgs() {
   if (process.platform !== "linux") return [];
@@ -20,57 +19,15 @@ function linuxLaunchArgs() {
   ];
 }
 
-export function isPlaywrightLaunchFailure(err: unknown): boolean {
-  const msg = err instanceof Error ? `${err.message}\n${err.stack || ""}` : String(err);
-  return (
-    msg.includes("libatk") ||
-    msg.includes("shared libraries") ||
-    msg.includes("Host system is missing dependencies") ||
-    msg.includes("browserType.launch") ||
-    msg.includes("Target page, context or browser has been closed") ||
-    msg.includes("Executable doesn't exist") ||
-    msg.includes("Call log:")
-  );
-}
+export { toSsgujaratFetchError, isPlaywrightLaunchFailure } from "./fetch-error";
 
-export function toSsgujaratFetchError(err: unknown): string {
-  if (err instanceof Error && err.message === SSG_MSG.BROWSER_UNAVAILABLE) {
-    return SSG_MSG.BROWSER_UNAVAILABLE;
-  }
-  if (isPlaywrightLaunchFailure(err)) return SSG_MSG.BROWSER_UNAVAILABLE;
-  if (err instanceof Error) {
-    const msg = err.message.trim();
-    if (msg.startsWith("SSG_")) return msg;
-    if (msg.includes("\n") || msg.length > 180) return SSG_MSG.BROWSER_UNAVAILABLE;
-    return msg;
-  }
-  return SSG_MSG.BROWSER_UNAVAILABLE;
-}
+/** Headless Chromium for SSGujarat fetch — try default, then known Linux binaries. */
+export async function launchSsgujaratBrowser() {
+  const { chromium } = await import(/* turbopackIgnore: true */ "playwright");
 
-async function tryLaunch(executablePath?: string): Promise<Browser> {
-  return chromium.launch({
-    headless: true,
-    args: linuxLaunchArgs(),
-    ...(executablePath ? { executablePath } : {}),
-  });
-}
-
-/** Headless Chromium for SSGujarat fetch — Linux VPS safe args + system Chrome fallback. */
-export async function launchSsgujaratBrowser(): Promise<Browser> {
-  let bundledPath = "";
-  try {
-    bundledPath = chromium.executablePath();
-  } catch {
-    bundledPath = "";
-  }
-
-  const attempts: (string | undefined)[] = [];
-  if (bundledPath && fs.existsSync(bundledPath)) attempts.push(bundledPath);
-  attempts.push(undefined);
+  const attempts: (string | undefined)[] = [undefined];
   if (process.platform === "linux") {
-    for (const p of LINUX_CHROME_CANDIDATES) {
-      if (fs.existsSync(p)) attempts.push(p);
-    }
+    attempts.push(...LINUX_CHROME_CANDIDATES);
   }
 
   let lastError: unknown;
@@ -80,7 +37,11 @@ export async function launchSsgujaratBrowser(): Promise<Browser> {
     if (seen.has(key)) continue;
     seen.add(key);
     try {
-      return await tryLaunch(exec);
+      return await chromium.launch({
+        headless: true,
+        args: linuxLaunchArgs(),
+        ...(exec ? { executablePath: exec } : {}),
+      });
     } catch (err) {
       lastError = err;
     }
@@ -88,3 +49,6 @@ export async function launchSsgujaratBrowser(): Promise<Browser> {
 
   throw new Error(toSsgujaratFetchError(lastError));
 }
+
+export type SsgujaratBrowser = Awaited<ReturnType<typeof launchSsgujaratBrowser>>;
+export type SsgujaratPage = Awaited<ReturnType<SsgujaratBrowser["newPage"]>>;

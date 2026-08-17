@@ -5,8 +5,9 @@ import { randomBytes } from "crypto";
 import sharp from "sharp";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { projectPath } from "@/lib/project-path";
 
-const UPLOAD_ROOT = path.join(process.cwd(), "uploads");
+const UPLOAD_ROOT = projectPath("uploads");
 const IMAGE_MIME = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"]);
 
 export async function POST(request: NextRequest) {

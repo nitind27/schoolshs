@@ -1,8 +1,8 @@
 import { mkdir } from "fs/promises";
-import path from "path";
 import QRCode from "qrcode";
 import pino from "pino";
 import { phoneToWhatsAppJid } from "@/lib/whatsapp/phone";
+import { projectPath } from "@/lib/project-path";
 
 export type WhatsAppConnectionStatus = "disconnected" | "connecting" | "qr" | "connected";
 
@@ -17,7 +17,7 @@ export type WhatsAppSessionSnapshot = {
 type BaileysModule = typeof import("@whiskeysockets/baileys");
 type WASocket = import("@whiskeysockets/baileys").WASocket;
 
-const AUTH_DIR = path.join(process.cwd(), "automation", "whatsapp-auth");
+const AUTH_DIR = projectPath("automation", "whatsapp-auth");
 
 let baileysPromise: Promise<BaileysModule> | null = null;
 

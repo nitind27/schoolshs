@@ -21,6 +21,7 @@ import {
 } from "@/lib/school-features";
 import { normalizeSchoolAssetPath } from "@/lib/id-card-share";
 import { formatSchoolDate } from "@/lib/school-timezone";
+import { projectPath } from "@/lib/project-path";
 
 const PAGE = { w: 595.28, h: 841.89 };
 const MARGIN = 36;
@@ -169,8 +170,8 @@ async function embedLogo(pdf: PDFDocument, logoPath: string | null): Promise<PDF
   const rel =
     normalizeSchoolAssetPath(logoPath) ||
     logoPath.replace(/\\/g, "/").replace(/^uploads\//, "").replace(/^\/+/, "");
-  const full = path.join(process.cwd(), "uploads", rel);
-  if (!full.startsWith(path.join(process.cwd(), "uploads")) || !existsSync(full)) return null;
+  const full = projectPath("uploads", rel);
+  if (!full.startsWith(projectPath("uploads")) || !existsSync(full)) return null;
   try {
     const raw = await readFile(full);
     const png = await sharp(raw)

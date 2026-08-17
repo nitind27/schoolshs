@@ -1,5 +1,13 @@
-import type { Page } from "playwright";
 import type { SsgujaratStudentRecord } from "./types";
+
+type ProfilePage = {
+  evaluate<T>(fn: () => T): Promise<T>;
+  waitForLoadState(
+    state?: "load" | "domcontentloaded" | "networkidle",
+    options?: { timeout?: number },
+  ): Promise<unknown>;
+  waitForSelector(selector: string, options?: { timeout?: number }): Promise<unknown>;
+};
 
 function titleCaseDistrict(value: string): string {
   return value
@@ -23,7 +31,7 @@ function estimateDobFromClass1Entry(academicYear: string): string {
   return `01/07/${start - 6}`;
 }
 
-async function readProfileFields(page: Page) {
+async function readProfileFields(page: ProfilePage) {
   return page.evaluate(() => {
     const g = (id: string) => {
       const el = document.getElementById(id);
@@ -77,7 +85,7 @@ async function readProfileFields(page: Page) {
   });
 }
 
-export async function parseStudentProfilePage(page: Page): Promise<SsgujaratStudentRecord | null> {
+export async function parseStudentProfilePage(page: ProfilePage): Promise<SsgujaratStudentRecord | null> {
   await page.waitForLoadState("domcontentloaded", { timeout: 45000 });
   await page.waitForSelector("#lblstudentname, #lblchilduniqueid", { timeout: 15000 }).catch(() => {});
 

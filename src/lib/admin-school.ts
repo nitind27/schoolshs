@@ -2,8 +2,9 @@ import { mkdir, writeFile, unlink } from "fs/promises";
 import path from "path";
 import { randomBytes } from "crypto";
 import sharp from "sharp";
+import { projectPath } from "@/lib/project-path";
 
-const UPLOAD_ROOT = path.join(process.cwd(), "uploads");
+const UPLOAD_ROOT = projectPath("uploads");
 
 const LOGO_MIME = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"]);
 const CONTRACT_EXT = new Set([".pdf", ".png", ".jpg", ".jpeg", ".webp"]);

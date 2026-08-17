@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
+import { projectPath } from "@/lib/project-path";
 import type { SessionUser } from "@/lib/session-token";
 import {
   chatAttachmentUrl,
@@ -332,7 +333,7 @@ export async function saveChatUpload(
   file: File,
   mimeType?: string
 ): Promise<PendingAttachment> {
-  const dir = path.join(process.cwd(), "uploads", "chat", schoolId, roomId);
+  const dir = projectPath("uploads", "chat", schoolId, roomId);
   await mkdir(dir, { recursive: true });
 
   const ext = path.extname(file.name) || "";

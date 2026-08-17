@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import { projectPath } from "@/lib/project-path";
 
 export interface SessionMeta {
   loginId: string;
@@ -20,7 +21,7 @@ export function resolveDgProfileDir(portalType: "citizen" | "sjed", scopeKey: st
     .update(`${portalType}:${scopeKey.trim().toLowerCase()}`)
     .digest("hex")
     .slice(0, 16);
-  return path.join(process.cwd(), "automation", "profiles", `${portalType}-${safe}`);
+  return projectPath("automation", "profiles", `${portalType}-${safe}`);
 }
 
 /** Browser profile dir — local automation; mkdir skipped on Vercel (read-only FS) */

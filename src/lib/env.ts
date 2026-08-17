@@ -5,6 +5,7 @@ import {
   readMysqlPartsFromEnv,
   resolveMysqlPartsFromEnv,
 } from "../../prisma/datasource-url";
+import { projectResolve } from "./project-path";
 
 export { getAppUrl } from "./env-auth";
 
@@ -97,7 +98,7 @@ export function buildDatabaseUrl(): string {
   if (direct?.startsWith("file:") || direct?.startsWith("libsql:")) return direct;
 
   const file = read("DB_FILE") || "./dev.db";
-  const absolute = path.isAbsolute(file) ? file : path.resolve(process.cwd(), file);
+  const absolute = path.isAbsolute(file) ? file : projectResolve(file);
   return `file:${absolute}`;
 }
 

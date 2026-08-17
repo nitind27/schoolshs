@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import { parseIdCardShareToken, ID_CARD_SHARE_COOKIE } from "@/lib/id-card-share-token";
+import { projectPath } from "@/lib/project-path";
 import {
   getSchoolSettingsForShare,
   getShareLinkBySlug,
@@ -38,7 +39,7 @@ export async function GET(
     const rel = normalizeSchoolAssetPath(settings.logoPath);
     if (!rel) return NextResponse.json({ error: "No logo" }, { status: 404 });
 
-    const uploadRoot = path.join(process.cwd(), "uploads");
+    const uploadRoot = projectPath("uploads");
     const filePath = path.join(uploadRoot, ...rel.split("/"));
     const resolved = path.resolve(filePath);
     if (!resolved.startsWith(path.resolve(uploadRoot)) || !existsSync(resolved)) {

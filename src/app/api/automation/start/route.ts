@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 import fs from "fs";
-import { chromium } from "playwright";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
 import {
@@ -11,17 +9,16 @@ import {
 } from "@/lib/dg-portal";
 import { buildAutomationPreflight } from "@/lib/automation-preflight";
 import { spawnAutomationWorker } from "@/lib/spawn-automation";
+import { projectCwd, projectPath } from "@/lib/project-path";
 
-function assertPlaywrightReady(): void {
+async function assertPlaywrightReady(): Promise<void> {
   try {
-    const execPath = chromium.executablePath();
-    if (!fs.existsSync(execPath)) {
-      throw new Error("Chromium browser missing on server. Run: npm run playwright:setup");
-    }
+    const { chromium } = await import(/* turbopackIgnore: true */ "playwright");
+    chromium.executablePath();
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     throw new Error(
-      msg.includes("Chromium") || msg.includes("missing")
+      msg.includes("Chromium") || msg.includes("missing") || msg.includes("Executable")
         ? msg
         : "Playwright not ready. VPS par SSH se chalao: npm run playwright:setup"
     );
@@ -29,12 +26,11 @@ function assertPlaywrightReady(): void {
 }
 
 function getTsxRunner(): { command: string; args: string[] } {
-  const tsxCli = path.join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
+  const tsxCli = projectPath("node_modules", "tsx", "dist", "cli.mjs");
   if (fs.existsSync(tsxCli)) {
     return { command: process.execPath, args: [tsxCli] };
   }
-  const tsxBin = path.join(
-    process.cwd(),
+  const tsxBin = projectPath(
     "node_modules",
     ".bin",
     process.platform === "win32" ? "tsx.cmd" : "tsx"
@@ -193,7 +189,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    assertPlaywrightReady();
+    await assertPlaywrightReady();
 
     const validIds = students.map((s) => s.id);
 
@@ -221,7 +217,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const scriptPath = path.join(process.cwd(), "automation", "run.ts");
+    const scriptPath = projectPath("automation", "run.ts");
     const { command, args: runnerArgs } = getTsxRunner();
 
     const scriptArgs =
@@ -229,15 +225,15 @@ export async function POST(request: NextRequest) {
         ? [...runnerArgs, scriptPath, validIds[0], mode]
         : [...runnerArgs, scriptPath, "batch", validIds.join(","), mode];
 
-    const logsDir = path.join(process.cwd(), "automation", "logs");
+    const logsDir = projectPath("automation", "logs");
     fs.mkdirSync(logsDir, { recursive: true });
-    const logFile = path.join(logsDir, `${job.id}.log`);
+    const logFile = projectPath("automation", "logs", `${job.id}.log`);
     const logFd = fs.openSync(logFile, "a");
 
     const child = spawnAutomationWorker(command, scriptArgs, {
       detached: true,
       stdio: ["ignore", logFd, logFd],
-      cwd: process.cwd(),
+      cwd: projectCwd(),
       env: {
         ...process.env,
         AUTOMATION_JOB_ID: job.id,

@@ -3,8 +3,8 @@ import { prisma } from "@/lib/db";
 import { processIdCardPhoto } from "@/lib/id-photo-processor";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { resolveDocAbsolutePath } from "@/lib/student-documents.server";
+import { projectPath } from "@/lib/project-path";
 import fs from "fs/promises";
-import path from "path";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -37,10 +37,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const processed = await processIdCardPhoto(inputBuffer);
-    const outDir = path.join(process.cwd(), "uploads", "students", id);
+    const outDir = projectPath("uploads", "students", id);
     await fs.mkdir(outDir, { recursive: true });
     const outRel = `students/${id}/id-photo-processed.jpg`;
-    const outPath = path.join(process.cwd(), "uploads", outRel);
+    const outPath = projectPath("uploads", outRel);
     await fs.writeFile(outPath, processed.buffer);
 
     await prisma.student.update({

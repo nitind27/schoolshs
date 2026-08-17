@@ -1,5 +1,4 @@
-import { spawn, type ChildProcess, type SpawnOptions } from "child_process";
-import fs from "fs";
+import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 
 type NodeEnv = "development" | "production" | "test";
 
@@ -12,14 +11,6 @@ function hasDisplay(): boolean {
   return Boolean(process.env.DISPLAY?.trim() || process.env.WAYLAND_DISPLAY?.trim());
 }
 
-function findXvfbRun(): string | null {
-  const candidates = ["/usr/bin/xvfb-run", "/bin/xvfb-run"];
-  for (const bin of candidates) {
-    if (fs.existsSync(bin)) return bin;
-  }
-  return null;
-}
-
 /** Linux VPS: child worker ko xvfb-run se wrap karo taaki Chromium headed chale */
 export function buildAutomationSpawn(
   command: string,
@@ -29,19 +20,10 @@ export function buildAutomationSpawn(
     return { command, args: scriptArgs, envExtra: {} };
   }
 
-  const xvfb = findXvfbRun();
-  if (xvfb) {
-    return {
-      command: xvfb,
-      args: ["-a", command, ...scriptArgs],
-      envExtra: {},
-    };
-  }
-
   return {
-    command,
-    args: scriptArgs,
-    envExtra: { AUTOMATION_HEADLESS: "1" },
+    command: "xvfb-run",
+    args: ["-a", command, ...scriptArgs],
+    envExtra: {},
   };
 }
 

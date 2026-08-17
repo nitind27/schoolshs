@@ -11,6 +11,7 @@ import {
   GALLERY_MAX_FILES,
   GALLERY_MAX_INPUT,
 } from "@/lib/gallery-upload";
+import { projectPath } from "@/lib/project-path";
 
 type RouteParams = { params: Promise<{ titleId: string }> };
 
@@ -39,8 +40,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: `You can upload up to ${GALLERY_MAX_FILES} images at once` }, { status: 400 });
     }
 
-    const dir = path.join(
-      process.cwd(),
+    const dir = projectPath(
       "uploads",
       "gallery",
       session.schoolId,
