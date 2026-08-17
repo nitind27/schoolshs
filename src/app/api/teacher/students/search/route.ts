@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { activeStudentStatusFilter } from "@/lib/student-list-filters";
+import { studentSearchWhere } from "@/lib/student-search";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["teacher"]);
-    const grNumber = String(
-      request.nextUrl.searchParams.get("grNumber") || "",
+    const q = String(
+      request.nextUrl.searchParams.get("q") ||
+        request.nextUrl.searchParams.get("search") ||
+        request.nextUrl.searchParams.get("grNumber") ||
+        "",
     ).trim();
 
     if (!session.staffId) {
@@ -16,16 +20,17 @@ export async function GET(request: NextRequest) {
         { status: 403 },
       );
     }
-    if (!grNumber) {
+    if (!q) {
       return NextResponse.json({ students: [] });
     }
 
+    const searchClause = studentSearchWhere(q);
     const students = await prisma.student.findMany({
       where: {
         schoolId: session.schoolId,
         status: activeStudentStatusFilter(),
-        grNumber: { contains: grNumber },
         schoolClass: { classTeacherId: session.staffId },
+        ...(searchClause || {}),
       },
       orderBy: [{ grNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
       take: 8,
@@ -34,6 +39,9 @@ export async function GET(request: NextRequest) {
         firstName: true,
         middleName: true,
         surname: true,
+        firstNameGu: true,
+        middleNameGu: true,
+        surnameGu: true,
         grNumber: true,
         rollNumber: true,
         standard: true,

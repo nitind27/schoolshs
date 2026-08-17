@@ -15,6 +15,7 @@ import {
 import { useT } from "@/i18n/locale-provider";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { looksLikeGrQuery } from "@/lib/student-search";
 import { InfoModal } from "@/components/ui/info-modal";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +24,9 @@ type Hit = {
   firstName?: string | null;
   middleName?: string | null;
   surname?: string | null;
+  firstNameGu?: string | null;
+  middleNameGu?: string | null;
+  surnameGu?: string | null;
   grNumber?: string | null;
   standard?: string | null;
   section?: string | null;
@@ -49,10 +53,12 @@ type Hit = {
 };
 
 function displayName(s: Hit) {
-  return (
-    [s.firstName, s.middleName, s.surname].filter(Boolean).join(" ").trim() ||
-    "—"
-  );
+  const gu = [s.firstNameGu, s.middleNameGu, s.surnameGu]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const en = [s.firstName, s.middleName, s.surname].filter(Boolean).join(" ").trim();
+  return gu || en || "—";
 }
 
 function classLabel(s: Hit) {
@@ -133,7 +139,7 @@ export function NavbarGrSearch({
       try {
         if (scope === "teacher") {
           const response = await fetch(
-            `/api/teacher/students/search?grNumber=${encodeURIComponent(trimmed)}`,
+            `/api/teacher/students/search?q=${encodeURIComponent(trimmed)}`,
             { cache: "no-store", signal: ac.signal },
           );
           const data = await response.json();
@@ -144,34 +150,29 @@ export function NavbarGrSearch({
           return;
         }
 
-        const [lookupRes, listRes] = await Promise.all([
-          fetch(
-            `/api/students/lookup-gr?grNumber=${encodeURIComponent(trimmed)}`,
-            {
-              cache: "no-store",
-              signal: ac.signal,
-            },
-          ),
-          fetch(`/api/students?search=${encodeURIComponent(trimmed)}&limit=8&includeDraft=1`, {
-            cache: "no-store",
-            signal: ac.signal,
-          }),
-        ]);
+        const listUrl = `/api/students?search=${encodeURIComponent(trimmed)}&limit=8&includeDraft=1&lite=1`;
+        const requests: Promise<Response>[] = [
+          fetch(listUrl, { cache: "no-store", signal: ac.signal }),
+        ];
+        if (looksLikeGrQuery(trimmed)) {
+          requests.unshift(
+            fetch(
+              `/api/students/lookup-gr?grNumber=${encodeURIComponent(trimmed)}`,
+              { cache: "no-store", signal: ac.signal },
+            ),
+          );
+        }
 
+        const settled = await Promise.allSettled(requests);
         if (seq !== reqSeq.current) return;
 
         let exact: Hit | null = null;
-        if (lookupRes.ok) {
-          const lookup = await lookupRes.json();
-          if (lookup?.student?.id) {
-            exact = lookup.student as Hit;
-          }
-        }
-
         let list: Hit[] = [];
-        if (listRes.ok) {
-          const data = await listRes.json();
-          list = Array.isArray(data.students) ? data.students : [];
+        for (const item of settled) {
+          if (item.status !== "fulfilled" || !item.value.ok) continue;
+          const data = await item.value.json();
+          if (data?.student?.id) exact = data.student as Hit;
+          if (Array.isArray(data.students)) list = data.students;
         }
 
         if (seq !== reqSeq.current) return;
@@ -224,15 +225,24 @@ export function NavbarGrSearch({
   };
 
   const submitExact = async () => {
-    const gr = q.trim();
-    if (!gr) {
+    const query = q.trim();
+    if (!query) {
       inputRef.current?.focus();
       return;
     }
 
-    // Prefer already-loaded hits for instant open
     if (hits.length === 1) {
       openStudent(hits[0]);
+      return;
+    }
+    if (hits.length > 1) {
+      setOpen(true);
+      toast.push({
+        title: t("navSearch.pickStudent"),
+        description: t("navSearch.pickStudentDesc"),
+        variant: "info",
+        duration: 3500,
+      });
       return;
     }
 
@@ -240,7 +250,7 @@ export function NavbarGrSearch({
     try {
       if (scope === "teacher") {
         const response = await fetch(
-          `/api/teacher/students/search?grNumber=${encodeURIComponent(gr)}`,
+          `/api/teacher/students/search?q=${encodeURIComponent(query)}`,
           { cache: "no-store" },
         );
         const data = await response.json();
@@ -248,7 +258,7 @@ export function NavbarGrSearch({
         const list: Hit[] = Array.isArray(data.students) ? data.students : [];
         const exact = list.find(
           (student) =>
-            String(student.grNumber || "").toLowerCase() === gr.toLowerCase(),
+            String(student.grNumber || "").toLowerCase() === query.toLowerCase(),
         );
         if (exact || list.length === 1) {
           openStudent(exact || list[0]);
@@ -261,38 +271,31 @@ export function NavbarGrSearch({
         }
         toast.push({
           title: t("navSearch.notFound"),
-          description: t("navSearch.notFoundDesc", { gr }),
+          description: t("navSearch.notFoundDesc", { gr: query }),
           variant: "warning",
           duration: 4000,
         });
         return;
       }
 
-      const res = await fetch(
-        `/api/students/lookup-gr?grNumber=${encodeURIComponent(gr)}`,
-        { cache: "no-store" },
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t("navSearch.failed"));
-
-      if (data.student?.id) {
-        openStudent(data.student);
-        return;
+      if (looksLikeGrQuery(query)) {
+        const res = await fetch(
+          `/api/students/lookup-gr?grNumber=${encodeURIComponent(query)}`,
+          { cache: "no-store" },
+        );
+        const data = res.ok ? await res.json() : null;
+        if (data?.student?.id) {
+          openStudent(data.student);
+          return;
+        }
       }
 
-      // Fallback: refresh search list once
-      await searchStudents(gr);
-      // searchStudents updates hits async — re-fetch for submit path
       const listRes = await fetch(
-        `/api/students?search=${encodeURIComponent(gr)}&limit=8&includeDraft=1`,
-        {
-          cache: "no-store",
-        },
+        `/api/students?search=${encodeURIComponent(query)}&limit=8&includeDraft=1&lite=1`,
+        { cache: "no-store" },
       );
       const listData = listRes.ok ? await listRes.json() : { students: [] };
-      const list: Hit[] = Array.isArray(listData.students)
-        ? listData.students
-        : [];
+      const list: Hit[] = Array.isArray(listData.students) ? listData.students : [];
 
       if (list.length === 1) {
         openStudent(list[0]);
@@ -313,7 +316,7 @@ export function NavbarGrSearch({
 
       toast.push({
         title: t("navSearch.notFound"),
-        description: t("navSearch.notFoundDesc", { gr }),
+        description: t("navSearch.notFoundDesc", { gr: query }),
         variant: "warning",
         duration: 4000,
       });

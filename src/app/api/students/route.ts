@@ -14,6 +14,7 @@ import {
   syncStudentPortalAccount,
 } from "@/lib/student-account";
 import { activeStudentStatusFilter } from "@/lib/student-list-filters";
+import { studentSearchWhere } from "@/lib/student-search";
 
 function studentDisplayName(s: { firstName?: string | null; surname?: string | null }) {
   return [s.firstName, s.surname].filter(Boolean).join(" ").trim() || "Student";
@@ -95,42 +96,20 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      const q = search.trim();
-      const searchOr: Record<string, unknown>[] = [
-        { firstName: { contains: q } },
-        { middleName: { contains: q } },
-        { surname: { contains: q } },
-        { firstNameGu: { contains: q } },
-        { surnameGu: { contains: q } },
-        { fatherName: { contains: q } },
-        { fatherNameGu: { contains: q } },
-        { aadhaarNumber: { contains: q } },
-        { mobileNumber: { contains: q } },
-        { institutionName: { contains: q } },
-        { rollNumber: { contains: q } },
-        { rollNumber: q },
-        { grNumber: { contains: q } },
-        { grNumber: q },
-        { childUid: { contains: q } },
-        { apaarId: { contains: q } },
-        { panNumber: { contains: q } },
-      ];
-      // Match padded GR (e.g. user types 45, DB has 0045)
-      const digits = q.replace(/\D/g, "");
-      if (digits && digits !== q) {
-        searchOr.push({ grNumber: digits }, { grNumber: { contains: digits } });
-      }
-      if (digits) {
-        const stripped = digits.replace(/^0+/, "") || "0";
-        if (stripped !== digits) {
-          searchOr.push({ grNumber: stripped }, { grNumber: { contains: stripped } });
+      const searchClause = studentSearchWhere(search);
+      if (searchClause) {
+        const extraAnd: object[] = [];
+        if (where.OR) {
+          extraAnd.push({ OR: where.OR });
+          delete where.OR;
         }
-      }
-      if (where.OR) {
-        where.AND = [{ OR: where.OR }, { OR: searchOr }];
-        delete where.OR;
-      } else {
-        where.OR = searchOr;
+        extraAnd.push(searchClause);
+        const existingAnd = Array.isArray(where.AND)
+          ? [...(where.AND as object[])]
+          : where.AND
+            ? [where.AND as object]
+            : [];
+        where.AND = [...existingAnd, ...extraAnd];
       }
     }
 
