@@ -98,3 +98,35 @@ export function classGroupLabel(standard: string, stream?: string | null): strin
   if (standard === "Balvatika") return "Balvatika";
   return `Std ${standard}`;
 }
+
+export type ClassGroupOption = {
+  key: string;
+  standard: string;
+  stream: string;
+  count: number;
+};
+
+/** Unique classes (Std 9, Std 11 Arts…) — not division A/B/C. */
+export function uniqueClassGroups(
+  classes: Array<{ standard?: string | null; stream?: string | null }>,
+): ClassGroupOption[] {
+  const map = new Map<string, ClassGroupOption>();
+  for (const c of classes) {
+    const standard = String(c.standard || "").trim();
+    if (!standard) continue;
+    const stream = ["11", "12"].includes(standard) ? String(c.stream || "").trim() : "";
+    const key = classGroupKey(standard, stream);
+    const existing = map.get(key);
+    if (existing) existing.count += 1;
+    else map.set(key, { key, standard, stream, count: 1 });
+  }
+  return [...map.values()].sort((a, b) => {
+    const na = Number.parseInt(a.standard, 10);
+    const nb = Number.parseInt(b.standard, 10);
+    if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+    if (a.standard !== b.standard) {
+      return a.standard.localeCompare(b.standard, undefined, { numeric: true });
+    }
+    return a.stream.localeCompare(b.stream);
+  });
+}

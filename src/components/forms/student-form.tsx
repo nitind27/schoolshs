@@ -1,7 +1,8 @@
 "use client";
 
 import { Spinner } from "@/components/ui/loader";
-import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -16,12 +17,11 @@ import {
   CURRENT_YEARS,
   BOARDS,
   BLOOD_GROUPS,
-  SENIOR_STREAMS,
   standardToCourseName,
   standardToCurrentYear,
 } from "@/lib/constants";
 import { PRE_MATRIC_SCHEMES, POST_MATRIC_SCHEMES } from "@/lib/dg-portal";
-import { ChevronLeft, ChevronRight, Save, CheckCircle, Sparkles, Cloud, CloudOff, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, CheckCircle, Sparkles, Cloud, CloudOff, Search, School } from "lucide-react";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
 import { getDgPortalConfig } from "@/lib/dg-portal";
 import { SsgujaratFetch } from "@/components/forms/ssgujarat-fetch";
@@ -33,7 +33,7 @@ import { CategoryBadge } from "@/components/ui/badge";
 import { useT } from "@/i18n/locale-provider";
 import { StudentDocumentsSection } from "@/components/documents/student-documents-section";
 import { GrSetupPanel } from "@/components/forms/gr-setup-panel";
-import { MANAGE_STANDARDS } from "@/lib/class-structure";
+import { classGroupKey, uniqueClassGroups } from "@/lib/class-structure";
 import { hasDraftContent, isDraftDobPlaceholder, stripDraftPlaceholdersForForm } from "@/lib/student-draft";
 import { getCompletionPercentage } from "@/lib/validation";
 import { DateField } from "@/components/ui/date-field";
@@ -160,6 +160,7 @@ export function StudentForm({
   /** Hero/copy: Update vs New — true for edit page or opened existing GR (not a brand-new draft). */
   const [showUpdateHero, setShowUpdateHero] = useState(isEditMode);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [classesLoading, setClassesLoading] = useState(true);
   const [form, setForm] = useState<FormData>({
     maritalStatus: "Unmarried",
     habitationType: "Own",
@@ -221,22 +222,33 @@ export function StudentForm({
     if (studentIdProp || initialData.id) setShowUpdateHero(true);
   }, [studentIdProp, initialData.id]);
 
-  // Prefill class from URL only on final assign step (new student)
+  // Prefill standard (not division) from URL class on the final assign step
   useEffect(() => {
     if (!deferClassAssignment || step !== 5) return;
-    if (form.classId || !initialClassId) return;
-    const exists = classes.some((c) => c.id === initialClassId);
-    if (exists) update("classId", initialClassId);
+    if (form.standard || !initialClassId) return;
+    const cls = classes.find((c) => c.id === initialClassId);
+    if (!cls) return;
+    const stream = ["11", "12"].includes(cls.standard) ? String(cls.stream || "").trim() : "";
+    setForm((prev) => ({
+      ...prev,
+      standard: cls.standard,
+      classId: null,
+      section: "",
+      courseName: standardToCourseName(cls.standard),
+      currentYear: standardToCurrentYear(cls.standard),
+      courseType: stream || defaultCourseTypeForStandard(cls.standard),
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, deferClassAssignment, initialClassId, classes, form.classId]);
+  }, [step, deferClassAssignment, initialClassId, classes, form.standard]);
 
   useEffect(() => {
-    const year = form.financialYear || "2025-26";
-    fetch(`/api/classes?academicYear=${encodeURIComponent(year)}`)
+    setClassesLoading(true);
+    fetch("/api/classes")
       .then((r) => r.json())
       .then((d) => setClasses(d.classes || []))
-      .catch(() => setClasses([]));
-  }, [form.financialYear]);
+      .catch(() => setClasses([]))
+      .finally(() => setClassesLoading(false));
+  }, []);
 
   useEffect(() => {
     if (!form.classId) return;
@@ -254,6 +266,39 @@ export function StudentForm({
       financialYear: cls.academicYear || prev.financialYear,
     }));
   }, [form.classId, classes]);
+
+  const classGroups = useMemo(() => uniqueClassGroups(classes), [classes]);
+  const selectedClassGroupKey = useMemo(() => {
+    const std = String(form.standard || "").trim();
+    if (!std) return "";
+    const raw = String(form.courseType || "").trim();
+    const stream =
+      ["11", "12"].includes(std) && ["Arts", "Commerce", "Science"].includes(raw) ? raw : "";
+    return classGroupKey(std, stream);
+  }, [form.standard, form.courseType]);
+
+  const classGroupLabelText = (standard: string, stream?: string) => {
+    const base =
+      standard === "Balvatika"
+        ? t("classes.balvatika")
+        : t("students.stdShort", { standard });
+    const streamLabel =
+      stream && ["Arts", "Commerce", "Science"].includes(stream) ? stream : "";
+    if (["11", "12"].includes(standard) && streamLabel) return `${base} — ${streamLabel}`;
+    return base;
+  };
+
+  const applyClassGroup = (standard: string, stream = "") => {
+    setForm((prev) => ({
+      ...prev,
+      standard: standard || null,
+      classId: null,
+      section: "",
+      courseName: standard ? standardToCourseName(standard) : prev.courseName,
+      currentYear: standard ? standardToCurrentYear(standard) : prev.currentYear,
+      courseType: stream || defaultCourseTypeForStandard(standard),
+    }));
+  };
 
   const currentAge = calcAgeYears(form.dateOfBirth);
   const scholarshipRequired = isScholarshipRequired(form.category);
@@ -656,6 +701,16 @@ export function StudentForm({
 
   const handleSubmit = async (): Promise<string | void> => {
     if (deferClassAssignment && !form.standard) {
+      alert(t("studentForm.assignStandardRequired"));
+      setStep(5);
+      return;
+    }
+    if (deferClassAssignment && classGroups.length === 0) {
+      alert(t("studentForm.noSchoolClasses"));
+      setStep(5);
+      return;
+    }
+    if (deferClassAssignment && !classGroups.some((g) => g.key === selectedClassGroupKey)) {
       alert(t("studentForm.assignStandardRequired"));
       setStep(5);
       return;
@@ -1535,57 +1590,57 @@ export function StudentForm({
                         }));
                       }}
                     />
-                    <Select
-                      label={t("fields.standard")}
-                      required
-                      emptyLabel={t("studentForm.selectStandard")}
-                      options={MANAGE_STANDARDS.map((std) => ({
-                        value: std,
-                        label: t("students.stdShort", { standard: std }),
-                      }))}
-                      value={form.standard || ""}
-                      onChange={(e) => {
-                        const std = e.target.value;
-                        setForm((prev) => ({
-                          ...prev,
-                          standard: std || null,
-                          classId: null,
-                          section: "",
-                          courseName: std ? standardToCourseName(std) : prev.courseName,
-                          currentYear: std ? standardToCurrentYear(std) : prev.currentYear,
-                          courseType: std
-                            ? defaultCourseTypeForStandard(std)
-                            : prev.courseType,
-                        }));
-                      }}
-                    />
-                    {form.standard === "11" || form.standard === "12" ? (
-                      <Select
-                        label={t("students.stream")}
-                        emptyLabel={t("common.select")}
-                        options={SENIOR_STREAMS.map((s) => ({ value: s, label: s }))}
-                        value={
-                          SENIOR_STREAMS.includes(form.courseType as (typeof SENIOR_STREAMS)[number])
-                            ? form.courseType || ""
-                            : ""
-                        }
-                        onChange={(e) =>
-                          update(
-                            "courseType",
-                            e.target.value || defaultCourseTypeForStandard(form.standard),
-                          )
-                        }
-                      />
-                    ) : null}
                   </div>
-                  {!form.standard && (
+                  {classesLoading ? (
+                    <div className="sf-class-picks-status">
+                      <Spinner size="sm" />
+                      <span>{t("common.loading")}</span>
+                    </div>
+                  ) : classGroups.length === 0 ? (
+                    <div className="sf-note sf-note--warn" style={{ marginTop: "0.75rem" }}>
+                      <p style={{ margin: 0 }}>{t("studentForm.noSchoolClasses")}</p>
+                      <Link href="/classes" className="sf-class-picks-link">
+                        <School className="h-4 w-4" />
+                        {t("studentForm.openClassesPage")}
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="sf-class-picks" role="listbox" aria-label={t("fields.standard")}>
+                      {classGroups.map((g) => {
+                        const selected = selectedClassGroupKey === g.key;
+                        return (
+                          <button
+                            key={g.key}
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            className="sf-class-pick"
+                            data-selected={selected ? "true" : "false"}
+                            onClick={() => applyClassGroup(g.standard, g.stream)}
+                          >
+                            <span className="sf-class-pick__name">
+                              {classGroupLabelText(g.standard, g.stream)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {!form.standard && classGroups.length > 0 && (
                     <p className="sf-note sf-note--warn" style={{ marginTop: "0.75rem" }}>
                       {t("studentForm.assignStandardRequired")}
                     </p>
                   )}
-                  {form.standard ? (
+                  {form.standard && classGroups.some((g) => g.key === selectedClassGroupKey) ? (
                     <p className="sf-note sf-note--ok" style={{ marginTop: "0.75rem" }}>
-                      {t("studentForm.divisionLaterHint", { standard: form.standard })}
+                      {t("studentForm.divisionLaterHint", {
+                        label: classGroupLabelText(
+                          form.standard,
+                          ["11", "12"].includes(form.standard)
+                            ? String(form.courseType || "")
+                            : "",
+                        ),
+                      })}
                     </p>
                   ) : null}
                 </div>
@@ -1611,7 +1666,12 @@ export function StudentForm({
                       ? (classes.find((c) => c.id === form.classId)?.name ||
                         (form.standard ? `Class ${form.standard}-${form.section || ""}` : "—"))
                       : form.standard
-                        ? t("students.stdPendingDivision", { standard: form.standard })
+                        ? classGroupLabelText(
+                            form.standard,
+                            ["11", "12"].includes(form.standard)
+                              ? String(form.courseType || "")
+                              : "",
+                          )
                         : "—"],
                   [t("fields.roll"), form.rollNumber],
                   [t("fields.childUid"), form.childUid],

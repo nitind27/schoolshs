@@ -2387,13 +2387,17 @@ const en = {
       "Assign class at the end after details are filled. Required before saving.",
     assignClassRequired:
       "Please assign a class at the end — student cannot be saved without a class.",
-    assignStandardFinalTitle: "Assign Standard",
+    assignStandardFinalTitle: "Assign Class",
     assignStandardFinalDesc:
-      "Pick Std 9, 10, 11 or 12. Division A/B/C is assigned later, after all admissions.",
-    assignStandardRequired: "Please pick a standard (9 / 10 / 11 / 12) before saving.",
-    selectStandard: "Select standard",
+      "Choose a class added in Classes. Divisions (A/B/C) are assigned later.",
+    assignStandardRequired: "Please pick a class before saving.",
+    selectStandard: "Select class",
+    noSchoolClasses:
+      "No classes added yet. Add classes from the Classes page — they will appear here.",
+    openClassesPage: "Open Classes",
+    classGroupMeta: "{{count}} division(s) in school",
     divisionLaterHint:
-      "Saved as Std {{standard}} — division will be assigned later from Students.",
+      "Saved as {{label}} — division will be assigned later from Students.",
     classDeferredHint: "For new students, class is assigned at the end.",
     apaarFetchBtn: "Fetch by APAAR",
     apaarFetchHint:

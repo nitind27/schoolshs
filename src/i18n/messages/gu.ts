@@ -2363,13 +2363,17 @@ const gu: Messages = {
       "બધી વિગતો ભર્યા પછી અંતે વર્ગ સોંપો. સાચવતા પહેલા જરૂરી છે.",
     assignClassRequired:
       "કૃપા કરીને અંતે વર્ગ સોંપો — વર્ગ વગર વિદ્યાર્થી સાચવી શકાતો નથી.",
-    assignStandardFinalTitle: "ધોરણ સોંપો",
+    assignStandardFinalTitle: "વર્ગ સોંપો",
     assignStandardFinalDesc:
-      "ધો. 9, 10, 11 અથવા 12 પસંદ કરો. ડિવિઝન A/B/C પછીથી, બધા એડમિશન પછી સોંપાશે.",
-    assignStandardRequired: "સેવ કરતા પહેલા ધોરણ (9 / 10 / 11 / 12) પસંદ કરો.",
-    selectStandard: "ધોરણ પસંદ કરો",
+      "Classesમાં ઉમેરેલો વર્ગ પસંદ કરો. ડિવિઝન (A/B/C) પછીથી સોંપાશે.",
+    assignStandardRequired: "સેવ કરતા પહેલા વર્ગ પસંદ કરો.",
+    selectStandard: "વર્ગ પસંદ કરો",
+    noSchoolClasses:
+      "હજુ કોઈ વર્ગ ઉમેરાયો નથી. Classes પેજ પર વર્ગ ઉમેરો — અહીં તે જ દેખાશે.",
+    openClassesPage: "Classes ખોલો",
+    classGroupMeta: "શાળામાં {{count}} ડિવિઝન",
     divisionLaterHint:
-      "ધો. {{standard}} તરીકે સેવ — ડિવિઝન પછીથી Studentsમાં સોંપાશે.",
+      "{{label}} તરીકે સેવ — ડિવિઝન પછીથી Studentsમાં સોંપાશે.",
     classDeferredHint: "નવા વિદ્યાર્થીમાં વર્ગ અંતે સોંપાય છે.",
     apaarFetchBtn: "APAAR થી લોડ",
     apaarFetchHint:

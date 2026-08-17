@@ -948,3 +948,97 @@
     backdrop-filter: none;
   }
 }
+
+.sf-class-picks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.sf-class-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 3.5rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.sf-class-pick:hover {
+  border-color: #047857;
+  box-shadow: 0 6px 16px rgba(4, 120, 87, 0.1);
+}
+
+.sf-class-pick[data-selected="true"] {
+  border-color: #047857;
+  background: #ecfdf5;
+  box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.14);
+}
+
+.sf-class-pick__name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.sf-class-pick[data-selected="true"] .sf-class-pick__name {
+  color: #047857;
+}
+
+.sf-class-pick__meta {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.sf-class-picks-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  color: #64748b;
+  font-size: 0.8125rem;
+}
+
+.sf-class-picks-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #047857;
+  text-decoration: none;
+}
+
+.sf-class-picks-link:hover {
+  text-decoration: underline;
+}
+
+html.locale-gu .sf-class-pick__name {
+  font-family: "Noto Sans Gujarati", inherit;
+  letter-spacing: 0;
+  overflow: visible;
+}
+
+@media (max-width: 639px) {
+  .sf-class-picks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sf-class-pick {
+    min-height: 3.75rem;
+    padding: 0.7rem 0.75rem;
+  }
+}
