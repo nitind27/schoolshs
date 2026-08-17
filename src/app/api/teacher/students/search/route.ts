@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
             name: true,
             standard: true,
             section: true,
+            stream: true,
           },
         },
       },

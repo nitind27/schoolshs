@@ -49,6 +49,7 @@ type Hit = {
     name: string;
     standard: string;
     section: string;
+    stream?: string | null;
   } | null;
 };
 
@@ -61,9 +62,26 @@ function displayName(s: Hit) {
   return gu || en || "—";
 }
 
-function classLabel(s: Hit) {
-  if (s.standard && s.section) return `${s.standard}-${s.section}`;
-  return s.standard || s.section || "";
+function searchClassParts(s: Hit) {
+  const standard = String(s.schoolClass?.standard || s.standard || "").trim();
+  const section = String(s.schoolClass?.section || s.section || "").trim();
+  const stream = String(s.schoolClass?.stream || "").trim();
+  return { standard, section, stream, className: String(s.schoolClass?.name || "").trim() };
+}
+
+function searchClassLabel(
+  s: Hit,
+  t: (key: string, params?: Record<string, string | number>) => string,
+) {
+  const { standard, section, stream, className } = searchClassParts(s);
+  const senior = standard === "11" || standard === "12";
+  if (standard && section && senior && stream) {
+    return t("navSearch.classStreamDiv", { standard, stream, section });
+  }
+  if (standard && section) return t("navSearch.classDiv", { standard, section });
+  if (standard && senior && stream) return t("navSearch.classStream", { standard, stream });
+  if (standard) return t("navSearch.classStd", { standard });
+  return className;
 }
 
 function mergeHits(exact: Hit | null, list: Hit[]): Hit[] {
@@ -417,7 +435,9 @@ export function NavbarGrSearch({
               {t("navSearch.noMatches")}
             </div>
           ) : (
-            hits.map((s) => (
+            hits.map((s) => {
+              const classText = searchClassLabel(s, t);
+              return (
               <button
                 key={s.id}
                 type="button"
@@ -435,12 +455,15 @@ export function NavbarGrSearch({
                   </span>
                   <span className="tn-gr-search__hit-meta">
                     {s.grNumber ? `GR ${s.grNumber}` : t("navSearch.noGr")}
-                    {classLabel(s) ? ` · ${classLabel(s)}` : ""}
-                    {s.rollNumber ? ` · Roll ${s.rollNumber}` : ""}
+                    {s.rollNumber ? ` · ${t("navSearch.roll", { roll: s.rollNumber })}` : ""}
                   </span>
                 </span>
+                {classText ? (
+                  <span className="tn-gr-search__hit-class">{classText}</span>
+                ) : null}
               </button>
-            ))
+              );
+            })
           )}
           <div className={cn("tn-gr-search__hint")}>
             {t(
@@ -471,11 +494,7 @@ export function NavbarGrSearch({
                   </p>
                   <p className="text-xs text-slate-600">
                     GR {selected.grNumber || "—"} ·{" "}
-                    {selected.schoolClass?.name ||
-                      [selectedStandard, selectedSection]
-                        .filter(Boolean)
-                        .join("-") ||
-                      "—"}
+                    {searchClassLabel(selected, t) || "—"}
                   </p>
                 </div>
               </div>
@@ -495,10 +514,7 @@ export function NavbarGrSearch({
               />
               <DetailItem
                 label={t("nav.classes")}
-                value={
-                  selected.schoolClass?.name ||
-                  [selectedStandard, selectedSection].filter(Boolean).join("-")
-                }
+                value={searchClassLabel(selected, t)}
               />
               <DetailItem
                 label={t("fields.dateOfBirth")}
