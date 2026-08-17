@@ -1377,6 +1377,17 @@ const en = {
     clear: "Clear",
     showingRange: "Showing {{from}}-{{to}} of {{total}}",
     bulkSubmitSelected: "Bulk Submit Selected",
+    assignDivision: "Assign Division",
+    assignDivisionTitle: "Assign division",
+    assignDivisionDesc:
+      "Pick a class division for the selected students. They will be placed in that A/B/C division.",
+    assignDivisionEmpty: "No class divisions added yet. Add them from Classes first.",
+    assignDivisionPick: "Select a division",
+    assignDivisionConfirm: "Assign {{count}} student(s) to {{name}}?",
+    assignDivisionSuccess: "{{count}} student(s) assigned to {{name}}",
+    assignDivisionFailed: "Could not assign division",
+    assignDivisionStdHint: "Divisions for Std {{standard}}",
+    assignDivisionOpenClasses: "Open Classes",
     idCard: "ID Card",
     autoFill: "Auto-Fill",
     newStudentSubtitle:

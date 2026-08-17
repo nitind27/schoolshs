@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Badge, CategoryBadge } from "@/components/ui/badge";
 import { CATEGORIES, STUDENT_STATUSES, GENDERS } from "@/lib/constants";
-import { MANAGE_STANDARDS } from "@/lib/class-structure";
+import { MANAGE_STANDARDS, classGroupKey, classGroupLabel } from "@/lib/class-structure";
 import {
   Search,
   Plus,
@@ -33,6 +33,8 @@ import {
   Phone,
   Calendar,
   FilePen,
+  Layers,
+  School,
 } from "lucide-react";
 import Link from "next/link";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
@@ -41,6 +43,7 @@ import { GlobalDataTable } from "@/components/ui/global-data-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useT } from "@/i18n/locale-provider";
 import { PageShell } from "@/components/layout/page-shell";
+import { InfoModal } from "@/components/ui/info-modal";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/hooks/use-confirm";
 import { genderShort, normalizeGender } from "@/lib/gender-utils";
@@ -288,6 +291,9 @@ function StudentsContent() {
   const [pendingDivisionOnly, setPendingDivisionOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [divisionModalOpen, setDivisionModalOpen] = useState(false);
+  const [assigningDivision, setAssigningDivision] = useState(false);
+  const [pickClassId, setPickClassId] = useState("");
 
   useEffect(() => {
     const classId = searchParams.get("classId");
@@ -465,6 +471,89 @@ function StudentsContent() {
       return `${a.stream || ""}${a.section}`.localeCompare(`${b.stream || ""}${b.section}`);
     });
   }, [classes, standardFilter]);
+
+  const selectedRows = useMemo(
+    () => students.filter((s) => selected.has(s.id)),
+    [students, selected],
+  );
+
+  const selectedStandards = useMemo(() => {
+    const set = new Set(
+      selectedRows.map((s) => String(s.standard || "").trim()).filter(Boolean),
+    );
+    return [...set];
+  }, [selectedRows]);
+
+  const divisionClasses = useMemo(() => {
+    let list = classes;
+    if (selectedStandards.length === 1) {
+      list = classes.filter((c) => c.standard === selectedStandards[0]);
+      const streams = new Set(
+        selectedRows
+          .map((s) => String(s.courseType || "").trim())
+          .filter((v) => ["Arts", "Commerce", "Science"].includes(v)),
+      );
+      if (["11", "12"].includes(selectedStandards[0]) && streams.size === 1) {
+        const stream = [...streams][0];
+        const filtered = list.filter((c) => (c.stream || "") === stream);
+        if (filtered.length) list = filtered;
+      }
+    }
+    return [...list].sort((a, b) => {
+      const na = Number(a.standard) - Number(b.standard);
+      if (na !== 0) return na;
+      const streamCmp = `${a.stream || ""}`.localeCompare(`${b.stream || ""}`);
+      if (streamCmp !== 0) return streamCmp;
+      return a.section.localeCompare(b.section);
+    });
+  }, [classes, selectedStandards, selectedRows]);
+
+  const divisionGroups = useMemo(() => {
+    const map = new Map<string, { label: string; classes: ClassMeta[] }>();
+    for (const c of divisionClasses) {
+      const key = classGroupKey(c.standard, c.stream);
+      if (!map.has(key)) {
+        map.set(key, { label: classGroupLabel(c.standard, c.stream), classes: [] });
+      }
+      map.get(key)!.classes.push(c);
+    }
+    return [...map.values()];
+  }, [divisionClasses]);
+
+  const pickedDivision = divisionClasses.find((c) => c.id === pickClassId) || null;
+
+  const openDivisionModal = () => {
+    setPickClassId("");
+    setDivisionModalOpen(true);
+  };
+
+  const assignDivision = async () => {
+    if (!pickedDivision || selected.size === 0) return;
+    setAssigningDivision(true);
+    try {
+      const res = await fetch("/api/students/assign-division", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentIds: Array.from(selected),
+          classId: pickedDivision.id,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || t("students.assignDivisionFailed"));
+        return;
+      }
+      setDivisionModalOpen(false);
+      setSelected(new Set());
+      setPickClassId("");
+      await fetchStudents();
+    } catch {
+      alert(t("students.assignDivisionFailed"));
+    } finally {
+      setAssigningDivision(false);
+    }
+  };
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -1317,11 +1406,29 @@ function StudentsContent() {
             {t("students.selected", { count: selected.size })}
           </span>
           <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-            <Link href={`/bulk-submit?ids=${Array.from(selected).join(",")}`} className="w-full">
-              <Button className="h-10 w-full text-xs">
-                {t("students.bulkSubmitSelected")}
+            {isDraftView ? (
+              <Link href={`/bulk-submit?ids=${Array.from(selected).join(",")}`} className="w-full">
+                <Button className="h-10 w-full text-xs">
+                  {t("students.bulkSubmitSelected")}
+                </Button>
+              </Link>
+            ) : (
+              <Button className="h-10 w-full text-xs" type="button" onClick={openDivisionModal}>
+                <Layers className="h-3.5 w-3.5" />
+                {t("students.assignDivision")}
               </Button>
-            </Link>
+            )}
+            {isDraftView ? (
+              <Button
+                variant="outline"
+                className="h-10 w-full text-xs"
+                type="button"
+                onClick={openDivisionModal}
+              >
+                <Layers className="h-3.5 w-3.5" />
+                {t("students.assignDivision")}
+              </Button>
+            ) : null}
             {selected.size > 1 && userRole === "school_admin" && canAutoApply && (
               <Link href={`/auto-apply?ids=${Array.from(selected).join(",")}`} className="w-full">
                 <Button variant="secondary" className="h-10 w-full text-xs">
@@ -1333,6 +1440,95 @@ function StudentsContent() {
           </div>
         </div>
       )}
+
+      <InfoModal
+        isOpen={divisionModalOpen}
+        onClose={() => {
+          if (assigningDivision) return;
+          setDivisionModalOpen(false);
+        }}
+        title={t("students.assignDivisionTitle")}
+      >
+        <p className="mb-3 text-sm text-slate-600">{t("students.assignDivisionDesc")}</p>
+        <p className="mb-3 text-xs font-semibold text-slate-500">
+          {t("students.selected", { count: selected.size })}
+          {selectedStandards.length === 1
+            ? ` · ${t("students.assignDivisionStdHint", { standard: selectedStandards[0] })}`
+            : ""}
+        </p>
+        {divisionClasses.length === 0 ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+            <p>{t("students.assignDivisionEmpty")}</p>
+            <Link
+              href="/classes"
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700"
+            >
+              <School className="h-4 w-4" />
+              {t("students.assignDivisionOpenClasses")}
+            </Link>
+          </div>
+        ) : (
+          <div className="max-h-[50vh] space-y-4 overflow-y-auto pr-1">
+            {divisionGroups.map((group) => (
+              <div key={group.label}>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                  {group.label}
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {group.classes.map((c) => {
+                    const active = pickClassId === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setPickClassId(c.id)}
+                        className={cn(
+                          "rounded-xl border px-3 py-2.5 text-left transition",
+                          active
+                            ? "border-emerald-600 bg-emerald-50 shadow-sm ring-2 ring-emerald-600/20"
+                            : "border-slate-200 bg-white hover:border-emerald-400",
+                        )}
+                      >
+                        <span className="block text-base font-bold text-slate-900">
+                          {c.section}
+                        </span>
+                        <span className="mt-0.5 block text-xs font-medium text-slate-600">
+                          {c.name}
+                        </span>
+                        {typeof c._count?.students === "number" ? (
+                          <span className="mt-1 block text-[11px] text-slate-400">
+                            {t("classes.studentsCount", { count: c._count.students })}
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="outline"
+            type="button"
+            disabled={assigningDivision}
+            onClick={() => setDivisionModalOpen(false)}
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button
+            type="button"
+            disabled={!pickClassId || assigningDivision || divisionClasses.length === 0}
+            onClick={() => void assignDivision()}
+          >
+            <Layers className="h-4 w-4" />
+            {assigningDivision
+              ? t("common.saving")
+              : t("students.assignDivision")}
+          </Button>
+        </div>
+      </InfoModal>
       <ConfirmDialog />
     </PageShell>
   );

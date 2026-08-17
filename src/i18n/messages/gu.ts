@@ -1362,6 +1362,17 @@ const gu: Messages = {
     clear: "સાફ કરો",
     showingRange: "{{total}} માંથી {{from}}-{{to}} બતાવી રહ્યા છીએ",
     bulkSubmitSelected: "પસંદ કરેલા બલ્ક સબમિટ",
+    assignDivision: "ડિવિઝન સોંપો",
+    assignDivisionTitle: "ડિવિઝન સોંપો",
+    assignDivisionDesc:
+      "પસંદ કરેલા વિદ્યાર્થીઓ માટે વર્ગ ડિવિઝન પસંદ કરો. તેઓ તે A/B/C ડિવિઝનમાં મૂકાશે.",
+    assignDivisionEmpty: "હજુ કોઈ વર્ગ ડિવિઝન નથી. પહેલા Classesમાં ઉમેરો.",
+    assignDivisionPick: "ડિવિઝન પસંદ કરો",
+    assignDivisionConfirm: "{{count}} વિદ્યાર્થીને {{name}}માં સોંપીએ?",
+    assignDivisionSuccess: "{{count}} વિદ્યાર્થી {{name}}માં સોંપાયા",
+    assignDivisionFailed: "ડિવિઝન સોંપી શકાયું નહીં",
+    assignDivisionStdHint: "ધો. {{standard}} ની ડિવિઝન",
+    assignDivisionOpenClasses: "Classes ખોલો",
     idCard: "આઈડી કાર્ડ",
     autoFill: "ઓટો-ફિલ",
     newStudentSubtitle:
