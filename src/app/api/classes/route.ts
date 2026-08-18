@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
-import { buildClassName } from "@/lib/class-structure";
+import { buildClassName, MANAGE_STANDARDS } from "@/lib/class-structure";
+import { enrolledStudentStatusFilter } from "@/lib/student-list-filters";
 import { seedClassSubjects } from "@/lib/class-subjects";
 import { assertStaffInSchool, assertClassTeacherAvailable } from "@/lib/school-assertions";
 
@@ -51,9 +52,14 @@ export async function GET(request: NextRequest) {
     const stream = searchParams.get("stream");
     const academicYear = searchParams.get("academicYear");
     const search = searchParams.get("search");
+    const managedOnly = searchParams.get("managed") === "1";
 
     const where: Record<string, unknown> = { schoolId: session.schoolId };
-    if (standard) where.standard = standard;
+    if (standard) {
+      where.standard = standard;
+    } else if (managedOnly) {
+      where.standard = { in: [...MANAGE_STANDARDS] };
+    }
     if (section) where.section = section;
     if (stream !== null && searchParams.has("stream")) where.stream = stream;
     if (academicYear) where.academicYear = academicYear;
@@ -64,6 +70,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
+    const enrolled = enrolledStudentStatusFilter();
     const classes = await prisma.schoolClass.findMany({
       where,
       orderBy: [{ standard: "asc" }, { stream: "asc" }, { section: "asc" }],
@@ -71,13 +78,78 @@ export async function GET(request: NextRequest) {
         classTeacher: { select: { id: true, firstName: true, lastName: true, designation: true } },
         _count: {
           select: {
-            students: { where: { status: { notIn: ["archived", "draft"] } } },
+            students: { where: { status: enrolled } },
           },
         },
       },
     });
 
-    return NextResponse.json({ classes, total: classes.length });
+    const classIds = classes.map((c) => c.id);
+    const linked: { classId: string | null; _count: { _all: number } }[] = [];
+    const unassigned: {
+      standard: string | null;
+      section: string | null;
+      courseType: string;
+      _count: { _all: number };
+    }[] = [];
+    if (classIds.length) {
+      const [linkedRows, unassignedRows] = await Promise.all([
+        prisma.student.groupBy({
+          by: ["classId"],
+          where: {
+            schoolId: session.schoolId,
+            status: enrolled,
+            classId: { in: classIds },
+          },
+          _count: { _all: true },
+        }),
+        prisma.student.groupBy({
+          by: ["standard", "section", "courseType"],
+          where: {
+            schoolId: session.schoolId,
+            status: enrolled,
+            classId: null,
+            AND: [
+              { standard: { not: null } },
+              { NOT: { standard: "" } },
+              { section: { not: null } },
+              { NOT: { section: "" } },
+            ],
+          },
+          _count: { _all: true },
+        }),
+      ]);
+      linked.push(...linkedRows);
+      unassigned.push(...unassignedRows);
+    }
+
+    const linkedById = new Map(
+      linked.filter((row) => row.classId).map((row) => [row.classId as string, row._count._all]),
+    );
+    const pendingByKey = new Map<string, number>();
+    for (const row of unassigned) {
+      const std = String(row.standard || "").trim();
+      const sec = String(row.section || "").trim();
+      const course = String(row.courseType || "").trim();
+      const stream =
+        ["11", "12"].includes(std) && ["Arts", "Commerce", "Science"].includes(course)
+          ? course
+          : "";
+      const key = `${std}|${sec}|${stream}`;
+      pendingByKey.set(key, (pendingByKey.get(key) || 0) + row._count._all);
+    }
+
+    const withCounts = classes.map((cls) => {
+      const pendingKey = `${cls.standard}|${cls.section}|${cls.stream || ""}`;
+      const students =
+        (linkedById.get(cls.id) || 0) + (pendingByKey.get(pendingKey) || 0);
+      return {
+        ...cls,
+        _count: { ...cls._count, students },
+      };
+    });
+
+    return NextResponse.json({ classes: withCounts, total: withCounts.length });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("GET /api/classes error:", error);

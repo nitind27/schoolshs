@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import {
-  CATEGORY_LABELS,
   SALARY_CATEGORIES,
   SALARY_FIELDS,
   currentFinancialYear,
   fyMonths,
   monthLabel,
+  salaryCategoryDisplayLabel,
   type SalaryCategory,
 } from "@/lib/salary-statement";
 import { loadSchoolSalaryStatement } from "@/lib/salary-statement-server";
@@ -30,10 +29,8 @@ export async function GET(request: NextRequest) {
     const rows = category && SALARY_CATEGORIES.includes(category as SalaryCategory)
       ? built.rows.filter((r) => r.category === category)
       : built.rows;
-    const school = await prisma.school.findUnique({
-      where: { id: session.schoolId },
-      select: { name: true },
-    });
+    const schoolName = built.schoolName || "";
+    const schoolType = built.schoolType;
 
     const months = fyMonths(financialYear);
     // month -> field -> sum
@@ -47,7 +44,7 @@ export async function GET(request: NextRequest) {
     }
 
     const catLabel = category && SALARY_CATEGORIES.includes(category as SalaryCategory)
-      ? CATEGORY_LABELS[category as SalaryCategory]
+      ? salaryCategoryDisplayLabel(category as SalaryCategory, schoolType)
       : "All Staff";
 
     const wb = new ExcelJS.Workbook();
@@ -55,7 +52,7 @@ export async function GET(request: NextRequest) {
     const colCount = months.length + 2;
 
     ws.mergeCells(1, 1, 1, colCount);
-    ws.getCell(1, 1).value = `SALARY LEDGER ${financialYear} — ${catLabel} — ${school?.name || ""}`;
+    ws.getCell(1, 1).value = `SALARY LEDGER ${financialYear} — ${catLabel} — ${schoolName}`;
     ws.getCell(1, 1).font = { bold: true, size: 12 };
     ws.getCell(1, 1).alignment = { horizontal: "center" };
 

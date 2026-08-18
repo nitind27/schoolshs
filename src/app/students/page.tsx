@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Badge, CategoryBadge } from "@/components/ui/badge";
 import { CATEGORIES, STUDENT_STATUSES, GENDERS } from "@/lib/constants";
-import { MANAGE_STANDARDS, classGroupKey, classGroupLabel } from "@/lib/class-structure";
+import { classGroupKey, classGroupLabel, sortStandards } from "@/lib/class-structure";
 import {
   Search,
   Plus,
@@ -32,7 +32,7 @@ import {
   MoreHorizontal,
   Phone,
   Calendar,
-  FilePen,
+  FileWarning,
   Layers,
   School,
 } from "lucide-react";
@@ -44,10 +44,15 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { useT } from "@/i18n/locale-provider";
 import { PageShell } from "@/components/layout/page-shell";
 import { InfoModal } from "@/components/ui/info-modal";
+import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/hooks/use-confirm";
 import { genderShort, normalizeGender } from "@/lib/gender-utils";
 import { useSchoolFeatures } from "@/components/school/use-school-features";
+import {
+  studentPendingReasons,
+  type PendingReason,
+} from "@/lib/student-list-filters";
 
 const PAGE_SIZE = 25;
 
@@ -228,6 +233,8 @@ type Summary = {
   other: number;
   noClass: number;
   draftCount?: number;
+  pendingCount?: number;
+  standards?: string[];
   byStandard?: Record<string, { total: number; pendingDivision: number }>;
 };
 
@@ -249,6 +256,47 @@ function maskAadhaar(value?: string | null) {
   const digits = String(value || "").replace(/\D/g, "");
   if (digits.length < 4) return value || "—";
   return `XXXX-XXXX-${digits.slice(-4)}`;
+}
+
+const PENDING_PILL: Record<PendingReason, { key: string; className: string }> = {
+  documents: {
+    key: "students.pendingReasonDocuments",
+    className: "border-rose-200 bg-rose-50 text-rose-800",
+  },
+  profile: {
+    key: "students.pendingReasonProfile",
+    className: "border-violet-200 bg-violet-50 text-violet-800",
+  },
+  division: {
+    key: "students.pendingReasonDivision",
+    className: "border-amber-200 bg-amber-50 text-amber-800",
+  },
+};
+
+function PendingReasonPills({
+  student,
+  t,
+}: {
+  student: StudentRow;
+  t: (k: string) => string;
+}) {
+  const reasons = studentPendingReasons(student);
+  if (!reasons.length) return null;
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {reasons.map((reason) => (
+        <span
+          key={reason}
+          className={cn(
+            "inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
+            PENDING_PILL[reason].className,
+          )}
+        >
+          {t(PENDING_PILL[reason].key)}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export default function StudentsPage() {
@@ -273,8 +321,11 @@ function StudentsContent() {
   const { has } = useSchoolFeatures();
   const canAutoApply = has("scholarship_auto_apply");
   const searchParams = useSearchParams();
-  const viewMode = searchParams.get("status") === "draft" ? "draft" : "all";
-  const isDraftView = viewMode === "draft";
+  const viewMode =
+    searchParams.get("pending") === "1" || searchParams.get("status") === "draft"
+      ? "pending"
+      : "all";
+  const isPendingView = viewMode === "pending";
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [classes, setClasses] = useState<ClassMeta[]>([]);
   const [total, setTotal] = useState(0);
@@ -292,6 +343,7 @@ function StudentsContent() {
   const [page, setPage] = useState(1);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [divisionModalOpen, setDivisionModalOpen] = useState(false);
+  const [divisionIntent, setDivisionIntent] = useState<"assign" | "admit">("assign");
   const [assigningDivision, setAssigningDivision] = useState(false);
   const [pickClassId, setPickClassId] = useState("");
 
@@ -305,17 +357,18 @@ function StudentsContent() {
     setCategoryFilter(cat || "");
     setStandardFilter(std || "");
     setGenderFilter(g || "");
-    // Draft tab uses URL ?status=draft — other statuses use the filter dropdown only
+    // Pending tab uses ?pending=1 (old ?status=draft still opens it)
     setStatusFilter(st && st !== "draft" ? st : "");
   }, [searchParams]);
 
   const switchView = useCallback(
-    (mode: "all" | "draft") => {
+    (mode: "all" | "pending") => {
       const params = new URLSearchParams(searchParams.toString());
-      if (mode === "draft") {
-        params.set("status", "draft");
+      params.delete("status");
+      if (mode === "pending") {
+        params.set("pending", "1");
       } else {
-        params.delete("status");
+        params.delete("pending");
       }
       setPage(1);
       setSelected(new Set());
@@ -369,10 +422,10 @@ function StudentsContent() {
       page: String(page),
       limit: String(PAGE_SIZE),
     });
-    if (!isDraftView) params.set("summary", "1");
+    params.set("summary", "1");
     if (search.trim()) params.set("search", search.trim());
-    if (isDraftView) {
-      params.set("status", "draft");
+    if (isPendingView) {
+      params.set("pending", "1");
     } else if (statusFilter) {
       params.set("status", statusFilter);
     }
@@ -410,7 +463,7 @@ function StudentsContent() {
     genderFilter,
     noClassOnly,
     pendingDivisionOnly,
-    isDraftView,
+    isPendingView,
   ]);
 
   useEffect(() => {
@@ -443,8 +496,8 @@ function StudentsContent() {
     setStatusFilter("");
     setPage(1);
     setSelected(new Set());
-    if (isDraftView) {
-      router.replace(`${pathname}?status=draft`, { scroll: false });
+    if (isPendingView) {
+      router.replace(`${pathname}?pending=1`, { scroll: false });
     } else {
       router.replace(pathname, { scroll: false });
     }
@@ -459,7 +512,18 @@ function StudentsContent() {
     [t],
   );
 
-  const standardOptions = [...MANAGE_STANDARDS];
+  const standardOptions = useMemo(() => {
+    if (summary?.standards?.length) return summary.standards;
+    return sortStandards(classes.map((c) => c.standard));
+  }, [summary?.standards, classes]);
+
+  const countForStandard = (std: string) => {
+    const fromSummary = summary?.byStandard?.[std]?.total;
+    if (typeof fromSummary === "number") return fromSummary;
+    return classes
+      .filter((c) => c.standard === std)
+      .reduce((n, c) => n + (c._count?.students ?? 0), 0);
+  };
 
   const classesForFilter = useMemo(() => {
     const list = standardFilter
@@ -522,13 +586,16 @@ function StudentsContent() {
 
   const pickedDivision = divisionClasses.find((c) => c.id === pickClassId) || null;
 
-  const openDivisionModal = () => {
+  const openDivisionModal = (intent: "assign" | "admit" = "assign") => {
+    setDivisionIntent(intent);
     setPickClassId("");
     setDivisionModalOpen(true);
   };
 
   const assignDivision = async () => {
     if (!pickedDivision || selected.size === 0) return;
+    const admitDrafts =
+      divisionIntent === "admit" || selectedRows.some((s) => s.status === "draft");
     setAssigningDivision(true);
     try {
       const res = await fetch("/api/students/assign-division", {
@@ -537,19 +604,29 @@ function StudentsContent() {
         body: JSON.stringify({
           studentIds: Array.from(selected),
           classId: pickedDivision.id,
+          admitDrafts,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || t("students.assignDivisionFailed"));
+        alert(
+          data.error ||
+            (admitDrafts ? t("students.admitDraftsFailed") : t("students.assignDivisionFailed")),
+        );
         return;
       }
       setDivisionModalOpen(false);
       setSelected(new Set());
       setPickClassId("");
+      toast.success(
+        t("students.assignDivisionSuccess", {
+          count: String(data.updated ?? selected.size),
+          name: pickedDivision.name,
+        }),
+      );
       await fetchStudents();
     } catch {
-      alert(t("students.assignDivisionFailed"));
+      alert(admitDrafts ? t("students.admitDraftsFailed") : t("students.assignDivisionFailed"));
     } finally {
       setAssigningDivision(false);
     }
@@ -634,6 +711,7 @@ function StudentsContent() {
       else if (standardFilter) params.set("standard", standardFilter);
       if (noClassOnly) params.set("noClass", "1");
       if (pendingDivisionOnly) params.set("pendingDivision", "1");
+      if (isPendingView) params.set("pending", "1");
     }
     const q = params.toString();
     window.open(`/api/students/export${q ? `?${q}` : ""}`, "_blank");
@@ -698,6 +776,7 @@ function StudentsContent() {
                     Roll {s.rollNumber || "—"}
                   </span>
                 </div>
+                <PendingReasonPills student={s} t={t} />
               </div>
             </div>
           );
@@ -775,7 +854,7 @@ function StudentsContent() {
     <PageShell
       title={t("students.title")}
       subtitle={
-        isDraftView ? t("students.draftAdmissionsSubtitle") : t("students.subtitle")
+        isPendingView ? t("students.pendingWorkSubtitle") : t("students.subtitle")
       }
       breadcrumbs={[
         { label: t("nav.dashboard"), href: userRole === "clerk" ? "/clerk" : "/dashboard" },
@@ -820,7 +899,7 @@ function StudentsContent() {
       }
     >
       <div className="space-y-3">
-        {/* All Students / Draft tabs */}
+        {/* All Students / Pending tabs */}
         <div className="flex flex-wrap items-center gap-2">
           <div
             role="tablist"
@@ -858,38 +937,41 @@ function StudentsContent() {
             <button
               type="button"
               role="tab"
-              aria-selected={viewMode === "draft"}
-              onClick={() => switchView("draft")}
+              aria-selected={isPendingView}
+              onClick={() => switchView("pending")}
               className={cn(
                 "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition",
-                viewMode === "draft"
-                  ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-sm"
+                isPendingView
+                  ? "bg-gradient-to-r from-rose-600 to-orange-500 text-white shadow-sm"
                   : "text-slate-600 hover:bg-slate-50",
               )}
             >
-              <FilePen className="h-3.5 w-3.5" />
-              {t("students.draftAdmissions")}
-              {(summary?.draftCount ?? 0) > 0 || (isDraftView && total > 0) ? (
+              <FileWarning className="h-3.5 w-3.5" />
+              {t("students.pendingWork")}
+              {(summary?.pendingCount ?? summary?.draftCount ?? 0) > 0 ||
+              (isPendingView && total > 0) ? (
                 <span
                   className={cn(
                     "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
-                    viewMode === "draft" ? "bg-white/20" : "bg-violet-100 text-violet-700",
+                    isPendingView ? "bg-white/20" : "bg-rose-100 text-rose-700",
                   )}
                 >
-                  {(isDraftView ? total : summary?.draftCount ?? 0).toLocaleString("en-IN")}
+                  {(isPendingView
+                    ? total
+                    : summary?.pendingCount ?? summary?.draftCount ?? 0
+                  ).toLocaleString("en-IN")}
                 </span>
               ) : null}
             </button>
           </div>
         </div>
 
-        {isDraftView ? (
-          <div className="rounded-2xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-900">
-            {t("students.draftAdmissionsBanner")}
+        {isPendingView ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-sm text-rose-900">
+            {t("students.pendingWorkBanner")}
           </div>
         ) : null}
-        {!isDraftView ? (
-        /* Colorful summary strip */
+        {/* Colorful summary strip */}
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-blue-100/80 bg-gradient-to-r from-white via-sky-50/40 to-violet-50/30 px-2.5 py-2 shadow-sm">
           {[
             {
@@ -904,7 +986,10 @@ function StudentsContent() {
                 !standardFilter &&
                 !statusFilter &&
                 viewMode === "all",
-              onClick: () => clearFilters(),
+              onClick: () => {
+                if (isPendingView) switchView("all");
+                else clearFilters();
+              },
               idle: "border-indigo-100 bg-indigo-50/80 text-indigo-950 hover:bg-indigo-100",
               activeCls: "border-transparent bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-200/60",
               labelIdle: "text-indigo-600",
@@ -957,22 +1042,18 @@ function StudentsContent() {
               labelIdle: "text-amber-700",
               labelActive: "text-amber-100",
             },
-            ...(!isDraftView && (summary?.draftCount ?? 0) > 0
-              ? [
-                  {
-                    key: "drafts",
-                    label: t("students.statDrafts"),
-                    value: summary?.draftCount ?? 0,
-                    active: false,
-                    onClick: () => switchView("draft"),
-                    idle: "border-violet-100 bg-violet-50/80 text-violet-950 hover:bg-violet-100",
-                    activeCls:
-                      "border-transparent bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md shadow-violet-200/60",
-                    labelIdle: "text-violet-600",
-                    labelActive: "text-violet-100",
-                  },
-                ]
-              : []),
+            {
+              key: "pending",
+              label: t("students.statPending"),
+              value: summary?.pendingCount ?? summary?.draftCount ?? 0,
+              active: isPendingView,
+              onClick: () => switchView("pending"),
+              idle: "border-rose-100 bg-rose-50/80 text-rose-950 hover:bg-rose-100",
+              activeCls:
+                "border-transparent bg-gradient-to-br from-rose-500 to-orange-500 text-white shadow-md shadow-rose-200/60",
+              labelIdle: "text-rose-700",
+              labelActive: "text-rose-100",
+            },
           ].map((s) => (
             <button
               key={s.key}
@@ -998,13 +1079,21 @@ function StudentsContent() {
             {t("students.statFiltered")}
           </div>
         </div>
-        ) : null}
 
-        {!isDraftView ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {MANAGE_STANDARDS.map((std) => {
+        {standardOptions.length > 0 ? (
+        <div
+          className={cn(
+            "grid gap-2",
+            standardOptions.length <= 2
+              ? "grid-cols-2"
+              : standardOptions.length === 3
+                ? "grid-cols-3"
+                : "grid-cols-2 sm:grid-cols-4",
+          )}
+        >
+            {standardOptions.map((std) => {
               const meta = summary?.byStandard?.[std];
-              const count = meta?.total ?? 0;
+              const count = countForStandard(std);
               const pending = meta?.pendingDivision ?? 0;
               const active = standardFilter === std && !noClassOnly;
               return (
@@ -1118,6 +1207,9 @@ function StudentsContent() {
                   )}
                 >
                   {t("students.allStandards")}
+                  {summary?.total
+                    ? ` (${summary.total.toLocaleString("en-IN")})`
+                    : ""}
                 </button>
                 {standardOptions.map((std) => (
                   <button
@@ -1138,6 +1230,7 @@ function StudentsContent() {
                     )}
                   >
                     {t("students.stdShort", { standard: std })}
+                    {` (${countForStandard(std).toLocaleString("en-IN")})`}
                   </button>
                 ))}
                 {standardFilter ? (
@@ -1200,7 +1293,7 @@ function StudentsContent() {
                 emptyLabel={t("students.allStatuses")}
                 options={statusFilterOptions}
                 value={statusFilter}
-                disabled={isDraftView}
+                disabled={isPendingView}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
                   setPage(1);
@@ -1352,6 +1445,7 @@ function StudentsContent() {
                                         <CategoryBadge category={student.category} />
                                       ) : null}
                                     </div>
+                                    <PendingReasonPills student={student} t={t} />
 
                                     <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2 text-[11px] text-slate-600">
                                       <span className="font-mono font-semibold text-slate-700">
@@ -1406,29 +1500,10 @@ function StudentsContent() {
             {t("students.selected", { count: selected.size })}
           </span>
           <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-            {isDraftView ? (
-              <Link href={`/bulk-submit?ids=${Array.from(selected).join(",")}`} className="w-full">
-                <Button className="h-10 w-full text-xs">
-                  {t("students.bulkSubmitSelected")}
-                </Button>
-              </Link>
-            ) : (
-              <Button className="h-10 w-full text-xs" type="button" onClick={openDivisionModal}>
+              <Button className="h-10 w-full text-xs" type="button" onClick={() => openDivisionModal("assign")}>
                 <Layers className="h-3.5 w-3.5" />
                 {t("students.assignDivision")}
               </Button>
-            )}
-            {isDraftView ? (
-              <Button
-                variant="outline"
-                className="h-10 w-full text-xs"
-                type="button"
-                onClick={openDivisionModal}
-              >
-                <Layers className="h-3.5 w-3.5" />
-                {t("students.assignDivision")}
-              </Button>
-            ) : null}
             {selected.size > 1 && userRole === "school_admin" && canAutoApply && (
               <Link href={`/auto-apply?ids=${Array.from(selected).join(",")}`} className="w-full">
                 <Button variant="secondary" className="h-10 w-full text-xs">
@@ -1447,9 +1522,17 @@ function StudentsContent() {
           if (assigningDivision) return;
           setDivisionModalOpen(false);
         }}
-        title={t("students.assignDivisionTitle")}
+        title={
+          divisionIntent === "admit"
+            ? t("students.admitDraftsTitle")
+            : t("students.assignDivisionTitle")
+        }
       >
-        <p className="mb-3 text-sm text-slate-600">{t("students.assignDivisionDesc")}</p>
+        <p className="mb-3 text-sm text-slate-600">
+          {divisionIntent === "admit"
+            ? t("students.admitDraftsDesc")
+            : t("students.assignDivisionDesc")}
+        </p>
         <p className="mb-3 text-xs font-semibold text-slate-500">
           {t("students.selected", { count: selected.size })}
           {selectedStandards.length === 1
@@ -1525,7 +1608,9 @@ function StudentsContent() {
             <Layers className="h-4 w-4" />
             {assigningDivision
               ? t("common.saving")
-              : t("students.assignDivision")}
+              : divisionIntent === "admit"
+                ? t("students.admitDraftsAction")
+                : t("students.assignDivision")}
           </Button>
         </div>
       </InfoModal>

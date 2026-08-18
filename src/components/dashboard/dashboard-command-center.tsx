@@ -126,6 +126,7 @@ export function DashboardCommandCenter({
         label: t("dashboard.attnDraftStudents"),
         hint: t("dashboard.attnHintDraft"),
         count: ops?.scholarship?.draft || 0,
+        href: "/students?pending=1",
         onClick: onOpenDraftStudents,
         tone: "rose" as const,
         icon: UserRoundX,

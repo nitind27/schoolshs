@@ -1,23 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { standardToCourseName } from "@/lib/constants";
 import { defaultCourseTypeForStandard } from "@/lib/student-academic-rules";
+import { syncGrEntryForStudent } from "@/lib/gr-student-sync";
+import { syncStudentPortalAccount } from "@/lib/student-account";
+
+function normalizeIds(raw: unknown): string[] {
+  const list = Array.isArray(raw)
+    ? raw
+    : typeof raw === "string"
+      ? raw.split(",")
+      : [];
+  return [
+    ...new Set(
+      list
+        .map((id) => String(id ?? "").trim())
+        .filter((id) => id && id !== "undefined" && id !== "null"),
+    ),
+  ];
+}
+
+function isArchivedStatus(status: string) {
+  return status.trim().toLowerCase() === "archived";
+}
 
 export async function POST(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
     const body = await request.json();
-    const studentIds = Array.isArray(body.studentIds)
-      ? body.studentIds.map((id: unknown) => String(id || "").trim()).filter(Boolean)
-      : [];
+    const studentIds = normalizeIds(body.studentIds);
     const classId = String(body.classId || "").trim();
+    const admitDrafts = body.admitDrafts === true;
 
     if (studentIds.length === 0) {
       return NextResponse.json({ error: "No students selected" }, { status: 400 });
     }
     if (!classId) {
-      return NextResponse.json({ error: "Please pick a division" }, { status: 400 });
+      return NextResponse.json({ error: "Please pick a class" }, { status: 400 });
     }
 
     const assignedClass = await prisma.schoolClass.findFirst({
@@ -28,45 +49,94 @@ export async function POST(request: NextRequest) {
     }
 
     const owned = await prisma.student.findMany({
-      where: { id: { in: studentIds }, schoolId: session.schoolId },
-      select: { id: true },
+      where: {
+        id: { in: studentIds },
+        schoolId: session.schoolId,
+      },
+      select: { id: true, status: true },
     });
-    const ownedIds = owned.map((s) => s.id);
-    if (ownedIds.length === 0) {
-      return NextResponse.json({ error: "No matching students in this school" }, { status: 404 });
+    const targets = owned.filter((s) => !isArchivedStatus(String(s.status || "")));
+    if (targets.length === 0) {
+      return NextResponse.json(
+        { error: "Selected students were not found in this school" },
+        { status: 404 },
+      );
     }
 
-    const data: {
-      classId: string;
-      standard: string;
-      section: string;
-      courseName: string;
-      courseType: string;
-      institutionName?: string;
-      institutionDistrict?: string;
-      financialYear?: string;
-    } = {
-      classId: assignedClass.id,
-      standard: assignedClass.standard,
-      section: assignedClass.section,
-      courseName: standardToCourseName(assignedClass.standard),
-      courseType:
-        String(assignedClass.stream || "").trim() ||
-        defaultCourseTypeForStandard(assignedClass.standard),
-    };
-    if (assignedClass.institutionName) data.institutionName = assignedClass.institutionName;
-    if (assignedClass.institutionDistrict) {
-      data.institutionDistrict = assignedClass.institutionDistrict;
-    }
-    if (assignedClass.academicYear) data.financialYear = assignedClass.academicYear;
+    const targetIds = targets.map((s) => s.id);
+    const courseName = standardToCourseName(assignedClass.standard);
+    const courseType =
+      String(assignedClass.stream || "").trim() ||
+      defaultCourseTypeForStandard(assignedClass.standard);
+    const financialYear = assignedClass.academicYear || "";
+    const institutionName = assignedClass.institutionName || "";
+    const institutionDistrict = assignedClass.institutionDistrict || "";
+    const idList = Prisma.join(targetIds.map((id) => Prisma.sql`${id}`));
+    const promoteFlag = admitDrafts ? 1 : 0;
 
-    const result = await prisma.student.updateMany({
-      where: { id: { in: ownedIds }, schoolId: session.schoolId },
-      data,
+    await prisma.$executeRaw`
+      UPDATE student
+      SET
+        classId = ${assignedClass.id},
+        standard = ${assignedClass.standard},
+        section = ${assignedClass.section},
+        courseName = ${courseName},
+        courseType = ${courseType},
+        financialYear = CASE
+          WHEN ${financialYear} = '' THEN financialYear
+          ELSE ${financialYear}
+        END,
+        institutionName = CASE
+          WHEN ${institutionName} = '' THEN institutionName
+          ELSE ${institutionName}
+        END,
+        institutionDistrict = CASE
+          WHEN ${institutionDistrict} = '' THEN institutionDistrict
+          ELSE ${institutionDistrict}
+        END,
+        status = CASE
+          WHEN ${promoteFlag} = 1 OR LOWER(TRIM(status)) = 'draft' THEN 'ready'
+          ELSE status
+        END,
+        updatedAt = CURRENT_TIMESTAMP(3)
+      WHERE schoolId = ${session.schoolId}
+        AND id IN (${idList})
+        AND LOWER(TRIM(status)) <> 'archived'
+    `;
+
+    const stillDraft = await prisma.$queryRaw<Array<{ n: bigint | number }>>`
+      SELECT COUNT(*) AS n
+      FROM student
+      WHERE schoolId = ${session.schoolId}
+        AND id IN (${idList})
+        AND LOWER(TRIM(status)) = 'draft'
+    `;
+    const leftover = Number(stillDraft[0]?.n ?? 0);
+    if (leftover > 0) {
+      console.error("admit-drafts leftover draft rows", leftover, targetIds);
+      return NextResponse.json(
+        { error: "Class assigned but students could not leave Draft. Try again." },
+        { status: 500 },
+      );
+    }
+
+    const admittedRows = await prisma.student.findMany({
+      where: { id: { in: targetIds }, schoolId: session.schoolId },
     });
+    const admitted = admittedRows.filter(
+      (s) => String(s.status || "").trim().toLowerCase() === "ready",
+    ).length;
+
+    for (const student of admittedRows) {
+      await syncStudentPortalAccount(student);
+      if (student.grNumber?.trim() && student.status !== "draft") {
+        await syncGrEntryForStudent(session.schoolId, student);
+      }
+    }
 
     return NextResponse.json({
-      updated: result.count,
+      updated: targetIds.length,
+      admitted,
       classId: assignedClass.id,
       className: assignedClass.name,
       standard: assignedClass.standard,

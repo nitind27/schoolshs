@@ -578,14 +578,6 @@ export default function SchoolOpsDashboard() {
           onOpenAdmissionPending={() =>
             openQuickList("admission", "pending", t("admissionStatus.pending"))
           }
-          onOpenDraftStudents={() =>
-            openDrill("status", {
-              id: "draft",
-              label: t("status.draft"),
-              value: stats?.byStatus?.draft || 0,
-              color: "#d97706",
-            })
-          }
         />
 
         <section className="ops-pulse ops-pulse-compact ops-metric-strip" aria-label={t("dashboard.pulseTitle")}>

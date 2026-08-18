@@ -10,12 +10,13 @@ import { PageShell } from "@/components/layout/page-shell";
 import { Download, Printer, BookOpen, PencilLine } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import {
-  SALARY_CATEGORIES,
   SALARY_FIELDS,
   currentFinancialYear,
   fyMonths,
   fyOptions,
   monthLabel,
+  salaryCategoryI18nKey,
+  visibleSalaryCategories,
   type SalaryCategory,
   type SalaryFieldKey,
 } from "@/lib/salary-statement";
@@ -38,6 +39,8 @@ export default function SalaryLedgerPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [schoolName, setSchoolName] = useState("");
+  const [schoolType, setSchoolType] = useState<string | null>(null);
+  const categories = useMemo(() => visibleSalaryCategories(schoolType), [schoolType]);
 
   const months = useMemo(() => fyMonths(fy), [fy]);
 
@@ -52,7 +55,10 @@ export default function SalaryLedgerPage() {
     setLoading(true);
     fetch(`/api/staff/salary-statement?fy=${encodeURIComponent(fy)}`)
       .then((r) => r.json())
-      .then((d) => setRows((d.rows || []) as ApiRow[]))
+      .then((d) => {
+        setRows((d.rows || []) as ApiRow[]);
+        if (d.schoolType !== undefined) setSchoolType(d.schoolType || null);
+      })
       .finally(() => setLoading(false));
   }, [fy]);
 
@@ -129,7 +135,10 @@ export default function SalaryLedgerPage() {
             onChange={(e) => setCategory(e.target.value as "" | SalaryCategory)}
             options={[
               { value: "", label: t("salaryLedger.allCategories") },
-              ...SALARY_CATEGORIES.map((cKey) => ({ value: cKey, label: t(`salaryStatement.cat_${cKey}`) })),
+              ...categories.map((cKey) => ({
+                value: cKey,
+                label: t(salaryCategoryI18nKey(cKey, schoolType)),
+              })),
             ]}
             className="w-56"
           />
@@ -164,7 +173,9 @@ export default function SalaryLedgerPage() {
             <h2 className="lg-school">{schoolName}</h2>
             <p className="lg-title">
               SALARY LEDGER — {fy}
-              {category ? ` — ${t(`salaryStatement.cat_${category}`)}` : ` — ${t("salaryLedger.allCategories")}`}
+              {category
+                ? ` — ${t(salaryCategoryI18nKey(category, schoolType))}`
+                : ` — ${t("salaryLedger.allCategories")}`}
             </p>
           </div>
           <Card>

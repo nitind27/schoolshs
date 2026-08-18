@@ -19,11 +19,11 @@ export async function GET(request: NextRequest) {
     const financialYear = searchParams.get("fy") || currentFinancialYear();
     const fromStaff = searchParams.get("fromStaff") === "1";
 
-    const { rows, staffCounts } = await loadSchoolSalaryStatement(session.schoolId, financialYear, {
+    const { rows, staffCounts, schoolType } = await loadSchoolSalaryStatement(session.schoolId, financialYear, {
       fromStaff,
     });
 
-    return NextResponse.json({ financialYear, rows, staffCounts });
+    return NextResponse.json({ financialYear, rows, staffCounts, schoolType });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
     return NextResponse.json({ error: "Failed to fetch salary statement", rows: [] }, { status: 500 });

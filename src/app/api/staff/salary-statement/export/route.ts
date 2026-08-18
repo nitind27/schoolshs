@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import {
-  CATEGORY_LABELS,
-  SALARY_CATEGORIES,
   SALARY_FIELDS,
   currentFinancialYear,
   emptyValues,
   fyMonths,
   monthLabel,
   rowTotal,
+  salaryCategoryDisplayLabel,
+  visibleSalaryCategories,
   type SalaryCategory,
   type SalaryFieldKey,
 } from "@/lib/salary-statement";
@@ -30,17 +29,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const financialYear = searchParams.get("fy") || currentFinancialYear();
 
-    const [built, school] = await Promise.all([
-      loadSchoolSalaryStatement(session.schoolId, financialYear),
-      prisma.school.findUnique({ where: { id: session.schoolId }, select: { name: true } }),
-    ]);
+    const built = await loadSchoolSalaryStatement(session.schoolId, financialYear);
+    const schoolName = built.schoolName || "School";
+    const schoolType = built.schoolType;
+    const categories = visibleSalaryCategories(schoolType);
 
     const byKey = new Map(built.rows.map((r) => [`${r.category}:${r.month}`, r]));
     const months = fyMonths(financialYear);
     const headers = ["MONTH", ...SALARY_FIELDS.map((f) => f.label), "TOTAL"];
 
     const wb = new ExcelJS.Workbook();
-    wb.creator = school?.name || "School";
+    wb.creator = schoolName;
     wb.created = new Date();
 
     const grandTotals = emptyValues();
@@ -66,12 +65,13 @@ export async function GET(request: NextRequest) {
       peon: emptyValues(),
     };
 
-    for (const category of SALARY_CATEGORIES) {
-      const ws = wb.addWorksheet(CATEGORY_LABELS[category].slice(0, 31));
+    for (const category of categories) {
+      const label = salaryCategoryDisplayLabel(category, schoolType);
+      const ws = wb.addWorksheet(label.slice(0, 31));
 
       ws.mergeCells(1, 1, 1, headers.length);
       const title = ws.getCell(1, 1);
-      title.value = `ANNUAL STATEMENT ${financialYear} — ${CATEGORY_LABELS[category].toUpperCase()} — ${school?.name || ""}`;
+      title.value = `ANNUAL STATEMENT ${financialYear} — ${label.toUpperCase()} — ${schoolName}`;
       title.font = { bold: true, size: 12 };
       title.alignment = { horizontal: "center" };
 
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
     const ws = wb.addWorksheet("Total Summary");
     ws.mergeCells(1, 1, 1, headers.length);
     const title = ws.getCell(1, 1);
-    title.value = `ANNUAL STATEMENT ${financialYear} — TOTAL SUMMARY — ${school?.name || ""}`;
+    title.value = `ANNUAL STATEMENT ${financialYear} — TOTAL SUMMARY — ${schoolName}`;
     title.font = { bold: true, size: 12 };
     title.alignment = { horizontal: "center" };
 
@@ -134,10 +134,10 @@ export async function GET(request: NextRequest) {
     });
     headerRow.height = 24;
 
-    SALARY_CATEGORIES.forEach((category, idx) => {
+    categories.forEach((category, idx) => {
       const totals = categoryTotals[category];
       const row = ws.getRow(4 + idx);
-      const cells = [CATEGORY_LABELS[category], ...SALARY_FIELDS.map((f) => totals[f.key]), rowTotal(totals)];
+      const cells = [salaryCategoryDisplayLabel(category, schoolType), ...SALARY_FIELDS.map((f) => totals[f.key]), rowTotal(totals)];
       cells.forEach((val, i) => {
         const cell = row.getCell(i + 1);
         cell.value = val;
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    const gRow = ws.getRow(4 + SALARY_CATEGORIES.length);
+    const gRow = ws.getRow(4 + categories.length);
     const gCells = ["GRAND TOTAL", ...SALARY_FIELDS.map((f) => grandTotals[f.key]), rowTotal(grandTotals)];
     gCells.forEach((val, i) => {
       const cell = gRow.getCell(i + 1);

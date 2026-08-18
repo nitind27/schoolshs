@@ -8,12 +8,17 @@ import { findStudentByGrNumber, syncGrEntryForStudent } from "@/lib/gr-student-s
 import { genderDbMatchValues } from "@/lib/gender-utils";
 import { toStudentUncheckedCreate, toStudentUncheckedUpdate } from "@/lib/student-write";
 import { applyStudentPlacement } from "@/lib/student-placement";
-import { MANAGE_STANDARDS } from "@/lib/class-structure";
+import { sortStandards } from "@/lib/class-structure";
 import {
   assertStudentAccountEmailAvailable,
   syncStudentPortalAccount,
 } from "@/lib/student-account";
-import { activeStudentStatusFilter } from "@/lib/student-list-filters";
+import {
+  andStudentWhere,
+  enrolledStudentStatusFilter,
+  pendingWorkOrFilters,
+  pendingWorkWhere,
+} from "@/lib/student-list-filters";
 import { searchStudentIds } from "@/lib/student-search.server";
 
 function studentDisplayName(s: { firstName?: string | null; surname?: string | null }) {
@@ -38,6 +43,7 @@ export async function GET(request: NextRequest) {
     const includeSummary = searchParams.get("summary") === "1";
     const includeArchived = searchParams.get("includeArchived") === "1";
     const includeDraft = searchParams.get("includeDraft") === "1";
+    const pendingQueue = searchParams.get("pending") === "1";
     const noClass = searchParams.get("noClass") === "1";
     const pendingDivision = searchParams.get("pendingDivision") === "1";
     const lite = searchParams.get("lite") === "1";
@@ -50,14 +56,16 @@ export async function GET(request: NextRequest) {
       const idList = idsParam.split(",").map((s) => s.trim()).filter(Boolean);
       if (idList.length) where.id = { in: idList };
     }
-    if (status) {
+    if (pendingQueue) {
+      where.status = enrolledStudentStatusFilter();
+    } else if (status) {
       where.status = status;
     } else if (idsParam) {
       if (!includeArchived) where.status = { not: "archived" };
     } else if (includeDraft || includeArchived) {
       if (!includeArchived) where.status = { not: "archived" };
     } else {
-      where.status = activeStudentStatusFilter();
+      where.status = enrolledStudentStatusFilter();
     }
     if (category) where.category = category;
     if (gender && gender !== "all") {
@@ -137,6 +145,10 @@ export async function GET(request: NextRequest) {
       where.AND = existingAnd;
     }
 
+    if (pendingQueue) {
+      andStudentWhere(where, { OR: pendingWorkOrFilters() });
+    }
+
     const classSelect = {
       id: true,
       name: true,
@@ -157,6 +169,10 @@ export async function GET(request: NextRequest) {
       admissionStatus: true,
       standard: true,
       section: true,
+      classId: true,
+      photoPath: true,
+      aadhaarDocPath: true,
+      validationErrors: true,
       firstName: true,
       middleName: true,
       surname: true,
@@ -201,6 +217,8 @@ export async function GET(request: NextRequest) {
           other: number;
           noClass: number;
           draftCount: number;
+          pendingCount: number;
+          standards: string[];
           byStandard: Record<string, { total: number; pendingDivision: number }>;
         }
       | undefined;
@@ -208,17 +226,31 @@ export async function GET(request: NextRequest) {
     if (includeSummary) {
       const base = {
         schoolId: session.schoolId,
-        status: activeStudentStatusFilter(),
+        status: enrolledStudentStatusFilter(),
       } as const;
-      const stdCounts = MANAGE_STANDARDS.map((std) =>
-        prisma.student.count({ where: { ...base, standard: std } }),
+      const classStdRows = await prisma.schoolClass.findMany({
+        where: { schoolId: session.schoolId },
+        select: { standard: true },
+        distinct: ["standard"],
+      });
+      const schoolStandards = sortStandards(classStdRows.map((row) => row.standard));
+      const stdCounts = schoolStandards.map((std) =>
+        prisma.student.count({
+          where: {
+            ...base,
+            OR: [
+              { schoolClass: { is: { standard: std } } },
+              { classId: null, standard: std },
+            ],
+          },
+        }),
       );
-      const stdPending = MANAGE_STANDARDS.map((std) =>
+      const stdPending = schoolStandards.map((std) =>
         prisma.student.count({
           where: { ...base, standard: std, classId: null },
         }),
       );
-      const [sumTotal, male, female, other, noClassCount, draftCount, ...rest] = await Promise.all([
+      const [sumTotal, male, female, other, noClassCount, pendingCount, ...rest] = await Promise.all([
         prisma.student.count({ where: base }),
         prisma.student.count({
           where: { ...base, gender: { in: genderDbMatchValues("Male") } },
@@ -237,16 +269,16 @@ export async function GET(request: NextRequest) {
           },
         }),
         prisma.student.count({
-          where: { schoolId: session.schoolId, status: "draft" },
+          where: { schoolId: session.schoolId, ...pendingWorkWhere() },
         }),
         ...stdCounts,
         ...stdPending,
       ]);
       const byStandard: Record<string, { total: number; pendingDivision: number }> = {};
-      MANAGE_STANDARDS.forEach((std, i) => {
+      schoolStandards.forEach((std, i) => {
         byStandard[std] = {
           total: rest[i] ?? 0,
-          pendingDivision: rest[MANAGE_STANDARDS.length + i] ?? 0,
+          pendingDivision: rest[schoolStandards.length + i] ?? 0,
         };
       });
       summary = {
@@ -255,7 +287,9 @@ export async function GET(request: NextRequest) {
         female,
         other,
         noClass: noClassCount,
-        draftCount,
+        draftCount: pendingCount,
+        pendingCount,
+        standards: schoolStandards,
         byStandard,
       };
     }

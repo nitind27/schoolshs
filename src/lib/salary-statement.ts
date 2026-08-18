@@ -18,6 +18,56 @@ export const CATEGORY_LABELS: Record<SalaryCategory, string> = {
   peon: "Peon",
 };
 
+export type SalarySchoolBand = "primary" | "secondary" | "higher_secondary" | "k12";
+
+/** Map School.schoolType (set when super-admin creates the school) to statement bands. */
+export function salarySchoolBand(schoolType?: string | null): SalarySchoolBand {
+  const raw = String(schoolType || "").trim().toLowerCase();
+  if (!raw) return "k12";
+  if (raw.includes("ઉચ્ચતર") || raw.includes("higher secondary") || raw.includes("higher-secondary")) {
+    return "higher_secondary";
+  }
+  if (
+    raw.includes("પ્રાથમિક") ||
+    raw === "primary" ||
+    (raw.includes("primary") && !raw.includes("secondary"))
+  ) {
+    return "primary";
+  }
+  if (raw === "secondary" || raw.includes("માધ્યમિક") || raw.includes("madhyamik")) {
+    return "secondary";
+  }
+  if (raw === "k-12" || raw === "k12" || raw === "college") return "k12";
+  if (raw.includes("secondary") && !raw.includes("higher")) return "secondary";
+  return "k12";
+}
+
+/** Which statement sections this school should show. */
+export function visibleSalaryCategories(schoolType?: string | null): SalaryCategory[] {
+  const band = salarySchoolBand(schoolType);
+  if (band === "primary") return ["secondary", "non_teaching", "peon"];
+  if (band === "secondary") return ["secondary", "non_teaching", "peon"];
+  if (band === "higher_secondary") return ["secondary", "higher_secondary", "non_teaching", "peon"];
+  return [...SALARY_CATEGORIES];
+}
+
+export function salaryCategoryI18nKey(category: SalaryCategory, schoolType?: string | null): string {
+  if (category === "secondary" && salarySchoolBand(schoolType) === "primary") {
+    return "salaryStatement.cat_primary";
+  }
+  return `salaryStatement.cat_${category}`;
+}
+
+export function salaryCategoryDisplayLabel(
+  category: SalaryCategory,
+  schoolType?: string | null,
+): string {
+  if (category === "secondary" && salarySchoolBand(schoolType) === "primary") {
+    return "Primary Teaching";
+  }
+  return CATEGORY_LABELS[category];
+}
+
 /** Allowance columns in statement order (same as the official PDF format) */
 export const SALARY_FIELDS = [
   { key: "basic", label: "BASIC" },
@@ -110,7 +160,11 @@ export type StatementStaffSource = {
 };
 
 /** Map designation / department onto the 4 statement categories */
-export function staffSalaryStatementCategory(staff: StatementStaffSource): SalaryCategory {
+export function staffSalaryStatementCategory(
+  staff: StatementStaffSource,
+  schoolType?: string | null,
+): SalaryCategory {
+  const band = salarySchoolBand(schoolType);
   const d = String(staff.designation || "").trim().toLowerCase();
   const dept = String(staff.department || "").trim().toLowerCase();
   const blob = `${d} ${dept}`;
@@ -122,6 +176,15 @@ export function staffSalaryStatementCategory(staff: StatementStaffSource): Salar
   const teaching =
     /teacher|principal|head master|headmistress|head teacher|\bhm\b|supervisor|lecturer|shikshak|acharya/.test(d);
   if (nonTeaching && !teaching) return "non_teaching";
+
+  if (band === "primary" || band === "secondary") return teaching || !d ? "secondary" : "non_teaching";
+  if (band === "higher_secondary") {
+    if (/higher secondary|higher-secondary|\bh\.?\s*s\.?\b|\b11\b|\b12\b|\bhsc\b|ઉચ્ચતર/.test(blob)) {
+      return "higher_secondary";
+    }
+    if (teaching || !d) return "secondary";
+    return "non_teaching";
+  }
 
   if (/higher secondary|higher-secondary|\bh\.?\s*s\.?\b|\b11\b|\b12\b|\bhsc\b|ઉચ્ચતર/.test(blob)) {
     return "higher_secondary";
@@ -176,14 +239,16 @@ export function buildStatementYearRows(
   financialYear: string,
   staffList: StatementStaffSource[],
   saved: ReadonlyArray<{ category: string; month: number } & Partial<Record<SalaryFieldKey, number | null>>>,
+  schoolType?: string | null,
 ) {
   const months = fyMonths(financialYear);
+  const categories = visibleSalaryCategories(schoolType);
   const computed = new Map<string, Record<SalaryFieldKey, number>>();
   const staffCounts = emptyStaffCounts();
   const monthCounts = new Map<string, number>();
 
   for (const staff of staffList) {
-    const category = staffSalaryStatementCategory(staff);
+    const category = staffSalaryStatementCategory(staff, schoolType);
     staffCounts[category] += 1;
     const pay = staffToStatementValues(staff);
     if (isStatementRowEmpty(pay)) continue;
@@ -196,7 +261,7 @@ export function buildStatementYearRows(
   }
 
   const savedMap = new Map(saved.map((r) => [`${r.category}:${r.month}`, r]));
-  const rows = SALARY_CATEGORIES.flatMap((category) =>
+  const rows = categories.flatMap((category) =>
     months.map(({ month, year }) => {
       const key = `${category}:${month}`;
       const existing = savedMap.get(key);

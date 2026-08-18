@@ -5,6 +5,19 @@ export const SECONDARY_DIVISIONS = ["A", "B", "C", "D", "E"] as const;
 /** High school standards this portal manages (not only board 10/12). */
 export const MANAGE_STANDARDS = ["9", "10", "11", "12"] as const;
 
+export function isManageStandard(standard?: string | null): boolean {
+  return (MANAGE_STANDARDS as readonly string[]).includes(String(standard || "").trim());
+}
+
+export function sortStandards(standards: string[]): string[] {
+  return [...new Set(standards.map((s) => String(s || "").trim()).filter(Boolean))].sort((a, b) => {
+    const na = Number.parseInt(a, 10);
+    const nb = Number.parseInt(b, 10);
+    if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+    return a.localeCompare(b, undefined, { numeric: true });
+  });
+}
+
 export { SENIOR_STREAMS };
 
 export interface ClassSeed {

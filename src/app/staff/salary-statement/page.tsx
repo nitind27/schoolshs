@@ -9,8 +9,6 @@ import { PageShell } from "@/components/layout/page-shell";
 import { Download, Printer, Save, IndianRupee, Wand2 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import {
-  CATEGORY_LABELS,
-  SALARY_CATEGORIES,
   SALARY_FIELDS,
   currentFinancialYear,
   emptyStaffCounts,
@@ -19,6 +17,8 @@ import {
   fyOptions,
   monthLabel,
   rowTotal,
+  salaryCategoryI18nKey,
+  visibleSalaryCategories,
   type SalaryCategory,
   type SalaryFieldKey,
 } from "@/lib/salary-statement";
@@ -45,10 +45,12 @@ export default function SalaryStatementPage() {
   const [exporting, setExporting] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState("");
+  const [schoolType, setSchoolType] = useState<string | null>(null);
   const [staffCounts, setStaffCounts] = useState(emptyStaffCounts);
   const [monthCounts, setMonthCounts] = useState<Record<string, number>>({});
 
   const months = useMemo(() => fyMonths(fy), [fy]);
+  const categories = useMemo(() => visibleSalaryCategories(schoolType), [schoolType]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -57,7 +59,11 @@ export default function SalaryStatementPage() {
       .catch(() => {});
   }, []);
 
-  const applyPayload = (d: { rows?: ApiRow[]; staffCounts?: Record<SalaryCategory, number> }) => {
+  const applyPayload = (d: {
+    rows?: ApiRow[];
+    staffCounts?: Record<SalaryCategory, number>;
+    schoolType?: string | null;
+  }) => {
     const next: Grid = {};
     const counts: Record<string, number> = {};
     for (const row of (d.rows || []) as ApiRow[]) {
@@ -69,6 +75,7 @@ export default function SalaryStatementPage() {
     setGrid(next);
     setMonthCounts(counts);
     if (d.staffCounts) setStaffCounts({ ...emptyStaffCounts(), ...d.staffCounts });
+    if (d.schoolType !== undefined) setSchoolType(d.schoolType || null);
     setSavedAt(null);
   };
 
@@ -107,7 +114,7 @@ export default function SalaryStatementPage() {
 
   const categoryTotals = useMemo(() => {
     const out = {} as Record<SalaryCategory, Record<SalaryFieldKey, number>>;
-    for (const c of SALARY_CATEGORIES) {
+    for (const c of categories) {
       const totals = emptyValues();
       for (const { month } of months) {
         const v = getValues(c, month);
@@ -116,20 +123,20 @@ export default function SalaryStatementPage() {
       out[c] = totals;
     }
     return out;
-  }, [months, getValues]);
+  }, [months, getValues, categories]);
 
   const grandTotals = useMemo(() => {
     const totals = emptyValues();
-    for (const c of SALARY_CATEGORIES) {
-      for (const f of SALARY_FIELDS) totals[f.key] += categoryTotals[c][f.key];
+    for (const c of categories) {
+      for (const f of SALARY_FIELDS) totals[f.key] += categoryTotals[c]?.[f.key] || 0;
     }
     return totals;
-  }, [categoryTotals]);
+  }, [categoryTotals, categories]);
 
   const save = async () => {
     setSaving(true);
     try {
-      const rows = SALARY_CATEGORIES.flatMap((category) =>
+      const rows = categories.flatMap((category) =>
         months.map(({ month, year }) => ({ category, month, year, values: getValues(category, month) })),
       );
       const res = await fetch("/api/staff/salary-statement", {
@@ -215,13 +222,13 @@ export default function SalaryStatementPage() {
             <p className="ss-title">ANNUAL SALARY STATEMENT — {fy}</p>
           </div>
 
-          {SALARY_CATEGORIES.map((category) => (
+          {categories.map((category) => (
             <Card key={category} className="ss-category-card">
               <CardContent className="p-0">
                 <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5 ss-cat-head">
                   <IndianRupee className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-bold text-slate-800">
-                    {t(`salaryStatement.cat_${category}`)}
+                    {t(salaryCategoryI18nKey(category, schoolType))}
                     <span className="ml-2 text-xs font-semibold text-slate-500">
                       {t("salaryStatement.staffCount", { count: staffCounts[category] })}
                     </span>
@@ -300,13 +307,13 @@ export default function SalaryStatementPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {SALARY_CATEGORIES.map((category) => (
+                    {categories.map((category) => (
                       <tr key={category}>
-                        <td className="ss-month">{t(`salaryStatement.cat_${category}`)}</td>
+                        <td className="ss-month">{t(salaryCategoryI18nKey(category, schoolType))}</td>
                         {SALARY_FIELDS.map((f) => (
-                          <td key={f.key} className="ss-num">{fmt(categoryTotals[category][f.key])}</td>
+                          <td key={f.key} className="ss-num">{fmt(categoryTotals[category]?.[f.key] || 0)}</td>
                         ))}
-                        <td className="ss-total">{fmt(rowTotal(categoryTotals[category]))}</td>
+                        <td className="ss-total">{fmt(rowTotal(categoryTotals[category] || emptyValues()))}</td>
                       </tr>
                     ))}
                     <tr className="ss-total-row">
