@@ -16,6 +16,10 @@ import { isUserRole } from "@/lib/roles";
 import { notifyAuthChanged } from "@/lib/auth-client";
 import { getBrowserLoginGeo } from "@/lib/browser-login-geo";
 import { DeviceSessionModal, type DeviceSessionRow } from "@/components/auth/device-session-modal";
+import {
+  PLAYSTORE_DEMO_STUDENT_OTP,
+  isPlaystoreDemoStudent,
+} from "@/lib/playstore-demo-student";
 import "./login-portal.css";
 
 type SchoolBranding = {
@@ -401,31 +405,34 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
     : "";
 
   const completeStudentSetup = async () => {
-    setStudentNewPasswordTouched(true);
-    setStudentConfirmPasswordTouched(true);
+    const demoStudent = isPlaystoreDemoStudent(email);
+    setStudentNewPasswordTouched(!demoStudent);
+    setStudentConfirmPasswordTouched(!demoStudent);
     if (studentSetupOtp.replace(/\D/g, "").length !== 6) {
       setStudentSetupMsg(t("login.otpInvalidLength"));
       return;
     }
-    const newPasswordError = getStudentNewPasswordError(studentNewPassword);
-    if (newPasswordError) {
-      setStudentSetupMsg(newPasswordError);
-      toast.warning(
-        t("login.studentSetupTitle"),
-        newPasswordError,
+    if (!demoStudent) {
+      const newPasswordError = getStudentNewPasswordError(studentNewPassword);
+      if (newPasswordError) {
+        setStudentSetupMsg(newPasswordError);
+        toast.warning(
+          t("login.studentSetupTitle"),
+          newPasswordError,
+        );
+        return;
+      }
+      const confirmPasswordError = getStudentConfirmPasswordError(
+        studentConfirmPassword,
       );
-      return;
-    }
-    const confirmPasswordError = getStudentConfirmPasswordError(
-      studentConfirmPassword,
-    );
-    if (confirmPasswordError) {
-      setStudentSetupMsg(confirmPasswordError);
-      toast.warning(
-        t("login.studentSetupTitle"),
-        confirmPasswordError,
-      );
-      return;
+      if (confirmPasswordError) {
+        setStudentSetupMsg(confirmPasswordError);
+        toast.warning(
+          t("login.studentSetupTitle"),
+          confirmPasswordError,
+        );
+        return;
+      }
     }
 
     setStudentSetupLoading(true);
@@ -457,7 +464,9 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
       setStudentConfirmPasswordTouched(false);
       setShowStudentNewPassword(false);
       setShowStudentConfirmPassword(false);
-      setPassword("");
+      if (!data.keepPassword) {
+        setPassword("");
+      }
       setCaptchaAnswer("");
       setCaptchaRefreshKey((key) => key + 1);
       setStudentSetupMsg("");
@@ -468,7 +477,9 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
       });
       toast.success(
         t("login.studentSetupCompleteTitle"),
-        t("login.studentSetupComplete"),
+        data.keepPassword
+          ? t("login.studentSetupCompleteDemo")
+          : t("login.studentSetupComplete"),
       );
     } catch {
       setStudentSetupMsg(t("common.networkError"));
@@ -802,8 +813,15 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
               <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-950">
                 <p className="font-semibold">{t("login.studentSetupTitle")}</p>
                 <p className="mt-1 text-xs leading-relaxed text-blue-800">
-                  {t("login.studentSetupHint", { email: email.trim().toLowerCase() })}
+                  {isPlaystoreDemoStudent(email)
+                    ? t("login.studentSetupDemoHint")
+                    : t("login.studentSetupHint", { email: email.trim().toLowerCase() })}
                 </p>
+                {isPlaystoreDemoStudent(email) ? (
+                  <p className="mt-2 rounded-lg border border-blue-200 bg-white px-3 py-2 font-mono text-sm font-bold tracking-[0.3em] text-blue-900">
+                    {t("login.studentSetupDemoOtp", { otp: PLAYSTORE_DEMO_STUDENT_OTP })}
+                  </p>
+                ) : null}
 
                 <div className="mt-3">
                   <label className="mb-2 block text-xs font-semibold">
@@ -817,6 +835,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                   />
                 </div>
 
+                {!isPlaystoreDemoStudent(email) ? (
                 <div className="mt-3 grid gap-3">
                   <div>
                     <label className="mb-1 block text-xs font-semibold" htmlFor="student-new-password">
@@ -943,10 +962,13 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                     )}
                   </div>
                 </div>
+                ) : null}
 
+                {!isPlaystoreDemoStudent(email) ? (
                 <p id="student-password-rules" className="mt-2 text-[11px] text-blue-700">
                   {t("login.studentPasswordRules")}
                 </p>
+                ) : null}
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -954,14 +976,16 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                     disabled={
                       studentSetupLoading ||
                       studentSetupOtp.length !== 6 ||
-                      !studentNewPassword ||
-                      !studentConfirmPassword
+                      (!isPlaystoreDemoStudent(email) &&
+                        (!studentNewPassword || !studentConfirmPassword))
                     }
                     className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
                   >
                     {studentSetupLoading
                       ? t("login.studentSetupSaving")
-                      : t("login.studentVerifyAndChange")}
+                      : isPlaystoreDemoStudent(email)
+                        ? t("login.studentVerifyDemo")
+                        : t("login.studentVerifyAndChange")}
                   </button>
                   <button
                     type="button"

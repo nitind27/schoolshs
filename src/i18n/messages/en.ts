@@ -630,6 +630,12 @@ const en = {
     studentSetupCompleteTitle: "Student account secured",
     studentSetupComplete:
       "Email verified and password changed. Sign in now with your new password.",
+    studentSetupDemoHint:
+      "Play Store demo student — enter the fixed OTP below. Password stays 123456. OTP is asked only this first time.",
+    studentSetupDemoOtp: "Demo OTP: {{otp}}",
+    studentVerifyDemo: "Verify OTP",
+    studentSetupCompleteDemo:
+      "OTP verified. Sign in again with the same password 123456. OTP will not be asked again.",
     demoSuperAdmin: "Demo Super Admin",
     demoSchoolAdmin: "Demo School Admin",
     demoPortals: "Demo Portals",

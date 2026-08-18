@@ -15,8 +15,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       email: result.email,
-      message:
-        "Email verified and password changed. Sign in with your new password.",
+      keepPassword: Boolean(result.keepPassword),
+      message: result.keepPassword
+        ? "Email verified. Sign in with the same password."
+        : "Email verified and password changed. Sign in with your new password.",
     });
   } catch (error) {
     if (error instanceof AuthError) {

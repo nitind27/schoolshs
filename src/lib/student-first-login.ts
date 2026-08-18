@@ -14,6 +14,12 @@ import {
   isEmailEnabled,
 } from "@/lib/platform-settings";
 import { STUDENT_TEMPORARY_PASSWORD } from "@/lib/student-account";
+import {
+  isPlaystoreDemoStudent,
+  PLAYSTORE_DEMO_STUDENT_OTP,
+} from "@/lib/playstore-demo-student";
+
+const DEMO_OTP_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -61,6 +67,20 @@ function assertStudentSetupAccount(user: StudentSetupUser | null): asserts user 
 export async function sendStudentFirstLoginOtp(
   user: Pick<StudentSetupUser, "id" | "email" | "name" | "school">,
 ) {
+  if (isPlaystoreDemoStudent(user.email)) {
+    const expires = new Date(Date.now() + DEMO_OTP_TTL_MS);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: false,
+        emailVerifiedAt: null,
+        emailVerificationToken: hashOtp(PLAYSTORE_DEMO_STUDENT_OTP),
+        emailVerificationExpires: expires,
+      },
+    });
+    return { sent: true as const, expires };
+  }
+
   if (!(await isEmailEnabled())) {
     const issue = await getSmtpConfigIssue();
     throw new AuthError(
@@ -120,15 +140,17 @@ export async function resendStudentFirstLoginOtp(email: string, currentPassword:
     throw new AuthError("Invalid email or password", 401);
   }
 
-  const earliestResendExpiry = new Date(
-    Date.now() + OTP_TTL_MS - OTP_RESEND_COOLDOWN_MS,
-  );
-  if (
-    user.emailVerificationToken &&
-    user.emailVerificationExpires &&
-    user.emailVerificationExpires > earliestResendExpiry
-  ) {
-    throw new AuthError("Please wait one minute before requesting another OTP.", 429);
+  if (!isPlaystoreDemoStudent(user.email)) {
+    const earliestResendExpiry = new Date(
+      Date.now() + OTP_TTL_MS - OTP_RESEND_COOLDOWN_MS,
+    );
+    if (
+      user.emailVerificationToken &&
+      user.emailVerificationExpires &&
+      user.emailVerificationExpires > earliestResendExpiry
+    ) {
+      throw new AuthError("Please wait one minute before requesting another OTP.", 429);
+    }
   }
   return sendStudentFirstLoginOtp(user);
 }
@@ -148,11 +170,41 @@ export async function completeStudentFirstLogin(input: {
   }
   const otp = input.otp.replace(/\D/g, "");
   if (otp.length !== 6) throw new AuthError("Enter the 6-digit OTP from your email.", 400);
-  if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
-    throw new AuthError("OTP expired. Request a new OTP.", 400);
+
+  const demoAccount = isPlaystoreDemoStudent(user.email);
+  const demoOtpOk = demoAccount && otp === PLAYSTORE_DEMO_STUDENT_OTP;
+  if (!demoOtpOk) {
+    if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+      throw new AuthError("OTP expired. Request a new OTP.", 400);
+    }
+    if (!verifyOtpCode(otp, user.emailVerificationToken)) {
+      throw new AuthError("Invalid OTP. Check the email code and try again.", 400);
+    }
   }
-  if (!verifyOtpCode(otp, user.emailVerificationToken)) {
-    throw new AuthError("Invalid OTP. Check the email code and try again.", 400);
+
+  if (demoAccount) {
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+          emailVerificationToken: null,
+          emailVerificationExpires: null,
+          mustChangePassword: false,
+          failedLoginCount: 0,
+          lockedUntil: null,
+        },
+      }),
+      prisma.userSession.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: {
+          revokedAt: new Date(),
+          revokeReason: "student_first_login_completed",
+        },
+      }),
+    ]);
+    return { ok: true as const, email: user.email, keepPassword: true as const };
   }
 
   const newPassword = input.newPassword;
@@ -196,5 +248,5 @@ export async function completeStudentFirstLogin(input: {
     }),
   ]);
 
-  return { ok: true as const, email: user.email };
+  return { ok: true as const, email: user.email, keepPassword: false as const };
 }

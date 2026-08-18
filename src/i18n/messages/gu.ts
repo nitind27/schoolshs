@@ -622,6 +622,12 @@ const gu: Messages = {
     studentSetupCompleteTitle: "વિદ્યાર્થી એકાઉન્ટ સુરક્ષિત થયું",
     studentSetupComplete:
       "ઈમેલ ચકાસાયો અને પાસવર્ડ બદલાયો. હવે નવા પાસવર્ડથી લોગિન કરો.",
+    studentSetupDemoHint:
+      "Play Store ડેમો વિદ્યાર્થી — નીચેનો ફિક્સ OTP દાખલ કરો. પાસવર્ડ 123456 જ રહેશે. OTP ફક્ત પહેલી વાર માંગાશે.",
+    studentSetupDemoOtp: "ડેમો OTP: {{otp}}",
+    studentVerifyDemo: "OTP ચકાસો",
+    studentSetupCompleteDemo:
+      "OTP ચકાસાયો. ફરી એ જ પાસવર્ડ 123456 થી લોગિન કરો. OTP ફરી નહીં માંગાય.",
     demoSuperAdmin: "ડેમો સુપર એડમિન",
     demoSchoolAdmin: "ડેમો શાળા એડમિન",
     demoPortals: "ડેમો પોર્ટલ",

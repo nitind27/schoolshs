@@ -923,10 +923,10 @@ async function main() {
          class: 7-A class teacher
 
  Student email: student1@dummy90001.local
-                student2@dummy90001.local
+                student2@dummy90001.local  ← Play Store review
                 student3@dummy90001.local
          pass : ${PASSWORDS.student}
-         note : first login may ask OTP / password change
+         OTP  : 900012  (student2 first login only, then never again)
 ══════════════════════════════════════════════════════
 `);
 }
