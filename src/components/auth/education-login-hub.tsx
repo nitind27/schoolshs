@@ -405,34 +405,31 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
     : "";
 
   const completeStudentSetup = async () => {
-    const demoStudent = isPlaystoreDemoStudent(email);
-    setStudentNewPasswordTouched(!demoStudent);
-    setStudentConfirmPasswordTouched(!demoStudent);
+    setStudentNewPasswordTouched(true);
+    setStudentConfirmPasswordTouched(true);
     if (studentSetupOtp.replace(/\D/g, "").length !== 6) {
       setStudentSetupMsg(t("login.otpInvalidLength"));
       return;
     }
-    if (!demoStudent) {
-      const newPasswordError = getStudentNewPasswordError(studentNewPassword);
-      if (newPasswordError) {
-        setStudentSetupMsg(newPasswordError);
-        toast.warning(
-          t("login.studentSetupTitle"),
-          newPasswordError,
-        );
-        return;
-      }
-      const confirmPasswordError = getStudentConfirmPasswordError(
-        studentConfirmPassword,
+    const newPasswordError = getStudentNewPasswordError(studentNewPassword);
+    if (newPasswordError) {
+      setStudentSetupMsg(newPasswordError);
+      toast.warning(
+        t("login.studentSetupTitle"),
+        newPasswordError,
       );
-      if (confirmPasswordError) {
-        setStudentSetupMsg(confirmPasswordError);
-        toast.warning(
-          t("login.studentSetupTitle"),
-          confirmPasswordError,
-        );
-        return;
-      }
+      return;
+    }
+    const confirmPasswordError = getStudentConfirmPasswordError(
+      studentConfirmPassword,
+    );
+    if (confirmPasswordError) {
+      setStudentSetupMsg(confirmPasswordError);
+      toast.warning(
+        t("login.studentSetupTitle"),
+        confirmPasswordError,
+      );
+      return;
     }
 
     setStudentSetupLoading(true);
@@ -464,9 +461,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
       setStudentConfirmPasswordTouched(false);
       setShowStudentNewPassword(false);
       setShowStudentConfirmPassword(false);
-      if (!data.keepPassword) {
-        setPassword("");
-      }
+      setPassword("");
       setCaptchaAnswer("");
       setCaptchaRefreshKey((key) => key + 1);
       setStudentSetupMsg("");
@@ -477,9 +472,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
       });
       toast.success(
         t("login.studentSetupCompleteTitle"),
-        data.keepPassword
-          ? t("login.studentSetupCompleteDemo")
-          : t("login.studentSetupComplete"),
+        t("login.studentSetupComplete"),
       );
     } catch {
       setStudentSetupMsg(t("common.networkError"));
@@ -835,7 +828,6 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                   />
                 </div>
 
-                {!isPlaystoreDemoStudent(email) ? (
                 <div className="mt-3 grid gap-3">
                   <div>
                     <label className="mb-1 block text-xs font-semibold" htmlFor="student-new-password">
@@ -962,13 +954,10 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                     )}
                   </div>
                 </div>
-                ) : null}
 
-                {!isPlaystoreDemoStudent(email) ? (
                 <p id="student-password-rules" className="mt-2 text-[11px] text-blue-700">
                   {t("login.studentPasswordRules")}
                 </p>
-                ) : null}
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -976,16 +965,14 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
                     disabled={
                       studentSetupLoading ||
                       studentSetupOtp.length !== 6 ||
-                      (!isPlaystoreDemoStudent(email) &&
-                        (!studentNewPassword || !studentConfirmPassword))
+                      !studentNewPassword ||
+                      !studentConfirmPassword
                     }
                     className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
                   >
                     {studentSetupLoading
                       ? t("login.studentSetupSaving")
-                      : isPlaystoreDemoStudent(email)
-                        ? t("login.studentVerifyDemo")
-                        : t("login.studentVerifyAndChange")}
+                      : t("login.studentVerifyAndChange")}
                   </button>
                   <button
                     type="button"

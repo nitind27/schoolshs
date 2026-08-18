@@ -925,8 +925,9 @@ async function main() {
  Student email: student1@dummy90001.local
                 student2@dummy90001.local  ← Play Store review
                 student3@dummy90001.local
-         pass : ${PASSWORDS.student}
-         OTP  : 900012  (student2 first login only, then never again)
+         pass : ${PASSWORDS.student}  (first login temporary)
+         OTP  : 900012  (student2 first login)
+         note : after OTP, set a new password — 123456 will stop working
 ══════════════════════════════════════════════════════
 `);
 }

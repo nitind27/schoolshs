@@ -182,31 +182,6 @@ export async function completeStudentFirstLogin(input: {
     }
   }
 
-  if (demoAccount) {
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: user.id },
-        data: {
-          emailVerified: true,
-          emailVerifiedAt: new Date(),
-          emailVerificationToken: null,
-          emailVerificationExpires: null,
-          mustChangePassword: false,
-          failedLoginCount: 0,
-          lockedUntil: null,
-        },
-      }),
-      prisma.userSession.updateMany({
-        where: { userId: user.id, revokedAt: null },
-        data: {
-          revokedAt: new Date(),
-          revokeReason: "student_first_login_completed",
-        },
-      }),
-    ]);
-    return { ok: true as const, email: user.email, keepPassword: true as const };
-  }
-
   const newPassword = input.newPassword;
   if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
     throw new AuthError(

@@ -631,7 +631,7 @@ const en = {
     studentSetupComplete:
       "Email verified and password changed. Sign in now with your new password.",
     studentSetupDemoHint:
-      "Play Store demo student — enter the fixed OTP below. Password stays 123456. OTP is asked only this first time.",
+      "Play Store demo student — use OTP 900012, then set a new password. After that, 123456 will not work.",
     studentSetupDemoOtp: "Demo OTP: {{otp}}",
     studentVerifyDemo: "Verify OTP",
     studentSetupCompleteDemo:

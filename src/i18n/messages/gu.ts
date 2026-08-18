@@ -623,7 +623,7 @@ const gu: Messages = {
     studentSetupComplete:
       "ઈમેલ ચકાસાયો અને પાસવર્ડ બદલાયો. હવે નવા પાસવર્ડથી લોગિન કરો.",
     studentSetupDemoHint:
-      "Play Store ડેમો વિદ્યાર્થી — નીચેનો ફિક્સ OTP દાખલ કરો. પાસવર્ડ 123456 જ રહેશે. OTP ફક્ત પહેલી વાર માંગાશે.",
+      "Play Store ડેમો વિદ્યાર્થી — OTP 900012 દાખલ કરો, પછી નવો પાસવર્ડ સેટ કરો. ત્યારબાદ 123456 ચાલશે નહીં.",
     studentSetupDemoOtp: "ડેમો OTP: {{otp}}",
     studentVerifyDemo: "OTP ચકાસો",
     studentSetupCompleteDemo:
