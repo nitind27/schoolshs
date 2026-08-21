@@ -804,6 +804,11 @@ model Student {
   fatherName         String
   motherNameGu       String?
   fatherNameGu       String?
+  /**
+   * Mother / father Aadhaar as collected on school registers
+   */
+  motherAadhaarNumber String? @db.VarChar(12)
+  fatherAadhaarNumber String? @db.VarChar(12)
   guardianName       String?
   guardianNameGu     String?
   category           String
@@ -825,6 +830,10 @@ model Student {
    * APAAR ID (One Nation One Student ID) — also called UPPAR ID in some schools
    */
   apaarId              String?      @db.VarChar(16)
+  /**
+   * UDISE+ Permanent Education Number (PEN) — 11 digits on school registers
+   */
+  penNumber            String?      @db.VarChar(16)
   /**
    * PAN of student / parent as collected for scholarship / IT forms
    */
@@ -926,6 +935,7 @@ model Student {
   @@index([standard])
   @@index([section])
   @@index([apaarId])
+  @@index([penNumber])
   @@index([panNumber])
   @@map("student")
 }

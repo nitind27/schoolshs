@@ -12,8 +12,9 @@ import {
   getReleasedClassIds,
 } from "@/lib/timetable-server";
 import { periodForDay } from "@/lib/timetable";
+import { getTeacherScope, nowInIndia } from "@/lib/teacher-scope";
 
-/** Aggregated dashboard for class teachers — scoped to assigned classes */
+/** Aggregated dashboard — homeroom class + timetable teaching classes */
 export async function GET() {
   try {
     const session = await requireSchoolAuth(["teacher", "school_admin"]);
@@ -22,8 +23,8 @@ export async function GET() {
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
-    const todayDay = now.getDate(); // 1–31
-    const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // 1=Mon … 7=Sun
+    const todayDay = now.getDate();
+    const dayOfWeek = nowInIndia().dayOfWeek;
 
     if (!staffId) {
       return NextResponse.json({
@@ -32,6 +33,8 @@ export async function GET() {
         teacherName: session.name || "",
         academicYear: "",
         generatedAt: now.toISOString(),
+        defaultClassId: null,
+        currentPeriod: null,
         stats: {
           totalClasses: 0,
           totalStudents: 0,
@@ -51,32 +54,8 @@ export async function GET() {
       });
     }
 
-    const [classes, school, staff] = await Promise.all([
-      prisma.schoolClass.findMany({
-        where: { schoolId, classTeacherId: staffId },
-        orderBy: [{ standard: "asc" }, { section: "asc" }],
-        include: {
-          students: {
-            select: {
-              id: true,
-              firstName: true,
-              middleName: true,
-              surname: true,
-              rollNumber: true,
-              grNumber: true,
-              gender: true,
-              category: true,
-              status: true,
-              sscSeatPrefix: true,
-              sscSeatNumber: true,
-              hscSeatPrefix: true,
-              hscSeatNumber: true,
-            },
-            orderBy: [{ rollNumber: "asc" }, { surname: "asc" }],
-          },
-          _count: { select: { students: true } },
-        },
-      }),
+    const [scope, school, staff] = await Promise.all([
+      getTeacherScope(session),
       prisma.school.findUnique({
         where: { id: schoolId },
         select: {
@@ -91,70 +70,96 @@ export async function GET() {
     ]);
 
     const academicYear =
-      school?.settings?.academicYear || classes[0]?.academicYear || "2025-26";
-    const classIds = classes.map((c) => c.id);
-    const studentIds = classes.flatMap((c) => c.students.map((s) => s.id));
+      school?.settings?.academicYear || scope.academicYear || "2025-26";
+    const classIds = scope.classes.map((c) => c.id);
 
-    const [
-      attendanceRows,
-      exams,
-      releasedClassIds,
-      daysConfig,
-      timetableEntries,
-    ] = await Promise.all([
-      studentIds.length
-        ? prisma.studentAttendanceMonth.findMany({
-            where: { schoolId, month, year, studentId: { in: studentIds } },
-            select: {
-              studentId: true,
-              classId: true,
-              daysJson: true,
-              monthTotal: true,
-            },
-          })
-        : Promise.resolve([]),
-      classIds.length
-        ? prisma.exam.findMany({
-            where: {
-              schoolId,
-              academicYear,
-              examType: "Annual",
-              OR: classes.map((c) => ({
-                standard: c.standard,
-                section: c.section,
-              })),
-            },
-            select: {
-              id: true,
-              standard: true,
-              section: true,
-              isPublished: true,
-              termMeta: true,
-            },
-          })
-        : Promise.resolve([]),
-      getReleasedClassIds(schoolId, academicYear).catch(
-        () => new Set<string>(),
-      ),
-      getOrCreateTimetableConfig(schoolId, academicYear).catch(() => null),
-      staffId
-        ? prisma.timetableEntry.findMany({
-            where: {
-              schoolId,
-              academicYear,
-              teacherId: staffId,
-            },
-            include: {
-              class: {
-                select: { id: true, name: true, standard: true, section: true },
+    const classes = classIds.length
+      ? await prisma.schoolClass.findMany({
+          where: { schoolId, id: { in: classIds } },
+          include: {
+            students: {
+              select: {
+                id: true,
+                firstName: true,
+                middleName: true,
+                surname: true,
+                rollNumber: true,
+                grNumber: true,
+                gender: true,
+                category: true,
+                status: true,
+                sscSeatPrefix: true,
+                sscSeatNumber: true,
+                hscSeatPrefix: true,
+                hscSeatNumber: true,
               },
+              orderBy: [{ rollNumber: "asc" }, { surname: "asc" }],
             },
-            orderBy: [{ dayOfWeek: "asc" }, { periodIndex: "asc" }],
-          })
-        : Promise.resolve([]),
-    ]);
+            _count: { select: { students: true } },
+          },
+        })
+      : [];
+
+    const classById = new Map(classes.map((c) => [c.id, c]));
+    const orderedClasses = scope.classes
+      .map((s) => classById.get(s.id))
+      .filter((c): c is (typeof classes)[number] => Boolean(c));
+    const studentIds = orderedClasses.flatMap((c) => c.students.map((s) => s.id));
+
+    const [attendanceRows, exams, releasedClassIds, daysConfig, timetableEntries] =
+      await Promise.all([
+        studentIds.length
+          ? prisma.studentAttendanceMonth.findMany({
+              where: { schoolId, month, year, studentId: { in: studentIds } },
+              select: {
+                studentId: true,
+                classId: true,
+                daysJson: true,
+                monthTotal: true,
+              },
+            })
+          : Promise.resolve([]),
+        orderedClasses.length
+          ? prisma.exam.findMany({
+              where: {
+                schoolId,
+                academicYear,
+                examType: "Annual",
+                OR: orderedClasses.map((c) => ({
+                  standard: c.standard,
+                  section: c.section,
+                })),
+              },
+              select: {
+                id: true,
+                standard: true,
+                section: true,
+                isPublished: true,
+                termMeta: true,
+              },
+            })
+          : Promise.resolve([]),
+        getReleasedClassIds(schoolId, academicYear).catch(
+          () => new Set<string>(),
+        ),
+        getOrCreateTimetableConfig(schoolId, academicYear).catch(() => null),
+        prisma.timetableEntry.findMany({
+          where: {
+            schoolId,
+            academicYear,
+            teacherId: staffId,
+          },
+          include: {
+            class: {
+              select: { id: true, name: true, standard: true, section: true },
+            },
+          },
+          orderBy: [{ dayOfWeek: "asc" }, { periodIndex: "asc" }],
+        }),
+      ]);
 
     const attByStudent = new Map(attendanceRows.map((r) => [r.studentId, r]));
+    const scopeById = new Map(scope.classes.map((c) => [c.id, c]));
 
     let boys = 0;
     let girls = 0;
@@ -163,7 +168,7 @@ export async function GET() {
     let presentMonth = 0;
     let markedMonth = 0;
 
-    const classCards = classes.map((cls) => {
+    const classCards = orderedClasses.map((cls) => {
       let classBoys = 0;
       let classGirls = 0;
       let markedToday = 0;
@@ -202,7 +207,7 @@ export async function GET() {
       const exam = exams.find(
         (e) => e.standard === cls.standard && e.section === cls.section,
       );
-
+      const scoped = scopeById.get(cls.id);
       const studentCount = cls._count.students;
       const attendancePct =
         classMarkedMonth > 0
@@ -225,6 +230,12 @@ export async function GET() {
         attendancePct,
         examPublished: exam?.isPublished ?? false,
         examId: exam?.id ?? null,
+        isHomeroom: scoped?.isHomeroom ?? false,
+        isTeaching: scoped?.isTeaching ?? false,
+        canMarkAttendance: scoped?.canMarkAttendance ?? false,
+        canEnterMarks: scoped?.canEnterMarks ?? false,
+        subjects: scoped?.subjects ?? [],
+        subjectCodes: scoped?.subjectCodes ?? [],
       };
     });
 
@@ -233,13 +244,13 @@ export async function GET() {
         markedTodayCount++;
     }
     const attendancePendingToday = classCards.filter(
-      (c) => c.studentCount > 0 && c.unmarkedToday > 0,
+      (c) => c.studentCount > 0 && c.unmarkedToday > 0 && c.canMarkAttendance,
     ).length;
 
     const releasedIds =
       releasedClassIds instanceof Set ? releasedClassIds : new Set<string>();
-    const filteredEntries = timetableEntries.filter(
-      (e) => releasedIds.size === 0 || releasedIds.has(e.classId),
+    const filteredEntries = timetableEntries.filter((e) =>
+      releasedIds.has(e.classId),
     );
 
     const todaySchedule = filteredEntries
@@ -248,6 +259,9 @@ export async function GET() {
         const p = daysConfig
           ? periodForDay(daysConfig, e.dayOfWeek, e.periodIndex)
           : null;
+        const isNow =
+          scope.currentPeriod?.classId === e.classId &&
+          scope.currentPeriod?.periodIndex === e.periodIndex;
         return {
           periodIndex: e.periodIndex,
           subject: e.subject,
@@ -258,11 +272,12 @@ export async function GET() {
           startTime: p?.start || null,
           endTime: p?.end || null,
           label: p ? `P${p.index}` : `P${e.periodIndex}`,
+          isNow,
         };
       });
 
     const totalStudents = studentIds.length;
-    const students = classes.flatMap((cls) =>
+    const students = orderedClasses.flatMap((cls) =>
       cls.students.map((student) => ({
         ...student,
         classId: cls.id,
@@ -298,14 +313,18 @@ export async function GET() {
       month,
       year,
       generatedAt: now.toISOString(),
+      defaultClassId: scope.defaultClassId,
+      currentPeriod: scope.currentPeriod,
       stats: {
-        totalClasses: classes.length,
+        totalClasses: classCards.length,
         totalStudents,
         boys,
         girls,
         other,
         avgPerClass:
-          classes.length > 0 ? Math.round(totalStudents / classes.length) : 0,
+          classCards.length > 0
+            ? Math.round(totalStudents / classCards.length)
+            : 0,
         attendanceMarkedToday: markedTodayCount,
         attendancePendingToday,
         monthAttendancePct:
@@ -318,7 +337,7 @@ export async function GET() {
       todaySchedule,
       quickHints: {
         noStaffLink: false,
-        noClasses: classes.length === 0,
+        noClasses: classCards.length === 0,
       },
     });
   } catch (e) {

@@ -13,6 +13,9 @@ type TeacherClass = {
   name: string;
   standard: string;
   section: string;
+  isHomeroom?: boolean;
+  isTeaching?: boolean;
+  subjects?: string[];
   students?: unknown[];
 };
 
@@ -35,6 +38,12 @@ export default function TeacherMyClassPage() {
               <Link href={`/classes/${cls.id}`} className="flex-1">
                 <h3 className="text-base font-semibold">{cls.name}</h3>
                 <p className="text-sm text-slate-500">{t("results.classLabel", { standard: cls.standard })}-{cls.section}</p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {cls.isHomeroom
+                    ? t("teacherPortal.homeroomBadge")
+                    : t("teacherPortal.lectureBadge")}
+                  {cls.subjects?.length ? ` · ${cls.subjects.join(", ")}` : ""}
+                </p>
                 <p className="mt-0.5 text-xs text-slate-500">{t("teacherPortal.studentsEnrolled", { count: cls.students?.length || 0 })}</p>
               </Link>
               <Link href={`/teacher/attendance?classId=${cls.id}&month=${now.getMonth() + 1}&year=${now.getFullYear()}`}>

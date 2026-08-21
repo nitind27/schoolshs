@@ -46,7 +46,15 @@ export default function TermMarksPage() {
   const classIdParam = searchParams.get("classId") || "";
   const termParam = (searchParams.get("term") || "mid1") as ExamTermKey;
 
-  const [classes, setClasses] = useState<Array<{ id: string; name: string; standard: string; section: string }>>([]);
+  const [classes, setClasses] = useState<Array<{
+    id: string;
+    name: string;
+    standard: string;
+    section: string;
+    isHomeroom?: boolean;
+    canEnterMarks?: boolean;
+    subjects?: string[];
+  }>>([]);
   const [classId, setClassId] = useState(classIdParam);
   const [term, setTerm] = useState<ExamTermKey>(termParam);
   const [data, setData] = useState<{
@@ -75,7 +83,19 @@ export default function TermMarksPage() {
   useEffect(() => {
     fetch("/api/classes?academicYear=2025-26")
       .then((r) => r.json())
-      .then((d) => setClasses(d.classes || []))
+      .then((d) => {
+        const list = (d.classes || []).filter(
+          (c: { canEnterMarks?: boolean }) => c.canEnterMarks !== false,
+        );
+        setClasses(list);
+        if (!classIdParam && !classId && list.length) {
+          const fallback =
+            d.defaultClassId ||
+            list.find((c: { isHomeroom?: boolean }) => c.isHomeroom)?.id ||
+            list[0].id;
+          if (fallback) setClassId(fallback);
+        }
+      })
       .catch(() => setClasses([]));
   }, []);
 
@@ -217,7 +237,16 @@ export default function TermMarksPage() {
               label={t("examTerms.selectClass")}
               value={classId}
               onChange={(e) => setClassId(e.target.value)}
-              options={classes.map((c) => ({ value: c.id, label: `${c.name} (${c.section})` }))}
+              options={classes.map((c) => ({
+                value: c.id,
+                label: [
+                  `${c.name} (${c.section})`,
+                  c.isHomeroom ? t("teacherPortal.homeroomBadge") : "",
+                  (c.subjects || []).join(", "),
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+              }))}
             />
           </div>
           <div className="min-w-[160px]">
@@ -231,6 +260,16 @@ export default function TermMarksPage() {
           </div>
         </CardContent>
       </Card>
+
+      {classId && (() => {
+        const selected = classes.find((c) => c.id === classId);
+        if (!selected?.subjects?.length) return null;
+        return (
+          <p className="text-sm text-slate-600">
+            {t("teacherPortal.yourSubjects", { subjects: selected.subjects.join(", ") })}
+          </p>
+        );
+      })()}
 
       {message && (
         <div className={cn(
@@ -252,6 +291,12 @@ export default function TermMarksPage() {
         <PageLoader />
       ) : !classId ? (
         <Card><CardContent className="p-12 text-center text-slate-500">{t("examTerms.selectClassFirst")}</CardContent></Card>
+      ) : data && rows.length > 0 && numericSubjects.length === 0 ? (
+        <Card>
+          <CardContent className="p-12 text-center text-slate-500">
+            {t("teacherPortal.noAssignedSubjects")}
+          </CardContent>
+        </Card>
       ) : data && rows.length > 0 ? (
         <>
           <div className="flex flex-wrap gap-3 text-sm">

@@ -1135,6 +1135,18 @@ export function StudentForm({
               />
               <div>
                 <Input
+                  label={t("fields.penNumber")}
+                  maxLength={16}
+                  placeholder="20522410726"
+                  value={form.penNumber || ""}
+                  onChange={(e) =>
+                    update("penNumber", e.target.value.replace(/\D/g, "").slice(0, 16))
+                  }
+                />
+                <p className="sf-hint">{t("studentForm.penHint")}</p>
+              </div>
+              <div>
+                <Input
                   label={t("fields.panNumber")}
                   maxLength={10}
                   placeholder={t("studentForm.panPlaceholder")}
@@ -1188,6 +1200,12 @@ export function StudentForm({
                     disabled={grLocked}
                     onChange={(e) => update("grNumber", e.target.value)}
                   />
+                  <DateField
+                    label={t("fields.startDate")}
+                    value={form.startDate || ""}
+                    onChange={(v) => update("startDate", v)}
+                    outputFormat="dmy-slash"
+                  />
                   <Select label={t("fields.bloodGroup")} options={[...BLOOD_GROUPS]} emptyLabel={t("common.select")} value={form.bloodGroup || ""} onChange={(e) => update("bloodGroup", e.target.value || null)} />
                 </div>
                 {grLocked && (
@@ -1219,6 +1237,21 @@ export function StudentForm({
                     guTouched={!!guTouched.motherNameGu}
                     onGuTouched={() => markGuTouched("motherNameGu")}
                   />
+                  <div>
+                    <Input
+                      label={t("fields.motherAadhaarNumber")}
+                      placeholder="123456789012"
+                      maxLength={12}
+                      value={form.motherAadhaarNumber || ""}
+                      onChange={(e) =>
+                        update(
+                          "motherAadhaarNumber",
+                          e.target.value.replace(/\D/g, "").slice(0, 12),
+                        )
+                      }
+                    />
+                    <p className="sf-hint">{t("studentForm.parentAadhaarHint")}</p>
+                  </div>
                   <BilingualNameField
                     label={t("fields.fatherName")}
                     required
@@ -1229,6 +1262,21 @@ export function StudentForm({
                     guTouched={!!guTouched.fatherNameGu}
                     onGuTouched={() => markGuTouched("fatherNameGu")}
                   />
+                  <div>
+                    <Input
+                      label={t("fields.fatherAadhaarNumber")}
+                      placeholder="123456789012"
+                      maxLength={12}
+                      value={form.fatherAadhaarNumber || ""}
+                      onChange={(e) =>
+                        update(
+                          "fatherAadhaarNumber",
+                          e.target.value.replace(/\D/g, "").slice(0, 12),
+                        )
+                      }
+                    />
+                    <p className="sf-hint">{t("studentForm.parentAadhaarHint")}</p>
+                  </div>
                   <BilingualNameField
                     label={t("fields.guardianName")}
                     enValue={form.guardianName || ""}
@@ -1657,8 +1705,11 @@ export function StudentForm({
                   [t("fields.aadhaar"), form.aadhaarNumber],
                   [t("fields.aadhaarName"), studentDisplayAadhaarName(form as Parameters<typeof studentDisplayAadhaarName>[0])],
                   [t("fields.motherName"), studentDisplayMotherName(form as Parameters<typeof studentDisplayMotherName>[0])],
+                  [t("fields.motherAadhaarNumber"), form.motherAadhaarNumber],
                   [t("fields.fatherName"), studentDisplayFatherName(form as Parameters<typeof studentDisplayFatherName>[0])],
+                  [t("fields.fatherAadhaarNumber"), form.fatherAadhaarNumber],
                   [t("fields.mobile"), form.mobileNumber],
+                  [t("fields.email"), form.email],
                   [t("fields.category"), form.category],
                   [t("fields.dob"), form.dateOfBirth],
                   [t("fields.class"),
@@ -1674,9 +1725,13 @@ export function StudentForm({
                           )
                         : "—"],
                   [t("fields.roll"), form.rollNumber],
+                  [t("fields.grNumber"), form.grNumber],
+                  [t("fields.startDate"), form.startDate],
                   [t("fields.childUid"), form.childUid],
                   [t("fields.apaarId"), form.apaarId],
+                  [t("fields.penNumber"), form.penNumber],
                   [t("fields.panNumber"), form.panNumber],
+                  [t("fields.rationCardNumber"), form.rationCardNumber],
                 ]},
                 { title: t("studentForm.academic"), tone: "academic", fields: [
                   [t("fields.scheme"), form.scholarshipScheme],

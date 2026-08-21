@@ -10,7 +10,9 @@ Use this prompt when **modifying an existing Flutter app** to match the SHS Scho
 
 - Backend: Next.js Scholarship Portal (same APIs as web).
 - Web teacher home: `/teacher`
-- Teacher sees **only assigned classes** (`classTeacherId = staffId`).
+- Teacher sees **homeroom class** (`classTeacherId = staffId`) **plus classes they teach** on the **released timetable**.
+- Default selected class = **own (homeroom) class**. If they are taking a lecture in another class, they can pick that class and mark its attendance.
+- Marks entry is limited to **their timetable subjects** in those classes.
 - Attendance codes: **`P`** Present · **`A`** Absent · **`L`** Leave · **`H`** Half-day
 - Languages: **English + Gujarati** (locale switch like web).
 
@@ -236,27 +238,31 @@ PATCH /api/account/password
 
 **Hero:** Welcome `{teacherName}`, `{schoolName}`, designation, `{academicYear}`, live date/time.
 
+Also read **`defaultClassId`** and **`currentPeriod`** (null if not in a live lecture).
+
 **KPI row (4 cards — tap opens bottom sheet / modal with full list):**
 
 | Card | Stat | Detail kind |
 |------|------|-------------|
-| My Classes | `stats.totalClasses` | Class list with attendance % |
+| My Classes | `stats.totalClasses` | Homeroom + timetable teaching classes |
 | Students | `stats.totalStudents` | Full student roster preview |
 | Month Attendance | `stats.monthAttendancePct` | Per-class summary |
 | Today's Periods | `stats.todayPeriods` | Schedule list |
 
 **Alerts:**
 - `quickHints.noStaffLink` → banner: staff profile not linked.
+- `currentPeriod` → banner: "You are teaching {subject} in {className}" with **Mark attendance here**.
 - `stats.attendancePendingToday > 0` → amber chip linking to attendance.
 
 **My Classes grid:** Each `ClassCard`:
 - Name, student count, boys/girls, `attendancePct`, `markedToday` / `unmarkedToday`
-- Chips: `examPublished` → Published (teal) / Draft
-- Actions: **Mark Attendance**, **Enter Marks**, **View Roster**
+- Chips: `isHomeroom` → **My class**; `isTeaching` → **Lecture**; `examPublished` → Published / Draft
+- Show `subjects[]` (timetable subjects for this teacher)
+- Actions: **Mark Attendance** if `canMarkAttendance`; **Enter Marks** if `canEnterMarks`; **View Roster**
 
-**Today's Schedule:** Period list from `todaySchedule[]` — subject, class, room, time.
+**Today's Schedule:** Period list from `todaySchedule[]` — subject, class, room, time. `isNow` highlights the live period. Tap a period → attendance for that `classId`.
 
-**Quick Actions row:** Attendance · Students · Results · Timetable · Export
+**Quick Actions row:** Attendance (pass `defaultClassId`) · Students · Results · Timetable · Export
 
 **Export (dashboard):**
 
@@ -273,7 +279,19 @@ Download bytes → save/share. Show filename from `Content-Disposition` if prese
 
 ### 3. Student Attendance
 
-**Filters:** Class picker (teacher classes only), month, year.
+**Preferred class list (Flutter):**
+
+```
+GET /api/teacher/scope
+```
+
+Use `defaultClassId` as the initial class. Picker = `classes` where `canMarkAttendance`.
+
+If `currentPeriod` is set and its `classId` differs from the selected class, show a banner to switch to that lecture class.
+
+**Also accepted:** `GET /api/teacher` (same classes + students, plus `defaultClassId` / `currentPeriod`).
+
+**Filters:** Class picker (homeroom + timetable classes), month, year.
 
 **Load:**
 
@@ -328,6 +346,8 @@ GET /api/timetable/my?academicYear=2025-26
 ```
 GET /api/teacher
 ```
+
+Includes homeroom **and** timetable teaching classes. Each class has `isHomeroom`, `isTeaching`, `subjects`, `canMarkAttendance`, `canEnterMarks`. Top-level `defaultClassId` + `currentPeriod`.
 
 **Filters:** Search (name, roll, GR, mobile, father), class, gender, status, category.
 
@@ -400,6 +420,10 @@ GET /api/results/class-overview?academicYear=2025-26
 GET /api/results/term-marks?classId={id}&term={mid|final|...}
 POST /api/results/term-marks
 ```
+
+Teachers only receive **their timetable subjects** (`subjects` / each student's `subjectMarks` filtered). Response includes `editableSubjectCodes`. Do not render other subject columns. If `editableSubjectCodes` is `[]`, show "No timetable subjects assigned".
+
+Class picker: `GET /api/teacher/scope` or `GET /api/results/class-overview` (already teacher-scoped). Prefer `defaultClassId`. Only show classes with `canEnterMarks`.
 
 **Save body (`action: save_marks`):**
 
@@ -536,8 +560,9 @@ Response:
 | POST | `/api/auth/mobile/login` | Login |
 | GET | `/api/auth/me` | Session |
 | PATCH | `/api/account/password` | Password |
-| GET | `/api/teacher` | Classes + students |
-| GET | `/api/teacher/dashboard` | Dashboard aggregate |
+| GET | `/api/teacher` | Classes + students (homeroom + timetable) |
+| GET | `/api/teacher/dashboard` | Dashboard aggregate + `defaultClassId` |
+| GET | `/api/teacher/scope` | Class/subject scope for Flutter (preferred) |
 | GET | `/api/teacher/export?type=&format=` | XLSX/PDF export |
 | GET | `/api/teacher/students/search?grNumber=` | GR lookup |
 | GET/PUT | `/api/attendance?classId&month&year` | Attendance |
@@ -552,6 +577,50 @@ Response:
 | GET | `/api/teacher/holidays?year=&month=` | Holidays (preferred for Flutter) |
 | GET | `/api/holidays?year=&month=` | Holidays (shared) |
 | GET | `/api/staff/holidays?year=&month=` | Holidays (alias) |
+
+### Teacher scope payload (`GET /api/teacher/scope`)
+
+Use this as the single source of truth after login / on attendance & marks screens.
+
+```json
+{
+  "linked": true,
+  "staffId": "...",
+  "academicYear": "2025-26",
+  "defaultClassId": "<homeroom class id>",
+  "currentPeriod": {
+    "classId": "...",
+    "className": "10-B",
+    "subject": "Mathematics",
+    "periodIndex": 3,
+    "startTime": "12:00",
+    "endTime": "12:45",
+    "label": "P3",
+    "room": "12"
+  },
+  "classes": [
+    {
+      "id": "...",
+      "name": "10-A",
+      "standard": "10",
+      "section": "A",
+      "isHomeroom": true,
+      "isTeaching": true,
+      "canMarkAttendance": true,
+      "canEnterMarks": true,
+      "subjects": ["Mathematics"],
+      "subjectCodes": ["MATH"]
+    }
+  ],
+  "attendanceClassIds": ["..."],
+  "marksClassIds": ["..."],
+  "homeroomClassIds": ["..."]
+}
+```
+
+- Attendance: only `canMarkAttendance` classes. Pre-select `defaultClassId`.
+- Marks: only `canEnterMarks` classes; only `subjectCodes` columns.
+- `currentPeriod` is null outside a live timetable slot.
 
 ---
 
@@ -661,13 +730,13 @@ Match the web Teacher Portal at /teacher with full feature parity and this desig
 Auth: GET /api/auth/captcha (render SVG), POST /api/auth/mobile/login with captchaToken+captchaAnswer, store Bearer token 7 days. Only teacher role for staff panel.
 
 Implement/refactor these screens with live APIs:
-1. Dashboard — GET /api/teacher/dashboard, KPI cards with detail sheets, class cards, today schedule, quick actions, export GET /api/teacher/export?type=dashboard&format=xlsx|pdf
-2. Attendance — GET/PUT /api/attendance, monthly grid P/A/L/H, export type=attendance
+1. Dashboard — GET /api/teacher/dashboard, KPI cards, class cards with isHomeroom/isTeaching/subjects, defaultClassId, currentPeriod banner, today schedule tap → attendance, export GET /api/teacher/export?type=dashboard&format=xlsx|pdf
+2. Attendance — GET /api/teacher/scope for class list, preselect defaultClassId, GET/PUT /api/attendance, monthly grid P/A/L/H, export type=attendance. Teacher can mark homeroom + timetable lecture classes.
 3. Timetable — GET /api/timetable/my (read-only)
 4. Students — GET /api/teacher, filters, GR search /api/teacher/students/search, export type=roster
-5. Roll Numbers — GET/PATCH /api/roll-numbers, auto-assign 1,2,3
-6. Exam Seats — GET/PATCH /api/exam-seat-numbers, prefix generator
-7. Results — class-overview, term-marks GET/POST, marks-sheet, print
+5. Roll Numbers — GET/PATCH /api/roll-numbers, auto-assign 1,2,3 (homeroom class only)
+6. Exam Seats — GET/PATCH /api/exam-seat-numbers, prefix generator (homeroom class only)
+7. Results — class-overview (scoped), term-marks GET/POST only teacher timetable subjects (editableSubjectCodes), marks-sheet, print
 8. Board Records — overview, entry, exam-result-sheet, result-list (teacher-scoped)
 9. Holidays — GET /api/teacher/holidays (or /api/holidays / /api/staff/holidays) read-only
 10. Profile — GET /api/auth/me, PATCH /api/account/password

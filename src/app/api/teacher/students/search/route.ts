@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { activeStudentStatusFilter } from "@/lib/student-list-filters";
 import { searchStudentIds } from "@/lib/student-search.server";
+import { getTeacherScope } from "@/lib/teacher-scope";
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,10 +25,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ students: [] });
     }
 
+    const scope = await getTeacherScope(session);
     const ids = await searchStudentIds(prisma, {
       schoolId: session.schoolId,
       query: q,
-      classTeacherId: session.staffId,
+      classIds: scope.attendanceClassIds,
       take: 8,
     });
     if (ids.length === 0) {

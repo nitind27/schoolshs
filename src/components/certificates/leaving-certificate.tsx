@@ -1,17 +1,35 @@
 "use client";
 
 import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
-import { studentFullName, dateToWords } from "@/lib/certificates/date-to-words";
+import { dateToWords } from "@/lib/certificates/date-to-words";
+import {
+  lcBirthPlaceEn,
+  lcBirthPlaceGu,
+  lcGuText,
+  lcMotherEn,
+  lcMotherGu,
+  lcNameEn,
+  lcNameGu,
+  lcPrinted,
+  lcReligionCasteEn,
+  lcReligionCasteGu,
+  type LCPrintText,
+} from "@/lib/certificates/lc-bilingual";
 
 export interface LCData {
   student: {
     firstName: string;
     middleName?: string | null;
     surname: string;
+    firstNameGu?: string | null;
+    middleNameGu?: string | null;
+    surnameGu?: string | null;
+    aadhaarNameGu?: string | null;
     grNumber?: string | null;
     religion?: string | null;
     caste?: string | null;
     motherName: string;
+    motherNameGu?: string | null;
     dateOfBirth: string;
     currentCity?: string | null;
     currentDistrict?: string | null;
@@ -41,13 +59,15 @@ export interface LCData {
   sscSeatNo?: string;
   medium?: string;
   issueDate: string;
+  /** Optional print-time English/Gujarati edits (LC page). */
+  print?: LCPrintText;
   /** Upper-primary LC extras */
   outwardNo?: string;
   nativePlace?: string;
   apaarId?: string;
 }
 
-const FONT = '"Times New Roman", Times, Georgia, serif';
+const FONT = '"Times New Roman", Times, "Noto Sans Gujarati", Georgia, serif';
 
 function Fill({
   value = "",
@@ -139,24 +159,38 @@ function Field({
 export function LeavingCertificateView({ data }: { data: LCData }) {
   const school = useCertificateBrand();
   const S = data.student;
-  const nm = studentFullName(S);
-  const religionCaste = [S.religion, S.caste].filter(Boolean).join(" / ");
-  const birthPlace = [
-    S.currentCity,
-    S.birthTaluka ? `Ta. ${S.birthTaluka}` : null,
-    S.currentDistrict ? `Dist. ${S.currentDistrict}` : null,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const p = data.print;
+  const nameEn = lcPrinted(p?.nameEn, lcNameEn(S));
+  const nameGu = lcPrinted(p?.nameGu, lcNameGu(S));
+  const religionCasteEn = lcPrinted(p?.religionCasteEn, lcReligionCasteEn(S));
+  const religionCasteGu = lcPrinted(p?.religionCasteGu, lcReligionCasteGu(S));
+  const motherEn = lcPrinted(p?.motherEn, lcMotherEn(S));
+  const motherGu = lcPrinted(p?.motherGu, lcMotherGu(S));
+  const birthPlaceEn = lcPrinted(p?.birthPlaceEn, lcBirthPlaceEn(S));
+  const birthPlaceGu = lcPrinted(p?.birthPlaceGu, lcBirthPlaceGu(S));
   const dob = S.dateOfBirth || "";
-  const dobWords = dateToWords(dob, "en");
+  const dobWordsEn = dateToWords(dob, "en");
+  const dobWordsGu = dateToWords(dob, "gu");
   const studying =
     data.studyingStandard ||
     [S.standard ? `Std ${S.standard}` : "", S.section].filter(Boolean).join("-");
+  const studyingGu = lcGuText(studying.replace(/^Std\s+/i, "Std "));
   const uid = (S.childUid || "").replace(/\D/g, "");
   const uidBoxes = Array.from({ length: 18 }, (_, i) => uid[i] || "");
   const medium = data.medium || "ગુજરાતી / Gujarati";
-  const lastSchool = data.lastSchool || school.nameEnAlt;
+  const lastSchoolEn = lcPrinted(p?.lastSchoolEn, data.lastSchool || school.nameEnAlt);
+  const lastSchoolGu = lcPrinted(
+    p?.lastSchoolGu,
+    data.lastSchool ? lcGuText(data.lastSchool) : school.nameGu || lcGuText(lastSchoolEn),
+  );
+  const reasonEn = data.reason || "";
+  const reasonGu = lcPrinted(p?.reasonGu, lcGuText(reasonEn));
+  const progressEn = data.progress || "";
+  const progressGu = lcPrinted(p?.progressGu, lcGuText(progressEn));
+  const conductEn = data.conduct || "";
+  const conductGu = lcPrinted(p?.conductGu, lcGuText(conductEn));
+  const remarksEn = data.remarks || "";
+  const remarksGu = lcPrinted(p?.remarksGu, lcGuText(remarksEn));
 
   return (
     <div className="lc-sheet" style={{ fontFamily: FONT, color: "#000", width: "100%", maxWidth: 720, margin: "0 auto" }}>
@@ -263,16 +297,16 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
           </div>
 
           {/* Fields 1–14 */}
-          <Field n={1} en="Full Name of the Student" gu={<>વિદ્યાર્થીનું પૂરેપૂરું નામ <Fill value={nm} flex={1} minWidth={160} /></>}>
-            <Fill value={nm} flex={1} minWidth={180} />
+          <Field n={1} en="Full Name of the Student" gu={<>વિદ્યાર્થીનું પૂરેપૂરું નામ <Fill value={nameGu} flex={1} minWidth={160} /></>}>
+            <Fill value={nameEn} flex={1} minWidth={180} />
           </Field>
 
-          <Field n={2} en="Religion and Caste" gu={<>ધર્મ અને જાતિ <Fill value={religionCaste} flex={1} minWidth={140} /></>}>
-            <Fill value={religionCaste} flex={1} minWidth={160} />
+          <Field n={2} en="Religion and Caste" gu={<>ધર્મ અને જાતિ <Fill value={religionCasteGu} flex={1} minWidth={140} /></>}>
+            <Fill value={religionCasteEn} flex={1} minWidth={160} />
           </Field>
 
-          <Field n={3} en="Mother's Name" gu={<>માતાનું નામ <Fill value={S.motherName || ""} flex={1} minWidth={140} /></>}>
-            <Fill value={S.motherName || ""} flex={1} minWidth={160} />
+          <Field n={3} en="Mother's Name" gu={<>માતાનું નામ <Fill value={motherGu} flex={1} minWidth={140} /></>}>
+            <Fill value={motherEn} flex={1} minWidth={160} />
           </Field>
 
           <Field
@@ -282,9 +316,9 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                 Place of Birth <span style={{ fontWeight: 400 }}>(With Taluka / District)</span>
               </>
             }
-            gu={<>જન્મ સ્થળ (તાલુકા, જિલ્લા સહિત) <Fill value={birthPlace} flex={1} minWidth={140} /></>}
+            gu={<>જન્મ સ્થળ (તાલુકા, જિલ્લા સહિત) <Fill value={birthPlaceGu} flex={1} minWidth={140} /></>}
           >
-            <Fill value={birthPlace} flex={1} minWidth={160} />
+            <Fill value={birthPlaceEn} flex={1} minWidth={160} />
           </Field>
 
           <Field
@@ -293,6 +327,10 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             gu={
               <>
                 ખ્રિસ્તી વર્ષ અનુસાર જન્મ તારીખ <Fill value={dob} minWidth={96} />
+                <span style={{ width: "100%", fontSize: 10, marginTop: 2, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "flex-end" }}>
+                  <span>(આંકડામાં અને શબ્દમાં)</span>
+                  <Fill value={dobWordsGu} flex={1} minWidth={200} />
+                </span>
               </>
             }
           >
@@ -300,14 +338,11 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             <span style={{ width: "100%", fontWeight: 400, fontSize: 9.5, marginTop: 2 }}>
               (In Figures and words as per Christian Calendar)
             </span>
-            <span style={{ width: "100%", fontSize: 10, marginTop: 2, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "flex-end" }}>
-              <span>(આંકડામાં અને શબ્દમાં)</span>
-              <Fill value={dobWords} flex={1} minWidth={200} />
-            </span>
+            <Fill value={dobWordsEn} flex={1} minWidth={200} />
           </Field>
 
-          <Field n={6} en="Last School Attended" gu={<>જ્યાં ભણ્યો હોય તે છેલ્લી શાળા <Fill value={lastSchool} flex={1} minWidth={140} /></>}>
-            <Fill value={lastSchool} flex={1} minWidth={160} />
+          <Field n={6} en="Last School Attended" gu={<>જ્યાં ભણ્યો હોય તે છેલ્લી શાળા <Fill value={lastSchoolGu} flex={1} minWidth={140} /></>}>
+            <Fill value={lastSchoolEn} flex={1} minWidth={160} />
           </Field>
 
           {/* 7 + 8 on same row */}
@@ -365,7 +400,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             gu={
               <>
                 કયા ધોરણમાં અભ્યાસ કરે છે? ક્યારથી?{" "}
-                <Fill value={[studying, data.studyingSince].filter(Boolean).join(" · ")} flex={1} minWidth={140} />
+                <Fill value={[studyingGu, data.studyingSince ? lcGuText(data.studyingSince) : ""].filter(Boolean).join(" · ")} flex={1} minWidth={140} />
               </>
             }
           >
@@ -373,19 +408,19 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             <Fill value={data.studyingSince || ""} flex={1} minWidth={120} />
           </Field>
 
-          <Field n={10} en="Reason for leaving the School" gu={<>શાળા છોડ્યાનું કારણ <Fill value={data.reason || ""} flex={1} minWidth={140} /></>}>
-            <Fill value={data.reason || ""} flex={1} minWidth={160} />
+          <Field n={10} en="Reason for leaving the School" gu={<>શાળા છોડ્યાનું કારણ <Fill value={reasonGu} flex={1} minWidth={140} /></>}>
+            <Fill value={reasonEn} flex={1} minWidth={160} />
           </Field>
 
-          <Field n={11} en="Progress" gu={<>પ્રગતિ <Fill value={data.progress || ""} flex={1} minWidth={140} /></>}>
-            <Fill value={data.progress || ""} flex={1} minWidth={160} />
+          <Field n={11} en="Progress" gu={<>પ્રગતિ <Fill value={progressGu} flex={1} minWidth={140} /></>}>
+            <Fill value={progressEn} flex={1} minWidth={160} />
           </Field>
 
-          <Field n={12} en="Conduct" gu={<>વર્તણૂંક <Fill value={data.conduct || ""} flex={1} minWidth={140} /></>}>
-            <Fill value={data.conduct || ""} flex={1} minWidth={160} />
+          <Field n={12} en="Conduct" gu={<>વર્તણૂંક <Fill value={conductGu} flex={1} minWidth={140} /></>}>
+            <Fill value={conductEn} flex={1} minWidth={160} />
           </Field>
 
-          <Field n={13} en="Remarks" gu={<>વિશેષ નોંધ <Fill value={data.remarks || ""} flex={1} minWidth={140} /></>}>
+          <Field n={13} en="Remarks" gu={<>વિશેષ નોંધ <Fill value={remarksGu} flex={1} minWidth={140} /></>}>
             <Fill value={data.remarks || ""} flex={1} minWidth={120} />
             <span
               style={{

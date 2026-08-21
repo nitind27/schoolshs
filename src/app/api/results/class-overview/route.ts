@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
 import { ensureClassExam, getClassMarksSheetConfig } from "@/lib/class-subjects";
 import { computeStudentTotals, subjectFinalMarks } from "@/lib/results/calculations";
+import { getTeacherScope, assertTeacherMarksAccess } from "@/lib/teacher-scope";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,8 +13,30 @@ export async function GET(request: NextRequest) {
     const academicYear = searchParams.get("academicYear") || "2025-26";
 
     if (!classId) {
+      const teacherScope =
+        session.role === "teacher" ? await getTeacherScope(session, { academicYear }) : null;
+      const allowedIds = teacherScope
+        ? new Set(
+            teacherScope.classes
+              .filter((c) => c.isHomeroom || c.canEnterMarks || c.isTeaching)
+              .map((c) => c.id),
+          )
+        : null;
+
+      if (allowedIds && allowedIds.size === 0) {
+        return NextResponse.json({
+          classes: [],
+          academicYear,
+          defaultClassId: teacherScope?.defaultClassId ?? null,
+        });
+      }
+
       const classes = await prisma.schoolClass.findMany({
-        where: { schoolId: session.schoolId, academicYear },
+        where: {
+          schoolId: session.schoolId,
+          academicYear,
+          ...(allowedIds ? { id: { in: Array.from(allowedIds) } } : {}),
+        },
         orderBy: [{ standard: "asc" }, { section: "asc" }],
         include: {
           classTeacher: { select: { firstName: true, lastName: true } },
@@ -26,8 +49,10 @@ export async function GET(request: NextRequest) {
         select: { id: true, standard: true, section: true, isPublished: true },
       });
 
+      const scopeById = new Map(teacherScope?.classes.map((c) => [c.id, c]) ?? []);
       const overview = classes.map((cls) => {
         const exam = exams.find((e) => e.standard === cls.standard && e.section === cls.section);
+        const scoped = scopeById.get(cls.id);
         return {
           id: cls.id,
           name: cls.name,
@@ -38,11 +63,22 @@ export async function GET(request: NextRequest) {
           classTeacher: cls.classTeacher,
           examId: exam?.id ?? null,
           isPublished: exam?.isPublished ?? false,
+          isHomeroom: scoped?.isHomeroom ?? false,
+          isTeaching: scoped?.isTeaching ?? false,
+          canEnterMarks: scoped?.canEnterMarks ?? session.role !== "teacher",
+          subjects: scoped?.subjects ?? [],
+          subjectCodes: scoped?.subjectCodes ?? [],
         };
       });
 
-      return NextResponse.json({ classes: overview, academicYear });
+      return NextResponse.json({
+        classes: overview,
+        academicYear,
+        defaultClassId: teacherScope?.defaultClassId ?? null,
+      });
     }
+
+    await assertTeacherMarksAccess(session, classId);
 
     const schoolClass = await prisma.schoolClass.findFirst({
       where: { id: classId, schoolId: session.schoolId },

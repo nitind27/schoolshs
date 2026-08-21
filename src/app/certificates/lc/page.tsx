@@ -7,6 +7,18 @@ import { CertificateFilters } from "@/components/certificates/certificate-filter
 import type { LCData } from "@/components/certificates/leaving-certificate";
 import { formatToday } from "@/lib/certificates/date-to-words";
 import { SAMPLE_LC } from "@/lib/certificates/sample-data";
+import {
+  lcBirthPlaceEn,
+  lcBirthPlaceGu,
+  lcGuText,
+  lcMotherEn,
+  lcMotherGu,
+  lcNameEn,
+  lcNameGu,
+  lcReligionCasteEn,
+  lcReligionCasteGu,
+  type LCPrintText,
+} from "@/lib/certificates/lc-bilingual";
 import { getCertificateViewForType } from "@/lib/certificates/resolve-pack";
 import {
   invalidateSchoolFeaturesCache,
@@ -17,6 +29,34 @@ import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
 import { studentShortNameGu } from "@/lib/student-names";
 import { PageLoader } from "@/components/ui/loader";
+
+type ExtraFields = {
+  reason: string;
+  progress: string;
+  conduct: string;
+  leavingDate: string;
+  sscExam: string;
+  sscSeatNo: string;
+  remarks: string;
+  outwardNo: string;
+};
+
+function seedPrintFromStudent(s: LCData["student"], extra: ExtraFields): LCPrintText {
+  return {
+    nameEn: lcNameEn(s),
+    nameGu: lcNameGu(s),
+    religionCasteEn: lcReligionCasteEn(s),
+    religionCasteGu: lcReligionCasteGu(s),
+    motherEn: lcMotherEn(s),
+    motherGu: lcMotherGu(s),
+    birthPlaceEn: lcBirthPlaceEn(s),
+    birthPlaceGu: lcBirthPlaceGu(s),
+    reasonGu: lcGuText(extra.reason),
+    progressGu: lcGuText(extra.progress),
+    conductGu: lcGuText(extra.conduct),
+    remarksGu: lcGuText(extra.remarks),
+  };
+}
 
 function LCContent() {
   const t = useT();
@@ -67,7 +107,7 @@ function LCContent() {
   >([]);
   const [source, setSource] = useState<"none" | "preview" | "live">("none");
   const [lcData, setLcData] = useState<LCData | null>(null);
-  const [extra, setExtra] = useState({
+  const [extra, setExtra] = useState<ExtraFields>({
     reason: "Further Education",
     progress: "Good",
     conduct: "Good",
@@ -77,6 +117,10 @@ function LCContent() {
     remarks: "",
     outwardNo: "",
   });
+  const [print, setPrint] = useState<LCPrintText>({});
+  const setPrintField = (key: keyof LCPrintText, value: string) => {
+    setPrint((prev) => ({ ...prev, [key]: value }));
+  };
   const autoLoadedRef = useRef(false);
 
   const lockedLabel = useMemo(() => {
@@ -88,8 +132,7 @@ function LCContent() {
   }, [students, lcData, lockedStudentId]);
 
   const showPreview = useCallback(() => {
-    setSource("preview");
-    setExtra({
+    const nextExtra: ExtraFields = {
       reason: SAMPLE_LC.reason || "Further Education",
       progress: SAMPLE_LC.progress || "Good",
       conduct: SAMPLE_LC.conduct || "Good",
@@ -98,7 +141,10 @@ function LCContent() {
       sscSeatNo: SAMPLE_LC.sscSeatNo || "",
       remarks: SAMPLE_LC.remarks || "",
       outwardNo: SAMPLE_LC.outwardNo || SAMPLE_LC.serialNo || "",
-    });
+    };
+    setExtra(nextExtra);
+    setPrint(seedPrintFromStudent(SAMPLE_LC.student, nextExtra));
+    setSource("preview");
   }, []);
 
   useEffect(() => {
@@ -121,6 +167,8 @@ function LCContent() {
     setStudents(list);
     const s = sid ? list.find((x: { id: string }) => x.id === sid) : list[0];
     if (s) {
+      const nextExtra = extra;
+      setPrint(seedPrintFromStudent(s, nextExtra));
       setLcData({
         student: s,
         serialNo: data.lcSerialNo || "",
@@ -237,11 +285,81 @@ function LCContent() {
         </div>
       </div>
       {displayData ? (
+        <div className="no-print mb-6 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
+          <h3 className="text-sm font-semibold text-amber-950">{t("certificates.printEditTitle")}</h3>
+          <p className="mt-0.5 mb-3 text-xs text-amber-800">{t("certificates.printEditHint")}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label={t("certificates.nameEn")}
+              value={print.nameEn || ""}
+              onChange={(e) => setPrintField("nameEn", e.target.value)}
+            />
+            <Input
+              label={t("certificates.nameGu")}
+              className="font-gujarati"
+              value={print.nameGu || ""}
+              onChange={(e) => setPrintField("nameGu", e.target.value)}
+            />
+            <Input
+              label={t("certificates.religionCasteEn")}
+              value={print.religionCasteEn || ""}
+              onChange={(e) => setPrintField("religionCasteEn", e.target.value)}
+            />
+            <Input
+              label={t("certificates.religionCasteGu")}
+              className="font-gujarati"
+              value={print.religionCasteGu || ""}
+              onChange={(e) => setPrintField("religionCasteGu", e.target.value)}
+            />
+            <Input
+              label={t("certificates.motherEn")}
+              value={print.motherEn || ""}
+              onChange={(e) => setPrintField("motherEn", e.target.value)}
+            />
+            <Input
+              label={t("certificates.motherGu")}
+              className="font-gujarati"
+              value={print.motherGu || ""}
+              onChange={(e) => setPrintField("motherGu", e.target.value)}
+            />
+            <Input
+              label={t("certificates.birthPlaceEn")}
+              value={print.birthPlaceEn || ""}
+              onChange={(e) => setPrintField("birthPlaceEn", e.target.value)}
+            />
+            <Input
+              label={t("certificates.birthPlaceGu")}
+              className="font-gujarati"
+              value={print.birthPlaceGu || ""}
+              onChange={(e) => setPrintField("birthPlaceGu", e.target.value)}
+            />
+            <Input
+              label={t("certificates.reasonGu")}
+              className="font-gujarati"
+              value={print.reasonGu || ""}
+              onChange={(e) => setPrintField("reasonGu", e.target.value)}
+            />
+            <Input
+              label={t("certificates.progressGu")}
+              className="font-gujarati"
+              value={print.progressGu || ""}
+              onChange={(e) => setPrintField("progressGu", e.target.value)}
+            />
+            <Input
+              label={t("certificates.conductGu")}
+              className="font-gujarati"
+              value={print.conductGu || ""}
+              onChange={(e) => setPrintField("conductGu", e.target.value)}
+            />
+          </div>
+        </div>
+      ) : null}
+      {displayData ? (
         <LeavingCertificateView
           key={`lc-${packId}`}
           data={
             source === "preview"
-              ? SAMPLE_LC
+              ? { ...SAMPLE_LC, print }
               : {
                   ...displayData,
                   leavingDate: extra.leavingDate || displayData.leavingDate,
@@ -252,6 +370,7 @@ function LCContent() {
                   outwardNo: extra.outwardNo || displayData.outwardNo,
                   sscExam: extra.sscExam,
                   sscSeatNo: extra.sscSeatNo,
+                  print,
                 }
           }
         />

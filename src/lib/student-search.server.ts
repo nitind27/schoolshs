@@ -47,11 +47,13 @@ export async function searchStudentIds(
     schoolId: string;
     query: string;
     classTeacherId?: string;
+    classIds?: string[];
     take?: number;
   },
 ): Promise<string[]> {
   const q = String(opts.query || "").trim();
   if (!q) return [];
+  if (Array.isArray(opts.classIds) && opts.classIds.length === 0) return [];
   const tokens = q.split(/\s+/).filter(Boolean).slice(0, 6);
   if (!tokens.length) return [];
 
@@ -60,16 +62,22 @@ export async function searchStudentIds(
     tokens.map((token) => tokenMatchSql("s", token)),
     " AND ",
   );
-  const joinClass = opts.classTeacherId
-    ? Prisma.sql`INNER JOIN schoolclass c ON c.id = s.classId AND c.classTeacherId = ${opts.classTeacherId}`
-    : Prisma.empty;
+  const scopedIds = (opts.classIds || []).filter(Boolean);
+  const classFilter = scopedIds.length
+    ? Prisma.sql`AND s.classId IN (${Prisma.join(scopedIds.map((id) => Prisma.sql`${id}`))})`
+    : opts.classTeacherId
+      ? Prisma.sql`AND EXISTS (
+          SELECT 1 FROM schoolclass c
+          WHERE c.id = s.classId AND c.classTeacherId = ${opts.classTeacherId}
+        )`
+      : Prisma.empty;
 
   try {
     const rows = await db.$queryRaw<{ id: string }[]>`
       SELECT s.id
       FROM student s
-      ${joinClass}
       WHERE s.schoolId = ${opts.schoolId}
+        ${classFilter}
         AND (${matchAll})
       ORDER BY s.surname ASC, s.firstName ASC
       LIMIT ${Prisma.raw(String(take))}

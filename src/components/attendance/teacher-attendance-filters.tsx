@@ -12,6 +12,9 @@ export interface TeacherClassOption {
   name: string;
   standard: string;
   section: string;
+  isHomeroom?: boolean;
+  isTeaching?: boolean;
+  subjects?: string[];
 }
 
 export interface TeacherAttendanceFiltersValue {
@@ -41,10 +44,21 @@ export function TeacherAttendanceFilters({
     setLoading(false);
   };
 
-  const classOptions = classes.map((c) => ({
-    value: c.id,
-    label: `${c.name} (${c.standard}-${c.section})`,
-  }));
+  const classOptions = classes.map((c) => {
+    const role = c.isHomeroom
+      ? t("teacherPortal.homeroomBadge")
+      : c.isTeaching
+        ? t("teacherPortal.lectureBadge")
+        : "";
+    const subjects = (c.subjects || []).filter(Boolean).join(", ");
+    const extra = [role, subjects].filter(Boolean).join(" · ");
+    return {
+      value: c.id,
+      label: extra
+        ? `${c.name} (${c.standard}-${c.section}) — ${extra}`
+        : `${c.name} (${c.standard}-${c.section})`,
+    };
+  });
 
   return (
     <div className="rounded-2xl border border-emerald-200 bg-white shadow-sm overflow-hidden">

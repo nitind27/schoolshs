@@ -17,6 +17,10 @@ import {
   computeStudentMarksSheet,
   type SubjectMarksInput,
 } from "@/lib/results/marks-sheet-calculations";
+import {
+  assertTeacherMarksAccess,
+  teacherSubjectCodesForClass,
+} from "@/lib/teacher-scope";
 
 function matchSubject(
   def: MarksSheetSubjectDef,
@@ -34,6 +38,9 @@ export async function GET(request: NextRequest) {
     const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
     const classId = request.nextUrl.searchParams.get("classId");
     if (!classId) return NextResponse.json({ error: "classId required" }, { status: 400 });
+
+    await assertTeacherMarksAccess(session, classId);
+    const allowedCodes = await teacherSubjectCodesForClass(session, classId);
 
     const schoolClass = await prisma.schoolClass.findFirst({
       where: { id: classId, schoolId: session.schoolId },
@@ -126,9 +133,28 @@ export async function GET(request: NextRequest) {
         academicYear: schoolClass.academicYear,
       },
       exam: { id: exam.id, isPublished: exam.isPublished },
-      config: sheetConfig,
+      config: {
+        ...sheetConfig,
+        subjects: allowedCodes
+          ? sheetConfig.subjects.filter((s) =>
+              allowedCodes.map((c) => c.toUpperCase()).includes(s.code.toUpperCase()),
+            )
+          : sheetConfig.subjects,
+      },
       examSubjects: examSubjects.map((s) => ({ id: s.id, name: s.name, code: s.code })),
-      students: rows,
+      students: rows.map((row) =>
+        allowedCodes
+          ? {
+              ...row,
+              subjectInputs: row.subjectInputs.filter((s) =>
+                allowedCodes
+                  .map((c) => c.toUpperCase())
+                  .includes(String(s.subject.code || "").toUpperCase()),
+              ),
+            }
+          : row,
+      ),
+      editableSubjectCodes: allowedCodes,
     });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
@@ -146,6 +172,18 @@ export async function POST(request: NextRequest) {
     if (!examId || !classId || !Array.isArray(students)) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
+
+    await assertTeacherMarksAccess(session, classId);
+    const allowedCodes = await teacherSubjectCodesForClass(session, classId);
+    if (allowedCodes && allowedCodes.length === 0) {
+      return NextResponse.json(
+        { error: "No timetable subjects assigned to you for this class" },
+        { status: 403 },
+      );
+    }
+    const allowedSet = allowedCodes
+      ? new Set(allowedCodes.map((c) => c.toUpperCase()))
+      : null;
 
     const exam = await prisma.exam.findFirst({
       where: { id: examId, schoolId: session.schoolId },
@@ -169,6 +207,7 @@ export async function POST(request: NextRequest) {
       for (const sub of st.subjectInputs || []) {
         const def = sheetConfig.subjects.find((s) => s.code === sub.subjectCode);
         if (!def) continue;
+        if (allowedSet && !allowedSet.has(def.code.toUpperCase())) continue;
         const examSub = matchSubject(def, examSubjects);
         if (!examSub) continue;
 
@@ -211,25 +250,27 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const existing = await prisma.reportCard.findFirst({
-        where: { studentId: st.studentId, examId },
-      });
-      const rcData = {
-        studentId: st.studentId,
-        examId,
-        academicYear: exam.academicYear,
-        standard: exam.standard || "",
-        section: exam.section,
-        passNumber: st.passNumber || null,
-        attendancePresent: st.attendancePresent != null ? Number(st.attendancePresent) : null,
-        attendanceTotal: st.attendanceTotal != null ? Number(st.attendanceTotal) : null,
-        totalMarks: st.finalTotal ?? null,
-        percentage: st.percentage ?? null,
-        result: st.result || null,
-        isPublished: exam.isPublished,
-      };
-      if (existing) await prisma.reportCard.update({ where: { id: existing.id }, data: rcData });
-      else await prisma.reportCard.create({ data: rcData });
+      if (!allowedSet) {
+        const existing = await prisma.reportCard.findFirst({
+          where: { studentId: st.studentId, examId },
+        });
+        const rcData = {
+          studentId: st.studentId,
+          examId,
+          academicYear: exam.academicYear,
+          standard: exam.standard || "",
+          section: exam.section,
+          passNumber: st.passNumber || null,
+          attendancePresent: st.attendancePresent != null ? Number(st.attendancePresent) : null,
+          attendanceTotal: st.attendanceTotal != null ? Number(st.attendanceTotal) : null,
+          totalMarks: st.finalTotal ?? null,
+          percentage: st.percentage ?? null,
+          result: st.result || null,
+          isPublished: exam.isPublished,
+        };
+        if (existing) await prisma.reportCard.update({ where: { id: existing.id }, data: rcData });
+        else await prisma.reportCard.create({ data: rcData });
+      }
     }
 
     return NextResponse.json({ success: true, count: students.length });

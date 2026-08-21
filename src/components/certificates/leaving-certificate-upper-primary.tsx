@@ -5,8 +5,21 @@
  * (packs 24261004403 / 24261004404).
  */
 import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
-import { studentFullName, dateToWords } from "@/lib/certificates/date-to-words";
+import { dateToWords } from "@/lib/certificates/date-to-words";
 import type { LCData } from "@/components/certificates/leaving-certificate";
+import {
+  lcBirthPlaceEn,
+  lcBirthPlaceGu,
+  lcGuText,
+  lcMotherEn,
+  lcMotherGu,
+  lcNameEn,
+  lcNameGu,
+  lcPlaceGu,
+  lcPrinted,
+  lcReligionCasteEn,
+  lcReligionCasteGu,
+} from "@/lib/certificates/lc-bilingual";
 import "./lc-upper-primary.css";
 
 const FONT = '"Times New Roman", Times, "Noto Serif Gujarati", Georgia, serif';
@@ -97,12 +110,14 @@ function FieldRow({
   en,
   gu,
   value,
+  valueGu,
   longLabel,
 }: {
   n: number;
   en: string;
   gu: string;
   value?: string;
+  valueGu?: string;
   longLabel?: boolean;
 }) {
   return (
@@ -113,7 +128,10 @@ function FieldRow({
         </span>
         <Fill value={value} />
       </div>
-      <div className="lc-up-field-gu">{gu}</div>
+      <div className="lc-up-field-gu">
+        <span>{gu}</span>
+        {valueGu ? <Fill value={valueGu} /> : null}
+      </div>
     </div>
   );
 }
@@ -121,28 +139,39 @@ function FieldRow({
 export function LeavingCertificateView({ data }: { data: LCData }) {
   const school = useCertificateBrand();
   const S = data.student;
-  const nm = studentFullName(S);
-  const religionCaste = [S.religion, S.caste].filter(Boolean).join(" / ");
-  const birthPlace = [
-    S.currentCity,
-    S.birthTaluka ? `Ta. ${S.birthTaluka}` : null,
-    S.currentDistrict ? `Dist. ${S.currentDistrict}` : null,
-  ]
-    .filter(Boolean)
-    .join(", ");
-  const nativePlace =
+  const p = data.print;
+  const studentNameEn = lcPrinted(p?.nameEn, lcNameEn(S));
+  const studentNameGu = lcPrinted(p?.nameGu, lcNameGu(S));
+  const religionCasteEn = lcPrinted(p?.religionCasteEn, lcReligionCasteEn(S));
+  const religionCasteGu = lcPrinted(p?.religionCasteGu, lcReligionCasteGu(S));
+  const motherEn = lcPrinted(p?.motherEn, lcMotherEn(S));
+  const motherGu = lcPrinted(p?.motherGu, lcMotherGu(S));
+  const birthPlaceEn = lcPrinted(p?.birthPlaceEn, lcBirthPlaceEn(S));
+  const birthPlaceGu = lcPrinted(p?.birthPlaceGu, lcBirthPlaceGu(S));
+  const nativePlaceEn =
     data.nativePlace ||
     [S.permanentCity, S.permanentDistrict].filter(Boolean).join(", ") ||
-    birthPlace;
+    birthPlaceEn;
+  const nativePlaceGu = data.nativePlace
+    ? lcGuText(data.nativePlace)
+    : lcPlaceGu([S.permanentCity, S.permanentDistrict]) || birthPlaceGu;
   const dob = S.dateOfBirth || "";
   const dobParts = parseDobParts(dob);
-  const dobWords = dateToWords(dob, "en");
+  const dobWordsEn = dateToWords(dob, "en");
+  const dobWordsGu = dateToWords(dob, "gu");
   const studying =
     data.studyingStandard ||
     [S.standard ? `Std. ${S.standard}` : "", S.section].filter(Boolean).join("-");
   const studyingLine = [studying, data.studyingSince].filter(Boolean).join("  ");
+  const studyingLineGu = [lcGuText(studying), data.studyingSince ? lcGuText(data.studyingSince) : ""]
+    .filter(Boolean)
+    .join("  ");
   const medium = data.medium || school.medium || "Gujarati / ગુજરાતી";
-  const lastSchool = data.lastSchool || school.nameEnAlt;
+  const lastSchoolEn = lcPrinted(p?.lastSchoolEn, data.lastSchool || school.nameEnAlt);
+  const lastSchoolGu = lcPrinted(
+    p?.lastSchoolGu,
+    data.lastSchool ? lcGuText(data.lastSchool) : school.nameGu || lcGuText(lastSchoolEn),
+  );
   const apaar = data.apaarId || S.apaarId || "";
   const childUid = S.childUid || "";
   const bankAccount = S.accountNumber || "";
@@ -150,16 +179,16 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
   const sectionLabel = school.section || "Granted Upper Primary Section";
   const addressEn = school.address || "Navagam, Ta. Songadh Dist. Tapi";
   const addressGu = school.addressGu || "નવાગામ તા. સોનગઢ, જી. તાપી";
-  const nameEn = school.nameEnAlt || school.nameEn;
-  const nameGu = school.nameGu;
+  const schoolNameEn = school.nameEnAlt || school.nameEn;
+  const schoolNameGu = school.nameGu;
   const lcNo = data.serialNo || "";
 
   return (
     <div className="lc-up-print-wrap">
       <div className="lc-up-sheet" style={{ fontFamily: FONT }}>
         <div className="lc-up-inner">
-          <p className="lc-up-name-gu">{nameGu}</p>
-          <p className="lc-up-name-en">{nameEn}</p>
+          <p className="lc-up-name-gu">{schoolNameGu}</p>
+          <p className="lc-up-name-en">{schoolNameEn}</p>
           <p className="lc-up-section">{sectionLabel}</p>
           <p className="lc-up-address">
             {addressEn}
@@ -212,17 +241,18 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             <Fill value={childUid} />
           </div>
 
-          <FieldRow n={1} en="Full Name of the Student" gu="વિદ્યાર્થીનું પૂરેપૂરું નામ" value={nm} />
-          <FieldRow n={2} en="Religion and Caste" gu="ધર્મ અને જાતિ" value={religionCaste} />
-          <FieldRow n={3} en="Mother's Name" gu="માતાનું નામ" value={S.motherName || ""} />
+          <FieldRow n={1} en="Full Name of the Student" gu="વિદ્યાર્થીનું પૂરેપૂરું નામ" value={studentNameEn} valueGu={studentNameGu} />
+          <FieldRow n={2} en="Religion and Caste" gu="ધર્મ અને જાતિ" value={religionCasteEn} valueGu={religionCasteGu} />
+          <FieldRow n={3} en="Mother's Name" gu="માતાનું નામ" value={motherEn} valueGu={motherGu} />
           <FieldRow
             n={4}
             en="Place of Birth (With Taluka/District)"
             gu="જન્મ સ્થળ (તાલુકા, જિલ્લા સહિત)"
-            value={birthPlace}
+            value={birthPlaceEn}
+            valueGu={birthPlaceGu}
             longLabel
           />
-          <FieldRow n={5} en="Native Place" gu="વતન" value={nativePlace} />
+          <FieldRow n={5} en="Native Place" gu="વતન" value={nativePlaceEn} valueGu={nativePlaceGu} />
 
           <div className="lc-up-dob">
             <div className="lc-up-dob-title">6. Date of Birth / જન્મ તારીખ</div>
@@ -234,7 +264,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                 <span style={{ fontWeight: 700, whiteSpace: "nowrap", lineHeight: 1.2 }}>
                   In Words / ખ્રિસ્તી વર્ષ અનુસાર જન્મ તારીખ શબ્દોમાં
                 </span>
-                <Fill value={dobWords} />
+                <Fill value={[dobWordsEn, dobWordsGu].filter(Boolean).join(" / ")} />
               </div>
               <div className="lc-up-dob-boxes">
                 <DobUnit value={dobParts.d} label="તારીખ" kind="day" />
@@ -248,7 +278,8 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             n={7}
             en="Last School Attended"
             gu="જ્યાં ભણ્યો હોય તે છેલ્લી શાળા"
-            value={lastSchool}
+            value={lastSchoolEn}
+            valueGu={lastSchoolGu}
           />
           <FieldRow
             n={8}
@@ -267,6 +298,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             en="In which Standard he/she Studying & Since When?"
             gu="કયા ધોરણમાં અભ્યાસ કરે છે? ક્યારથી?"
             value={studyingLine}
+            valueGu={studyingLineGu}
             longLabel
           />
           <FieldRow
@@ -274,6 +306,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             en="Reason of leaving the School"
             gu="શાળા છોડ્યાનું કારણ"
             value={data.reason || ""}
+            valueGu={lcPrinted(p?.reasonGu, lcGuText(data.reason))}
           />
 
           <div className="lc-up-bank">
@@ -289,9 +322,9 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             </div>
           </div>
 
-          <FieldRow n={13} en="Progress" gu="પ્રગતિ" value={data.progress || ""} />
-          <FieldRow n={14} en="Conduct" gu="વર્તણૂંક" value={data.conduct || ""} />
-          <FieldRow n={15} en="Remarks" gu="વિશેષ નોંધ" value={data.remarks || ""} />
+          <FieldRow n={13} en="Progress" gu="પ્રગતિ" value={data.progress || ""} valueGu={lcPrinted(p?.progressGu, lcGuText(data.progress))} />
+          <FieldRow n={14} en="Conduct" gu="વર્તણૂંક" value={data.conduct || ""} valueGu={lcPrinted(p?.conductGu, lcGuText(data.conduct))} />
+          <FieldRow n={15} en="Remarks" gu="વિશેષ નોંધ" value={data.remarks || ""} valueGu={lcPrinted(p?.remarksGu, lcGuText(data.remarks))} />
 
           <div className="lc-up-footer">
             <div className="lc-up-meta">

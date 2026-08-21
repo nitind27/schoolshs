@@ -25,6 +25,11 @@ import {
   type ExamTermKey,
   type ExamTermMeta,
 } from "@/lib/results/exam-terms";
+import {
+  assertTeacherMarksAccess,
+  teacherSubjectCodesForClass,
+  filterByTeacherSubjects,
+} from "@/lib/teacher-scope";
 
 function termStatsForExam(
   meta: ExamTermMeta,
@@ -68,6 +73,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "classId required" }, { status: 400 });
     }
 
+    await assertTeacherMarksAccess(session, classId);
+    const allowedCodes = await teacherSubjectCodesForClass(session, classId);
+
     const schoolClass = await prisma.schoolClass.findFirst({
       where: { id: classId, schoolId: session.schoolId },
       include: {
@@ -104,7 +112,8 @@ export async function GET(request: NextRequest) {
         exam: { id: exam.id, isPublished: exam.isPublished },
         termMeta: meta,
         termStats,
-        subjects: sheetConfig.subjects,
+        subjects: filterByTeacherSubjects(sheetConfig.subjects, allowedCodes),
+        editableSubjectCodes: allowedCodes,
       });
     }
 
@@ -126,6 +135,15 @@ export async function GET(request: NextRequest) {
     );
     const completion = computeTermCompletion(term, meta, students);
 
+    const visibleSubjects = filterByTeacherSubjects(
+      sheetConfig.subjects.filter((s) => s.type === "numeric" || term.role === "final"),
+      allowedCodes,
+    );
+    const visibleStudents = students.map((st) => ({
+      ...st,
+      subjectMarks: filterByTeacherSubjects(st.subjectMarks, allowedCodes),
+    }));
+
     return NextResponse.json({
       class: {
         id: schoolClass.id,
@@ -138,10 +156,11 @@ export async function GET(request: NextRequest) {
       exam: { id: exam.id, isPublished: exam.isPublished },
       term,
       termMeta: meta,
-      subjects: sheetConfig.subjects.filter((s) => s.type === "numeric" || term.role === "final"),
-      students,
+      subjects: visibleSubjects,
+      students: visibleStudents,
       completion,
-      editable: !term.locked && !term.published,
+      editable: !term.locked && !term.published && (allowedCodes === null || allowedCodes.length > 0),
+      editableSubjectCodes: allowedCodes,
     });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
@@ -242,6 +261,18 @@ export async function POST(request: NextRequest) {
       });
       if (!schoolClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
 
+      await assertTeacherMarksAccess(session, classId);
+      const allowedCodes = await teacherSubjectCodesForClass(session, classId);
+      if (allowedCodes && allowedCodes.length === 0) {
+        return NextResponse.json(
+          { error: "No timetable subjects assigned to you for this class" },
+          { status: 403 },
+        );
+      }
+      const allowedSet = allowedCodes
+        ? new Set(allowedCodes.map((c) => c.toUpperCase()))
+        : null;
+
       const sheetConfig = await getClassMarksSheetConfig(
         classId,
         schoolClass.standard,
@@ -256,6 +287,7 @@ export async function POST(request: NextRequest) {
             (s) => s.code === String(sub.subjectCode || markSub.subjectCode || ""),
           );
           if (!def) continue;
+          if (allowedSet && !allowedSet.has(def.code.toUpperCase())) continue;
           const examSub =
             exam.subjects.find((s) => s.code === def.code) ||
             exam.subjects.find((s) => s.name === def.name);

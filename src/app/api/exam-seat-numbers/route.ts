@@ -3,7 +3,7 @@ import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { ensureClassExam } from "@/lib/class-subjects";
 import { prisma } from "@/lib/db";
 import { parseExamTermMeta } from "@/lib/results/exam-terms";
-import { assertTeacherAttendanceAccess } from "@/lib/teacher-attendance";
+import { assertTeacherHomeroomAccess } from "@/lib/teacher-attendance";
 
 const ROLES = ["school_admin", "clerk", "teacher"] as const;
 const SEAT_PATTERN = /^[A-Z0-9][A-Z0-9/_-]{0,39}$/;
@@ -12,7 +12,7 @@ async function getClassForSession(
   session: Awaited<ReturnType<typeof requireSchoolAuth>>,
   classId: string,
 ) {
-  await assertTeacherAttendanceAccess(session, classId);
+  await assertTeacherHomeroomAccess(session, classId);
   const schoolClass = await prisma.schoolClass.findFirst({
     where: { id: classId, schoolId: session.schoolId },
   });

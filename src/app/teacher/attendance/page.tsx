@@ -1,7 +1,7 @@
 "use client";
 
 import { PageLoader, Spinner } from "@/components/ui/loader";
-import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -23,7 +23,7 @@ import {
   resolveVisibleDayIndices,
   type AttendanceViewFilters,
 } from "@/lib/attendance-view-filters";
-import { ClipboardList, Printer, Save, CheckCircle2 } from "lucide-react";
+import { ClipboardList, Printer, Save, CheckCircle2, Clock } from "lucide-react";
 import { teacherTheme as tp } from "@/components/teacher/teacher-theme";
 
 function TeacherAttendanceContent() {
@@ -31,6 +31,11 @@ function TeacherAttendanceContent() {
   const searchParams = useSearchParams();
   const [classes, setClasses] = useState<TeacherClassOption[]>([]);
   const [classesLoading, setClassesLoading] = useState(true);
+  const [currentPeriod, setCurrentPeriod] = useState<{
+    classId: string;
+    className: string;
+    subject: string;
+  } | null>(null);
   const [filters, setFilters] = useState({
     classId: searchParams.get("classId") || "",
     month: searchParams.get("month") || String(new Date().getMonth() + 1),
@@ -73,10 +78,17 @@ function TeacherAttendanceContent() {
           name: c.name,
           standard: c.standard,
           section: c.section,
+          isHomeroom: c.isHomeroom,
+          isTeaching: c.isTeaching,
+          subjects: c.subjects,
         }));
         setClasses(list);
-        if (!filters.classId && list.length === 1) {
-          setFilters((f) => ({ ...f, classId: list[0]!.id }));
+        setCurrentPeriod(d.currentPeriod || null);
+        if (!filters.classId) {
+          const fallback = d.defaultClassId || (list.length === 1 ? list[0]!.id : "");
+          if (fallback) {
+            setFilters((f) => ({ ...f, classId: fallback }));
+          }
         }
       })
       .finally(() => setClassesLoading(false));
@@ -116,6 +128,13 @@ function TeacherAttendanceContent() {
     setLoaded(true);
     setLoading(false);
   }, [filters, classes, t]);
+
+  const autoLoaded = useRef(false);
+  useEffect(() => {
+    if (classesLoading || !filters.classId || autoLoaded.current) return;
+    autoLoaded.current = true;
+    void load();
+  }, [classesLoading, filters.classId, load]);
 
   const save = async () => {
     if (!filters.classId) return;
@@ -284,6 +303,32 @@ function TeacherAttendanceContent() {
           </div>
         )}
       </div>
+
+      {currentPeriod && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start gap-2 text-sm text-amber-950">
+            <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <p>
+              {t("teacherPortal.currentlyTeaching", {
+                subject: currentPeriod.subject,
+                className: currentPeriod.className,
+              })}
+            </p>
+          </div>
+          {filters.classId !== currentPeriod.classId && (
+            <Button
+              size="sm"
+              className={tp.btn}
+              onClick={() => {
+                setFilters((f) => ({ ...f, classId: currentPeriod.classId }));
+                autoLoaded.current = false;
+              }}
+            >
+              {t("teacherPortal.takeAttendanceNow")}
+            </Button>
+          )}
+        </div>
+      )}
 
       {!classes.length ? (
         <Card className="border-amber-200 bg-amber-50/50">

@@ -88,6 +88,14 @@ const HEADER_ALIASES: Record<string, ImportFieldKey> = (() => {
     ["contact", "mobileNumber"],
     ["mother", "motherName"],
     ["father", "fatherName"],
+    ["mother aadhaar", "motherAadhaarNumber"],
+    ["mother aadhar", "motherAadhaarNumber"],
+    ["father aadhaar", "fatherAadhaarNumber"],
+    ["father aadhar", "fatherAadhaarNumber"],
+    ["pen", "penNumber"],
+    ["pen no", "penNumber"],
+    ["pen number", "penNumber"],
+    ["pen.no", "penNumber"],
     ["guardian", "guardianName"],
     ["caste category", "category"],
     ["social category", "category"],
@@ -181,9 +189,12 @@ function coerceFieldValue(key: ImportFieldKey, value: unknown): unknown {
   if (key === "ifscCode") return String(value).toUpperCase().trim();
   if (
     key === "aadhaarNumber" ||
+    key === "motherAadhaarNumber" ||
+    key === "fatherAadhaarNumber" ||
     key === "mobileNumber" ||
     key === "accountNumber" ||
-    key === "childUid"
+    key === "childUid" ||
+    key === "penNumber"
   ) {
     return String(value).replace(/\s/g, "").trim();
   }
@@ -387,11 +398,14 @@ export const SAMPLE_IMPORT_ROW: Record<ImportFieldKey, string | number> = {
   aadhaarNumber: "123456789012",
   panNumber: "",
   apaarId: "",
+  penNumber: "20522410726",
   rationCardNumber: "",
   mobileNumber: "9876543210",
   email: "",
   motherName: "SUNITA BEN",
   fatherName: "MAHESH BHAI",
+  motherAadhaarNumber: "234567890123",
+  fatherAadhaarNumber: "345678901234",
   guardianName: "",
   category: "OBC",
   caste: "Patel",
@@ -596,6 +610,7 @@ export const IMPORT_FIELD_GROUPS: { id: string; title: string; fields: ImportFie
       "email",
       "bloodGroup",
       "apaarId",
+      "penNumber",
       "panNumber",
       "rationCardNumber",
     ],
@@ -606,6 +621,8 @@ export const IMPORT_FIELD_GROUPS: { id: string; title: string; fields: ImportFie
     fields: [
       "motherName",
       "fatherName",
+      "motherAadhaarNumber",
+      "fatherAadhaarNumber",
       "guardianName",
       "category",
       "caste",

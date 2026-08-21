@@ -20,6 +20,9 @@ type ClassRow = {
   classTeacher?: { firstName: string; lastName: string } | null;
   examId?: string | null;
   isPublished?: boolean;
+  isHomeroom?: boolean;
+  canEnterMarks?: boolean;
+  subjects?: string[];
 };
 
 export default function ResultsPage() {
@@ -141,6 +144,13 @@ export default function ResultsPage() {
                                     {cls.classTeacher.firstName} {cls.classTeacher.lastName}
                                   </p>
                                 )}
+                                {cls.subjects?.length ? (
+                                  <p className="text-xs text-teal-700 mt-1">
+                                    {t("teacherPortal.yourSubjects", {
+                                      subjects: cls.subjects.join(", "),
+                                    })}
+                                  </p>
+                                ) : null}
                               </div>
                               <ChevronRight className="h-5 w-5 text-slate-400 shrink-0 mt-1" />
                             </div>

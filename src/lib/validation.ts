@@ -137,6 +137,21 @@ export function validateStudent(data: Partial<StudentInput>): ValidationError[] 
     errors.push({ field: "apaarId", message: "APAAR / UPPAR ID looks invalid" });
   }
 
+  const pen = String(data.penNumber || "").replace(/\s/g, "");
+  if (pen && !/^\d{8,16}$/.test(pen)) {
+    errors.push({ field: "penNumber", message: "PEN must be 8–16 digits" });
+  }
+
+  for (const { field, label } of [
+    { field: "motherAadhaarNumber" as const, label: "Mother Aadhaar" },
+    { field: "fatherAadhaarNumber" as const, label: "Father Aadhaar" },
+  ]) {
+    const v = String(data[field] || "").replace(/\s/g, "");
+    if (v && !/^\d{12}$/.test(v)) {
+      errors.push({ field, message: `${label} must be 12 digits` });
+    }
+  }
+
   if (data.percentage10th !== undefined && data.percentage10th !== null && (data.percentage10th < 0 || data.percentage10th > 100)) {
     errors.push({ field: "percentage10th", message: "10th percentage must be between 0-100" });
   }
@@ -199,6 +214,8 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     fatherName: String(row.fatherName || "").trim(),
     motherNameGu: String(row.motherNameGu || "").trim() || null,
     fatherNameGu: String(row.fatherNameGu || "").trim() || null,
+    motherAadhaarNumber: String(row.motherAadhaarNumber || "").replace(/\s/g, "").trim() || null,
+    fatherAadhaarNumber: String(row.fatherAadhaarNumber || "").replace(/\s/g, "").trim() || null,
     guardianName: String(row.guardianName || "").trim() || null,
     guardianNameGu: String(row.guardianNameGu || "").trim() || null,
     category: normalizeCategory(String(row.category || "").trim()) || String(row.category || "").trim(),
@@ -251,6 +268,7 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     standard: String(row.standard || "").trim() || null,
     childUid: String(row.childUid || "").replace(/\s/g, "").trim() || null,
     apaarId: String(row.apaarId || "").replace(/\s/g, "").trim().toUpperCase() || null,
+    penNumber: String(row.penNumber || "").replace(/\s/g, "").trim() || null,
     panNumber: String(row.panNumber || "")
       .replace(/\s/g, "")
       .trim()

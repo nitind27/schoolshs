@@ -47,6 +47,11 @@ type ClassCard = {
   unmarkedToday: number;
   attendancePct: number;
   examPublished: boolean;
+  isHomeroom?: boolean;
+  isTeaching?: boolean;
+  canMarkAttendance?: boolean;
+  canEnterMarks?: boolean;
+  subjects?: string[];
 };
 
 type Period = {
@@ -58,6 +63,7 @@ type Period = {
   startTime: string | null;
   endTime: string | null;
   label: string;
+  isNow?: boolean;
 };
 
 type DashboardData = {
@@ -98,6 +104,12 @@ type DashboardData = {
     boardSeatNumber?: string;
   }[];
   todaySchedule: Period[];
+  defaultClassId?: string | null;
+  currentPeriod?: {
+    classId: string;
+    className: string;
+    subject: string;
+  } | null;
   quickHints: { noStaffLink: boolean; noClasses?: boolean };
 };
 
@@ -293,6 +305,26 @@ export default function TeacherDashboard() {
         />
       </div>
 
+      {data?.currentPeriod && (
+        <div className="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start gap-2 text-sm text-amber-950">
+            <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <p>
+              {t("teacherPortal.currentlyTeaching", {
+                subject: data.currentPeriod.subject,
+                className: data.currentPeriod.className,
+              })}
+            </p>
+          </div>
+          <Link href={attHref(data.currentPeriod.classId)}>
+            <Button size="sm" className={tp.btn}>
+              <ClipboardList className="h-4 w-4" />
+              {t("teacherPortal.takeAttendanceNow")}
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {(stats?.attendancePendingToday ?? 0) > 0 && (
         <div className="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-start gap-2 text-sm text-amber-950">
@@ -348,6 +380,15 @@ export default function TeacherDashboard() {
                           >
                             {cls.name}
                           </Link>
+                          {cls.isHomeroom ? (
+                            <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 ${tp.badgeSuccess}`}>
+                              {t("teacherPortal.homeroomBadge")}
+                            </span>
+                          ) : cls.isTeaching ? (
+                            <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wide rounded-full bg-amber-100 text-amber-800 px-2 py-0.5">
+                              {t("teacherPortal.lectureBadge")}
+                            </span>
+                          ) : null}
                           {cls.examPublished ? (
                             <span
                               className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 ${tp.badgeSuccess}`}
@@ -365,6 +406,9 @@ export default function TeacherDashboard() {
                           Std {cls.standard}-{cls.section}
                           {cls.stream ? ` · ${cls.stream}` : ""} ·{" "}
                           {cls.academicYear}
+                          {cls.subjects?.length
+                            ? ` · ${cls.subjects.join(", ")}`
+                            : ""}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2 text-xs">
                           <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 text-blue-700 px-2.5 py-1 font-medium">
@@ -400,12 +444,15 @@ export default function TeacherDashboard() {
                         </div>
                       </div>
                       <div className="grid w-full shrink-0 grid-cols-1 gap-2 min-[380px]:grid-cols-2 md:flex md:w-auto md:min-w-[11.5rem] md:flex-col">
+                        {cls.canMarkAttendance !== false && (
                         <Link href={attHref(cls.id)}>
                           <Button size="sm" className={`w-full ${tp.btn}`}>
                             <ClipboardList className="h-3.5 w-3.5" />
                             {t("teacherPortal.markAttendanceBtn")}
                           </Button>
                         </Link>
+                        )}
+                        {cls.canEnterMarks !== false && (
                         <Link href={`/results/term?classId=${cls.id}`}>
                           <Button
                             size="sm"
@@ -416,7 +463,8 @@ export default function TeacherDashboard() {
                             {t("teacherPortal.enterMarks")}
                           </Button>
                         </Link>
-                        {["10", "12"].includes(cls.standard) ? (
+                        )}
+                        {cls.isHomeroom && ["10", "12"].includes(cls.standard) ? (
                           <Link
                             href={`/teacher/board-records?std=${cls.standard}&view=entry&classId=${cls.id}`}
                           >
@@ -471,9 +519,14 @@ export default function TeacherDashboard() {
             ) : (
               <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
                 {data.todaySchedule.map((p) => (
-                  <div
+                  <Link
                     key={`${p.classId}-${p.periodIndex}`}
-                    className="teacher-period-card flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5"
+                    href={attHref(p.classId)}
+                    className={`teacher-period-card flex items-start gap-3 rounded-xl border px-3 py-2.5 ${
+                      p.isNow
+                        ? "border-amber-300 bg-amber-50"
+                        : "border-slate-100 bg-slate-50/80"
+                    }`}
                   >
                     <div className="h-10 w-10 rounded-lg bg-amber-100 text-amber-800 flex flex-col items-center justify-center shrink-0">
                       <Clock className="h-3.5 w-3.5" />
@@ -495,7 +548,7 @@ export default function TeacherDashboard() {
                         {p.room ? ` · ${p.room}` : ""}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -510,7 +563,9 @@ export default function TeacherDashboard() {
             <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {[
                 {
-                  href: "/teacher/attendance",
+                  href: data?.defaultClassId
+                    ? `/teacher/attendance?classId=${data.defaultClassId}`
+                    : "/teacher/attendance",
                   icon: ClipboardList,
                   title: t("teacherNav.attendance"),
                   desc: t("teacherPortal.markAttendance"),

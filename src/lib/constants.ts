@@ -199,7 +199,7 @@ export const STUDENT_STATUSES = [
 export const CSV_HEADERS = [
   "firstName", "middleName", "surname", "aadhaarName", "dateOfBirth", "gender",
   "aadhaarNumber", "rationCardNumber", "mobileNumber", "email", "motherName",
-  "fatherName", "guardianName", "category", "caste", "religion", "maritalStatus",
+  "fatherName", "motherAadhaarNumber", "fatherAadhaarNumber", "guardianName", "category", "caste", "religion", "maritalStatus",
   "parentOccupation", "isOrphan", "annualFamilyIncome", "currentAddress",
   "currentDistrict", "currentCity", "currentPincode", "permanentAddress",
   "permanentDistrict", "permanentCity", "permanentPincode", "habitationType",
@@ -209,7 +209,7 @@ export const CSV_HEADERS = [
   "startDate", "completionDate", "board10th", "percentage10th", "year10th",
   "board12th", "percentage12th", "year12th", "previousQualification",
   "bankName", "branchName", "accountNumber", "ifscCode", "accountHolderName",
-  "rollNumber", "grNumber", "standard", "section", "childUid", "apaarId", "panNumber", "bloodGroup",
+  "rollNumber", "grNumber", "standard", "section", "childUid", "apaarId", "penNumber", "panNumber", "bloodGroup",
 ] as const;
 
 export const CSV_HEADER_LABELS: Record<string, string> = {
@@ -225,6 +225,8 @@ export const CSV_HEADER_LABELS: Record<string, string> = {
   email: "Email",
   motherName: "Mother Name",
   fatherName: "Father Name",
+  motherAadhaarNumber: "Mother Aadhaar Number",
+  fatherAadhaarNumber: "Father Aadhaar Number",
   guardianName: "Guardian Name",
   category: "Category (SC/ST/OBC/SEBC/EWS/Open)",
   caste: "Caste",
@@ -255,7 +257,7 @@ export const CSV_HEADER_LABELS: Record<string, string> = {
   institutionName: "Institution Name",
   currentYear: "Current Year",
   admissionType: "Admission Type",
-  startDate: "Course Start Date",
+    startDate: "Admission / Course Start Date",
   completionDate: "Course Completion Date",
   board10th: "10th Board",
   percentage10th: "10th Percentage",
@@ -275,6 +277,7 @@ export const CSV_HEADER_LABELS: Record<string, string> = {
   section: "Section",
   childUid: "SSG Child UID (18 digit)",
   apaarId: "APAAR / UPPAR ID",
+  penNumber: "PEN Number (UDISE+)",
   panNumber: "PAN Number",
   bloodGroup: "Blood Group",
 };

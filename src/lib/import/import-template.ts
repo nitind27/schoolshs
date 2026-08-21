@@ -135,7 +135,10 @@ export async function buildStudentImportWorkbook(
     "currentPincode",
     "permanentPincode",
     "apaarId",
+    "penNumber",
     "panNumber",
+    "motherAadhaarNumber",
+    "fatherAadhaarNumber",
   ]);
 
   fields.forEach((key, i) => {

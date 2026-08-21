@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
-import { assertTeacherAttendanceAccess } from "@/lib/teacher-attendance";
+import { assertTeacherHomeroomAccess } from "@/lib/teacher-attendance";
 import { assertStudentsInSchool } from "@/lib/school-assertions";
 import { resequenceClassRollNumbers } from "@/lib/roll-resequence";
 import { sortStudentsBySavedRoll } from "@/lib/roll-order";
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     if (!classId) return NextResponse.json({ classes, students: [] });
 
-    await assertTeacherAttendanceAccess(session, classId);
+    await assertTeacherHomeroomAccess(session, classId);
     if (!classes.some((item) => item.id === classId)) {
       return NextResponse.json({ error: "Class not found" }, { status: 404 });
     }
@@ -99,7 +99,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "classId required" }, { status: 400 });
     }
 
-    await assertTeacherAttendanceAccess(session, classId);
+    await assertTeacherHomeroomAccess(session, classId);
 
     if (body.autoAssign === true) {
       const updated = await prisma.$transaction(

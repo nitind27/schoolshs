@@ -5,6 +5,7 @@ import { buildClassName, MANAGE_STANDARDS } from "@/lib/class-structure";
 import { enrolledStudentStatusFilter } from "@/lib/student-list-filters";
 import { seedClassSubjects } from "@/lib/class-subjects";
 import { assertStaffInSchool, assertClassTeacherAvailable } from "@/lib/school-assertions";
+import { getTeacherScope } from "@/lib/teacher-scope";
 
 function normalizeStream(standard: string, stream: unknown): string {
   const s = String(stream || "").trim();
@@ -84,7 +85,17 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const classIds = classes.map((c) => c.id);
+    let scoped = classes;
+    let teacherScope: Awaited<ReturnType<typeof getTeacherScope>> | null = null;
+    if (session.role === "teacher") {
+      teacherScope = await getTeacherScope(session, {
+        academicYear: academicYear || undefined,
+      });
+      const allowed = new Set(teacherScope.attendanceClassIds);
+      scoped = classes.filter((c) => allowed.has(c.id));
+    }
+
+    const classIds = scoped.map((c) => c.id);
     const linked: { classId: string | null; _count: { _all: number } }[] = [];
     const unassigned: {
       standard: string | null;
@@ -139,17 +150,30 @@ export async function GET(request: NextRequest) {
       pendingByKey.set(key, (pendingByKey.get(key) || 0) + row._count._all);
     }
 
-    const withCounts = classes.map((cls) => {
+    const scopeById = new Map(teacherScope?.classes.map((c) => [c.id, c]) ?? []);
+    const withCounts = scoped.map((cls) => {
       const pendingKey = `${cls.standard}|${cls.section}|${cls.stream || ""}`;
       const students =
         (linkedById.get(cls.id) || 0) + (pendingByKey.get(pendingKey) || 0);
+      const scopedClass = scopeById.get(cls.id);
       return {
         ...cls,
         _count: { ...cls._count, students },
+        isHomeroom: scopedClass?.isHomeroom ?? false,
+        isTeaching: scopedClass?.isTeaching ?? false,
+        canMarkAttendance: scopedClass?.canMarkAttendance ?? session.role !== "teacher",
+        canEnterMarks: scopedClass?.canEnterMarks ?? session.role !== "teacher",
+        subjects: scopedClass?.subjects ?? [],
+        subjectCodes: scopedClass?.subjectCodes ?? [],
       };
     });
 
-    return NextResponse.json({ classes: withCounts, total: withCounts.length });
+    return NextResponse.json({
+      classes: withCounts,
+      total: withCounts.length,
+      defaultClassId: teacherScope?.defaultClassId ?? null,
+      currentPeriod: teacherScope?.currentPeriod ?? null,
+    });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("GET /api/classes error:", error);
