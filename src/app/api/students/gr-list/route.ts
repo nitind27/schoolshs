@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { enrolledStudentStatusFilter } from "@/lib/student-list-filters";
 
 function displayName(s: {
   firstName?: string | null;
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
               },
               { grNumber: { not: null } },
               { NOT: { grNumber: "" } },
-              { status: { notIn: ["archived", "draft"] } },
+              { status: enrolledStudentStatusFilter() },
             ],
           },
           select: {
@@ -208,7 +209,7 @@ export async function GET(request: NextRequest) {
             },
             { grNumber: { not: null } },
             { NOT: { grNumber: "" } },
-            { status: { notIn: ["archived", "draft"] } },
+            { status: enrolledStudentStatusFilter() },
           ],
         },
         select: {

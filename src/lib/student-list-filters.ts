@@ -1,9 +1,9 @@
-/** Statuses hidden from attendance, roll numbers, GR counts */
-export const STUDENT_LIST_HIDDEN_STATUSES = ["archived", "draft"] as const;
+/** Only archived students are hidden from class lists. Incomplete/draft still appear; pending work is on the dashboard. */
+export const STUDENT_LIST_HIDDEN_STATUSES = ["archived"] as const;
 
 export type StudentListHiddenStatus = (typeof STUDENT_LIST_HIDDEN_STATUSES)[number];
 
-/** Active enrolled students — excludes archived and in-progress GR drafts */
+/** Class rolls, attendance, teacher search — everyone except archived. */
 export function activeStudentStatusFilter() {
   return { notIn: [...STUDENT_LIST_HIDDEN_STATUSES] };
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { assertTeacherHomeroomAccess } from "@/lib/teacher-attendance";
 import { assertStudentsInSchool } from "@/lib/school-assertions";
+import { enrolledStudentStatusFilter } from "@/lib/student-list-filters";
 import { resequenceClassRollNumbers } from "@/lib/roll-resequence";
 import { sortStudentsBySavedRoll } from "@/lib/roll-order";
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
         academicYear: true,
         _count: {
           select: {
-            students: { where: { status: { notIn: ["archived", "draft"] } } },
+            students: { where: { status: enrolledStudentStatusFilter() } },
           },
         },
       },
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
       where: {
         schoolId: session.schoolId,
         classId,
-        status: { notIn: ["archived", "draft"] },
+        status: enrolledStudentStatusFilter(),
       },
       orderBy: [{ firstName: "asc" }, { surname: "asc" }],
       select: {
@@ -128,7 +129,7 @@ export async function PATCH(request: NextRequest) {
       where: {
         schoolId: session.schoolId,
         classId,
-        status: { notIn: ["archived", "draft"] },
+        status: enrolledStudentStatusFilter(),
       },
       select: { id: true, rollNumber: true },
     });

@@ -6,7 +6,7 @@ type Tx = Prisma.TransactionClient;
 
 /**
  * Re-assign class roll numbers: girls first (A→Z), then boys (A→Z).
- * Skips archived/draft. Clears gaps after delete/deactivate.
+ * Includes draft/incomplete students. Skips archived only.
  */
 export async function resequenceClassRollNumbers(
   tx: Tx,
