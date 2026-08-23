@@ -1,25 +1,60 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
 import { getTeacherScope } from "@/lib/teacher-scope";
+import { mobileJson, mobileOptions } from "@/lib/mobile-api";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function OPTIONS(request: NextRequest) {
+  return mobileOptions(request.headers.get("origin"));
+}
+
+function scopePayload(scope: Awaited<ReturnType<typeof getTeacherScope>>) {
+  return {
+    linked: scope.linked,
+    staffId: scope.staffId,
+    academicYear: scope.academicYear,
+    defaultClassId: scope.defaultClassId,
+    currentPeriod: scope.currentPeriod,
+    classes: scope.classes,
+    attendanceClassIds: scope.attendanceClassIds,
+    marksClassIds: scope.marksClassIds,
+    homeroomClassIds: scope.homeroomClassIds,
+  };
+}
+
+export async function GET(request: NextRequest) {
+  const origin = request.headers.get("origin");
   try {
-    const session = await requireSchoolAuth(["teacher"]);
+    const session = await requireSchoolAuth(["teacher", "school_admin"]);
+    const compact =
+      request.nextUrl.searchParams.get("view") === "scope" ||
+      request.nextUrl.searchParams.get("scope") === "1";
 
     if (!session.staffId) {
-      return NextResponse.json({
-        classes: [],
-        stats: { totalStudents: 0, totalClasses: 0, boys: 0, girls: 0 },
+      const empty = {
+        linked: false,
+        staffId: null,
+        academicYear: "",
         defaultClassId: null,
         currentPeriod: null,
+        classes: [],
+        attendanceClassIds: [] as string[],
+        marksClassIds: [] as string[],
+        homeroomClassIds: [] as string[],
+        stats: { totalStudents: 0, totalClasses: 0, boys: 0, girls: 0, other: 0 },
         message: "no_staff",
-      });
+      };
+      return mobileJson(empty, undefined, origin);
     }
 
     const scope = await getTeacherScope(session);
-    const classIds = scope.attendanceClassIds;
+    if (compact) {
+      return mobileJson(scopePayload(scope), undefined, origin);
+    }
 
+    const classIds = scope.attendanceClassIds;
     const classes = classIds.length
       ? await prisma.schoolClass.findMany({
           where: { schoolId: session.schoolId, id: { in: classIds } },
@@ -94,22 +129,26 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({
-      classes: scopedClasses,
-      defaultClassId: scope.defaultClassId,
-      currentPeriod: scope.currentPeriod,
-      stats: {
-        totalStudents,
-        totalClasses: scopedClasses.length,
-        boys,
-        girls,
-        other: Math.max(0, totalStudents - boys - girls),
+    return mobileJson(
+      {
+        ...scopePayload(scope),
+        classes: scopedClasses,
+        stats: {
+          totalStudents,
+          totalClasses: scopedClasses.length,
+          boys,
+          girls,
+          other: Math.max(0, totalStudents - boys - girls),
+        },
       },
-    });
+      undefined,
+      origin,
+    );
   } catch (e) {
-    if (e instanceof AuthError)
-      return NextResponse.json({ error: e.message }, { status: e.status });
+    if (e instanceof AuthError) {
+      return mobileJson({ error: e.message }, { status: e.status }, origin);
+    }
     console.error("[teacher GET]", e);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return mobileJson({ error: "Failed" }, { status: 500 }, origin);
   }
 }

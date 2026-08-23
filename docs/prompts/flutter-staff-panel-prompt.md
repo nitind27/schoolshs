@@ -283,13 +283,20 @@ Download bytes → save/share. Show filename from `Content-Disposition` if prese
 
 ```
 GET /api/teacher/scope
+Authorization: Bearer <token>
 ```
+
+**Fallback (use if `/api/teacher/scope` returns HTML 404):**
+```
+GET /api/teacher?view=scope
+Authorization: Bearer <token>
+```
+
+**Also accepted:** `GET /api/teacher` (classes + students + `defaultClassId` / `currentPeriod` / same scope ids).
 
 Use `defaultClassId` as the initial class. Picker = `classes` where `canMarkAttendance`.
 
 If `currentPeriod` is set and its `classId` differs from the selected class, show a banner to switch to that lecture class.
-
-**Also accepted:** `GET /api/teacher` (same classes + students, plus `defaultClassId` / `currentPeriod`).
 
 **Filters:** Class picker (homeroom + timetable classes), month, year.
 
@@ -581,6 +588,7 @@ Response:
 ### Teacher scope payload (`GET /api/teacher/scope`)
 
 Use this as the single source of truth after login / on attendance & marks screens.
+If `/api/teacher/scope` 404s on an older server, use `GET /api/teacher?view=scope` (same JSON).
 
 ```json
 {

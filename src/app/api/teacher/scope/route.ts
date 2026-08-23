@@ -3,9 +3,12 @@ import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import { mobileJson, mobileOptions } from "@/lib/mobile-api";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Flutter + web: teacher class/subject scope from class-teacher + released timetable.
  * GET /api/teacher/scope?academicYear=2025-26
+ * Fallback if this path 404s on an old deploy: GET /api/teacher?view=scope
  */
 export async function OPTIONS(request: NextRequest) {
   return mobileOptions(request.headers.get("origin"));
