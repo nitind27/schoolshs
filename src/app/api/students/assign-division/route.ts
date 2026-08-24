@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { standardToCourseName } from "@/lib/constants";
@@ -68,41 +67,27 @@ export async function POST(request: NextRequest) {
     const courseType =
       String(assignedClass.stream || "").trim() ||
       defaultCourseTypeForStandard(assignedClass.standard);
-    const financialYear = assignedClass.academicYear || "";
-    const institutionName = assignedClass.institutionName || "";
-    const institutionDistrict = assignedClass.institutionDistrict || "";
-    const idList = Prisma.join(targetIds.map((id) => Prisma.sql`${id}`));
-    const promoteFlag = admitDrafts ? 1 : 0;
+    const financialYear = assignedClass.academicYear?.trim() || "";
+    const institutionName = assignedClass.institutionName?.trim() || "";
+    const institutionDistrict = assignedClass.institutionDistrict?.trim() || "";
 
-    await prisma.$executeRaw`
-      UPDATE student
-      SET
-        classId = ${assignedClass.id},
-        standard = ${assignedClass.standard},
-        section = ${assignedClass.section},
-        courseName = ${courseName},
-        courseType = ${courseType},
-        financialYear = CASE
-          WHEN ${financialYear} = '' THEN financialYear
-          ELSE ${financialYear}
-        END,
-        institutionName = CASE
-          WHEN ${institutionName} = '' THEN institutionName
-          ELSE ${institutionName}
-        END,
-        institutionDistrict = CASE
-          WHEN ${institutionDistrict} = '' THEN institutionDistrict
-          ELSE ${institutionDistrict}
-        END,
-        status = CASE
-          WHEN ${promoteFlag} = 1 THEN 'ready'
-          ELSE status
-        END,
-        updatedAt = CURRENT_TIMESTAMP(3)
-      WHERE schoolId = ${session.schoolId}
-        AND id IN (${idList})
-        AND LOWER(TRIM(status)) <> 'archived'
-    `;
+    await prisma.student.updateMany({
+      where: {
+        schoolId: session.schoolId,
+        id: { in: targetIds },
+      },
+      data: {
+        classId: assignedClass.id,
+        standard: assignedClass.standard,
+        section: assignedClass.section,
+        courseName,
+        courseType,
+        ...(financialYear ? { financialYear } : {}),
+        ...(institutionName ? { institutionName } : {}),
+        ...(institutionDistrict ? { institutionDistrict } : {}),
+        ...(admitDrafts ? { status: "ready" } : {}),
+      },
+    });
 
     const admittedRows = await prisma.student.findMany({
       where: { id: { in: targetIds }, schoolId: session.schoolId },
