@@ -1,10 +1,14 @@
 import ExcelJS from "exceljs";
 import {
+  BOARDS,
   CATEGORIES,
   CLASS_SECTIONS,
+  COURSE_TYPES,
   CSV_HEADER_LABELS,
+  CURRENT_YEARS,
   FINANCIAL_YEARS,
   GENDERS,
+  GUJARAT_DISTRICTS,
   RELIGIONS,
 } from "@/lib/constants";
 import { MANAGE_STANDARDS } from "@/lib/class-structure";
@@ -26,8 +30,17 @@ const LISTS: Partial<Record<ImportFieldKey, string[]>> = {
   residentType: ["Rural", "Urban"],
   habitationType: ["Own", "Rent"],
   maritalStatus: ["Unmarried", "Married"],
-  courseType: ["Secondary", "Higher Secondary", "Arts", "Commerce"],
+  courseType: [...COURSE_TYPES],
   bloodGroup: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"],
+  sscSeatPrefix: ["A", "B", "C", "S", "P"],
+  hscSeatPrefix: ["A", "B", "C", "S", "P"],
+  admissionType: ["Regular", "Lateral", "Transfer"],
+  currentYear: [...CURRENT_YEARS],
+  board10th: [...BOARDS],
+  board12th: [...BOARDS],
+  currentDistrict: [...GUJARAT_DISTRICTS],
+  permanentDistrict: [...GUJARAT_DISTRICTS],
+  institutionDistrict: [...GUJARAT_DISTRICTS],
 };
 
 function colLetter(index: number) {
@@ -72,11 +85,12 @@ export async function buildStudentImportWorkbook(
     ["1", "Do not change or delete the header row on the Students sheet."],
     ["2", "Yellow columns are required. Fill at least those for each student."],
     ["3", "Dates must be DD/MM/YYYY (example 15/07/2010)."],
-    ["4", "Standard = 9 / 10 / 11 / 12. Section (A/B/C) is optional — division can be assigned later."],
+    ["4", "Yellow columns include GR Number and Standard. Section (A/B/C) is optional."],
     ["5", "If Permanent Address is empty, Current Address is copied on import."],
     ["6", "Same Aadhaar number updates the existing student in your school."],
     ["7", "Delete the example row (Aadhaar 123456789012) before upload, or it is skipped automatically."],
     ["8", "Incomplete rows still import as Draft — complete them later in Students."],
+    ["9", "GR Number is the school General Register number. Keep it as text so Excel does not change it."],
   ];
   notes.forEach(([n, text], i) => {
     readme.getCell(i + 3, 1).value = n;
@@ -132,6 +146,7 @@ export async function buildStudentImportWorkbook(
     "dateOfBirth",
     "startDate",
     "completionDate",
+    "idCardValidUpto",
     "currentPincode",
     "permanentPincode",
     "apaarId",
@@ -139,6 +154,10 @@ export async function buildStudentImportWorkbook(
     "panNumber",
     "motherAadhaarNumber",
     "fatherAadhaarNumber",
+    "grNumber",
+    "rollNumber",
+    "sscSeatNumber",
+    "hscSeatNumber",
   ]);
 
   fields.forEach((key, i) => {

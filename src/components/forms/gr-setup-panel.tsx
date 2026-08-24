@@ -12,6 +12,7 @@ import {
   BookOpen,
   ChevronDown,
   ExternalLink,
+  Check,
   Pencil,
   Search,
   UserPlus,
@@ -29,6 +30,7 @@ type GrLookupResult = {
   found: boolean;
   source: "student" | "gr_entry" | "both" | null;
   student: Student | null;
+  students?: Student[];
   suggested: Partial<Student>;
 };
 
@@ -128,6 +130,10 @@ export function GrSetupPanel({
   const [status, setStatus] = useState<"idle" | "new" | "existing" | "gr_only">("idle");
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState<GrConflict | null>(null);
+  const [changingGr, setChangingGr] = useState(false);
+  const [changeGrValue, setChangeGrValue] = useState("");
+  const [changeChecking, setChangeChecking] = useState(false);
+  const [changeConflicts, setChangeConflicts] = useState<GrConflict[]>([]);
   const [grSearch, setGrSearch] = useState("");
   const [grClassFilter, setGrClassFilter] = useState("");
   const [grMenuOpen, setGrMenuOpen] = useState(false);
@@ -217,7 +223,8 @@ export function GrSetupPanel({
     if (locked) return;
     setSelectedExistingGr("");
     if (deferClassAssignment) {
-      if (academicYear) void loadGrList({ academicYear });
+      if (classId) void loadGrList({ classId });
+      else if (academicYear) void loadGrList({ academicYear });
       else setGrOptions([]);
     } else {
       void loadGrList({ classId });
@@ -259,21 +266,24 @@ export function GrSetupPanel({
         grNumber: gr,
         academicYear: cls?.academicYear || academicYear || "2025-26",
       });
-      if (classId && !deferClassAssignment) params.set("classId", classId);
+      if (classId) params.set("classId", classId);
 
       const lookupRes = await fetch(`/api/students/lookup-gr?${params}`);
       const lookup = (await lookupRes.json()) as GrLookupResult & { error?: string };
       if (!lookupRes.ok) throw new Error(lookup.error || "Lookup failed");
 
       // New mode: GR already belongs to a student — warn, do not draft / onReady
-      if (mode === "new" && lookup.student?.id) {
-        const fromList = grOptions.find(
-          (g) => g.grNumber.trim() === gr && g.studentId === lookup.student!.id,
-        );
-        setConflict(buildConflict(gr, lookup.student, fromList));
-        onGrNumberChange(gr);
-        setStatus("idle");
-        return;
+      if (mode === "new" && (lookup.students?.length || lookup.student?.id)) {
+        const first = lookup.students?.[0] || lookup.student;
+        if (first?.id) {
+          const fromList = grOptions.find(
+            (g) => g.grNumber.trim() === gr && g.studentId === first.id,
+          );
+          setConflict(buildConflict(gr, first, fromList));
+          onGrNumberChange(gr);
+          setStatus("idle");
+          return;
+        }
       }
 
       let id = lookup.student?.id || studentId;
@@ -286,12 +296,8 @@ export function GrSetupPanel({
           financialYear: cls?.academicYear || academicYear || "2025-26",
           ...lookup.suggested,
         };
-        // New flow: never lock class at draft start
-        if (deferClassAssignment) {
-          draftBody.classId = null;
-        } else if (classId) {
-          draftBody.classId = classId;
-        }
+        if (classId) draftBody.classId = classId;
+        else if (deferClassAssignment) draftBody.classId = null;
 
         const draftRes = await fetch("/api/students", {
           method: "POST",
@@ -312,7 +318,7 @@ export function GrSetupPanel({
             ...lookup.suggested,
             ...created,
             grNumber: gr,
-            ...(deferClassAssignment ? { classId: null } : { classId }),
+            classId: classId || null,
           },
           source: lookup.source,
           isNew: true,
@@ -321,11 +327,8 @@ export function GrSetupPanel({
         setConflict(null);
         setStatus(lookup.source === "gr_entry" && !lookup.student ? "gr_only" : "existing");
         const suggested = { ...lookup.suggested };
-        if (deferClassAssignment) {
-          // Keep existing class if student already has one; otherwise leave unset for final assign
-          if (!lookup.student?.classId) {
-            suggested.classId = null as unknown as string;
-          }
+        if (deferClassAssignment && !lookup.student?.classId) {
+          suggested.classId = (classId || null) as unknown as string;
         }
         onReady({
           studentId: id,
@@ -346,7 +349,7 @@ export function GrSetupPanel({
 
   const handleYearChange = (year: string) => {
     onAcademicYearChange(year);
-    if (!deferClassAssignment) onClassChange("");
+    onClassChange("");
     onGrNumberChange("");
     setSelectedExistingGr("");
     setGrOptions([]);
@@ -399,8 +402,84 @@ export function GrSetupPanel({
   const handleClear = () => {
     clearLocalSelection();
     setGrClassFilter("");
+    setChangingGr(false);
+    setChangeConflicts([]);
     onClearSelection?.();
   };
+
+  const startChangeGr = () => {
+    setChangingGr(true);
+    setChangeGrValue(grNumber);
+    setChangeConflicts([]);
+    setError("");
+  };
+
+  const cancelChangeGr = () => {
+    setChangingGr(false);
+    setChangeGrValue(grNumber);
+    setChangeConflicts([]);
+    setError("");
+  };
+
+  const applyChangeGr = () => {
+    const next = changeGrValue.trim();
+    if (!next) {
+      setError(t("studentForm.grRequired"));
+      return;
+    }
+    if (changeConflicts.length) return;
+    if (next === grNumber.trim()) {
+      cancelChangeGr();
+      return;
+    }
+    onGrNumberChange(next);
+    setChangingGr(false);
+    setChangeConflicts([]);
+  };
+
+  useEffect(() => {
+    if (!changingGr) return;
+    const next = changeGrValue.trim();
+    if (!next || next === grNumber.trim()) {
+      setChangeConflicts([]);
+      setChangeChecking(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setChangeChecking(true);
+      try {
+        const params = new URLSearchParams({
+          grNumber: next,
+          academicYear: academicYear || "2025-26",
+        });
+        if (studentId) params.set("excludeStudentId", studentId);
+        const res = await fetch(`/api/students/lookup-gr?${params}`);
+        const lookup = (await res.json()) as GrLookupResult;
+        const others = (
+          lookup.students?.length ? lookup.students : lookup.student ? [lookup.student] : []
+        ).filter((s) => s.id && s.id !== studentId);
+        setChangeConflicts(
+          others.map((s) => {
+            const fromList = grOptions.find((g) => g.studentId === s.id);
+            return buildConflict(next, s, fromList);
+          }),
+        );
+      } catch {
+        setChangeConflicts([]);
+      } finally {
+        setChangeChecking(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [
+    changingGr,
+    changeGrValue,
+    grNumber,
+    studentId,
+    academicYear,
+    grOptions,
+    buildConflict,
+  ]);
 
   const handleTryDifferentGr = () => {
     setConflict(null);
@@ -513,10 +592,23 @@ export function GrSetupPanel({
               <X className="h-3.5 w-3.5" />
               {t("studentForm.grClearSelection")}
             </Button>
-            <Button type="button" variant="outline" size="sm" className="h-auto min-h-11 gap-1 px-3 text-xs" onClick={onUnlockEdit}>
-              <Pencil className="h-3.5 w-3.5" />
-              {t("common.edit")}
-            </Button>
+            {studentId ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-auto min-h-11 gap-1 px-3 text-xs"
+                onClick={startChangeGr}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                {t("studentForm.grChangeNumber")}
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" size="sm" className="h-auto min-h-11 gap-1 px-3 text-xs" onClick={onUnlockEdit}>
+                <Pencil className="h-3.5 w-3.5" />
+                {t("common.edit")}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -529,12 +621,7 @@ export function GrSetupPanel({
               ? t("studentForm.grStepFilters")
               : t("studentForm.grStepFiltersEdit")}
           </p>
-          <div
-            className={cn(
-              "grid grid-cols-1 gap-2.5",
-              deferClassAssignment ? "sm:grid-cols-[11rem_1fr] sm:items-end" : "sm:grid-cols-2",
-            )}
-          >
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             <Select
               label={t("fields.financialYear")}
               options={YEAR_OPTIONS.map((y) => ({ value: y, label: y }))}
@@ -543,30 +630,31 @@ export function GrSetupPanel({
               disabled={locked}
               required
             />
-            {deferClassAssignment ? (
-              !locked && (
-                <p className="pb-2 text-xs leading-snug text-slate-500 sm:pb-2.5">
-                  {t("studentForm.classDeferredHint")}
-                </p>
-              )
-            ) : (
-              <Select
-                label={t("fields.assignClass")}
-                emptyLabel={t("common.selectClass")}
-                options={yearClasses.map((c) => ({
-                  value: c.id,
-                  label: c.name,
-                }))}
-                value={classId}
-                onChange={(e) => handleClassChange(e.target.value)}
-                disabled={locked || !academicYear}
-                required
-              />
-            )}
+            <Select
+              label={t("fields.assignClass")}
+              emptyLabel={
+                deferClassAssignment
+                  ? t("students.assignClassLater")
+                  : t("common.selectClass")
+              }
+              options={yearClasses.map((c) => ({
+                value: c.id,
+                label: c.name,
+              }))}
+              value={classId}
+              onChange={(e) => handleClassChange(e.target.value)}
+              disabled={locked || !academicYear}
+              required={!deferClassAssignment}
+            />
           </div>
-          {!deferClassAssignment && !locked && academicYear && yearClasses.length === 0 && (
+          {!locked && academicYear && yearClasses.length === 0 && (
             <p className="mt-1.5 text-xs text-amber-700">{t("studentForm.grNoClassesForYear")}</p>
           )}
+          {deferClassAssignment && !locked ? (
+            <p className="mt-1.5 text-xs leading-snug text-slate-500">
+              {t("studentForm.classOptionalHint")}
+            </p>
+          ) : null}
         </div>
 
         {!locked && canOpenGr && (
@@ -933,6 +1021,77 @@ export function GrSetupPanel({
               </p>
               <p className="text-sm font-semibold text-slate-800">{grNumber || "—"}</p>
             </div>
+          </div>
+        )}
+
+        {locked && changingGr && studentId && (
+          <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-3">
+            <p className="text-sm font-semibold text-teal-950">{t("studentForm.grChangeTitle")}</p>
+            <p className="mt-0.5 text-xs leading-snug text-teal-800/90">{t("studentForm.grChangeDesc")}</p>
+            <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto]">
+              <Input
+                label={t("fields.grNumber")}
+                value={changeGrValue}
+                onChange={(e) => setChangeGrValue(e.target.value)}
+                placeholder={t("studentForm.grNewPlaceholder")}
+                aria-invalid={changeConflicts.length > 0}
+              />
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  className="h-10 w-full gap-1.5 bg-teal-700 hover:bg-teal-800 sm:w-auto"
+                  onClick={applyChangeGr}
+                  disabled={changeChecking || changeConflicts.length > 0 || !changeGrValue.trim()}
+                >
+                  {changeChecking ? <Spinner size="sm" /> : <Check className="h-4 w-4" />}
+                  {t("studentForm.grChangeSave")}
+                </Button>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 w-full sm:w-auto"
+                  onClick={cancelChangeGr}
+                >
+                  {t("common.cancel")}
+                </Button>
+              </div>
+            </div>
+            {changeChecking ? (
+              <p className="mt-2 text-xs text-teal-800">{t("studentForm.grListLoading")}</p>
+            ) : changeConflicts.length > 0 ? (
+              <div role="alert" className="mt-2.5 space-y-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-950">
+                {changeConflicts.map((row) => (
+                  <div key={row.studentId} className="flex gap-2">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="text-sm font-semibold leading-tight">
+                        {t("studentForm.grChangeTaken", { gr: row.grNumber })}
+                      </p>
+                      <p className="text-xs leading-snug text-amber-900/90">
+                        {t("studentForm.grChangeTakenBody", {
+                          name: row.name,
+                          class: row.classLabel,
+                        })}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-7 gap-1 bg-amber-600 px-2.5 text-xs hover:bg-amber-700"
+                        onClick={() => goEditConflict(row.studentId)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        {t("studentForm.grEditExisting")}
+                        <ExternalLink className="h-3 w-3 opacity-80" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : changeGrValue.trim() && changeGrValue.trim() !== grNumber.trim() ? (
+              <p className="mt-2 text-xs font-medium text-emerald-700">{t("studentForm.grChangeOk")}</p>
+            ) : null}
           </div>
         )}
 

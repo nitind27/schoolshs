@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import {
-  findStudentByGrNumber,
+  findStudentsByGrNumber,
   grEntryToStudentPartial,
 } from "@/lib/gr-student-sync";
 
@@ -13,12 +13,18 @@ export async function GET(request: NextRequest) {
     const grNumber = String(params.get("grNumber") || "").trim();
     const classId = params.get("classId") || "";
     const academicYear = params.get("academicYear") || "2025-26";
+    const excludeStudentId = String(params.get("excludeStudentId") || "").trim();
 
     if (!grNumber) {
       return NextResponse.json({ error: "GR number required" }, { status: 400 });
     }
 
-    const student = await findStudentByGrNumber(session.schoolId, grNumber);
+    const students = await findStudentsByGrNumber(
+      session.schoolId,
+      grNumber,
+      excludeStudentId || undefined,
+    );
+    const student = students[0] ?? null;
 
     let grEntry = await prisma.generalRegisterEntry.findFirst({
       where: {
@@ -61,6 +67,8 @@ export async function GET(request: NextRequest) {
         found: true,
         source: grEntry ? "both" : "student",
         student,
+        students,
+        duplicate: students.length > 1,
         grEntry,
         suggested: {
           ...suggested,
@@ -75,6 +83,8 @@ export async function GET(request: NextRequest) {
         found: true,
         source: "gr_entry",
         student: null,
+        students: [],
+        duplicate: false,
         grEntry,
         suggested,
       });
@@ -84,6 +94,8 @@ export async function GET(request: NextRequest) {
       found: false,
       source: null,
       student: null,
+      students: [],
+      duplicate: false,
       grEntry: null,
       suggested: {
         grNumber,

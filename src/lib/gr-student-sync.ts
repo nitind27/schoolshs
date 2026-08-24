@@ -6,13 +6,31 @@ import { entryPayloadFromStudent } from "@/lib/certificates/general-register";
 
 export { stableDraftAadhaarFromGr, grEntryToStudentPartial } from "@/lib/gr-student-utils";
 
-export async function findStudentByGrNumber(schoolId: string, grNumber: string) {
+export async function findStudentsByGrNumber(
+  schoolId: string,
+  grNumber: string,
+  excludeStudentId?: string,
+) {
   const gr = grNumber.trim();
-  if (!gr) return null;
-  return prisma.student.findFirst({
-    where: { schoolId, grNumber: gr },
+  if (!gr) return [];
+  return prisma.student.findMany({
+    where: {
+      schoolId,
+      grNumber: gr,
+      status: { not: "archived" },
+      ...(excludeStudentId ? { id: { not: excludeStudentId } } : {}),
+    },
     orderBy: { updatedAt: "desc" },
   });
+}
+
+export async function findStudentByGrNumber(
+  schoolId: string,
+  grNumber: string,
+  excludeStudentId?: string,
+) {
+  const rows = await findStudentsByGrNumber(schoolId, grNumber, excludeStudentId);
+  return rows[0] ?? null;
 }
 
 function payloadToGrDb(
@@ -73,15 +91,39 @@ export async function syncGrEntryForStudent(
   const payload = entryPayloadFromStudent(student, academicYear, grNumber, school?.udiseCode);
   const data = payloadToGrDb(payload, student.id);
 
-  const existing = await prisma.generalRegisterEntry.findFirst({
+  const byStudent = await prisma.generalRegisterEntry.findFirst({
+    where: { schoolId, academicYear, studentId: student.id },
+  });
+  const byGr = await prisma.generalRegisterEntry.findFirst({
     where: { schoolId, academicYear, grNumber },
   });
 
-  if (existing) {
+  if (byStudent) {
+    if (byGr && byGr.id !== byStudent.id) {
+      if (!byGr.studentId || byGr.studentId === student.id) {
+        await prisma.generalRegisterEntry.delete({ where: { id: byStudent.id } });
+        return prisma.generalRegisterEntry.update({
+          where: { id: byGr.id },
+          data,
+        });
+      }
+      // Another student already holds this GR in the register — do not steal it.
+      return byStudent;
+    }
     return prisma.generalRegisterEntry.update({
-      where: { id: existing.id },
+      where: { id: byStudent.id },
       data,
     });
+  }
+
+  if (byGr) {
+    if (!byGr.studentId || byGr.studentId === student.id) {
+      return prisma.generalRegisterEntry.update({
+        where: { id: byGr.id },
+        data,
+      });
+    }
+    return null;
   }
 
   return prisma.generalRegisterEntry.create({

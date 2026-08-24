@@ -275,6 +275,10 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
       .toUpperCase() || null,
     bloodGroup: String(row.bloodGroup || "").trim() || null,
     idCardValidUpto: parseImportDate(row.idCardValidUpto) || null,
+    sscSeatPrefix: String(row.sscSeatPrefix || "").trim().toUpperCase() || null,
+    sscSeatNumber: String(row.sscSeatNumber || "").replace(/\s/g, "").trim() || null,
+    hscSeatPrefix: String(row.hscSeatPrefix || "").trim().toUpperCase() || null,
+    hscSeatNumber: String(row.hscSeatNumber || "").replace(/\s/g, "").trim() || null,
     status: "draft",
     notes: null,
   };

@@ -117,6 +117,7 @@ export function DateRangeField({
   const [hoverDay, setHoverDay] = useState<Date | null>(null);
   const [pickingEnd, setPickingEnd] = useState(false);
   const [draftStart, setDraftStart] = useState<Date | null>(null);
+  const [headPick, setHeadPick] = useState<"month" | "year" | null>(null);
   const [view, setView] = useState(() => {
     const base = fromDate || today;
     return { y: base.getFullYear(), m: base.getMonth() };
@@ -125,7 +126,10 @@ export function DateRangeField({
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setHeadPick(null);
+      return;
+    }
     const base = fromDate || today;
     setView({ y: base.getFullYear(), m: base.getMonth() });
     setPickingEnd(false);
@@ -186,6 +190,8 @@ export function DateRangeField({
       const target = e.target as Node;
       if (rootRef.current?.contains(target)) return;
       if (panelRef.current?.contains(target)) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest?.("select.shs-dp__select") || el?.tagName === "OPTION") return;
       setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
@@ -215,6 +221,13 @@ export function DateRangeField({
       return new Intl.DateTimeFormat(intlLocale, { weekday: "narrow" }).format(d);
     });
   }, [intlLocale]);
+
+  const years = useMemo(() => {
+    const nowY = today.getFullYear();
+    const list: number[] = [];
+    for (let y = nowY + 2; y >= nowY - 15; y--) list.push(y);
+    return list;
+  }, [today]);
 
   const cells = useMemo(() => buildMonthGrid(view.y, view.m), [view.y, view.m]);
 
@@ -313,8 +326,6 @@ export function DateRangeField({
             aria-label={label || t("staffHr.dateFilter")}
             style={panelStyle}
             onMouseDown={(e) => {
-              const tag = (e.target as HTMLElement).tagName;
-              if (tag === "SELECT" || tag === "OPTION") return;
               e.preventDefault();
             }}
           >
@@ -323,54 +334,92 @@ export function DateRangeField({
                 type="button"
                 className="shs-dp__nav"
                 aria-label="Previous month"
-                onClick={() =>
+                onClick={() => {
+                  setHeadPick(null);
                   setView((v) => {
                     const m = v.m - 1;
                     return m < 0 ? { y: v.y - 1, m: 11 } : { y: v.y, m };
-                  })
-                }
+                  });
+                }}
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <div className="shs-dp__selectors">
-                <select
+                <button
+                  type="button"
                   className="shs-dp__select"
-                  value={view.m}
-                  onChange={(e) => setView((v) => ({ ...v, m: Number(e.target.value) }))}
+                  data-open={headPick === "month" ? "true" : "false"}
+                  aria-label="Month"
+                  aria-expanded={headPick === "month"}
+                  onClick={() => setHeadPick((cur) => (cur === "month" ? null : "month"))}
                 >
-                  {monthNames.map((name, i) => (
-                    <option key={name} value={i}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                <select
+                  {monthNames[view.m]}
+                </button>
+                <button
+                  type="button"
                   className="shs-dp__select"
-                  value={view.y}
-                  onChange={(e) => setView((v) => ({ ...v, y: Number(e.target.value) }))}
+                  data-open={headPick === "year" ? "true" : "false"}
+                  aria-label="Year"
+                  aria-expanded={headPick === "year"}
+                  onClick={() => setHeadPick((cur) => (cur === "year" ? null : "year"))}
                 >
-                  {Array.from({ length: 5 }, (_, i) => today.getFullYear() - 2 + i).map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
+                  {view.y}
+                </button>
               </div>
               <button
                 type="button"
                 className="shs-dp__nav"
                 aria-label="Next month"
-                onClick={() =>
+                onClick={() => {
+                  setHeadPick(null);
                   setView((v) => {
                     const m = v.m + 1;
                     return m > 11 ? { y: v.y + 1, m: 0 } : { y: v.y, m };
-                  })
-                }
+                  });
+                }}
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
 
+            {headPick === "month" ? (
+              <div className="shs-dp__pick-grid" role="listbox" aria-label="Month">
+                {monthNames.map((name, i) => (
+                  <button
+                    key={name}
+                    type="button"
+                    role="option"
+                    aria-selected={i === view.m}
+                    data-selected={i === view.m ? "true" : "false"}
+                    onClick={() => {
+                      setView((v) => ({ ...v, m: i }));
+                      setHeadPick(null);
+                    }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            ) : headPick === "year" ? (
+              <div className="shs-dp__year-list" role="listbox" aria-label="Year">
+                {years.map((y) => (
+                  <button
+                    key={y}
+                    type="button"
+                    role="option"
+                    aria-selected={y === view.y}
+                    data-selected={y === view.y ? "true" : "false"}
+                    onClick={() => {
+                      setView((v) => ({ ...v, y }));
+                      setHeadPick(null);
+                    }}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
             <p className="shs-dp__range-hint">
               {pickingEnd ? t("staffHr.rangePickEnd") : t("staffHr.rangePickStart")}
             </p>
@@ -422,6 +471,8 @@ export function DateRangeField({
                 );
               })}
             </div>
+              </>
+            )}
 
             <div className="shs-dp__footer">
               <button type="button" className="shs-dp__foot-btn shs-dp__foot-btn--muted" onClick={clear}>

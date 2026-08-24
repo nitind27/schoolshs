@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { requireSchoolFeature } from "@/lib/school-feature-access";
-import { GALLERY_ROLES, canDeleteGallery, galleryImagePublicUrl } from "@/lib/gallery";
+import { GALLERY_ROLES, canDeleteGallery, galleryImagePublicUrl, galleryMediaKind } from "@/lib/gallery";
 
 function coverOf(event: {
   titles: { images: { filePath: string }[] }[];
 }) {
   for (const title of event.titles) {
-    if (title.images[0]?.filePath) return galleryImagePublicUrl(title.images[0].filePath);
+    const photo = title.images.find((img) => galleryMediaKind(img.filePath) === "image");
+    if (photo?.filePath) return galleryImagePublicUrl(photo.filePath);
   }
   return null;
 }
@@ -25,7 +26,7 @@ export async function GET() {
         titles: {
           orderBy: { createdAt: "asc" },
           include: {
-            images: { orderBy: { createdAt: "asc" }, take: 1, select: { filePath: true } },
+            images: { orderBy: { createdAt: "asc" }, take: 12, select: { filePath: true } },
             _count: { select: { images: true } },
           },
         },

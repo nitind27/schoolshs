@@ -33,6 +33,7 @@ import { CategoryBadge } from "@/components/ui/badge";
 import { useT } from "@/i18n/locale-provider";
 import { StudentDocumentsSection } from "@/components/documents/student-documents-section";
 import { GrSetupPanel } from "@/components/forms/gr-setup-panel";
+import { ClassDivisionPicker } from "@/components/students/class-division-picker";
 import { classGroupKey, uniqueClassGroups } from "@/lib/class-structure";
 import { hasDraftContent, isDraftDobPlaceholder, stripDraftPlaceholdersForForm } from "@/lib/student-draft";
 import { getCompletionPercentage } from "@/lib/validation";
@@ -300,6 +301,14 @@ export function StudentForm({
     }));
   };
 
+  const applyClassId = (id: string | null) => {
+    if (!id) {
+      setForm((prev) => ({ ...prev, classId: null, section: "" }));
+      return;
+    }
+    update("classId", id);
+  };
+
   const currentAge = calcAgeYears(form.dateOfBirth);
   const scholarshipRequired = isScholarshipRequired(form.category);
   const categorySchemes = scholarshipSchemesForCategory(form.category);
@@ -480,9 +489,7 @@ export function StudentForm({
         next = stripDraftPlaceholdersForForm(next as Record<string, unknown>, "all") as FormData;
         next.aadhaarNumber = "";
         next.mobileNumber = "";
-        if (deferClassAssignment) {
-          next.classId = null;
-        }
+        next.classId = suggested.classId || prev.classId || null;
         setOccupationOtherMode(false);
       } else {
         // Existing student: only clear em-dash leftovers
@@ -513,8 +520,6 @@ export function StudentForm({
   useEffect(() => {
     if (!grReady) return;
     if (!form.grNumber?.trim()) return;
-    // New flow allows draft without class; edit still prefers class when present
-    if (!deferClassAssignment && !form.classId) return;
     if (skipAutoSave.current) {
       skipAutoSave.current = false;
       return;
@@ -731,7 +736,12 @@ export function StudentForm({
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          alert((err as { error?: string }).error || "Failed to save student");
+          alert(
+            (err as { error?: string }).error ||
+              ((err as { code?: string }).code === "DUPLICATE_GR"
+                ? t("studentForm.grDuplicateSaveError")
+                : "Failed to save student"),
+          );
           return undefined;
         }
         return savedStudentId;
@@ -779,7 +789,7 @@ export function StudentForm({
           setForm((prev) => ({
             ...prev,
             financialYear: year,
-            ...(deferClassAssignment ? {} : { classId: null }),
+            classId: null,
             grNumber: "",
           }));
         }}
@@ -1189,17 +1199,38 @@ export function StudentForm({
               <div className="sf-block sf-block--school">
                 <div className="sf-block__head">
                   <h4 className="sf-block__title">{t("studentForm.schoolEnrollment")}</h4>
+                  <p className="sf-hint" style={{ marginTop: "0.25rem" }}>
+                    {t("studentForm.classOptionalHint")}
+                  </p>
+                </div>
+                <div className="sf-span-full" style={{ marginBottom: "0.75rem" }}>
+                  <ClassDivisionPicker
+                    classes={classes}
+                    classId={form.classId}
+                    standard={form.standard}
+                    stream={
+                      ["11", "12"].includes(String(form.standard || ""))
+                        ? String(form.courseType || "")
+                        : ""
+                    }
+                    onSelectStandard={(std, stream) => applyClassGroup(std, stream || "")}
+                    onSelectClass={applyClassId}
+                    allowLater
+                  />
                 </div>
                 <div className="sf-grid">
-                  <Input label={t("fields.standard")} value={form.standard || ""} disabled />
-                  <Input label={t("fields.section")} value={form.section || ""} disabled />
                   <Input label={t("fields.rollNumber")} value={form.rollNumber || ""} onChange={(e) => update("rollNumber", e.target.value)} />
-                  <Input
-                    label={t("fields.grNumber")}
-                    value={form.grNumber || ""}
-                    disabled={grLocked}
-                    onChange={(e) => update("grNumber", e.target.value)}
-                  />
+                  <div>
+                    <Input
+                      label={t("fields.grNumber")}
+                      value={form.grNumber || ""}
+                      disabled={grLocked}
+                      onChange={(e) => update("grNumber", e.target.value)}
+                    />
+                    {grLocked ? (
+                      <p className="sf-hint">{t("studentForm.grEnrollmentLockedHint")}</p>
+                    ) : null}
+                  </div>
                   <DateField
                     label={t("fields.startDate")}
                     value={form.startDate || ""}
@@ -1644,43 +1675,31 @@ export function StudentForm({
                       <Spinner size="sm" />
                       <span>{t("common.loading")}</span>
                     </div>
-                  ) : classGroups.length === 0 ? (
-                    <div className="sf-note sf-note--warn" style={{ marginTop: "0.75rem" }}>
-                      <p style={{ margin: 0 }}>{t("studentForm.noSchoolClasses")}</p>
-                      <Link href="/classes" className="sf-class-picks-link">
-                        <School className="h-4 w-4" />
-                        {t("studentForm.openClassesPage")}
-                      </Link>
-                    </div>
                   ) : (
-                    <div className="sf-class-picks" role="listbox" aria-label={t("fields.standard")}>
-                      {classGroups.map((g) => {
-                        const selected = selectedClassGroupKey === g.key;
-                        return (
-                          <button
-                            key={g.key}
-                            type="button"
-                            role="option"
-                            aria-selected={selected}
-                            className="sf-class-pick"
-                            data-selected={selected ? "true" : "false"}
-                            onClick={() => applyClassGroup(g.standard, g.stream)}
-                          >
-                            <span className="sf-class-pick__name">
-                              {classGroupLabelText(g.standard, g.stream)}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <ClassDivisionPicker
+                      classes={classes}
+                      classId={form.classId}
+                      standard={form.standard}
+                      stream={
+                        ["11", "12"].includes(String(form.standard || ""))
+                          ? String(form.courseType || "")
+                          : ""
+                      }
+                      onSelectStandard={(std, stream) => applyClassGroup(std, stream || "")}
+                      onSelectClass={applyClassId}
+                      allowLater
+                    />
                   )}
-                  {!form.standard && classGroups.length > 0 && (
-                    <p className="sf-note sf-note--warn" style={{ marginTop: "0.75rem" }}>
-                      {t("studentForm.assignStandardRequired")}
-                    </p>
-                  )}
-                  {form.standard && classGroups.some((g) => g.key === selectedClassGroupKey) ? (
+                  {form.classId ? (
                     <p className="sf-note sf-note--ok" style={{ marginTop: "0.75rem" }}>
+                      {t("studentForm.classAssignedHint", {
+                        label:
+                          classes.find((c) => c.id === form.classId)?.name ||
+                          `${form.standard || ""}-${form.section || ""}`,
+                      })}
+                    </p>
+                  ) : form.standard ? (
+                    <p className="sf-note sf-note--warn" style={{ marginTop: "0.75rem" }}>
                       {t("studentForm.divisionLaterHint", {
                         label: classGroupLabelText(
                           form.standard,

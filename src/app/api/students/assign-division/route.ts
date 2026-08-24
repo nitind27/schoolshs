@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
           ELSE ${institutionDistrict}
         END,
         status = CASE
-          WHEN ${promoteFlag} = 1 OR LOWER(TRIM(status)) = 'draft' THEN 'ready'
+          WHEN ${promoteFlag} = 1 THEN 'ready'
           ELSE status
         END,
         updatedAt = CURRENT_TIMESTAMP(3)
@@ -103,22 +103,6 @@ export async function POST(request: NextRequest) {
         AND id IN (${idList})
         AND LOWER(TRIM(status)) <> 'archived'
     `;
-
-    const stillDraft = await prisma.$queryRaw<Array<{ n: bigint | number }>>`
-      SELECT COUNT(*) AS n
-      FROM student
-      WHERE schoolId = ${session.schoolId}
-        AND id IN (${idList})
-        AND LOWER(TRIM(status)) = 'draft'
-    `;
-    const leftover = Number(stillDraft[0]?.n ?? 0);
-    if (leftover > 0) {
-      console.error("admit-drafts leftover draft rows", leftover, targetIds);
-      return NextResponse.json(
-        { error: "Class assigned but students could not leave Draft. Try again." },
-        { status: 500 },
-      );
-    }
 
     const admittedRows = await prisma.student.findMany({
       where: { id: { in: targetIds }, schoolId: session.schoolId },

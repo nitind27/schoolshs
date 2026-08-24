@@ -15,6 +15,10 @@ const MIME: Record<string, string> = {
   ".gif": "image/gif",
   ".heic": "image/heic",
   ".heif": "image/heif",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".mov": "video/quicktime",
+  ".m4v": "video/x-m4v",
   ".pdf": "application/pdf",
   ".doc": "application/msword",
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -142,7 +146,7 @@ export async function GET(
         "Content-Type": mime,
         "Cache-Control":
           segments[0] === "gallery" ? "private, no-cache" : "private, max-age=3600",
-        "Content-Disposition": mime.startsWith("image/")
+        "Content-Disposition": mime.startsWith("image/") || mime.startsWith("video/")
           ? "inline"
           : `inline; filename="${encodeURIComponent(fileName)}"`,
       },

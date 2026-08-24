@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
     qualities: [60, 75, 90, 100],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 2560, 3840],
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "100mb",
+    },
+  },
   serverExternalPackages: [
     "@prisma/client",
     "@prisma/adapter-libsql",

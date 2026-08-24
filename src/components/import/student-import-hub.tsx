@@ -45,7 +45,7 @@ export function StudentImportHub() {
   const [showGuide, setShowGuide] = useState(true);
   const [previewFilter, setPreviewFilter] = useState<"all" | "valid" | "warning" | "error">("all");
   const [templateFields, setTemplateFields] = useState<Set<ImportFieldKey>>(
-    () => new Set(IMPORT_PRESETS.admission),
+    () => new Set(IMPORT_PRESETS.full),
   );
   const [includeSample, setIncludeSample] = useState(true);
   const [templateBusy, setTemplateBusy] = useState(false);
@@ -172,10 +172,9 @@ export function StudentImportHub() {
     setTemplateBusy(true);
     setError(null);
     try {
-      const fields = [...templateFields];
-      REQUIRED_IMPORT_FIELDS.forEach((f) => {
-        if (!fields.includes(f)) fields.unshift(f);
-      });
+      const fields = CSV_HEADERS.filter(
+        (k) => templateFields.has(k) || REQUIRED_IMPORT_FIELDS.includes(k),
+      );
       const qs = new URLSearchParams({
         format,
         fields: fields.join(","),

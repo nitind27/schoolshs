@@ -14,14 +14,18 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  Download,
+  FileArchive,
   Images,
   Pencil,
+  Play,
   Plus,
   Trash2,
   Upload,
   X,
 } from "lucide-react";
 import { GalleryImageEditor, type GalleryEditorItem, type GalleryEditorOutput } from "@/components/gallery/gallery-image-editor";
+import { isGalleryImageFile, isGalleryVideoFile } from "@/lib/gallery";
 import "../gallery.css";
 
 type GalleryImage = {
@@ -32,6 +36,7 @@ type GalleryImage = {
   uploadedById: string | null;
   createdAt: string;
   canDelete: boolean;
+  kind?: "image" | "video";
 };
 
 type GalleryTitle = {
@@ -54,6 +59,25 @@ function formatDate(iso: string) {
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
+function mediaKind(img: GalleryImage): "image" | "video" {
+  if (img.kind) return img.kind;
+  return /\.(mp4|webm|mov|m4v)(\?|$)/i.test(img.url) ? "video" : "image";
+}
+
+const GALLERY_ACCEPT =
+  "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v";
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function GalleryEventPage() {
   const t = useT();
   const router = useRouter();
@@ -74,6 +98,7 @@ export default function GalleryEventPage() {
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [zippingId, setZippingId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ titleId: string; index: number } | null>(null);
   const [editor, setEditor] = useState<{
     titleId: string;
@@ -248,19 +273,70 @@ export default function GalleryEventPage() {
 
   const uploadFiles = async (titleId: string, files: FileList | null) => {
     if (!files?.length) return;
-    const items: GalleryEditorItem[] = Array.from(files)
-      .filter((f) => f.type.startsWith("image/"))
-      .slice(0, 20)
-      .map((f) => ({
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: f.name,
-        src: URL.createObjectURL(f),
-      }));
-    if (!items.length) {
-      setErr(t("gallery.uploadFailed"));
+    const list = Array.from(files).slice(0, 20);
+    const images = list.filter((f) => isGalleryImageFile(f) && !isGalleryVideoFile(f));
+    const videos = list.filter((f) => isGalleryVideoFile(f));
+    if (!images.length && !videos.length) {
+      setErr(t("gallery.uploadTypeError"));
       return;
     }
+    if (videos.some((f) => f.size > 80 * 1024 * 1024)) {
+      setErr(t("gallery.uploadTooLarge"));
+      return;
+    }
+
+    if (videos.length) {
+      setUploadingId(titleId);
+      setErr("");
+      try {
+        const fd = new FormData();
+        videos.forEach((f) => fd.append("files", f));
+        const res = await fetch(`/api/gallery/titles/${titleId}/images`, { method: "POST", body: fd });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || t("gallery.uploadFailed"));
+        await load();
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : t("gallery.uploadFailed"));
+      } finally {
+        setUploadingId(null);
+      }
+    }
+
+    if (!images.length) return;
+    const items: GalleryEditorItem[] = images.map((f) => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: f.name,
+      src: URL.createObjectURL(f),
+    }));
     setEditor({ titleId, items });
+  };
+
+  const downloadOne = async (image: GalleryImage) => {
+    setErr("");
+    const res = await fetch(`/api/gallery/images/${image.id}/download`);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setErr(data.error || t("gallery.downloadFailed"));
+      return;
+    }
+    triggerBlobDownload(await res.blob(), image.originalName || "gallery-file");
+  };
+
+  const downloadZip = async (album: GalleryTitle) => {
+    if (!album.images.length) return;
+    setZippingId(album.id);
+    setErr("");
+    try {
+      const res = await fetch(`/api/gallery/titles/${album.id}/download`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErr(data.error || t("gallery.zipFailed"));
+        return;
+      }
+      triggerBlobDownload(await res.blob(), `${album.title}.zip`);
+    } finally {
+      setZippingId(null);
+    }
   };
 
   const openEditImage = (titleId: string, image: GalleryImage) => {
@@ -324,9 +400,10 @@ export default function GalleryEventPage() {
   };
 
   const deleteImage = async (image: GalleryImage) => {
+    const video = mediaKind(image) === "video";
     const ok = await confirm({
-      title: t("gallery.deletePhoto"),
-      message: t("gallery.deletePhotoConfirm"),
+      title: video ? t("gallery.deleteVideo") : t("gallery.deletePhoto"),
+      message: video ? t("gallery.deleteVideoConfirm") : t("gallery.deletePhotoConfirm"),
       confirmLabel: t("common.delete"),
       variant: "destructive",
     });
@@ -473,6 +550,21 @@ export default function GalleryEventPage() {
                     <h3 className="gal-album__title">{album.title}</h3>
                   )}
                   <div className="gal-head__actions">
+                    {album.images.length > 0 ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={zippingId === album.id}
+                        onClick={() => void downloadZip(album)}
+                      >
+                        {zippingId === album.id ? (
+                          <Spinner />
+                        ) : (
+                          <FileArchive className="h-3.5 w-3.5" />
+                        )}
+                        {zippingId === album.id ? t("gallery.downloadingZip") : t("gallery.downloadZip")}
+                      </Button>
+                    ) : null}
                     <Button
                       size="sm"
                       variant="outline"
@@ -500,39 +592,65 @@ export default function GalleryEventPage() {
                   <p className="gal-album__empty">{t("gallery.noPhotos")}</p>
                 ) : (
                   <div className="gal-photos">
-                    {album.images.map((img, index) => (
+                    {album.images.map((img, index) => {
+                      const video = mediaKind(img) === "video";
+                      return (
                       <div key={img.id} className="gal-photo">
                         <button
                           type="button"
                           className="gal-photo__open"
                           onClick={() => setLightbox({ titleId: album.id, index })}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={img.url} alt={img.originalName || album.title} />
+                          {video ? (
+                            <video src={img.url} muted playsInline preload="metadata" />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={img.url} alt={img.originalName || album.title} />
+                          )}
+                          {video ? (
+                            <span className="gal-photo__play" aria-hidden>
+                              <Play className="h-5 w-5" />
+                            </span>
+                          ) : null}
+                          {video ? <span className="gal-photo__kind">{t("gallery.videoBadge")}</span> : null}
                           {img.uploadedByName ? (
                             <span className="gal-photo__by">{img.uploadedByName}</span>
                           ) : null}
+                        </button>
+                        <button
+                          type="button"
+                          className="gal-photo__dl"
+                          aria-label={t("gallery.download")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void downloadOne(img);
+                          }}
+                        >
+                          <Download className="h-3.5 w-3.5" />
                         </button>
                         {img.canDelete ? (
                           <button
                             type="button"
                             className="gal-photo__del"
-                            aria-label={t("gallery.deletePhoto")}
+                            aria-label={video ? t("gallery.deleteVideo") : t("gallery.deletePhoto")}
                             onClick={() => void deleteImage(img)}
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
                         ) : null}
-                        <button
-                          type="button"
-                          className="gal-photo__edit"
-                          aria-label={t("gallery.editPhoto")}
-                          onClick={() => openEditImage(album.id, img)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                        {!video ? (
+                          <button
+                            type="button"
+                            className="gal-photo__edit"
+                            aria-label={t("gallery.editPhoto")}
+                            onClick={() => openEditImage(album.id, img)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        ) : null}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
@@ -550,7 +668,7 @@ export default function GalleryEventPage() {
                   )}
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    accept={GALLERY_ACCEPT}
                     multiple
                     disabled={uploadingId === album.id}
                     onChange={(e) => {
@@ -607,12 +725,22 @@ export default function GalleryEventPage() {
               </button>
             </>
           ) : null}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={currentPhoto.url}
-            alt={currentPhoto.originalName || event?.activityName || ""}
-            onClick={(e) => e.stopPropagation()}
-          />
+          {mediaKind(currentPhoto) === "video" ? (
+            <video
+              src={currentPhoto.url}
+              controls
+              playsInline
+              autoPlay
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={currentPhoto.url}
+              alt={currentPhoto.originalName || event?.activityName || ""}
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
           <p className="gal-lightbox__caption">
             {currentPhoto.uploadedByName
               ? t("gallery.uploadedBy", { name: currentPhoto.uploadedByName })
@@ -621,19 +749,30 @@ export default function GalleryEventPage() {
               ? `  ${lightbox.index + 1} / ${flatPhotos.length}`
               : ""}
           </p>
-          <button
-            type="button"
-            className="gal-lightbox__edit"
-            onClick={(e) => {
-              e.stopPropagation();
-              const titleId = lightbox.titleId;
-              setLightbox(null);
-              openEditImage(titleId, currentPhoto);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-            {t("gallery.editPhoto")}
-          </button>
+          <div className="gal-lightbox__tools" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="gal-lightbox__edit"
+              onClick={() => void downloadOne(currentPhoto)}
+            >
+              <Download className="h-4 w-4" />
+              {t("gallery.download")}
+            </button>
+            {mediaKind(currentPhoto) === "image" ? (
+              <button
+                type="button"
+                className="gal-lightbox__edit"
+                onClick={() => {
+                  const titleId = lightbox.titleId;
+                  setLightbox(null);
+                  openEditImage(titleId, currentPhoto);
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+                {t("gallery.editPhoto")}
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

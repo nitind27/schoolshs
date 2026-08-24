@@ -5,7 +5,7 @@ import { requireSchoolFeature } from "@/lib/school-feature-access";
 import {
   GALLERY_ROLES,
   canDeleteGallery,
-  galleryImagePublicUrl,
+  serializeGalleryMedia,
 } from "@/lib/gallery";
 import { removeGalleryFolder, unlinkGalleryFile } from "@/lib/gallery-upload";
 
@@ -39,15 +39,9 @@ function serializeEvent(
     titles: event.titles.map((t) => ({
       id: t.id,
       title: t.title,
-      images: t.images.map((img) => ({
-        id: img.id,
-        url: galleryImagePublicUrl(img.filePath),
-        originalName: img.originalName,
-        uploadedByName: img.uploadedByName,
-        uploadedById: img.uploadedById,
-        createdAt: img.createdAt,
-        canDelete: canDeleteGallery(role) || img.uploadedById === userId,
-      })),
+      images: t.images.map((img) =>
+        serializeGalleryMedia(img, canDeleteGallery(role) || img.uploadedById === userId),
+      ),
     })),
   };
 }

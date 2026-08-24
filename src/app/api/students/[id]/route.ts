@@ -4,7 +4,7 @@ import { validateStudent, normalizeStudentRow } from "@/lib/validation";
 import { fillStudentGuNames } from "@/lib/gujarati/transliterate-server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { applyDraftDefaults } from "@/lib/student-draft";
-import { syncGrEntryForStudent } from "@/lib/gr-student-sync";
+import { findStudentsByGrNumber, syncGrEntryForStudent } from "@/lib/gr-student-sync";
 import { toStudentUncheckedUpdate } from "@/lib/student-write";
 import { applyStudentPlacement } from "@/lib/student-placement";
 import { deleteStudentCompletely } from "@/lib/student-delete";
@@ -80,6 +80,30 @@ export async function PUT(
     }
 
     const errors = validateStudent(data);
+
+    const nextGr = String(data.grNumber || "").trim();
+    const prevGr = String(existing.grNumber || "").trim();
+    if (nextGr && nextGr !== prevGr) {
+      const others = await findStudentsByGrNumber(session.schoolId, nextGr, id);
+      if (others.length) {
+        return NextResponse.json(
+          {
+            error: `GR ${nextGr} is already used by another student`,
+            code: "DUPLICATE_GR",
+            students: others.map((row) => ({
+              id: row.id,
+              grNumber: row.grNumber,
+              firstName: row.firstName,
+              surname: row.surname,
+              standard: row.standard,
+              section: row.section,
+              status: row.status,
+            })),
+          },
+          { status: 409 },
+        );
+      }
+    }
 
     await assertStudentAccountEmailAvailable(data.email, id);
     const student = await prisma.student.update({

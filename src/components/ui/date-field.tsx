@@ -38,8 +38,8 @@ export type DateFieldProps = {
   name?: string;
 };
 
-const PANEL_MIN_W = 304;
-const PANEL_EST_H = 320;
+const PANEL_W = 268;
+const PANEL_EST_H = 340;
 const PANEL_GAP = 6;
 const VIEWPORT_PAD = 8;
 
@@ -172,6 +172,7 @@ export function DateField({
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value || "");
   const [coords, setCoords] = useState<PanelCoords | null>(null);
+  const [headPick, setHeadPick] = useState<"month" | "year" | null>(null);
   const [view, setView] = useState(() => {
     const base = selected || today;
     return { y: base.getFullYear(), m: base.getMonth() };
@@ -186,7 +187,10 @@ export function DateField({
   }, [value]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setHeadPick(null);
+      return;
+    }
     const base = selected || today;
     setView({ y: base.getFullYear(), m: base.getMonth() });
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -200,8 +204,8 @@ export function DateField({
     const viewportHeight = vv?.height ?? window.innerHeight;
     const viewportTop = vv?.offsetTop ?? 0;
     const viewportLeft = vv?.offsetLeft ?? 0;
-    const maxWidth = Math.max(0, viewportWidth - VIEWPORT_PAD * 2);
-    const width = Math.min(Math.max(rect.width, Math.min(PANEL_MIN_W, maxWidth)), maxWidth);
+    const maxWidth = Math.max(220, viewportWidth - VIEWPORT_PAD * 2);
+    const width = Math.min(PANEL_W, maxWidth);
     const spaceBelow = viewportTop + viewportHeight - rect.bottom - VIEWPORT_PAD;
     const spaceAbove = rect.top - viewportTop - VIEWPORT_PAD;
     const placeTop = spaceBelow < PANEL_EST_H && spaceAbove > spaceBelow;
@@ -248,6 +252,8 @@ export function DateField({
       const target = e.target as Node;
       if (rootRef.current?.contains(target)) return;
       if (panelRef.current?.contains(target)) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest?.("select.shs-dp__select") || el?.tagName === "OPTION") return;
       setOpen(false);
     };
     const onKey = (e: globalThis.KeyboardEvent) => {
@@ -360,9 +366,6 @@ export function DateField({
             aria-label={label || t("dateField.calendar")}
             style={panelStyle}
             onMouseDown={(e) => {
-              // Keep input from blurring when picking days; allow native <select> focus
-              const tag = (e.target as HTMLElement).tagName;
-              if (tag === "SELECT" || tag === "OPTION") return;
               e.preventDefault();
             }}
           >
@@ -371,58 +374,94 @@ export function DateField({
                 type="button"
                 className="shs-dp__nav"
                 aria-label="Previous month"
-                onClick={() =>
+                onClick={() => {
+                  setHeadPick(null);
                   setView((v) => {
                     const m = v.m - 1;
                     return m < 0 ? { y: v.y - 1, m: 11 } : { y: v.y, m };
-                  })
-                }
+                  });
+                }}
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
 
               <div className="shs-dp__selectors">
-                <select
+                <button
+                  type="button"
                   className="shs-dp__select"
-                  value={view.m}
-                  onChange={(e) => setView((v) => ({ ...v, m: Number(e.target.value) }))}
+                  data-open={headPick === "month" ? "true" : "false"}
                   aria-label="Month"
+                  aria-expanded={headPick === "month"}
+                  onClick={() => setHeadPick((cur) => (cur === "month" ? null : "month"))}
                 >
-                  {monthNames.map((name, i) => (
-                    <option key={name} value={i}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                <select
+                  {monthNames[view.m]}
+                </button>
+                <button
+                  type="button"
                   className="shs-dp__select"
-                  value={view.y}
-                  onChange={(e) => setView((v) => ({ ...v, y: Number(e.target.value) }))}
+                  data-open={headPick === "year" ? "true" : "false"}
                   aria-label="Year"
+                  aria-expanded={headPick === "year"}
+                  onClick={() => setHeadPick((cur) => (cur === "year" ? null : "year"))}
                 >
-                  {years.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
+                  {view.y}
+                </button>
               </div>
 
               <button
                 type="button"
                 className="shs-dp__nav"
                 aria-label="Next month"
-                onClick={() =>
+                onClick={() => {
+                  setHeadPick(null);
                   setView((v) => {
                     const m = v.m + 1;
                     return m > 11 ? { y: v.y + 1, m: 0 } : { y: v.y, m };
-                  })
-                }
+                  });
+                }}
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
 
+            {headPick === "month" ? (
+              <div className="shs-dp__pick-grid" role="listbox" aria-label="Month">
+                {monthNames.map((name, i) => (
+                  <button
+                    key={name}
+                    type="button"
+                    role="option"
+                    aria-selected={i === view.m}
+                    data-selected={i === view.m ? "true" : "false"}
+                    onClick={() => {
+                      setView((v) => ({ ...v, m: i }));
+                      setHeadPick(null);
+                    }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            ) : headPick === "year" ? (
+              <div className="shs-dp__year-list" role="listbox" aria-label="Year">
+                {years.map((y) => (
+                  <button
+                    key={y}
+                    type="button"
+                    role="option"
+                    aria-selected={y === view.y}
+                    data-selected={y === view.y ? "true" : "false"}
+                    onClick={() => {
+                      setView((v) => ({ ...v, y }));
+                      setHeadPick(null);
+                    }}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
             <div className="shs-dp__week">
               {weekdays.map((d) => (
                 <div key={d} className="shs-dp__weekday">
@@ -455,6 +494,8 @@ export function DateField({
                 );
               })}
             </div>
+              </>
+            )}
 
             <div className="shs-dp__footer">
               <button

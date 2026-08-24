@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { projectResolve } from "@/lib/project-path";
 
 export const GALLERY_MAX_INPUT = 8 * 1024 * 1024;
+export const GALLERY_MAX_VIDEO = 80 * 1024 * 1024;
 export const GALLERY_MAX_FILES = 20;
 export const GALLERY_ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -13,6 +14,13 @@ export const GALLERY_ALLOWED_TYPES = new Set([
   "image/png",
   "image/webp",
   "image/gif",
+]);
+export const GALLERY_VIDEO_TYPES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-m4v",
+  "video/x-matroska",
 ]);
 
 export async function compressGalleryImage(input: Buffer) {

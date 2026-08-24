@@ -3,10 +3,9 @@ import { writeFile } from "fs/promises";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { requireSchoolFeature } from "@/lib/school-feature-access";
-import { GALLERY_ROLES, canDeleteGalleryImage, galleryImagePublicUrl } from "@/lib/gallery";
+import { GALLERY_ROLES, canDeleteGalleryImage, galleryMediaKind, galleryImagePublicUrl, isGalleryImageFile } from "@/lib/gallery";
 import {
   compressGalleryImage,
-  GALLERY_ALLOWED_TYPES,
   GALLERY_MAX_INPUT,
   galleryFileAbs,
   unlinkGalleryFile,
@@ -26,12 +25,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     });
     if (!image) return NextResponse.json({ error: "Image not found" }, { status: 404 });
 
+    if (galleryMediaKind(image.filePath) === "video") {
+      return NextResponse.json({ error: "Videos cannot be edited" }, { status: 400 });
+    }
+
     const form = await request.formData();
     const file = form.get("file") || form.get("files");
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "Select an image" }, { status: 400 });
     }
-    if (file.type && !GALLERY_ALLOWED_TYPES.has(file.type)) {
+    if (!isGalleryImageFile(file) || (file.type && file.type.startsWith("video/"))) {
       return NextResponse.json({ error: "Use JPG, PNG or WEBP" }, { status: 400 });
     }
     if (file.size > GALLERY_MAX_INPUT * 3) {

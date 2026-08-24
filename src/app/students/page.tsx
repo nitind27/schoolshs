@@ -35,8 +35,10 @@ import {
   FileWarning,
   Layers,
   School,
+  Hash,
 } from "lucide-react";
 import Link from "next/link";
+import { DuplicateGrFinder, type DuplicateGrGroup } from "@/components/students/duplicate-gr-finder";
 import type { Student, SchoolClass } from "@/generated/prisma/client";
 import type { ColumnDef } from "@tanstack/react-table";
 import { GlobalDataTable } from "@/components/ui/global-data-table";
@@ -72,12 +74,14 @@ function StudentRowActions({
   studentId,
   onDeactivate,
   onDelete,
+  onAssignClass,
   compact = false,
   showAutoApply = true,
 }: {
   studentId: string;
   onDeactivate: () => void;
   onDelete: () => void;
+  onAssignClass?: () => void;
   compact?: boolean;
   showAutoApply?: boolean;
 }) {
@@ -167,6 +171,20 @@ function StudentRowActions({
           style={{ top: menuPos.top, left: menuPos.left }}
           className="fixed z-50 min-w-[11.5rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
         >
+          {onAssignClass ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-teal-800 hover:bg-teal-50"
+              onClick={() => {
+                setOpen(false);
+                onAssignClass();
+              }}
+            >
+              <Layers className="h-4 w-4 text-teal-600" />
+              {t("students.assignDivision")}
+            </button>
+          ) : null}
           <Link
             href={`/id-cards?studentId=${studentId}`}
             role="menuitem"
@@ -236,6 +254,9 @@ type Summary = {
   pendingCount?: number;
   standards?: string[];
   byStandard?: Record<string, { total: number; pendingDivision: number }>;
+  duplicateGrGroups?: number;
+  duplicateGrStudents?: number;
+  duplicateGrNumbers?: string[];
 };
 
 function classLabel(student: StudentRow, t: (k: string, p?: Record<string, string>) => string) {
@@ -272,6 +293,43 @@ const PENDING_PILL: Record<PendingReason, { key: string; className: string }> = 
     className: "border-amber-200 bg-amber-50 text-amber-800",
   },
 };
+
+function ClassAssignControl({
+  student,
+  t,
+  onAssign,
+}: {
+  student: StudentRow;
+  t: (key: string, params?: Record<string, string>) => string;
+  onAssign: () => void;
+}) {
+  const missing = !student.classId;
+  const label = classLabel(student, t);
+  if (!missing) {
+    return (
+      <button
+        type="button"
+        onClick={onAssign}
+        className="inline-flex rounded-lg border border-sky-100 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800 hover:border-sky-300"
+        title={t("students.assignDivision")}
+      >
+        {label}
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onAssign}
+      className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+    >
+      {label}
+      <span className="underline decoration-amber-700/60 underline-offset-2">
+        {t("students.setClass")}
+      </span>
+    </button>
+  );
+}
 
 function PendingReasonPills({
   student,
@@ -322,10 +380,13 @@ function StudentsContent() {
   const canAutoApply = has("scholarship_auto_apply");
   const searchParams = useSearchParams();
   const viewMode =
-    searchParams.get("pending") === "1" || searchParams.get("status") === "draft"
-      ? "pending"
-      : "all";
+    searchParams.get("duplicateGr") === "1"
+      ? "duplicates"
+      : searchParams.get("pending") === "1" || searchParams.get("status") === "draft"
+        ? "pending"
+        : "all";
   const isPendingView = viewMode === "pending";
+  const isDuplicateView = viewMode === "duplicates";
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [classes, setClasses] = useState<ClassMeta[]>([]);
   const [total, setTotal] = useState(0);
@@ -346,6 +407,8 @@ function StudentsContent() {
   const [divisionIntent, setDivisionIntent] = useState<"assign" | "admit">("assign");
   const [assigningDivision, setAssigningDivision] = useState(false);
   const [pickClassId, setPickClassId] = useState("");
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGrGroup[]>([]);
+  const [duplicateLoading, setDuplicateLoading] = useState(false);
 
   useEffect(() => {
     const classId = searchParams.get("classId");
@@ -362,14 +425,13 @@ function StudentsContent() {
   }, [searchParams]);
 
   const switchView = useCallback(
-    (mode: "all" | "pending") => {
+    (mode: "all" | "pending" | "duplicates") => {
       const params = new URLSearchParams(searchParams.toString());
       params.delete("status");
-      if (mode === "pending") {
-        params.set("pending", "1");
-      } else {
-        params.delete("pending");
-      }
+      params.delete("pending");
+      params.delete("duplicateGr");
+      if (mode === "pending") params.set("pending", "1");
+      if (mode === "duplicates") params.set("duplicateGr", "1");
       setPage(1);
       setSelected(new Set());
       const q = params.toString();
@@ -417,6 +479,10 @@ function StudentsContent() {
   };
 
   const fetchStudents = useCallback(async () => {
+    if (isDuplicateView) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const params = new URLSearchParams({
       page: String(page),
@@ -464,6 +530,7 @@ function StudentsContent() {
     noClassOnly,
     pendingDivisionOnly,
     isPendingView,
+    isDuplicateView,
   ]);
 
   useEffect(() => {
@@ -472,6 +539,16 @@ function StudentsContent() {
     }, search ? 300 : 0);
     return () => clearTimeout(timer);
   }, [fetchStudents, search]);
+
+  useEffect(() => {
+    if (!isDuplicateView) return;
+    setDuplicateLoading(true);
+    fetch("/api/students/duplicate-grs")
+      .then((r) => r.json())
+      .then((d) => setDuplicateGroups(Array.isArray(d.groups) ? d.groups : []))
+      .catch(() => setDuplicateGroups([]))
+      .finally(() => setDuplicateLoading(false));
+  }, [isDuplicateView]);
 
   const activeFilters = [
     statusFilter,
@@ -484,6 +561,11 @@ function StudentsContent() {
   ].filter(Boolean).length;
 
   const selectedClass = classes.find((c) => c.id === classFilter);
+
+  const duplicateGrSet = useMemo(
+    () => new Set(summary?.duplicateGrNumbers ?? []),
+    [summary?.duplicateGrNumbers],
+  );
 
   const clearFilters = () => {
     setCategoryFilter("");
@@ -586,16 +668,20 @@ function StudentsContent() {
 
   const pickedDivision = divisionClasses.find((c) => c.id === pickClassId) || null;
 
-  const openDivisionModal = (intent: "assign" | "admit" = "assign") => {
+  const openAssignFor = (ids: string[], intent: "assign" | "admit" = "assign") => {
+    setSelected(new Set(ids));
     setDivisionIntent(intent);
     setPickClassId("");
     setDivisionModalOpen(true);
   };
 
+  const openDivisionModal = (intent: "assign" | "admit" = "assign") => {
+    openAssignFor(Array.from(selected), intent);
+  };
+
   const assignDivision = async () => {
     if (!pickedDivision || selected.size === 0) return;
-    const admitDrafts =
-      divisionIntent === "admit" || selectedRows.some((s) => s.status === "draft");
+    const admitDrafts = divisionIntent === "admit";
     setAssigningDivision(true);
     try {
       const res = await fetch("/api/students/assign-division", {
@@ -769,8 +855,18 @@ function StudentsContent() {
                   </p>
                 ) : null}
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[11px] font-semibold text-slate-700">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-md border px-1.5 py-0.5 font-mono text-[11px] font-semibold",
+                      s.grNumber && duplicateGrSet.has(s.grNumber)
+                        ? "border-amber-300 bg-amber-50 text-amber-900"
+                        : "border-slate-200 bg-white text-slate-700",
+                    )}
+                  >
                     GR {s.grNumber || "—"}
+                    {s.grNumber && duplicateGrSet.has(s.grNumber) ? (
+                      <span className="ml-1 text-[9px] font-bold uppercase">2+</span>
+                    ) : null}
                   </span>
                   <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
                     Roll {s.rollNumber || "—"}
@@ -788,9 +884,11 @@ function StudentsContent() {
         accessorFn: (s) => classLabel(s, t),
         cell: ({ row }) => (
           <div className="space-y-1.5">
-            <span className="inline-flex rounded-lg border border-sky-100 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800">
-              {classLabel(row.original, t)}
-            </span>
+            <ClassAssignControl
+              student={row.original}
+              t={t}
+              onAssign={() => openAssignFor([row.original.id])}
+            />
             <div>
               <span
                 className={cn(
@@ -843,18 +941,23 @@ function StudentsContent() {
             showAutoApply={canAutoApply}
             onDeactivate={() => deactivateStudent(row.original.id)}
             onDelete={() => deleteStudent(row.original)}
+            onAssignClass={() => openAssignFor([row.original.id])}
           />
         ),
       },
     ],
-    [selected, students.length, t, canAutoApply],
+    [selected, students.length, t, canAutoApply, duplicateGrSet],
   );
 
   return (
     <PageShell
       title={t("students.title")}
       subtitle={
-        isPendingView ? t("students.pendingWorkSubtitle") : t("students.subtitle")
+        isDuplicateView
+          ? t("students.duplicateGrSubtitle")
+          : isPendingView
+            ? t("students.pendingWorkSubtitle")
+            : t("students.subtitle")
       }
       breadcrumbs={[
         { label: t("nav.dashboard"), href: userRole === "clerk" ? "/clerk" : "/dashboard" },
@@ -963,6 +1066,34 @@ function StudentsContent() {
                 </span>
               ) : null}
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={isDuplicateView}
+              onClick={() => switchView("duplicates")}
+              className={cn(
+                "inline-flex min-h-9 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition",
+                isDuplicateView
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50",
+              )}
+            >
+              <Hash className="h-3.5 w-3.5" />
+              {t("students.duplicateGrTab")}
+              {(summary?.duplicateGrGroups ?? 0) > 0 || (isDuplicateView && duplicateGroups.length > 0) ? (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    isDuplicateView ? "bg-white/20" : "bg-amber-100 text-amber-800",
+                  )}
+                >
+                  {(isDuplicateView
+                    ? duplicateGroups.length
+                    : summary?.duplicateGrGroups ?? 0
+                  ).toLocaleString("en-IN")}
+                </span>
+              ) : null}
+            </button>
           </div>
         </div>
 
@@ -970,6 +1101,24 @@ function StudentsContent() {
           <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-sm text-rose-900">
             {t("students.pendingWorkBanner")}
           </div>
+        ) : null}
+        {!isDuplicateView && (summary?.duplicateGrGroups ?? 0) > 0 ? (
+          <button
+            type="button"
+            onClick={() => switchView("duplicates")}
+            className="flex w-full items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-left text-sm text-amber-950 shadow-sm hover:bg-amber-100"
+          >
+            <Hash className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <span>
+              <span className="font-semibold">{t("students.duplicateGrBannerTitle")}</span>
+              <span className="mt-0.5 block text-xs leading-snug text-amber-900/90">
+                {t("students.duplicateGrBanner", {
+                  students: String(summary?.duplicateGrStudents ?? 0),
+                  groups: String(summary?.duplicateGrGroups ?? 0),
+                })}
+              </span>
+            </span>
+          </button>
         ) : null}
         {/* Colorful summary strip */}
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-blue-100/80 bg-gradient-to-r from-white via-sky-50/40 to-violet-50/30 px-2.5 py-2 shadow-sm">
@@ -1313,13 +1462,17 @@ function StudentsContent() {
             )}
           </div>
 
-          {loading && students.length === 0 ? (
+          {isDuplicateView ? (
+            <div className="px-3 pb-3">
+              <DuplicateGrFinder groups={duplicateGroups} loading={duplicateLoading} />
+            </div>
+          ) : loading && students.length === 0 ? (
             <div className="flex h-40 items-center justify-center lg:hidden">
               <Spinner size="md" />
             </div>
           ) : null}
 
-          {!loading && students.length === 0 ? (
+          {!isDuplicateView && !loading && students.length === 0 ? (
             <div className="px-4 py-14 text-center">
               <Users className="mx-auto mb-2 h-10 w-10 text-slate-300" />
               <p className="text-sm text-slate-500">{t("students.noStudents")}</p>
@@ -1430,9 +1583,11 @@ function StudentsContent() {
                                     </div>
 
                                     <div className="mt-2 flex flex-wrap gap-1.5">
-                                      <span className="inline-flex rounded-lg border border-sky-100 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
-                                        {classLabel(student, t)}
-                                      </span>
+                                      <ClassAssignControl
+                                        student={student}
+                                        t={t}
+                                        onAssign={() => openAssignFor([student.id])}
+                                      />
                                       <span
                                         className={cn(
                                           "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-bold",
@@ -1448,8 +1603,18 @@ function StudentsContent() {
                                     <PendingReasonPills student={student} t={t} />
 
                                     <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2 text-[11px] text-slate-600">
-                                      <span className="font-mono font-semibold text-slate-700">
+                                      <span
+                                        className={cn(
+                                          "font-mono font-semibold",
+                                          student.grNumber && duplicateGrSet.has(student.grNumber)
+                                            ? "text-amber-800"
+                                            : "text-slate-700",
+                                        )}
+                                      >
                                         GR {student.grNumber || "—"}
+                                        {student.grNumber && duplicateGrSet.has(student.grNumber)
+                                          ? " · 2+"
+                                          : ""}
                                       </span>
                                       <span>Roll {student.rollNumber || "—"}</span>
                                       <span className="truncate tabular-nums">
@@ -1468,6 +1633,7 @@ function StudentsContent() {
                                         showAutoApply={canAutoApply}
                                         onDeactivate={() => deactivateStudent(student.id)}
                                         onDelete={() => deleteStudent(student)}
+                                        onAssignClass={() => openAssignFor([student.id])}
                                       />
                                     </div>
                                   </div>

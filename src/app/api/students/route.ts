@@ -5,6 +5,7 @@ import { fillStudentGuNames } from "@/lib/gujarati/transliterate-server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { applyDraftDefaults } from "@/lib/student-draft";
 import { findStudentByGrNumber, syncGrEntryForStudent } from "@/lib/gr-student-sync";
+import { duplicateGrCounts } from "@/lib/duplicate-gr";
 import { genderDbMatchValues } from "@/lib/gender-utils";
 import { toStudentUncheckedCreate, toStudentUncheckedUpdate } from "@/lib/student-write";
 import { applyStudentPlacement } from "@/lib/student-placement";
@@ -220,6 +221,9 @@ export async function GET(request: NextRequest) {
           pendingCount: number;
           standards: string[];
           byStandard: Record<string, { total: number; pendingDivision: number }>;
+          duplicateGrGroups: number;
+          duplicateGrStudents: number;
+          duplicateGrNumbers: string[];
         }
       | undefined;
 
@@ -281,6 +285,7 @@ export async function GET(request: NextRequest) {
           pendingDivision: rest[schoolStandards.length + i] ?? 0,
         };
       });
+      const duplicate = await duplicateGrCounts(session.schoolId);
       summary = {
         total: sumTotal,
         male,
@@ -291,6 +296,9 @@ export async function GET(request: NextRequest) {
         pendingCount,
         standards: schoolStandards,
         byStandard,
+        duplicateGrGroups: duplicate.groupCount,
+        duplicateGrStudents: duplicate.studentCount,
+        duplicateGrNumbers: duplicate.grNumbers,
       };
     }
 
