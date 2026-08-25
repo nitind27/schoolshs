@@ -5,6 +5,24 @@ export const SECONDARY_DIVISIONS = ["A", "B", "C", "D", "E"] as const;
 /** High school standards this portal manages (not only board 10/12). */
 export const MANAGE_STANDARDS = ["9", "10", "11", "12"] as const;
 
+/** Songadh Primary · DISE 24261004403 */
+export const PRIMARY_LOWER_STANDARDS = ["1", "2", "3", "4", "5"] as const;
+
+/** Songadh Upper Primary · DISE 24261004404 */
+export const PRIMARY_UPPER_STANDARDS = ["6", "7", "8"] as const;
+
+/**
+ * Import / class dropdown standards for a school code (or UDISE).
+ * 24261004403 → 1–5 · 24261004404 → 6–8 · 24261004405 → 9–12
+ */
+export function importStandardsForSchoolCode(code?: string | null): string[] {
+  const c = String(code || "").trim();
+  if (c === "24261004403") return [...PRIMARY_LOWER_STANDARDS];
+  if (c === "24261004404") return [...PRIMARY_UPPER_STANDARDS];
+  if (c === "24261004405") return [...MANAGE_STANDARDS];
+  return [...MANAGE_STANDARDS];
+}
+
 export function isManageStandard(standard?: string | null): boolean {
   return (MANAGE_STANDARDS as readonly string[]).includes(String(standard || "").trim());
 }

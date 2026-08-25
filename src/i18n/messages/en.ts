@@ -2095,7 +2095,8 @@ const en = {
     templateFailed: "Could not download template",
     guideYellow: "Yellow header = required (includes GR Number). Teal = optional.",
     guideDate: "Dates: DD/MM/YYYY. Gender / Standard / Category / GR-related lists have dropdowns.",
-    guideStd: "Fill GR Number, Standard, and Section as in the school register. Section can wait if needed.",
+    guideStd:
+      "Standard dropdown matches your school: 24261004403 → 1–5, 24261004404 → 6–8, 24261004405 → 9–12. Section can wait if needed.",
     guideDraft: "Missing bank or address fields still import as Draft.",
     guideForm:
       "Students sheet pe ek student = ek row. Yellow columns required. Dropdown fields use lists. Save file and upload here.",

@@ -11,37 +11,46 @@ import {
   GUJARAT_DISTRICTS,
   RELIGIONS,
 } from "@/lib/constants";
-import { MANAGE_STANDARDS } from "@/lib/class-structure";
+import { MANAGE_STANDARDS, importStandardsForSchoolCode } from "@/lib/class-structure";
 import {
   REQUIRED_IMPORT_FIELDS,
   SAMPLE_IMPORT_ROW,
   type ImportFieldKey,
 } from "@/lib/import/student-import";
 
-const LISTS: Partial<Record<ImportFieldKey, string[]>> = {
-  gender: [...GENDERS],
-  category: [...CATEGORIES],
-  religion: [...RELIGIONS],
-  standard: [...MANAGE_STANDARDS],
-  section: [...CLASS_SECTIONS],
-  isOrphan: ["Yes", "No"],
-  isHosteler: ["Yes", "No"],
-  financialYear: [...FINANCIAL_YEARS],
-  residentType: ["Rural", "Urban"],
-  habitationType: ["Own", "Rent"],
-  maritalStatus: ["Unmarried", "Married"],
-  courseType: [...COURSE_TYPES],
-  bloodGroup: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"],
-  sscSeatPrefix: ["A", "B", "C", "S", "P"],
-  hscSeatPrefix: ["A", "B", "C", "S", "P"],
-  admissionType: ["Regular", "Lateral", "Transfer"],
-  currentYear: [...CURRENT_YEARS],
-  board10th: [...BOARDS],
-  board12th: [...BOARDS],
-  currentDistrict: [...GUJARAT_DISTRICTS],
-  permanentDistrict: [...GUJARAT_DISTRICTS],
-  institutionDistrict: [...GUJARAT_DISTRICTS],
-};
+function listDefs(standards: string[]): Partial<Record<ImportFieldKey, string[]>> {
+  return {
+    gender: [...GENDERS],
+    category: [...CATEGORIES],
+    religion: [...RELIGIONS],
+    standard: standards,
+    section: [...CLASS_SECTIONS],
+    isOrphan: ["Yes", "No"],
+    isHosteler: ["Yes", "No"],
+    financialYear: [...FINANCIAL_YEARS],
+    residentType: ["Rural", "Urban"],
+    habitationType: ["Own", "Rent"],
+    maritalStatus: ["Unmarried", "Married"],
+    courseType: [...COURSE_TYPES],
+    bloodGroup: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"],
+    sscSeatPrefix: ["A", "B", "C", "S", "P"],
+    hscSeatPrefix: ["A", "B", "C", "S", "P"],
+    admissionType: ["Regular", "Lateral", "Transfer"],
+    currentYear: [...CURRENT_YEARS],
+    board10th: [...BOARDS],
+    board12th: [...BOARDS],
+    currentDistrict: [...GUJARAT_DISTRICTS],
+    permanentDistrict: [...GUJARAT_DISTRICTS],
+    institutionDistrict: [...GUJARAT_DISTRICTS],
+  };
+}
+
+function sampleStandard(standards: string[]): string {
+  if (standards.includes("10")) return "10";
+  if (standards.includes("7")) return "7";
+  if (standards.includes("3")) return "3";
+  return standards[Math.floor(standards.length / 2)] || MANAGE_STANDARDS[0];
+}
 
 function colLetter(index: number) {
   let n = index + 1;
@@ -56,9 +65,11 @@ function colLetter(index: number) {
 
 export async function buildStudentImportWorkbook(
   fields: ImportFieldKey[],
-  opts?: { includeSample?: boolean },
+  opts?: { includeSample?: boolean; schoolCode?: string | null },
 ): Promise<Buffer> {
   const includeSample = opts?.includeSample !== false;
+  const standards = importStandardsForSchoolCode(opts?.schoolCode);
+  const LISTS = listDefs(standards);
   const wb = new ExcelJS.Workbook();
   wb.creator = "Codeat Education";
   wb.created = new Date();
@@ -85,7 +96,10 @@ export async function buildStudentImportWorkbook(
     ["1", "Do not change or delete the header row on the Students sheet."],
     ["2", "Yellow columns are required. Fill at least those for each student."],
     ["3", "Dates must be DD/MM/YYYY (example 15/07/2010)."],
-    ["4", "Yellow columns include GR Number and Standard. Section (A/B/C) is optional."],
+    [
+      "4",
+      `Standard dropdown for this school: ${standards.join(", ")}. Section (A/B/C) is optional.`,
+    ],
     ["5", "If Permanent Address is empty, Current Address is copied on import."],
     ["6", "Same Aadhaar number updates the existing student in your school."],
     ["7", "Delete the example row (Aadhaar 123456789012) before upload, or it is skipped automatically."],
@@ -101,10 +115,13 @@ export async function buildStudentImportWorkbook(
   const colGuideRow = notes.length + 4;
   readme.getCell(`A${colGuideRow}`).value = "Columns in this file";
   readme.getCell(`A${colGuideRow}`).font = { bold: true };
+  const sampleStd = sampleStandard(standards);
   fields.forEach((key, i) => {
     const req = REQUIRED_IMPORT_FIELDS.includes(key);
     readme.getCell(colGuideRow + 1 + i, 1).value = req ? `${CSV_HEADER_LABELS[key]} *` : CSV_HEADER_LABELS[key];
-    readme.getCell(colGuideRow + 1 + i, 2).value = String(SAMPLE_IMPORT_ROW[key] ?? "—");
+    const sampleVal =
+      key === "standard" ? sampleStd : String(SAMPLE_IMPORT_ROW[key] ?? "—");
+    readme.getCell(colGuideRow + 1 + i, 2).value = sampleVal;
     if (req) {
       readme.getCell(colGuideRow + 1 + i, 1).font = { color: { argb: "FFB45309" }, bold: true };
     }
@@ -127,7 +144,9 @@ export async function buildStudentImportWorkbook(
   });
 
   if (includeSample) {
-    const sample = ws.addRow(fields.map((k) => SAMPLE_IMPORT_ROW[k] ?? ""));
+    const sample = ws.addRow(
+      fields.map((k) => (k === "standard" ? sampleStd : (SAMPLE_IMPORT_ROW[k] ?? ""))),
+    );
     sample.eachCell((cell) => {
       cell.font = { italic: true, color: { argb: "FF64748B" } };
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
@@ -204,13 +223,22 @@ export async function buildStudentImportWorkbook(
   return Buffer.from(buf);
 }
 
-export function buildStudentImportCsv(fields: ImportFieldKey[], includeSample = true): string {
+export function buildStudentImportCsv(
+  fields: ImportFieldKey[],
+  includeSample = true,
+  schoolCode?: string | null,
+): string {
+  const standards = importStandardsForSchoolCode(schoolCode);
+  const sampleStd = sampleStandard(standards);
   const labels = fields.map((k) => CSV_HEADER_LABELS[k] || k);
   const lines = [labels.map((l) => `"${l.replace(/"/g, '""')}"`).join(",")];
   if (includeSample) {
     lines.push(
       fields
-        .map((k) => `"${String(SAMPLE_IMPORT_ROW[k] ?? "").replace(/"/g, '""')}"`)
+        .map((k) => {
+          const v = k === "standard" ? sampleStd : SAMPLE_IMPORT_ROW[k] ?? "";
+          return `"${String(v).replace(/"/g, '""')}"`;
+        })
         .join(","),
     );
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { resolveImportTemplateFields } from "@/lib/import/student-import";
 import {
   buildStudentImportCsv,
@@ -8,7 +9,7 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireSchoolAuth();
+    const session = await requireSchoolAuth();
     const { searchParams } = new URL(request.url);
     const formatParam = searchParams.get("format");
     const format = formatParam === "csv" ? "csv" : "xlsx";
@@ -20,8 +21,15 @@ export async function GET(request: NextRequest) {
         .filter(Boolean),
     );
 
+    const school = await prisma.school.findUnique({
+      where: { id: session.schoolId },
+      select: { code: true, udiseCode: true },
+    });
+    const schoolCode =
+      school?.code || school?.udiseCode || session.schoolCode || "";
+
     if (format === "csv") {
-      const csv = buildStudentImportCsv(fields, includeSample);
+      const csv = buildStudentImportCsv(fields, includeSample, schoolCode);
       return new NextResponse(csv, {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
@@ -30,7 +38,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const buf = await buildStudentImportWorkbook(fields, { includeSample });
+    const buf = await buildStudentImportWorkbook(fields, {
+      includeSample,
+      schoolCode,
+    });
     return new NextResponse(new Uint8Array(buf), {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
