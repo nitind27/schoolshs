@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
   try {
     await requireSchoolAuth();
     const { searchParams } = new URL(request.url);
-    const format = searchParams.get("format") === "csv" ? "csv" : "xlsx";
+    const formatParam = searchParams.get("format");
+    const format = formatParam === "csv" ? "csv" : "xlsx";
     const includeSample = searchParams.get("sample") !== "0";
     const fields = resolveImportTemplateFields(
       (searchParams.get("fields") || "")

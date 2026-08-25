@@ -1,0 +1,80 @@
+key,label,kind
+firstName,"First Name",text
+middleName,"Middle Name",text
+surname,"Surname",text
+aadhaarName,"Name (As per Aadhaar)",text
+dateOfBirth,"Date of Birth (DD/MM/YYYY)",text
+gender,"Gender",list
+aadhaarNumber,"Aadhaar Number",text
+mobileNumber,"Mobile Number",text
+email,"Email",text
+grNumber,"GR Number",text
+standard,"Standard (Class)",list
+section,"Section",list
+rollNumber,"Roll Number",text
+bloodGroup,"Blood Group",list
+rationCardNumber,"Ration Card Number",text
+panNumber,"PAN Number",text
+apaarId,"APAAR / UPPAR ID",text
+penNumber,"PEN Number (UDISE+)",text
+childUid,"SSG Child UID (18 digit)",text
+motherName,"Mother Name",text
+fatherName,"Father Name",text
+motherAadhaarNumber,"Mother Aadhaar Number",text
+fatherAadhaarNumber,"Father Aadhaar Number",text
+guardianName,"Guardian Name",text
+category,"Category (SC/ST/OBC/SEBC/EWS/Open)",list
+caste,"Caste",text
+religion,"Religion",list
+maritalStatus,"Marital Status",list
+parentOccupation,"Parent Occupation",text
+isOrphan,"Is Orphan (Yes/No)",list
+annualFamilyIncome,"Annual Family Income",text
+familySize,"Family Size",text
+currentAddress,"Current Address",text
+currentDistrict,"Current District",list
+currentCity,"Current City",text
+currentPincode,"Current Pincode",text
+permanentAddress,"Permanent Address",text
+permanentDistrict,"Permanent District",list
+permanentCity,"Permanent City",text
+permanentPincode,"Permanent Pincode",text
+habitationType,"Habitation Type (Own/Rent)",list
+residentType,"Resident Type (Rural/Urban)",list
+isHosteler,"Is Hosteler (Yes/No)",list
+hostelType,"Hostel Type",text
+hostelName,"Hostel Name",text
+scholarshipScheme,"Scholarship Scheme",text
+financialYear,"Financial Year",list
+courseType,"Course Type",list
+courseName,"Course Name",text
+institutionDistrict,"Institution District",list
+institutionName,"Institution Name",text
+currentYear,"Current Year",list
+admissionType,"Admission Type",list
+startDate,"Admission / Course Start Date",text
+completionDate,"Course Completion Date",text
+sscSeatPrefix,"10th Seat Prefix (A/B/C/S/P)",list
+sscSeatNumber,"10th Seat Number",text
+board10th,"10th Board",list
+percentage10th,"10th Percentage",text
+year10th,"10th Year",text
+hscSeatPrefix,"12th Seat Prefix (A/B/C/S/P)",list
+hscSeatNumber,"12th Seat Number",text
+board12th,"12th Board",list
+percentage12th,"12th Percentage",text
+year12th,"12th Year",text
+previousQualification,"Previous Qualification",text
+bankName,"Bank Name",text
+branchName,"Branch Name",text
+accountNumber,"Account Number",text
+ifscCode,"IFSC Code",text
+accountHolderName,"Account Holder Name",text
+idCardValidUpto,"ID Card Valid Upto (DD/MM/YYYY)",text
+firstNameGu,"First Name (Gujarati)",text
+middleNameGu,"Middle Name (Gujarati)",text
+surnameGu,"Surname (Gujarati)",text
+aadhaarNameGu,"Aadhaar Name (Gujarati)",text
+motherNameGu,"Mother Name (Gujarati)",text
+fatherNameGu,"Father Name (Gujarati)",text
+guardianNameGu,"Guardian Name (Gujarati)",text

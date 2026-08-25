@@ -1098,7 +1098,7 @@ function StudentsContent() {
         </div>
 
         {isPendingView ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-sm text-rose-900">
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">
             {t("students.pendingWorkBanner")}
           </div>
         ) : null}
@@ -1106,12 +1106,13 @@ function StudentsContent() {
           <button
             type="button"
             onClick={() => switchView("duplicates")}
-            className="flex w-full items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-left text-sm text-amber-950 shadow-sm hover:bg-amber-100"
+            className="flex w-full items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left text-xs text-amber-950 hover:bg-amber-100"
           >
-            <Hash className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            <span>
+            <Hash className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+            <span className="min-w-0 truncate">
               <span className="font-semibold">{t("students.duplicateGrBannerTitle")}</span>
-              <span className="mt-0.5 block text-xs leading-snug text-amber-900/90">
+              <span className="text-amber-800/80">
+                {" — "}
                 {t("students.duplicateGrBanner", {
                   students: String(summary?.duplicateGrStudents ?? 0),
                   groups: String(summary?.duplicateGrGroups ?? 0),
@@ -1120,350 +1121,279 @@ function StudentsContent() {
             </span>
           </button>
         ) : null}
-        {/* Colorful summary strip */}
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-blue-100/80 bg-gradient-to-r from-white via-sky-50/40 to-violet-50/30 px-2.5 py-2 shadow-sm">
-          {[
-            {
-              key: "total",
-              label: t("students.statTotal"),
-              value: summary?.total ?? total,
-              active:
-                !genderFilter &&
-                !noClassOnly &&
-                !pendingDivisionOnly &&
-                !classFilter &&
-                !standardFilter &&
-                !statusFilter &&
-                viewMode === "all",
-              onClick: () => {
-                if (isPendingView) switchView("all");
-                else clearFilters();
-              },
-              idle: "border-indigo-100 bg-indigo-50/80 text-indigo-950 hover:bg-indigo-100",
-              activeCls: "border-transparent bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-200/60",
-              labelIdle: "text-indigo-600",
-              labelActive: "text-indigo-100",
-            },
-            {
-              key: "boys",
-              label: t("students.statBoys"),
-              value: summary?.male ?? "—",
-              active: genderFilter === "Male",
-              onClick: () => {
-                setGenderFilter((g) => (g === "Male" ? "" : "Male"));
-                setNoClassOnly(false);
-                setPage(1);
-              },
-              idle: "border-sky-100 bg-sky-50/80 text-sky-950 hover:bg-sky-100",
-              activeCls: "border-transparent bg-gradient-to-br from-sky-500 to-cyan-600 text-white shadow-md shadow-sky-200/60",
-              labelIdle: "text-sky-600",
-              labelActive: "text-sky-100",
-            },
-            {
-              key: "girls",
-              label: t("students.statGirls"),
-              value: summary?.female ?? "—",
-              active: genderFilter === "Female",
-              onClick: () => {
-                setGenderFilter((g) => (g === "Female" ? "" : "Female"));
-                setNoClassOnly(false);
-                setPage(1);
-              },
-              idle: "border-rose-100 bg-rose-50/80 text-rose-950 hover:bg-rose-100",
-              activeCls: "border-transparent bg-gradient-to-br from-rose-500 to-pink-600 text-white shadow-md shadow-rose-200/60",
-              labelIdle: "text-rose-600",
-              labelActive: "text-rose-100",
-            },
-            {
-              key: "noclass",
-              label: t("students.statNoClass"),
-              value: summary?.noClass ?? "—",
-              active: noClassOnly,
-              onClick: () => {
-                setNoClassOnly((v) => !v);
-                setClassFilter("");
-                setStandardFilter("");
-                setPendingDivisionOnly(false);
-                setPage(1);
-              },
-              idle: "border-amber-100 bg-amber-50/80 text-amber-950 hover:bg-amber-100",
-              activeCls: "border-transparent bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-200/60",
-              labelIdle: "text-amber-700",
-              labelActive: "text-amber-100",
-            },
-            {
-              key: "pending",
-              label: t("students.statPending"),
-              value: summary?.pendingCount ?? summary?.draftCount ?? 0,
-              active: isPendingView,
-              onClick: () => switchView("pending"),
-              idle: "border-rose-100 bg-rose-50/80 text-rose-950 hover:bg-rose-100",
-              activeCls:
-                "border-transparent bg-gradient-to-br from-rose-500 to-orange-500 text-white shadow-md shadow-rose-200/60",
-              labelIdle: "text-rose-700",
-              labelActive: "text-rose-100",
-            },
-          ].map((s) => (
-            <button
-              key={s.key}
-              type="button"
-              onClick={s.onClick}
-              className={cn(
-                "flex min-h-14 min-w-[7.5rem] flex-1 cursor-pointer items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left transition-all sm:flex-none",
-                s.active ? s.activeCls : s.idle,
-              )}
-            >
-              <span className={cn("text-[11px] font-semibold", s.active ? s.labelActive : s.labelIdle)}>
-                {s.label}
-              </span>
-              <span className="text-base font-bold tabular-nums">
-                {typeof s.value === "number" ? s.value.toLocaleString("en-IN") : s.value}
-              </span>
-            </button>
-          ))}
-          <div className="ml-auto hidden items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-800 sm:flex">
-            <span className="font-bold text-emerald-700 tabular-nums">
-              {total.toLocaleString("en-IN")}
-            </span>
-            {t("students.statFiltered")}
-          </div>
-        </div>
 
-        {standardOptions.length > 0 ? (
-        <div
-          className={cn(
-            "grid gap-2",
-            standardOptions.length <= 2
-              ? "grid-cols-2"
-              : standardOptions.length === 3
-                ? "grid-cols-3"
-                : "grid-cols-2 sm:grid-cols-4",
-          )}
-        >
-            {standardOptions.map((std) => {
-              const meta = summary?.byStandard?.[std];
-              const count = countForStandard(std);
-              const pending = meta?.pendingDivision ?? 0;
-              const active = standardFilter === std && !noClassOnly;
-              return (
-                <button
-                  key={std}
-                  type="button"
-                  onClick={() => {
-                    setStandardFilter(std);
-                    setClassFilter("");
+        {!isDuplicateView ? (
+          <Card className="sticky top-0 z-20 overflow-hidden rounded-xl border-slate-200/80 shadow-sm">
+            {/* Compact stats */}
+            <div className="flex flex-wrap items-center gap-1 border-b border-slate-100 bg-slate-50/80 px-2 py-1.5">
+              {[
+                {
+                  key: "total",
+                  label: t("students.statTotal"),
+                  value: summary?.total ?? total,
+                  active:
+                    !genderFilter &&
+                    !noClassOnly &&
+                    !pendingDivisionOnly &&
+                    !classFilter &&
+                    !standardFilter &&
+                    !statusFilter &&
+                    viewMode === "all",
+                  onClick: () => {
+                    if (isPendingView) switchView("all");
+                    else clearFilters();
+                  },
+                  tone: "bg-indigo-50 text-indigo-800 border-indigo-100",
+                  activeTone: "bg-indigo-600 text-white border-indigo-600",
+                },
+                {
+                  key: "boys",
+                  label: t("students.statBoys"),
+                  value: summary?.male ?? "—",
+                  active: genderFilter === "Male",
+                  onClick: () => {
+                    setGenderFilter((g) => (g === "Male" ? "" : "Male"));
                     setNoClassOnly(false);
+                    setPage(1);
+                  },
+                  tone: "bg-sky-50 text-sky-800 border-sky-100",
+                  activeTone: "bg-sky-600 text-white border-sky-600",
+                },
+                {
+                  key: "girls",
+                  label: t("students.statGirls"),
+                  value: summary?.female ?? "—",
+                  active: genderFilter === "Female",
+                  onClick: () => {
+                    setGenderFilter((g) => (g === "Female" ? "" : "Female"));
+                    setNoClassOnly(false);
+                    setPage(1);
+                  },
+                  tone: "bg-rose-50 text-rose-800 border-rose-100",
+                  activeTone: "bg-rose-600 text-white border-rose-600",
+                },
+                {
+                  key: "noclass",
+                  label: t("students.statNoClass"),
+                  value: summary?.noClass ?? "—",
+                  active: noClassOnly,
+                  onClick: () => {
+                    setNoClassOnly((v) => !v);
+                    setClassFilter("");
+                    setStandardFilter("");
                     setPendingDivisionOnly(false);
                     setPage(1);
-                    setSelected(new Set());
-                  }}
+                  },
+                  tone: "bg-amber-50 text-amber-800 border-amber-100",
+                  activeTone: "bg-amber-500 text-white border-amber-500",
+                },
+                {
+                  key: "pending",
+                  label: t("students.statPending"),
+                  value: summary?.pendingCount ?? summary?.draftCount ?? 0,
+                  active: isPendingView,
+                  onClick: () => switchView("pending"),
+                  tone: "bg-orange-50 text-orange-800 border-orange-100",
+                  activeTone: "bg-orange-500 text-white border-orange-500",
+                },
+              ].map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={s.onClick}
                   className={cn(
-                    "rounded-2xl border px-3 py-3 text-left transition",
-                    active
-                      ? "border-teal-500 bg-teal-50"
-                      : "border-slate-200 bg-white hover:border-teal-200 hover:bg-teal-50/40",
+                    "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold transition",
+                    s.active ? s.activeTone : s.tone,
                   )}
                 >
-                  <p className="text-xs font-bold uppercase tracking-wide text-teal-800">
-                    {t("students.stdShort", { standard: std })}
-                  </p>
-                  <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
-                    {count.toLocaleString("en-IN")}
-                  </p>
-                  <p className="mt-0.5 text-[11px] font-medium text-slate-500">
-                    {t("students.stdBoardStudents", { count: String(count) })}
-                  </p>
-                  {pending > 0 ? (
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setStandardFilter(std);
-                        setClassFilter("");
-                        setNoClassOnly(false);
-                        setPendingDivisionOnly(true);
-                        setPage(1);
-                        setSelected(new Set());
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setStandardFilter(std);
-                          setClassFilter("");
-                          setNoClassOnly(false);
-                          setPendingDivisionOnly(true);
-                          setPage(1);
-                        }
-                      }}
-                      className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800"
-                    >
-                      {t("students.stdBoardPending", { count: String(pending) })}
-                    </span>
-                  ) : (
-                    <span className="mt-2 inline-block text-[10px] font-semibold text-slate-400">
-                      {t("students.allInStandard")}
-                    </span>
-                  )}
+                  <span className="opacity-80">{s.label}</span>
+                  <span className="tabular-nums">
+                    {typeof s.value === "number" ? s.value.toLocaleString("en-IN") : s.value}
+                  </span>
                 </button>
-              );
-            })}
-          </div>
-        ) : null}
-
-        <Card className="overflow-hidden rounded-2xl border-slate-200/80 shadow-sm">
-          <div className="border-b border-slate-100 bg-white p-3 sm:p-4">
-            {/* Search + clear */}
-            <div className="flex gap-2">
-              <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  placeholder={t("students.searchPlaceholder")}
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                />
-              </div>
-              {(activeFilters > 0 || search) && (
-                <Button variant="ghost" size="sm" className="h-10 shrink-0 px-3" onClick={clearFilters}>
-                  <X className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t("students.clear")}</span>
-                </Button>
-              )}
+              ))}
+              <span className="ml-auto hidden text-[11px] font-medium text-slate-500 sm:inline">
+                <span className="font-bold tabular-nums text-slate-700">
+                  {total.toLocaleString("en-IN")}
+                </span>{" "}
+                {t("students.statFiltered")}
+              </span>
             </div>
 
-            {/* Standard pills — few buttons only */}
-            {standardOptions.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStandardFilter("");
-                    setClassFilter("");
-                    setNoClassOnly(false);
-                    setPendingDivisionOnly(false);
-                    setPage(1);
-                  }}
-                  className={cn(
-                    "min-h-9 cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold transition min-[380px]:px-3 min-[380px]:text-xs",
-                    !standardFilter && !noClassOnly
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm shadow-blue-200"
-                      : "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100",
-                  )}
-                >
-                  {t("students.allStandards")}
-                  {summary?.total
-                    ? ` (${summary.total.toLocaleString("en-IN")})`
-                    : ""}
-                </button>
-                {standardOptions.map((std) => (
+            <div className="space-y-2 p-2.5 sm:p-3">
+              {/* Search */}
+              <div className="flex gap-2">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                  <input
+                    placeholder={t("students.searchPlaceholder")}
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                  />
+                </div>
+                {(activeFilters > 0 || search) && (
+                  <Button variant="ghost" size="sm" className="h-9 shrink-0 px-2.5" onClick={clearFilters}>
+                    <X className="h-4 w-4" />
+                    <span className="hidden sm:inline">{t("students.clear")}</span>
+                  </Button>
+                )}
+              </div>
+
+              {/* Standard + division chips (replaces big std cards) */}
+              {standardOptions.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1">
                   <button
-                    key={std}
                     type="button"
                     onClick={() => {
-                      setStandardFilter(std);
+                      setStandardFilter("");
                       setClassFilter("");
                       setNoClassOnly(false);
                       setPendingDivisionOnly(false);
                       setPage(1);
+                      setSelected(new Set());
                     }}
                     className={cn(
-                      "min-h-9 cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold transition min-[380px]:px-3 min-[380px]:text-xs",
-                      standardFilter === std && !pendingDivisionOnly
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm shadow-blue-200"
-                        : "bg-slate-50 text-slate-600 hover:bg-sky-50 hover:text-sky-700 border border-slate-200 hover:border-sky-200",
+                      "inline-flex h-7 items-center rounded-md px-2 text-[11px] font-semibold transition",
+                      !standardFilter && !noClassOnly
+                        ? "bg-teal-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200",
                     )}
                   >
-                    {t("students.stdShort", { standard: std })}
-                    {` (${countForStandard(std).toLocaleString("en-IN")})`}
+                    {t("students.allStandards")}
+                    {summary?.total != null
+                      ? ` · ${summary.total.toLocaleString("en-IN")}`
+                      : ""}
                   </button>
-                ))}
-                {standardFilter ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPendingDivisionOnly((v) => !v);
-                      setClassFilter("");
-                      setNoClassOnly(false);
-                      setPage(1);
-                    }}
-                    className={cn(
-                      "min-h-9 cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold transition min-[380px]:px-3 min-[380px]:text-xs",
-                      pendingDivisionOnly
-                        ? "bg-amber-500 text-white shadow-sm"
-                        : "bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-100",
-                    )}
-                  >
-                    {t("students.pendingDivision")}
-                  </button>
-                ) : null}
+                  {standardOptions.map((std) => {
+                    const count = countForStandard(std);
+                    const pending = summary?.byStandard?.[std]?.pendingDivision ?? 0;
+                    const active = standardFilter === std && !noClassOnly;
+                    return (
+                      <div key={std} className="inline-flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStandardFilter(std);
+                            setClassFilter("");
+                            setNoClassOnly(false);
+                            setPendingDivisionOnly(false);
+                            setPage(1);
+                            setSelected(new Set());
+                          }}
+                          className={cn(
+                            "inline-flex h-7 items-center rounded-md px-2 text-[11px] font-semibold transition",
+                            active && !pendingDivisionOnly
+                              ? "bg-teal-600 text-white"
+                              : "bg-teal-50 text-teal-800 hover:bg-teal-100",
+                          )}
+                        >
+                          {t("students.stdShort", { standard: std })}
+                          <span className="ml-1 tabular-nums opacity-90">
+                            {count.toLocaleString("en-IN")}
+                          </span>
+                        </button>
+                        {pending > 0 ? (
+                          <button
+                            type="button"
+                            title={t("students.stdBoardPending", { count: String(pending) })}
+                            onClick={() => {
+                              setStandardFilter(std);
+                              setClassFilter("");
+                              setNoClassOnly(false);
+                              setPendingDivisionOnly(true);
+                              setPage(1);
+                              setSelected(new Set());
+                            }}
+                            className={cn(
+                              "inline-flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 text-[10px] font-bold transition",
+                              standardFilter === std && pendingDivisionOnly
+                                ? "bg-amber-500 text-white"
+                                : "bg-amber-100 text-amber-800 hover:bg-amber-200",
+                            )}
+                          >
+                            {pending}
+                          </button>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {/* Filters in one row */}
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                <Select
+                  label={t("students.filterByClass")}
+                  emptyLabel={t("students.allClasses")}
+                  options={classesForFilter.map((c) => ({
+                    value: c.id,
+                    label: `${c.name} (${c._count?.students ?? 0})`,
+                  }))}
+                  value={classFilter}
+                  onChange={(e) => applyClassFilter(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <Select
+                  label={t("students.filterByGender")}
+                  emptyLabel={t("students.allGenders")}
+                  options={GENDERS.map((g) => ({ value: g, label: t(`gender.${g}`) }))}
+                  value={genderFilter}
+                  onChange={(e) => {
+                    setGenderFilter(e.target.value);
+                    setNoClassOnly(false);
+                    setPage(1);
+                  }}
+                  className="h-8 text-xs"
+                />
+                <Select
+                  label={t("students.filterByCategory")}
+                  emptyLabel={t("students.allCategories")}
+                  options={CATEGORIES.map((c) => ({ value: c, label: t(`category.${c}`) }))}
+                  value={categoryFilter}
+                  onChange={(e) => {
+                    setCategoryFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="h-8 text-xs"
+                />
+                <Select
+                  label={t("students.filterByStatus")}
+                  emptyLabel={t("students.allStatuses")}
+                  options={statusFilterOptions}
+                  value={statusFilter}
+                  disabled={isPendingView}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="h-8 text-xs"
+                />
               </div>
-            )}
 
-            {/* Compact filters grid */}
-            <div className="mt-3 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:grid-cols-4">
-              <Select
-                label={t("students.filterByClass")}
-                emptyLabel={t("students.allClasses")}
-                options={classesForFilter.map((c) => ({
-                  value: c.id,
-                  label: `${c.name} (${c._count?.students ?? 0})`,
-                }))}
-                value={classFilter}
-                onChange={(e) => applyClassFilter(e.target.value)}
-              />
-              <Select
-                label={t("students.filterByGender")}
-                emptyLabel={t("students.allGenders")}
-                options={GENDERS.map((g) => ({ value: g, label: t(`gender.${g}`) }))}
-                value={genderFilter}
-                onChange={(e) => {
-                  setGenderFilter(e.target.value);
-                  setNoClassOnly(false);
-                  setPage(1);
-                }}
-              />
-              <Select
-                label={t("students.filterByCategory")}
-                emptyLabel={t("students.allCategories")}
-                options={CATEGORIES.map((c) => ({ value: c, label: t(`category.${c}`) }))}
-                value={categoryFilter}
-                onChange={(e) => {
-                  setCategoryFilter(e.target.value);
-                  setPage(1);
-                }}
-              />
-              <Select
-                label={t("students.filterByStatus")}
-                emptyLabel={t("students.allStatuses")}
-                options={statusFilterOptions}
-                value={statusFilter}
-                disabled={isPendingView}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-              />
+              {(activeFilters > 0 || search) ? (
+                <p className="text-[11px] text-slate-500">
+                  {t("students.showingRange", {
+                    from: total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1,
+                    to: Math.min(page * PAGE_SIZE, total),
+                    total,
+                  })}
+                  {selectedClass ? ` · ${selectedClass.name}` : ""}
+                  {standardFilter && !selectedClass
+                    ? ` · ${t("students.stdShort", { standard: standardFilter })}`
+                    : ""}
+                </p>
+              ) : null}
             </div>
+          </Card>
+        ) : null}
 
-            {(activeFilters > 0 || search) && (
-              <p className="mt-2.5 text-xs text-slate-500">
-                {t("students.showingRange", {
-                  from: total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1,
-                  to: Math.min(page * PAGE_SIZE, total),
-                  total,
-                })}
-                {selectedClass ? ` · ${selectedClass.name}` : ""}
-              </p>
-            )}
-          </div>
-
+        <Card className="overflow-hidden rounded-xl border-slate-200/80 shadow-sm">
           {isDuplicateView ? (
-            <div className="px-3 pb-3">
+            <div className="p-2.5 sm:p-3">
               <DuplicateGrFinder groups={duplicateGroups} loading={duplicateLoading} />
             </div>
           ) : loading && students.length === 0 ? (
@@ -1486,7 +1416,7 @@ function StudentsContent() {
                 </Link>
               )}
             </div>
-          ) : (
+          ) : !isDuplicateView ? (
             <>
               {/* Desktop table */}
               <div className="hidden lg:block">
@@ -1656,7 +1586,7 @@ function StudentsContent() {
                 </>
               )}
             </>
-          )}
+          ) : null}
         </Card>
       </div>
 

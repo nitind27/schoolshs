@@ -5,13 +5,12 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
   Copy,
   Eye,
-  Hash,
   Pencil,
   Search,
-  Users,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import {
@@ -48,11 +47,15 @@ export type DuplicateGrGroup = {
 };
 
 function classText(s: DuplicateGrStudent) {
-  if (s.schoolClass?.name) return s.schoolClass.name;
+  if (s.schoolClass?.name) return s.schoolClass.name.replace(/^Class\s+/i, "");
   const std = String(s.standard || s.schoolClass?.standard || "").trim();
   const sec = String(s.section || s.schoolClass?.section || "").trim();
   if (std && sec) return `${std}-${sec}`;
   return std || "—";
+}
+
+function studentName(s: DuplicateGrStudent) {
+  return studentFullNameGu(s) || studentShortNameGu(s) || "—";
 }
 
 export function DuplicateGrFinder({
@@ -64,6 +67,7 @@ export function DuplicateGrFinder({
 }) {
   const t = useT();
   const [query, setQuery] = useState("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -72,7 +76,7 @@ export function DuplicateGrFinder({
       .map((group) => {
         const grMatch = group.grNumber.toLowerCase().includes(q);
         const students = group.students.filter((s) => {
-          const name = (studentFullNameGu(s) || studentShortNameGu(s) || "").toLowerCase();
+          const name = studentName(s).toLowerCase();
           const father = studentDisplayFatherName(s).toLowerCase();
           return name.includes(q) || father.includes(q) || classText(s).toLowerCase().includes(q);
         });
@@ -83,6 +87,11 @@ export function DuplicateGrFinder({
       .filter((g): g is DuplicateGrGroup => Boolean(g));
   }, [groups, query]);
 
+  const totalStudents = useMemo(
+    () => filtered.reduce((n, g) => n + g.count, 0),
+    [filtered],
+  );
+
   const copyGr = async (gr: string) => {
     try {
       await navigator.clipboard.writeText(gr);
@@ -92,9 +101,13 @@ export function DuplicateGrFinder({
     }
   };
 
+  const toggleGroup = (gr: string) => {
+    setCollapsed((prev) => ({ ...prev, [gr]: !prev[gr] }));
+  };
+
   if (loading) {
     return (
-      <div className="rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-8 text-center text-sm text-amber-900">
+      <div className="rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-6 text-center text-sm text-amber-900">
         {t("common.loading")}
       </div>
     );
@@ -102,124 +115,181 @@ export function DuplicateGrFinder({
 
   if (!groups.length) {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-6 text-sm text-emerald-900">
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-4 text-sm text-emerald-900">
         {t("students.duplicateGrEmpty")}
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3">
-        <div className="flex items-start gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">
-            <Hash className="h-4 w-4" />
-          </span>
+    <div className="overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm">
+      <div className="sticky top-0 z-10 border-b border-amber-100 bg-amber-50/95 px-3 py-2.5 backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-amber-950">{t("students.duplicateGrTitle")}</p>
-            <p className="mt-0.5 text-xs leading-snug text-amber-900/90">{t("students.duplicateGrSubtitle")}</p>
+            <p className="text-sm font-semibold text-amber-950">{t("students.duplicateGrTitle")}</p>
+            <p className="text-[11px] text-amber-800/80">
+              {t("students.duplicateGrSummary", {
+                groups: String(filtered.length),
+                students: String(totalStudents),
+              })}
+            </p>
           </div>
         </div>
-        <div className="relative mt-3">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-700/70" />
+        <div className="relative mt-2">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-amber-700/60" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("students.duplicateGrSearch")}
-            className="h-10 border-amber-200 bg-white pl-9"
+            className="h-8 border-amber-200 bg-white pl-8 text-sm"
           />
         </div>
       </div>
 
       {!filtered.length ? (
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-600">
+        <div className="px-3 py-8 text-center text-sm text-slate-500">
           {t("students.duplicateGrNoMatch")}
         </div>
       ) : (
-        filtered.map((group) => (
-          <section
-            key={group.grNumber}
-            className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm"
-          >
-            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-100 bg-amber-50/80 px-3.5 py-2.5">
-              <div className="flex min-w-0 items-center gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-                <p className="font-mono text-base font-bold tracking-wide text-amber-950">
-                  GR {group.grNumber}
-                </p>
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-600 px-2 py-0.5 text-[11px] font-bold text-white">
-                  <Users className="h-3 w-3" />
-                  {t("students.duplicateGrCount", { count: String(group.count) })}
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1 border-amber-200 bg-white text-xs text-amber-900"
-                onClick={() => void copyGr(group.grNumber)}
-              >
-                <Copy className="h-3.5 w-3.5" />
-                {group.grNumber}
-              </Button>
-            </header>
-            <div className="grid gap-2 p-3 sm:grid-cols-2">
-              {group.students.map((s) => {
-                const name = studentFullNameGu(s) || studentShortNameGu(s) || "—";
-                const father = studentDisplayFatherName(s);
-                return (
-                  <article
-                    key={s.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50/70 p-3"
+        <div className="max-h-[min(70vh,720px)] overflow-y-auto">
+          {filtered.map((group) => {
+            const isClosed = Boolean(collapsed[group.grNumber]);
+            return (
+              <section key={group.grNumber} className="border-b border-slate-100 last:border-b-0">
+                <header className="sticky top-0 z-[1] flex items-center gap-1.5 border-b border-amber-100/80 bg-amber-50/90 px-2 py-1.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.grNumber)}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-amber-800 hover:bg-amber-100"
+                    aria-expanded={!isClosed}
                   >
-                    <p className="text-sm font-semibold leading-snug text-slate-900">{name}</p>
-                    {father ? (
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {t("fields.fatherName")}: {father}
-                      </p>
-                    ) : null}
-                    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-                      <span className="rounded-md border border-sky-100 bg-sky-50 px-1.5 py-0.5 font-semibold text-sky-800">
-                        {classText(s)}
-                      </span>
-                      {s.rollNumber ? (
-                        <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-slate-600">
-                          Roll {s.rollNumber}
-                        </span>
-                      ) : null}
-                      {s.status ? (
-                        <span
-                          className={cn(
-                            "rounded-md border px-1.5 py-0.5 font-semibold capitalize",
-                            s.status === "draft"
-                              ? "border-violet-200 bg-violet-50 text-violet-800"
-                              : "border-slate-200 bg-white text-slate-600",
-                          )}
-                        >
-                          {s.status}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-2.5 flex flex-wrap gap-1.5">
-                      <Link href={`/students/${s.id}/edit`}>
-                        <Button size="sm" className="h-8 gap-1 px-2.5 text-xs">
-                          <Pencil className="h-3.5 w-3.5" />
-                          {t("students.duplicateGrEdit")}
-                        </Button>
-                      </Link>
-                      <Link href={`/students/${s.id}`}>
-                        <Button size="sm" variant="outline" className="h-8 gap-1 px-2.5 text-xs">
-                          <Eye className="h-3.5 w-3.5" />
-                          {t("common.view")}
-                        </Button>
-                      </Link>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-        ))
+                    {isClosed ? (
+                      <ChevronRight className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.grNumber)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <span className="font-mono text-sm font-bold text-amber-950">
+                      GR {group.grNumber}
+                    </span>
+                    <span className="ml-2 inline-flex rounded bg-amber-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                      {group.count}
+                    </span>
+                  </button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-[11px] text-amber-900"
+                    onClick={() => void copyGr(group.grNumber)}
+                    title={t("students.duplicateGrCopied")}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Copy</span>
+                  </Button>
+                </header>
+
+                {!isClosed ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[520px] border-collapse text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50/80 text-[10px] uppercase tracking-wide text-slate-500">
+                          <th className="px-2 py-1.5 font-semibold">#</th>
+                          <th className="px-2 py-1.5 font-semibold">{t("fields.firstName")}</th>
+                          <th className="hidden px-2 py-1.5 font-semibold sm:table-cell">
+                            {t("fields.fatherName")}
+                          </th>
+                          <th className="px-2 py-1.5 font-semibold">{t("fields.standard")}</th>
+                          <th className="px-2 py-1.5 font-semibold">{t("fields.rollNumber")}</th>
+                          <th className="px-2 py-1.5 font-semibold">{t("common.status")}</th>
+                          <th className="px-2 py-1.5 text-right font-semibold">{t("common.actions")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.students.map((s, idx) => {
+                          const name = studentName(s);
+                          const father = studentDisplayFatherName(s);
+                          return (
+                            <tr
+                              key={s.id}
+                              className="border-b border-slate-50 hover:bg-amber-50/40"
+                            >
+                              <td className="px-2 py-1.5 align-middle text-xs text-slate-400">
+                                {idx + 1}
+                              </td>
+                              <td className="max-w-[180px] px-2 py-1.5 align-middle">
+                                <p className="truncate text-[13px] font-medium leading-tight text-slate-900">
+                                  {name}
+                                </p>
+                                {father ? (
+                                  <p className="truncate text-[10px] text-slate-500 sm:hidden">
+                                    {father}
+                                  </p>
+                                ) : null}
+                              </td>
+                              <td className="hidden max-w-[140px] truncate px-2 py-1.5 align-middle text-xs text-slate-600 sm:table-cell">
+                                {father || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-2 py-1.5 align-middle">
+                                <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-800">
+                                  {classText(s)}
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-2 py-1.5 align-middle font-mono text-xs text-slate-600">
+                                {s.rollNumber || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-2 py-1.5 align-middle">
+                                {s.status ? (
+                                  <span
+                                    className={cn(
+                                      "rounded px-1.5 py-0.5 text-[10px] font-semibold capitalize",
+                                      s.status === "draft"
+                                        ? "bg-violet-50 text-violet-800"
+                                        : s.status === "ready"
+                                          ? "bg-emerald-50 text-emerald-800"
+                                          : "bg-slate-100 text-slate-600",
+                                    )}
+                                  >
+                                    {s.status}
+                                  </span>
+                                ) : (
+                                  "—"
+                                )}
+                              </td>
+                              <td className="px-2 py-1 align-middle">
+                                <div className="flex items-center justify-end gap-0.5">
+                                  <Link
+                                    href={`/students/${s.id}/edit`}
+                                    title={t("students.duplicateGrEdit")}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-teal-700 hover:bg-teal-50"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Link>
+                                  <Link
+                                    href={`/students/${s.id}`}
+                                    title={t("common.view")}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Link>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
+        </div>
       )}
     </div>
   );

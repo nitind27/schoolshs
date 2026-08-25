@@ -186,7 +186,8 @@ export function StudentImportHub() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = format === "csv" ? "student_import_template.csv" : "student_import_template.xlsx";
+      a.download =
+        format === "csv" ? "student_import_template.csv" : "student_import_template.xlsx";
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -349,6 +350,7 @@ export function StudentImportHub() {
                   <p>{t("importPage.guideDate")}</p>
                   <p>{t("importPage.guideStd")}</p>
                   <p>{t("importPage.guideDraft")}</p>
+                  <p>{t("importPage.guideForm")}</p>
                 </div>
               </CardContent>
             )}

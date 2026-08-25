@@ -362,10 +362,14 @@ export async function parseStudentImportFile(
     cellDates: false,
   });
   const sheetNames = workbook.SheetNames.filter(
-    (n) => !/^(instructions?|read me|lists|column guide)$/i.test(n),
+    (n) => !/^(instructions?|read me|lists|column guide|entry form|form\s?meta)$/i.test(n),
   );
   const selectedSheet =
-    sheetName && sheetNames.includes(sheetName) ? sheetName : sheetNames[0];
+    sheetName && sheetNames.includes(sheetName)
+      ? sheetName
+      : sheetNames.includes("Students")
+        ? "Students"
+        : sheetNames[0];
   const sheet = workbook.Sheets[selectedSheet];
 
   let headerRow = 0;

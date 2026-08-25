@@ -91,19 +91,22 @@ export async function buildStudentImportWorkbook(
     ["7", "Delete the example row (Aadhaar 123456789012) before upload, or it is skipped automatically."],
     ["8", "Incomplete rows still import as Draft — complete them later in Students."],
     ["9", "GR Number is the school General Register number. Keep it as text so Excel does not change it."],
+    ["10", "Fill one student per row on the Students sheet. Use dropdowns where available."],
+    ["11", "Works on Windows, phone, and WPS — no macros needed. Save and upload this file."],
   ];
   notes.forEach(([n, text], i) => {
     readme.getCell(i + 3, 1).value = n;
     readme.getCell(i + 3, 2).value = text;
   });
-  readme.getCell("A12").value = "Columns in this file";
-  readme.getCell("A12").font = { bold: true };
+  const colGuideRow = notes.length + 4;
+  readme.getCell(`A${colGuideRow}`).value = "Columns in this file";
+  readme.getCell(`A${colGuideRow}`).font = { bold: true };
   fields.forEach((key, i) => {
     const req = REQUIRED_IMPORT_FIELDS.includes(key);
-    readme.getCell(13 + i, 1).value = req ? `${CSV_HEADER_LABELS[key]} *` : CSV_HEADER_LABELS[key];
-    readme.getCell(13 + i, 2).value = String(SAMPLE_IMPORT_ROW[key] ?? "—");
+    readme.getCell(colGuideRow + 1 + i, 1).value = req ? `${CSV_HEADER_LABELS[key]} *` : CSV_HEADER_LABELS[key];
+    readme.getCell(colGuideRow + 1 + i, 2).value = String(SAMPLE_IMPORT_ROW[key] ?? "—");
     if (req) {
-      readme.getCell(13 + i, 1).font = { color: { argb: "FFB45309" }, bold: true };
+      readme.getCell(colGuideRow + 1 + i, 1).font = { color: { argb: "FFB45309" }, bold: true };
     }
   });
 
@@ -172,9 +175,8 @@ export async function buildStudentImportWorkbook(
           type: "list",
           allowBlank: true,
           formulae: [list],
-          showErrorMessage: true,
-          errorTitle: "Invalid value",
-          error: `Pick a value from the list for ${label}`,
+          showErrorMessage: false,
+          showInputMessage: false,
         };
       }
     }
@@ -185,7 +187,7 @@ export async function buildStudentImportWorkbook(
     to: { row: 1, column: fields.length },
   };
 
-  const studentIdx = wb.worksheets.findIndex((s) => s.name === "Students");
+  const studentsIdx = wb.worksheets.findIndex((s) => s.name === "Students");
   wb.views = [
     {
       x: 0,
@@ -193,7 +195,7 @@ export async function buildStudentImportWorkbook(
       width: 20000,
       height: 15000,
       firstSheet: 0,
-      activeTab: Math.max(studentIdx, 0),
+      activeTab: Math.max(studentsIdx, 0),
       visibility: "visible",
     },
   ];
