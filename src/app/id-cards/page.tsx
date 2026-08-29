@@ -32,13 +32,17 @@ const ID_CARDS_PAGE_SIZE = 6;
 function studentSearchText(s: StudentWithClass) {
   return [
     s.firstName,
+    s.middleName,
     s.surname,
     s.fatherName,
+    s.motherName,
     s.grNumber,
     s.rollNumber != null ? String(s.rollNumber) : "",
-    s.mobile,
+    s.mobileNumber,
     s.aadhaarNumber,
-    s.uid,
+    s.childUid,
+    s.apaarId,
+    s.penNumber,
   ]
     .filter(Boolean)
     .join(" ")
