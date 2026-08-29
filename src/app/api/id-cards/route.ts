@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
       const idList = idsParam.split(",").map((s) => s.trim()).filter(Boolean);
       if (idList.length) where.id = { in: idList };
     } else {
+      if (!classId && !standard && !section) {
+        return NextResponse.json({ students: [], total: 0 });
+      }
       if (classId) where.classId = classId;
       if (standard) where.standard = standard;
       if (section) where.section = section;

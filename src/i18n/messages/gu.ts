@@ -1956,7 +1956,17 @@ const gu: Messages = {
     saveSettings: "સેટિંગ્સ સાચવો",
     noStudents: "પસંદ કરેલા વર્ગમાં કોઈ વિદ્યાર્થી નહીં",
     noStudentsHint:
-      "આ ફિલ્ટરમાં કોઈ વિદ્યાર્થી નથી — વર્ગ પસંદ કરો અથવા વિદ્યાર્થી ઉમેરો",
+      "આ વર્ગમાં કોઈ વિદ્યાર્થી નથી — વિદ્યાર્થી ઉમેરો અથવા બીજો વર્ગ પસંદ કરો",
+    selectClassTitle: "વર્ગ પસંદ કરો",
+    selectClassHint:
+      "વિદ્યાર્થી આઈડી કાર્ડ જોવા માટે ઉપર વર્ગ પસંદ કરો. ઝડપ માટે એક સાથે ફક્ત એક વર્ગ લોડ થાય છે.",
+    showingCount: "{{total}} માંથી {{shown}} વિદ્યાર્થી બતાવી રહ્યા છીએ",
+    seeMore: "વધુ જુઓ ({{count}})",
+    remainingCount: "આ વર્ગમાં {{count}} વિદ્યાર્થી બાકી",
+    searchPlaceholder: "નામ, GR, રોલ, મોબાઈલ, પિતા, આધાર…",
+    noSearchResults: "કોઈ વિદ્યાર્થી મળ્યો નહીં",
+    noSearchResultsHint: 'આ વર્ગમાં "{{query}}" માટે કોઈ મેળ ખાતો નથી',
+    showingSearchCount: '"{{query}}" માટે {{total}} માંથી {{shown}} બતાવી રહ્યા છીએ',
     photosAlreadyProcessed:
       "બધા ફોટા પહેલેથી પ્રોસેસ થયા છે અથવા ફોટો અપલોડ નથી",
     cardsReady: "{{count}} આઈડી કાર્ડ તૈયાર",
@@ -2005,6 +2015,9 @@ const gu: Messages = {
     photoMissing: "ફોટો નથી",
     photoStats: "{{with}} ફોટો સાથે · {{without}} બાકી",
     addPhotoLink: "પાસપોર્ટ ફોટો ઉમેરો →",
+    showingCount: "{{total}} માંથી {{shown}} સ્ટાફ બતાવી રહ્યા છીએ",
+    seeMore: "વધુ જુઓ ({{count}})",
+    remainingCount: "પ્રિવ્યૂ માટે {{count}} સ્ટાફ બાકી",
   },
   idCardShare: {
     managerTitle: "પ્રિન્ટ લિંક શેર કરો",

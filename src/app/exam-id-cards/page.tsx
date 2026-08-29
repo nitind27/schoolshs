@@ -17,6 +17,7 @@ import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import { useT } from "@/i18n/locale-provider";
 import {
   BadgeCheck,
+  ChevronDown,
   CreditCard,
   Printer,
   Search,
@@ -41,6 +42,26 @@ function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
+}
+
+const EXAM_ID_CARDS_PAGE_SIZE = 6;
+
+async function preloadStaffPhotos(
+  people: ExamStaffCardPerson[],
+  existing: Record<string, string> = {},
+): Promise<Record<string, string>> {
+  const nextUrls = { ...existing };
+  await Promise.all(
+    people
+      .filter((s) => s.hasPhoto && (s.photoUrl || s.photoPath) && !nextUrls[s.id])
+      .map(async (s) => {
+        const src = s.photoUrl || (s.photoPath ? `/api/uploads/${s.photoPath}` : "");
+        if (!src) return;
+        const dataUrl = await preloadImageAsDataUrl(src);
+        if (dataUrl) nextUrls[s.id] = dataUrl;
+      }),
+  );
+  return nextUrls;
 }
 
 async function preloadImageAsDataUrl(url: string): Promise<string | null> {
@@ -91,6 +112,7 @@ export default function ExamIdCardsPage() {
   });
   const [cardsPerPage, setCardsPerPage] = useState<2 | 4 | 6 | 8>(6);
   const [showCutLines, setShowCutLines] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(EXAM_ID_CARDS_PAGE_SIZE);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,6 +135,7 @@ export default function ExamIdCardsPage() {
       setWithPhoto(Number(data.withPhoto) || 0);
       setWithoutPhoto(Number(data.withoutPhoto) || 0);
       setSelected(new Set((data.staff || []).map((s: ExamStaffCardPerson) => s.id)));
+      setVisibleCount(EXAM_ID_CARDS_PAGE_SIZE);
       setPhotoDataUrls({});
       if (data.settings?.academicYear) {
         setMeta((m) => ({
@@ -121,19 +144,9 @@ export default function ExamIdCardsPage() {
         }));
       }
 
-      // Warm photo cache for cards that have files on disk
-      const nextUrls: Record<string, string> = {};
-      await Promise.all(
-        ((data.staff || []) as ExamStaffCardPerson[])
-          .filter((s) => s.hasPhoto && (s.photoUrl || s.photoPath))
-          .map(async (s) => {
-            const src = s.photoUrl || (s.photoPath ? `/api/uploads/${s.photoPath}` : "");
-            if (!src) return;
-            const dataUrl = await preloadImageAsDataUrl(src);
-            if (dataUrl) nextUrls[s.id] = dataUrl;
-          }),
-      );
-      setPhotoDataUrls(nextUrls);
+      const loadedStaff = (data.staff || []) as ExamStaffCardPerson[];
+      const initialVisible = loadedStaff.slice(0, EXAM_ID_CARDS_PAGE_SIZE);
+      setPhotoDataUrls(await preloadStaffPhotos(initialVisible));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
       setStaff([]);
@@ -159,6 +172,13 @@ export default function ExamIdCardsPage() {
     [staff, selected],
   );
 
+  const visibleStaff = useMemo(
+    () => staff.slice(0, visibleCount),
+    [staff, visibleCount],
+  );
+  const hasMoreStaff = visibleCount < staff.length;
+  const remainingStaff = staff.length - visibleCount;
+
   const printPages = useMemo(
     () => chunk(selectedStaff, cardsPerPage),
     [selectedStaff, cardsPerPage],
@@ -180,6 +200,17 @@ export default function ExamIdCardsPage() {
     photoDataUrls[s.id] ||
     s.photoUrl ||
     (s.photoPath ? `/api/uploads/${s.photoPath}` : undefined);
+
+  const handleSeeMore = () => {
+    const nextCount = Math.min(visibleCount + EXAM_ID_CARDS_PAGE_SIZE, staff.length);
+    const newlyVisible = staff.slice(visibleCount, nextCount);
+    setVisibleCount(nextCount);
+    if (!newlyVisible.length) return;
+    setPhotoDataUrls((prev) => {
+      void preloadStaffPhotos(newlyVisible, prev).then(setPhotoDataUrls);
+      return prev;
+    });
+  };
 
   const handlePrint = async () => {
     if (!selectedStaff.length) return;
@@ -377,6 +408,11 @@ export default function ExamIdCardsPage() {
           {staff.length > 0 ? (
             <span className="ml-2 font-medium text-slate-700">
               ·{" "}
+              {t("examIdCards.showingCount", {
+                shown: String(visibleStaff.length),
+                total: String(staff.length),
+              })}
+              {" · "}
               {t("examIdCards.photoStats", {
                 with: String(withPhoto),
                 without: String(withoutPhoto),
@@ -398,7 +434,7 @@ export default function ExamIdCardsPage() {
             {/* Screen selection + preview */}
             <div className="print:hidden space-y-4">
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
-                {staff.map((s) => {
+                {visibleStaff.map((s) => {
                   const checked = selected.has(s.id);
                   return (
                     <div
@@ -469,6 +505,25 @@ export default function ExamIdCardsPage() {
                   );
                 })}
               </div>
+
+              {hasMoreStaff && (
+                <div className="flex flex-col items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="min-w-[220px] border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
+                    onClick={handleSeeMore}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                    {t("examIdCards.seeMore", {
+                      count: String(Math.min(EXAM_ID_CARDS_PAGE_SIZE, remainingStaff)),
+                    })}
+                  </Button>
+                  <p className="text-xs text-slate-500">
+                    {t("examIdCards.remainingCount", { count: String(remainingStaff) })}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Print bundle — flex A4 sheets with cut guides */}

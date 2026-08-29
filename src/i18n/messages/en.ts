@@ -1977,7 +1977,17 @@ const en = {
     saveSettings: "Save Settings",
     noStudents: "No students in selected class",
     noStudentsHint:
-      "No students in this filter — select a class or add students",
+      "No students in this class — add students or try another class",
+    selectClassTitle: "Select a class",
+    selectClassHint:
+      "Choose a class above to load and preview student ID cards. Only one class loads at a time for faster performance.",
+    showingCount: "Showing {{shown}} of {{total}} students",
+    seeMore: "See more ({{count}})",
+    remainingCount: "{{count}} more students in this class",
+    searchPlaceholder: "Search name, GR, roll, mobile, father, Aadhaar…",
+    noSearchResults: "No students found",
+    noSearchResultsHint: 'No match for "{{query}}" in this class',
+    showingSearchCount: 'Showing {{shown}} of {{total}} for "{{query}}"',
     photosAlreadyProcessed:
       "All photos already processed or no photos uploaded",
     cardsReady: "{{count}} ID cards ready",
@@ -2026,6 +2036,9 @@ const en = {
     photoMissing: "No photo",
     photoStats: "{{with}} with photo · {{without}} missing",
     addPhotoLink: "Add passport photo →",
+    showingCount: "Showing {{shown}} of {{total}} staff",
+    seeMore: "See more ({{count}})",
+    remainingCount: "{{count}} more staff to preview",
   },
   idCardShare: {
     managerTitle: "Share Print Link",
