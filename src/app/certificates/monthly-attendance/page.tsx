@@ -65,7 +65,9 @@ function MonthlyAttendanceContent() {
       onPreview={showPreview}
       onExitPreview={() => setSource(patrak ? "live" : "none")}
       canPrint={!!displayData}
-      printMargin="5mm"
+      landscape
+      pageSize="legal"
+      printMargin="4mm"
     >
       <CertificateFilters value={filters} onChange={setFilters} onLoad={load} showMonth />
       {displayData ? (

@@ -17,16 +17,13 @@ const INK = "#1a5f7a";
 const FONT = '"Noto Sans Gujarati", "Noto Sans", Arial, sans-serif';
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
-/** Printable area inside A4 after page margins */
-const A4P = {
-  margin: "5mm",
-  w: "200mm",
-  h: "287mm",
-} as const;
-const A4L = {
+/** Legal 8.5×14in landscape — one size for preview and print (no mixed A4 pages). */
+const LEGAL = {
   margin: "4mm",
-  w: "289mm",
-  h: "202mm",
+  pageW: "355.6mm",
+  pageH: "215.9mm",
+  w: "347.6mm",
+  h: "207.9mm",
 } as const;
 
 function g(n: number | string): string {
@@ -257,16 +254,10 @@ function RegisterSpread({
     useAttendanceDayBlanks(rows, month, year);
 
   return (
-    <div className="patrak-sheet patrak-landscape patrak-reg-page patrak-spread">
+    <div className="patrak-spread-wrap">
       <div className="patrak-screen-label no-print">
-        {"\u0AAA\u0ABE\u0AA8\u0AC1\u0A82"} {g(leftPageNo)}–{g(rightPageNo)} — joint spread (one line)
+        {"\u0AAA\u0ABE\u0AA8\u0AC1\u0A82"} {g(leftPageNo)}–{g(rightPageNo)} — Legal landscape (8.5 × 14 in)
       </div>
-
-      <div className="patrak-spread-markers">
-        <div className="patrak-spread-marker-slot"><PageMarker n={leftPageNo} centered /></div>
-        <div className="patrak-spread-marker-slot"><PageMarker n={rightPageNo} centered /></div>
-      </div>
-
       <div className="patrak-day-edit no-print">
         <label>
           આ માસના દિવસ
@@ -280,6 +271,12 @@ function RegisterSpread({
           અંત સુધી કુલ
           <HdrDots value={cumDays} onChange={setCumDays} width={4} />
         </label>
+      </div>
+
+    <div className="patrak-sheet patrak-landscape patrak-reg-page patrak-spread">
+      <div className="patrak-spread-markers">
+        <div className="patrak-spread-marker-slot"><PageMarker n={leftPageNo} centered /></div>
+        <div className="patrak-spread-marker-slot"><PageMarker n={rightPageNo} centered /></div>
       </div>
 
       <table className="patrak-tbl patrak-unified">
@@ -405,6 +402,7 @@ function RegisterSpread({
           </tr>
         </tfoot>
       </table>
+    </div>
     </div>
   );
 }
@@ -537,9 +535,14 @@ export function MonthlyAttendancePatrakView({
 
   return (
     <div className="patrak-root">
-      {/* ── Sheet 1: portrait summary ───────────────── */}
-      <div className="patrak-sheet patrak-portrait">
-        <div className="patrak-screen-label no-print">પાનું ૧ — સારાંશ (Portrait A4)</div>
+      <p className="patrak-print-hint no-print">
+        Print on <strong>Legal (8.5 × 14 in) Landscape</strong> paper.
+        {" "}લીગલ સાઈઝ (૮.૫ × ૧૪ ઇંચ) — લેન્ડસ્કેપ. Print preview આ કાગળના માપે દેખાશે.
+      </p>
+
+      {/* ── Sheet 1: summary (legal landscape) ───────────────── */}
+      <div className="patrak-screen-label no-print">પાનું ૧ — સારાંશ · Legal landscape</div>
+      <div className="patrak-sheet patrak-landscape patrak-summary">
         <h1 className="patrak-title">વિદ્યાર્થીનું માસિક હાજરી પત્રક</h1>
         <div className="patrak-meta">
           <span>વર્ગ શિક્ષકશ્રી <u className="patrak-fill">{data.classTeacher || "\u00a0".repeat(18)}</u></span>
@@ -702,9 +705,9 @@ export function MonthlyAttendancePatrakView({
         year={data.year}
       />
 
-      {/* ── Page 6: portrait reports ───────────────── */}
-      <div className="patrak-sheet patrak-portrait patrak-sheet-last">
-        <div className="patrak-screen-label no-print">છેલ્લું પાનું — અહેવાલ (નવા દાખલ / શાળા છોડી)</div>
+      {/* ── Last page: reports (legal landscape) ───────────────── */}
+      <div className="patrak-screen-label no-print">છેલ્લું પાનું — અહેવાલ (નવા દાખલ / શાળા છોડી) · Legal landscape</div>
+      <div className="patrak-sheet patrak-landscape patrak-sheet-last patrak-reports">
 
         <h3 className="patrak-sec-title">નવા દાખલ થયેલ વિદ્યાર્થીઓનો અહેવાલ</h3>
         <table className="patrak-tbl patrak-adm">
@@ -754,38 +757,42 @@ export function MonthlyAttendancePatrakView({
           overflow-x: auto;
           padding: 8px 4px 32px;
         }
+        .patrak-root .patrak-print-hint {
+          text-align: center;
+          font-size: 13px;
+          color: #334155;
+          background: #f8fafc;
+          border: 1px dashed #94a3b8;
+          border-radius: 10px;
+          padding: 8px 12px;
+          margin: 0 auto 14px;
+          max-width: ${LEGAL.pageW};
+        }
         .patrak-root .patrak-sheet {
           box-sizing: border-box;
           background: #fff;
           page-break-after: always;
           break-after: page;
-          page-break-inside: auto;
-          break-inside: auto;
+          page-break-inside: avoid;
+          break-inside: avoid;
           margin: 0 auto 28px;
           box-shadow: 0 6px 24px rgba(0,0,0,.12);
-          overflow: visible;
+          overflow: hidden;
           border: 1px solid #d8e2e8;
-        }
-        .patrak-root .patrak-portrait {
-          page: patrak-portrait;
-          width: 210mm;
-          min-height: 0;
-          height: auto;
-          padding: 6mm 5mm;
+          width: ${LEGAL.pageW};
+          max-width: ${LEGAL.pageW};
+          height: ${LEGAL.pageH};
+          min-height: ${LEGAL.pageH};
+          padding: 5mm 6mm;
           display: flex;
           flex-direction: column;
-          overflow: visible;
-          box-sizing: border-box;
         }
+        .patrak-root .patrak-portrait,
         .patrak-root .patrak-landscape {
-          page: patrak-landscape;
-          width: 297mm;
-          min-height: 0;
-          height: auto;
-          padding: 4mm 5mm;
-          display: flex;
-          flex-direction: column;
-          box-sizing: border-box;
+          width: ${LEGAL.pageW};
+          max-width: ${LEGAL.pageW};
+          height: ${LEGAL.pageH};
+          min-height: ${LEGAL.pageH};
         }
         .patrak-root .patrak-sheet-last {
           page-break-after: auto;
@@ -843,7 +850,7 @@ export function MonthlyAttendancePatrakView({
         }
         .patrak-root .patrak-c { text-align: center; }
         .patrak-root .patrak-move {
-          font-size: 5.8pt;
+          font-size: 7.2pt;
           margin-bottom: 3mm;
           width: 100%;
           max-width: 100%;
@@ -894,6 +901,7 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-keep-footer {
           page-break-inside: avoid;
           break-inside: avoid;
+          margin-top: auto;
         }
         .patrak-root .patrak-cls { font-size: 8.5pt; margin-bottom: 2mm; }
         .patrak-root .patrak-cls td { height: 9mm; }
@@ -915,20 +923,21 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-sig-date { letter-spacing: 0.05em; }
 
         .patrak-root .patrak-reg-page {
-          --patrak-meta-h: 6.5mm;
-          --patrak-colhdr-h: 48mm;
+          --patrak-meta-h: 7mm;
+          --patrak-colhdr-h: 42mm;
           --patrak-hdr-h: calc(var(--patrak-meta-h) + var(--patrak-colhdr-h));
-          --patrak-row-h: 3.35mm;
-          --patrak-foot-h: 4mm;
+          --patrak-row-h: 3.55mm;
+          --patrak-foot-h: 4.5mm;
           width: 100%;
         }
         /* Joint open-book: one table, continuous lines */
         .patrak-root .patrak-spread {
           display: flex;
           flex-direction: column;
-          width: 297mm;
-          max-width: 297mm;
-          min-height: 0;
+          width: ${LEGAL.pageW};
+          max-width: ${LEGAL.pageW};
+          height: ${LEGAL.pageH};
+          min-height: ${LEGAL.pageH};
           box-sizing: border-box;
         }
         .patrak-root .patrak-spread-markers {
@@ -988,7 +997,7 @@ export function MonthlyAttendancePatrakView({
           min-height: var(--patrak-row-h) !important;
           max-height: var(--patrak-row-h) !important;
           padding: 0 1px !important;
-          font-size: 6.5pt;
+          font-size: 8pt;
           line-height: 1;
           overflow: hidden;
           white-space: nowrap;
@@ -1002,18 +1011,18 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-unified .patrak-day-h,
         .patrak-root .patrak-unified .patrak-day-c,
         .patrak-root .patrak-unified .patrak-day-f {
-          width: 3.5mm !important;
-          max-width: 3.5mm !important;
+          width: 5.1mm !important;
+          max-width: 5.1mm !important;
           padding: 0 !important;
           text-align: center;
-          font-size: 5.5pt;
+          font-size: 6.5pt;
         }
-        .patrak-root .patrak-unified .patrak-w-gr { width: 8mm; }
-        .patrak-root .patrak-unified .patrak-w-dob { width: 11mm; }
-        .patrak-root .patrak-unified .patrak-w-caste { width: 6mm; }
-        .patrak-root .patrak-unified .patrak-w-cat { width: 7mm; }
-        .patrak-root .patrak-unified .patrak-w-ser { width: 5.5mm !important; min-width: 5.5mm; }
-        .patrak-root .patrak-unified .patrak-w-name { width: 28mm; min-width: 24mm; }
+        .patrak-root .patrak-unified .patrak-w-gr { width: 10mm; }
+        .patrak-root .patrak-unified .patrak-w-dob { width: 14mm; }
+        .patrak-root .patrak-unified .patrak-w-caste { width: 8mm; }
+        .patrak-root .patrak-unified .patrak-w-cat { width: 9mm; }
+        .patrak-root .patrak-unified .patrak-w-ser { width: 6.5mm !important; min-width: 6.5mm; }
+        .patrak-root .patrak-unified .patrak-w-name { width: 48mm; min-width: 42mm; }
         .patrak-root .patrak-unified .patrak-w-sum {
           width: 14mm !important;
           min-width: 14mm !important;
@@ -1110,7 +1119,7 @@ export function MonthlyAttendancePatrakView({
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          font-size: 6.5pt;
+          font-size: 8pt;
           text-align: left;
           padding: 0 2px !important;
         }
@@ -1376,27 +1385,15 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-decl { text-align: center; font-size: 8.5pt; margin: 5mm 0 3mm; }
         .patrak-root .print-only { display: none; }
 
-        @page patrak-portrait {
-          size: A4 portrait;
-          margin: ${A4P.margin};
-        }
-        @page patrak-landscape {
-          size: A4 landscape;
-          margin: ${A4L.margin};
+        @page {
+          size: 14in 8.5in;
+          margin: ${LEGAL.margin};
         }
 
         @media print {
           @page {
-            size: A4 portrait;
-            margin: ${A4P.margin};
-          }
-          @page patrak-portrait {
-            size: A4 portrait;
-            margin: ${A4P.margin};
-          }
-          @page patrak-landscape {
-            size: A4 landscape;
-            margin: ${A4L.margin};
+            size: 14in 8.5in;
+            margin: ${LEGAL.margin};
           }
 
           html, body {
@@ -1408,28 +1405,39 @@ export function MonthlyAttendancePatrakView({
           .print-area {
             position: static !important;
             inset: auto !important;
-            width: 100% !important;
+            width: ${LEGAL.w} !important;
+            max-width: ${LEGAL.w} !important;
             height: auto !important;
             overflow: visible !important;
             background: #fff !important;
           }
 
           .patrak-root {
-            width: 100% !important;
+            width: ${LEGAL.w} !important;
+            max-width: ${LEGAL.w} !important;
             margin: 0 !important;
             padding: 0 !important;
             overflow: visible !important;
           }
 
-          .patrak-root .patrak-sheet {
+          .patrak-root .patrak-sheet,
+          .patrak-root .patrak-portrait,
+          .patrak-root .patrak-landscape,
+          .patrak-root .patrak-spread {
             margin: 0 !important;
             box-shadow: none !important;
             border: none !important;
+            width: ${LEGAL.w} !important;
+            max-width: ${LEGAL.w} !important;
+            height: ${LEGAL.h} !important;
+            min-height: ${LEGAL.h} !important;
+            max-height: ${LEGAL.h} !important;
+            padding: 2mm 3mm !important;
+            overflow: hidden !important;
             page-break-after: always !important;
             break-after: page !important;
-            page-break-inside: auto !important;
-            break-inside: auto !important;
-            overflow: visible !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .patrak-root .patrak-sheet-last {
             page-break-after: auto !important;
@@ -1437,48 +1445,24 @@ export function MonthlyAttendancePatrakView({
           }
           .patrak-root .patrak-screen-label { display: none !important; }
 
-          .patrak-root .patrak-portrait {
-            page: patrak-portrait !important;
-            width: ${A4P.w} !important;
-            min-height: 0 !important;
-            max-height: none !important;
-            height: auto !important;
-            padding: 2mm 1mm !important;
-            overflow: visible !important;
-          }
-          .patrak-root .patrak-landscape {
-            page: patrak-landscape !important;
-            width: ${A4L.w} !important;
-            min-height: 0 !important;
-            max-height: none !important;
-            height: auto !important;
-            padding: 1mm 2mm !important;
-            overflow: visible !important;
-          }
-
           .patrak-root .patrak-reg-page {
-            --patrak-meta-h: 6.5mm;
-            --patrak-colhdr-h: 48mm;
-            --patrak-row-h: 3.35mm;
-            --patrak-foot-h: 4mm;
-          }
-          .patrak-root .patrak-spread {
-            width: ${A4L.w} !important;
-            max-width: ${A4L.w} !important;
-            min-height: 0 !important;
+            --patrak-meta-h: 7mm;
+            --patrak-colhdr-h: 42mm;
+            --patrak-row-h: 3.55mm;
+            --patrak-foot-h: 4.5mm;
           }
 
-          .patrak-root .patrak-title { font-size: 13pt; margin-bottom: 2.5mm; }
-          .patrak-root .patrak-meta { font-size: 9pt; margin-bottom: 2mm; gap: 1.5mm 4mm; }
-          .patrak-root .patrak-move { font-size: 5.6pt; margin-bottom: 2mm; }
+          .patrak-root .patrak-title { font-size: 14pt; margin-bottom: 2.5mm; }
+          .patrak-root .patrak-meta { font-size: 10pt; margin-bottom: 2mm; gap: 1.5mm 4mm; }
+          .patrak-root .patrak-move { font-size: 7pt; margin-bottom: 2mm; }
           .patrak-root .patrak-move td,
-          .patrak-root .patrak-move th { padding: 0.5px 1px; height: auto; min-height: 4.2mm; }
-          .patrak-root .patrak-cls-title { font-size: 8.5pt; margin: 2mm 0 1.2mm; }
-          .patrak-root .patrak-cls { font-size: 7.5pt; margin-bottom: 1.5mm; }
-          .patrak-root .patrak-cls td { height: 7mm; }
+          .patrak-root .patrak-move th { padding: 1px 2px; height: auto; min-height: 5mm; }
+          .patrak-root .patrak-cls-title { font-size: 9pt; margin: 2mm 0 1.2mm; }
+          .patrak-root .patrak-cls { font-size: 8pt; margin-bottom: 1.5mm; }
+          .patrak-root .patrak-cls td { height: 8mm; }
           .patrak-root .patrak-sigs {
-            margin-top: 6mm !important;
-            padding-top: 8mm !important;
+            margin-top: auto !important;
+            padding-top: 6mm !important;
             font-size: 10pt;
             page-break-before: avoid !important;
             break-before: avoid !important;
@@ -1488,12 +1472,12 @@ export function MonthlyAttendancePatrakView({
             padding-top: 4mm !important;
           }
 
-          .patrak-root .patrak-sec-title { font-size: 10pt; margin: 3mm 0 2mm; }
-          .patrak-root .patrak-adm { font-size: 8pt; margin-bottom: 3mm; }
-          .patrak-root .patrak-lev { font-size: 7.5pt; }
+          .patrak-root .patrak-sec-title { font-size: 11pt; margin: 3mm 0 2mm; }
+          .patrak-root .patrak-adm { font-size: 9pt; margin-bottom: 3mm; }
+          .patrak-root .patrak-lev { font-size: 8.5pt; }
           .patrak-root .patrak-adm td,
-          .patrak-root .patrak-lev td { height: 6.5mm; }
-          .patrak-root .patrak-decl { font-size: 8.5pt; margin: 4mm 0 3mm; }
+          .patrak-root .patrak-lev td { height: 7mm; }
+          .patrak-root .patrak-decl { font-size: 9pt; margin: 4mm 0 3mm; }
 
           .patrak-root,
           .patrak-root * {
@@ -1517,36 +1501,19 @@ export function MonthlyAttendancePatrakView({
             font-size: 11px;
             font-weight: 600;
             color: #64748b;
-            margin: 0 0 8px;
+            margin: 0 auto 8px;
+            max-width: ${LEGAL.pageW};
             letter-spacing: 0.02em;
           }
           .patrak-root {
             padding: 8px 12px 24px;
             box-sizing: border-box;
+            background: #e8ecf0;
+            border-radius: 12px;
           }
           .patrak-root .patrak-sheet {
-            margin-left: 0;
-            margin-right: 0;
-          }
-          .patrak-root .patrak-portrait {
-            width: 100%;
-            max-width: 210mm;
-            min-height: 0;
-            height: auto;
-            padding: 5mm 4mm;
-            box-sizing: border-box;
-          }
-          .patrak-root .patrak-landscape {
-            width: 100%;
-            max-width: 297mm;
-            min-height: 0;
-            height: auto;
-            padding: 4mm 5mm;
-            box-sizing: border-box;
-          }
-          .patrak-root .patrak-spread {
-            width: 100%;
-            max-width: 297mm;
+            margin-left: auto;
+            margin-right: auto;
           }
         }
       `}</style>

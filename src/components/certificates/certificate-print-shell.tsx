@@ -18,6 +18,7 @@ export function CertificatePrintShell({
   hidePrint = false,
   printMargin,
   packId: packIdProp,
+  pageSize = "A4",
 }: {
   children: React.ReactNode;
   landscape?: boolean;
@@ -32,6 +33,8 @@ export function CertificatePrintShell({
   printMargin?: string;
   /** Override pack (LC page resolves school-code fallback) */
   packId?: string | null;
+  /** Paper size for @page / print dialog. Default A4. */
+  pageSize?: "A4" | "legal";
 }) {
   const t = useT();
   const router = useRouter();
@@ -136,7 +139,7 @@ export function CertificatePrintShell({
 
       {/* ── Certificate content ─────────────────────── */}
       <div
-        className={`print-area ${landscape ? "print-landscape" : "print-portrait"} ${isPreview ? "cert-preview-frame" : ""}`}
+        className={`print-area ${landscape ? "print-landscape" : "print-portrait"} ${pageSize === "legal" ? "print-legal" : ""} ${isPreview ? "cert-preview-frame" : ""}`}
       >
         {children}
       </div>
@@ -205,7 +208,13 @@ export function CertificatePrintShell({
           }
         }
         @page {
-          size: ${landscape ? "A4 landscape" : "A4 portrait"};
+          size: ${pageSize === "legal"
+            ? landscape
+              ? "14in 8.5in"
+              : "8.5in 14in"
+            : landscape
+              ? "A4 landscape"
+              : "A4 portrait"};
           margin: ${pageMargin};
         }
         @media print {
@@ -229,7 +238,9 @@ export function CertificatePrintShell({
         }
         .cert-preview-frame .cert-page {
           margin: 0 auto;
-          max-width: ${landscape ? "297mm" : "210mm"};
+          max-width: ${pageSize === "legal"
+            ? landscape ? "356mm" : "216mm"
+            : landscape ? "297mm" : "210mm"};
           box-shadow: 0 8px 32px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.1);
           border-radius: 2px;
         }

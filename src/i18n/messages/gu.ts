@@ -2654,33 +2654,43 @@ const gu: Messages = {
       "USB અથવા Wi‑Fi સ્કેનર (Epson, Canon, HP…) · કાચ પર દસ્તાવેજ મૂકો",
     scannerHardwareReady: "સ્કેનર તૈયાર",
     scannerHardwareHint: "દસ્તાવેજ સ્કેનર કાચ પર મૂકો, પછી 'હવે સ્કેન' દબાવો",
+    scannerHardwareHintCanon:
+      "Canon સ્કેન વિન્ડો ખુલશે. કાગળ કાચ પર મૂકો, ત્યાં Scan દબાવો અને રાહ જુઓ — પોર્ટલ ફોટો લઈ લેશે.",
     scannerHardwareScan: "હવે સ્કેન",
     scannerHardwareFailed:
       "સ્કેન નિષ્ફળ. સ્કેનર ચાલુ છે (USB અથવા એ જ Wi‑Fi) અને કાગળ કાચ પર છે ચકાસો.",
     scannerNoHardware:
       "સ્કેનર મળ્યો નહીં. USB કનેક્ટ કરો અથવા Wi‑Fi સ્કેનર Windows ડ્રાઇવર સાથે સેટ કરો.",
     scannerNoHardwareHelpTitle: "સ્કેનર અહીં કેવી રીતે દેખાશે",
-    scannerNoHardwareHelpUsb: "USB: કેબલ લગાવો, પાવર ચાલુ, Windows ડ્રાઇવર ઇન્સ્ટોલ થાય ત્યાં સુધી રાહ જુઓ",
+    scannerNoHardwareHelpUsb: "USB: કેબલ આ જ કમ્પ્યુટરમાં લગાવો, પાવર ચાલુ, Windows ડ્રાઇવરની રાહ જુઓ",
     scannerNoHardwareHelpWifi:
-      "Wi‑Fi: આ PC જેવા જ નેટવર્ક પર + Epson/Canon/HP નેટવર્ક સ્કેન ડ્રાઇવર ઇન્સ્ટોલ કરો",
+      "Wi‑Fi: આ PC જેવા જ નેટવર્ક + Epson / Canon / HP / Brother સ્કેન ડ્રાઇવર",
     scannerNoHardwareHelpDriver:
-      "Windows Settings → Bluetooth & devices → Printers & scanners — પહેલા ત્યાં ડિવાઇસ દેખાવું જોઈએ",
+      "Windows Settings → Printers & scanners — ડિવાઇસ આ જ PC પર દેખાવું જોઈએ",
     scannerConnUsb: "USB",
     scannerConnWifi: "Wi‑Fi",
     scannerConnUnknown: "સ્કેનર",
-    scannerBridgeOnline: "સ્કેનર બ્રિજ કનેક્ટ",
+    scannerBridgeOnline: "આ PC પર સ્કેનર હેલ્પર કનેક્ટ",
     scannerBridgeOffline:
-      "સ્કેનર બ્રિજ ચાલુ નથી. આ PC પર સ્ટાર્ટ કરો (નીચે સ્ટેપ).",
+      "આ કમ્પ્યુટર પર સ્કેનર હેલ્પર નથી. જ્યાં સ્કેનર લગાવેલું છે તે PC પર એક વાર ઇન્સ્ટોલ કરો.",
     scannerBridgeErrorGeneric:
-      "સ્કેનર ભૂલ. USB / Wi‑Fi કનેક્શન, ડ્રાઇવર ચકાસો અને ફરી પ્રયાસ કરો.",
-    scannerBridgeSetupTitle: "આ કમ્પ્યુટર પર એક વાર સેટઅપ",
-    scannerBridgeStep1: "USB સ્કેનર: USB કેબલથી કનેક્ટ કરો અને પાવર ચાલુ કરો",
+      "સ્કેનર ભૂલ. આ કમ્પ્યુટર પર USB / Wi‑Fi સ્કેનર ચકાસો.",
+    scannerBridgeSetupTitle: "આ કમ્પ્યુટર પર હેલ્પર ઇન્સ્ટોલ કરો",
+    scannerBridgeStep1: "સ્કેનર આ જ PC સાથે જોડાયેલું હોવું જોઈએ (કોઈ પણ બ્રાન્ડ: HP, Epson, Brother, Canon…)",
     scannerBridgeStep1Wifi:
-      "Wi‑Fi સ્કેનર: આ PC જેવા જ Wi‑Fi પર જોડો અને કંપનીનો Windows સ્કેન ડ્રાઇવર ઇન્સ્ટોલ કરો જેથી Printers & scanners માં દેખાય",
+      "Wi‑Fi સ્કેનર: આ PC જેવા જ Wi‑Fi + કંપનીનો Windows સ્કેન ડ્રાઇવર",
     scannerBridgeStep2:
-      "પ્રોજેક્ટ ફોલ્ડરમાં start-scanner-bridge.bat ડબલ-ક્લિક કરો (અથવા: npm run scanner-bridge)",
+      "સ્કેનર હેલ્પર એક વાર ડાઉનલોડ કરી ચલાવો. પછી આપમેળે ચાલે — npm ની જરૂર નથી.",
     scannerBridgeStep3:
-      "બ્રિજ વિન્ડો ખુલ્લી રાખો, પછી Hardware Scanner ખોલો — USB અને Wi‑Fi બંને લિસ્ટમાં દેખાશે",
+      "Start / ફરી પ્રયાસ કરો. સ્કેનર પસંદ કરો (અથવા Windows Scan) અને Scan Now દબાવો.",
+    scannerStartHelper: "આ PC પર હેલ્પર ચાલુ કરો",
+    scannerDownloadHelper: "સ્કેનર હેલ્પર ડાઉનલોડ કરો",
+    scannerHardwareHintWindows:
+      "Windows સ્કેન વિન્ડો ખુલશે. આ PC પરનું કોઈ પણ સ્કેનર પસંદ કરો.",
+    scannerHardwareHintVendor:
+      "કંપનીની સ્કેન વિન્ડો ખુલશે (HP / Epson / Brother / Canon). ત્યાં સ્કેન કરો — પોર્ટલ ફોટો લઈ લેશે.",
+    scannerHardwareHintCanon:
+      "કંપનીની સ્કેન વિન્ડો ખુલશે. ત્યાં Scan દબાવો — પોર્ટલ ફોટો લઈ લેશે.",
     scannerRetake: "ફરી લો",
     scannerUse: "સ્કેન વાપરો",
     scannerCapture: "કેપ્ચર",

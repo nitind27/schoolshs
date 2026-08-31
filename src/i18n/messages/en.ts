@@ -2682,33 +2682,41 @@ const en = {
       "USB or Wi‑Fi scanner (Epson, Canon, HP…) · Place document on glass · Auto compress",
     scannerHardwareReady: "Scanner Ready",
     scannerHardwareHint: "Put document on scanner glass, then click Scan Now",
+    scannerHardwareHintCanon:
+      "The scanner maker’s window will open. Scan there — the portal will pick up the photo.",
     scannerHardwareScan: "Scan Now",
     scannerHardwareFailed:
       "Scan failed. Check scanner is on (USB plugged or same Wi‑Fi) and paper is on glass.",
     scannerNoHardware:
       "No scanner found. Connect USB scanner or set up Wi‑Fi scanner with Windows drivers.",
     scannerNoHardwareHelpTitle: "How to show your scanner here",
-    scannerNoHardwareHelpUsb: "USB: plug cable, power on, wait for Windows to install driver",
+    scannerNoHardwareHelpUsb: "USB: plug the cable into THIS computer, power on, wait for Windows driver",
     scannerNoHardwareHelpWifi:
-      "Wi‑Fi: same network as this PC + install Epson/Canon/HP network scan driver (Windows Scanners list)",
+      "Wi‑Fi: same network as THIS PC + install Epson / Canon / HP / Brother scan driver",
     scannerNoHardwareHelpDriver:
-      "Open Windows Settings → Bluetooth & devices → Printers & scanners — your device must appear there first",
+      "Windows Settings → Bluetooth & devices → Printers & scanners — the device must appear on THIS PC first",
     scannerConnUsb: "USB",
     scannerConnWifi: "Wi‑Fi",
     scannerConnUnknown: "Scanner",
-    scannerBridgeOnline: "Scanner bridge connected",
+    scannerBridgeOnline: "Scanner helper connected on this PC",
     scannerBridgeOffline:
-      "Scanner bridge not running. Start it on this PC (see steps below).",
+      "This computer does not have the scanner helper yet. Install it once on the PC where the scanner is plugged in.",
     scannerBridgeErrorGeneric:
-      "Scanner error. Check USB / Wi‑Fi connection, driver, and try again.",
-    scannerBridgeSetupTitle: "One-time setup on this computer",
-    scannerBridgeStep1: "USB scanner: connect with USB cable and power on",
+      "Scanner error. Check the USB / Wi‑Fi scanner on THIS computer, then try again.",
+    scannerBridgeSetupTitle: "Install helper on THIS computer",
+    scannerBridgeStep1: "The scanner must be connected to the same PC you are using now (any brand: HP, Epson, Brother, Canon…)",
     scannerBridgeStep1Wifi:
-      "Wi‑Fi scanner: join same Wi‑Fi as this PC and install the maker’s Windows scan driver so it appears in Printers & scanners",
+      "Wi‑Fi scanner: same Wi‑Fi as this PC, with the maker’s Windows scan driver installed",
     scannerBridgeStep2:
-      "Double-click start-scanner-bridge.bat in the project folder (or run: npm run scanner-bridge)",
+      "Download and run Scanner Helper once. After that it starts by itself — no npm, no developer window.",
     scannerBridgeStep3:
-      "Keep the bridge window open, then open Hardware Scanner — USB and Wi‑Fi devices both show in the list",
+      "Click Start / Try again. Choose your scanner (or Windows Scan) and click Scan Now.",
+    scannerStartHelper: "Start helper on this PC",
+    scannerDownloadHelper: "Download scanner helper",
+    scannerHardwareHintWindows:
+      "Windows will open a scan window. Pick any scanner on this PC, then scan.",
+    scannerHardwareHintVendor:
+      "The scanner maker’s window will open (HP / Epson / Brother / Canon). Scan there — the portal will pick up the image.",
     scannerRetake: "Retake",
     scannerUse: "Use Scan",
     scannerCapture: "Capture",

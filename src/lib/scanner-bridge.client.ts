@@ -14,6 +14,7 @@ export interface HardwareScannerDevice {
   port?: string | null;
   server?: string | null;
   manufacturer?: string | null;
+  provider?: string | null;
 }
 
 export interface ScannerBridgeHealth {
@@ -63,15 +64,22 @@ export async function listHardwareScanners(): Promise<HardwareScannerDevice[]> {
 }
 
 export async function scanFromHardware(deviceId: string): Promise<File> {
-  const data = await bridgeFetch<{ imageBase64: string; mimeType: string }>("/scan", {
-    method: "POST",
-    body: JSON.stringify({ deviceId }),
-  });
-  const binary = atob(data.imageBase64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const blob = new Blob([bytes], { type: data.mimeType || "image/jpeg" });
-  return new File([blob], `hardware_scan_${Date.now()}.jpg`, { type: data.mimeType || "image/jpeg" });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120000);
+  try {
+    const data = await bridgeFetch<{ imageBase64: string; mimeType: string }>("/scan", {
+      method: "POST",
+      body: JSON.stringify({ deviceId }),
+      signal: controller.signal,
+    });
+    const binary = atob(data.imageBase64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: data.mimeType || "image/jpeg" });
+    return new File([blob], `hardware_scan_${Date.now()}.jpg`, { type: data.mimeType || "image/jpeg" });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function scannerConnectionLabel(

@@ -644,6 +644,15 @@ html.locale-en {
     font-weight: 600 !important;
     text-align: center !important;
   }
+
+  /* Monthly attendance — Legal landscape (8.5×14 in). Do not lock to A4. */
+  .print-area.print-legal,
+  .print-area:has(.patrak-root) {
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
 }
 
 @keyframes navbar-chat-slide {

@@ -30,6 +30,7 @@ import {
   Plug,
   Wifi,
   Usb,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -209,12 +210,36 @@ export function DocumentScanner({
     }
   }, [startCamera, t]);
 
+  const tryStartLocalHelper = useCallback(async () => {
+    try {
+      const frame = document.createElement("iframe");
+      frame.src = "shs-scanner://start";
+      frame.style.display = "none";
+      document.body.appendChild(frame);
+      await new Promise((r) => setTimeout(r, 1600));
+      frame.remove();
+    } catch {
+      /* protocol not installed yet */
+    }
+  }, []);
+
   const loadHardwareScanners = useCallback(async () => {
     setLoading(true);
     setError(null);
     stopStream();
     try {
-      const health = await checkScannerBridge();
+      let health = await checkScannerBridge();
+      if (!health?.ok) {
+        await tryStartLocalHelper();
+        health = await checkScannerBridge();
+      }
+      if (!health?.ok) {
+        await fetch("/api/scanner-bridge/ensure", { method: "POST" }).catch(() => null);
+        for (let i = 0; i < 10 && !health?.ok; i++) {
+          await new Promise((r) => setTimeout(r, 400));
+          health = await checkScannerBridge();
+        }
+      }
       setBridgeOnline(!!health?.ok);
       if (!health?.ok) {
         setError(t("documents.scannerBridgeOffline"));
@@ -224,7 +249,8 @@ export function DocumentScanner({
       const list = await listHardwareScanners();
       setHardwareDevices(list);
       if (list.length > 0) {
-        setSelectedHardwareDevice(list[0].id);
+        const preferred = list.find((d) => d.provider === "wia") || list[0];
+        setSelectedHardwareDevice(preferred.id);
       } else {
         setError(t("documents.scannerNoHardware"));
       }
@@ -235,7 +261,7 @@ export function DocumentScanner({
     } finally {
       setLoading(false);
     }
-  }, [stopStream, t]);
+  }, [locale, stopStream, t, tryStartLocalHelper]);
 
   const refreshBridgeStatus = useCallback(async () => {
     const health = await checkScannerBridge();
@@ -253,15 +279,16 @@ export function DocumentScanner({
     setCapturedFile(null);
     setError(null);
 
-    void refreshBridgeStatus().then((online) => {
+    void (async () => {
+      const online = await refreshBridgeStatus();
       if (online) {
         setScanMode("hardware");
-        void loadHardwareScanners();
+        await loadHardwareScanners();
       } else {
         setScanMode("camera");
-        void loadCameraDevices();
+        await loadCameraDevices();
       }
-    });
+    })();
 
     return () => stopStream();
   }, [open, loadCameraDevices, loadHardwareScanners, refreshBridgeStatus, stopStream]);
@@ -575,6 +602,13 @@ export function DocumentScanner({
                     <li>{t("documents.scannerBridgeStep2")}</li>
                     <li>{t("documents.scannerBridgeStep3")}</li>
                   </ol>
+                  <a
+                    href="/api/scanner-bridge/helper/install.ps1"
+                    className="mt-2 inline-flex items-center gap-2 rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold text-white hover:bg-white/25"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    {t("documents.scannerDownloadHelper")}
+                  </a>
                 </div>
               )}
               {scanMode === "hardware" && bridgeOnline && hardwareDevices.length === 0 && (
@@ -587,14 +621,27 @@ export function DocumentScanner({
                   </ul>
                 </div>
               )}
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => void (scanMode === "hardware" ? loadHardwareScanners() : loadCameraDevices())}
-              >
-                <RefreshCw className="h-4 w-4" />
-                {t("documents.scannerRetry")}
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void (scanMode === "hardware" ? loadHardwareScanners() : loadCameraDevices())}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {scanMode === "hardware" && !bridgeOnline
+                    ? t("documents.scannerStartHelper")
+                    : t("documents.scannerRetry")}
+                </Button>
+                {scanMode === "hardware" && !bridgeOnline ? (
+                  <a
+                    href="/api/scanner-bridge/helper/install.ps1"
+                    className="inline-flex min-h-8 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    {t("documents.scannerDownloadHelper")}
+                  </a>
+                ) : null}
+              </div>
             </div>
           )}
 
@@ -650,7 +697,14 @@ export function DocumentScanner({
               </div>
               <div>
                 <p className="font-semibold text-lg">{t("documents.scannerHardwareReady")}</p>
-                <p className="mt-1 max-w-sm text-sm text-slate-300">{t("documents.scannerHardwareHint")}</p>
+                <p className="mt-1 max-w-sm text-sm text-slate-300">
+                  {(() => {
+                    const selected = hardwareDevices.find((d) => d.id === selectedHardwareDevice);
+                    if (selected?.provider === "windows-pick") return t("documents.scannerHardwareHintWindows");
+                    if (selected?.provider?.startsWith("vendor-")) return t("documents.scannerHardwareHintVendor");
+                    return t("documents.scannerHardwareHint");
+                  })()}
+                </p>
                 {(() => {
                   const selected = hardwareDevices.find((d) => d.id === selectedHardwareDevice);
                   if (!selected) return null;

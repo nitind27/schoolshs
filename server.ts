@@ -33,6 +33,15 @@ app.prepare().then(() => {
       console.log("> WhatsApp session not restored (connect from Password Activity when needed)");
     });
 
+  if (process.platform === "win32" && process.env.SCANNER_BRIDGE !== "0") {
+    void import("./scanner-bridge/server")
+      .then(({ startScannerBridge }) => startScannerBridge())
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn("> Scanner helper not started:", message);
+      });
+  }
+
   httpServer.listen(port, hostname, () => {
     console.log(`> Ready on http://${hostname}:${port} (WebSocket: /api/socketio)`);
   });

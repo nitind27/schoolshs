@@ -1,8 +1,6 @@
 /**
- * Local scanner bridge (Windows WIA).
- * Supports USB cable scanners and Wi‑Fi / network MFPs that Windows installs as WIA devices.
- * Run once on school PC: npm run scanner-bridge
- * Browser portal connects via http://127.0.0.1:9847
+ * Local scanner helper (Windows WIA + Canon IJ Scan Utility).
+ * Starts automatically with the school portal. Staff never run npm.
  */
 import http from "http";
 import { spawn } from "child_process";
@@ -19,24 +17,24 @@ const LIST_SCRIPT = path.join(BRIDGE_DIR, "list-devices.ps1");
 const SCAN_SCRIPT = path.join(BRIDGE_DIR, "scan.ps1");
 
 function corsHeaders(origin: string | undefined): Record<string, string> {
-  const allowed =
-    !origin ||
-    origin.startsWith("http://localhost") ||
-    origin.startsWith("http://127.0.0.1");
   return {
-    "Access-Control-Allow-Origin": allowed && origin ? origin : "*",
+    "Access-Control-Allow-Origin": origin || "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
   };
 }
 
 function runPowerShell(file: string, args: string[] = []): Promise<string> {
   return new Promise((resolve, reject) => {
     const ps = spawn(
-      "powershell",
+      "powershell.exe",
       ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", file, ...args],
-      { windowsHide: true }
+      {
+        windowsHide: true,
+        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+      }
     );
     let stdout = "";
     let stderr = "";
@@ -53,17 +51,31 @@ function runPowerShell(file: string, args: string[] = []): Promise<string> {
 async function listDevices(): Promise<{ id: string; name: string }[]> {
   const out = await runPowerShell(LIST_SCRIPT);
   if (!out) return [];
-  const parsed = JSON.parse(out) as { devices?: { id: string; name: string }[] | { id: string; name: string } };
+  const parsed = JSON.parse(out) as {
+    devices?: { id: string; name: string }[] | { id: string; name: string };
+    error?: string;
+  };
   const raw = parsed.devices;
+  if ((!raw || (Array.isArray(raw) && raw.length === 0)) && parsed.error) {
+    throw new Error(parsed.error);
+  }
   if (!raw) return [];
   return Array.isArray(raw) ? raw : [raw];
 }
 
-async function scanDevice(deviceIndex: number): Promise<Buffer> {
+async function scanDevice(deviceId: string): Promise<Buffer> {
   const tmpDir = path.join(os.tmpdir(), "shs-scanner-bridge");
   await fs.mkdir(tmpDir, { recursive: true });
   const outPath = path.join(tmpDir, `scan-${randomUUID()}.jpg`);
-  await runPowerShell(SCAN_SCRIPT, ["-DeviceIndex", String(deviceIndex), "-OutputPath", outPath]);
+  const index = /^\d+$/.test(deviceId) ? deviceId : "0";
+  await runPowerShell(SCAN_SCRIPT, [
+    "-DeviceIndex",
+    index,
+    "-DeviceId",
+    deviceId,
+    "-OutputPath",
+    outPath,
+  ]);
   const buf = await fs.readFile(outPath);
   await fs.unlink(outPath).catch(() => {});
   return buf;
@@ -100,13 +112,14 @@ const server = http.createServer(async (req, res) => {
       sendJson(
         res,
         200,
-        {
-          ok: true,
-          platform: process.platform,
-          wia: process.platform === "win32",
-          supportsWifi: process.platform === "win32",
-          port: PORT,
-        },
+          {
+            ok: true,
+            platform: process.platform,
+            wia: process.platform === "win32",
+            supportsWifi: process.platform === "win32",
+            port: PORT,
+            helper: true,
+          },
         headers
       );
       return;
@@ -133,16 +146,16 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "POST" && url === "/scan") {
       const raw = await readBody(req);
-      let deviceIndex = 0;
+      let deviceId = "0";
       if (raw) {
         try {
           const body = JSON.parse(raw) as { deviceId?: string };
-          deviceIndex = parseInt(body.deviceId || "0", 10) || 0;
+          deviceId = String(body.deviceId ?? "0");
         } catch {
           /* default 0 */
         }
       }
-      const buffer = await scanDevice(deviceIndex);
+      const buffer = await scanDevice(deviceId);
       sendJson(
         res,
         200,
@@ -164,12 +177,35 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-if (process.platform !== "win32") {
-  console.warn("Warning: Scanner bridge is designed for Windows (WIA). Camera mode still works in browser.");
+let started = false;
+
+export function startScannerBridge(): Promise<void> {
+  if (started) return Promise.resolve();
+  started = true;
+
+  if (process.platform !== "win32") {
+    console.warn("> Scanner bridge is for Windows (WIA). Camera mode still works in the browser.");
+  }
+
+  return new Promise((resolve) => {
+    server.once("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        console.log(`> Scanner helper already running at http://${HOST}:${PORT}`);
+        resolve();
+        return;
+      }
+      console.warn("> Scanner helper failed to start:", err.message);
+      started = false;
+      resolve();
+    });
+    server.listen(PORT, HOST, () => {
+      console.log(`> Scanner helper ready at http://${HOST}:${PORT} (USB / Wi-Fi scanners)`);
+      resolve();
+    });
+  });
 }
 
-server.listen(PORT, HOST, () => {
-  console.log(`Scanner bridge running at http://${HOST}:${PORT}`);
-  console.log("Keep this window open while using USB / Wi‑Fi scanners in the portal.");
-  console.log("Endpoints: GET /health  GET /devices  POST /scan");
-});
+const launchedDirectly = process.argv.some((a) => /scanner-bridge[\\/]+(server|client-helper)/i.test(a));
+if (launchedDirectly) {
+  void startScannerBridge();
+}

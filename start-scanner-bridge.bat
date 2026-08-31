@@ -1,8 +1,9 @@
 @echo off
-title SHS Scanner Bridge
-cd /d "%~dp0.."
-echo Starting Scanner Bridge (USB + Wi-Fi) for Scholarship Portal...
-echo Keep this window OPEN while scanning documents.
-echo.
-call npm run scanner-bridge
+title SHS Scanner Helper
+cd /d "%~dp0"
+echo Starting scanner helper...
+wscript "%~dp0scanner-bridge\silent-start.vbs"
+timeout /t 2 /nobreak >nul
+echo Scanner helper is running in the background.
+echo You can close this window and use Hardware Scanner in the portal.
 pause
