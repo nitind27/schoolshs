@@ -368,7 +368,7 @@ function RegisterSpread({
                 </>
               )}
               <td className="patrak-c patrak-ser-cell">{g(r.serial)}</td>
-              <td className="patrak-name-cell">{r.name}</td>
+              <td className="patrak-name-cell font-gujarati">{r.name}</td>
               <td className="patrak-fold" aria-hidden />
               {DAYS.map((d) => (
                 <td key={d} className="patrak-day-c">{r.attendance[d - 1] || ""}</td>
@@ -722,7 +722,7 @@ export function MonthlyAttendancePatrakView({
               <tr key={r.serial}>
                 <td className="patrak-c">{g(r.serial)}</td>
                 <td>{r.grNumber}</td>
-                <td>{r.name}</td>
+                <td className="font-gujarati">{r.name}</td>
                 <td>{r.admissionDate}</td>
                 <td>{r.note}</td>
               </tr>

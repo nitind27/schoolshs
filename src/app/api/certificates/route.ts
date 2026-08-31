@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { requireSchoolFeature } from "@/lib/school-feature-access";
 import { studentFullName } from "@/lib/certificates/date-to-words";
+import { studentFullNameGu, type StudentNameLike } from "@/lib/student-names";
 import { buildAttendanceRows, toClassRegisterRows } from "@/lib/attendance";
 import { assertTeacherAttendanceAccess } from "@/lib/teacher-attendance";
 import { mapStudentToGrRow } from "@/lib/certificates/general-register";
@@ -71,6 +72,12 @@ function buildPatrak(
   return { ...meta, movement, classification: cls };
 }
 
+function studentNameGu(
+  s: StudentNameLike & { firstName: string; middleName?: string | null; surname: string },
+): string {
+  return studentFullNameGu(s) || studentFullName(s);
+}
+
 function buildScholarshipRows(
   students: { grNumber?: string | null; scholarshipScheme?: string | null; standard?: string | null; section?: string | null; firstName: string; middleName?: string | null; surname: string }[],
 ): ScholarshipReportRow[] {
@@ -78,7 +85,7 @@ function buildScholarshipRows(
     .filter((s) => s.scholarshipScheme && s.scholarshipScheme !== "None")
     .map((s) => ({
       grNumber: s.grNumber || "",
-      name: studentFullName(s),
+      name: studentNameGu(s),
       waiverType: s.scholarshipScheme!,
       standard: `${s.standard || ""}-${s.section || ""}`,
       conduct: "સારી",
@@ -95,7 +102,7 @@ function buildAdmissionRows(
     .map((s, i) => ({
       serial: i + 1,
       grNumber: s.grNumber || "",
-      name: studentFullName(s),
+      name: studentNameGu(s),
       admissionDate: s.verifiedAt ? new Date(s.verifiedAt).toLocaleDateString("en-GB") : "",
       note: "",
     }));

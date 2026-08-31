@@ -129,9 +129,9 @@ export const SAMPLE_PATRAK: MonthlyPatrakData = {
 };
 
 const SAMPLE_NAMES = [
-  "PATEL RIYA BHARATBHAI", "SHAH HARDIK KIRANBHAI", "DESAI PRIYA RAJESHBHAI",
-  "VANKAR AMIT KANTIBHAI", "CHAUHAN KAVYA NARESHBHAI", "TADVI ROHIT RAMSING",
-  "GAMIT SNEHA ARVINDBHAI", "SOLANKI JAY DIPAKBHAI",
+  "પટેલ રિયા ભરતભાઈ", "શાહ હાર્દિક કિરણભાઈ", "દેસાઈ પ્રિયા રાજેશભાઈ",
+  "વણકર અમિત કાંતિભાઈ", "ચૌહાણ કાવ્યા નરેશભાઈ", "તડવી રોહિત રામસિંહ",
+  "ગામિત સ્નેહા અરવિંદભાઈ", "સોલંકી જય દીપકભાઈ",
 ];
 
 export const SAMPLE_CLASS_REGISTER: ClassRegisterRow[] = SAMPLE_NAMES.map((name, i) => ({
@@ -149,16 +149,16 @@ export const SAMPLE_CLASS_REGISTER: ClassRegisterRow[] = SAMPLE_NAMES.map((name,
 export const SAMPLE_CLASS_REGISTER_META = { month: "7", standard: "10", section: "A" };
 
 export const SAMPLE_SCHOLARSHIP: ScholarshipReportRow[] = [
-  { grNumber: "1201", name: "TADVI ROHIT RAMSING", waiverType: "સરકારી માફી (ST)", standard: "10-A", conduct: "સારી", presentDays: "24" },
-  { grNumber: "1205", name: "GAMIT SNEHA ARVINDBHAI", waiverType: "શિષ્યવૃત્તિ", standard: "10-A", conduct: "સારી", presentDays: "25" },
-  { grNumber: "1208", name: "VANKAR AMIT KANTIBHAI", waiverType: "સરકારી માફી (SC)", standard: "10-A", conduct: "સારી", presentDays: "23" },
+  { grNumber: "1201", name: "તડવી રોહિત રામસિંહ", waiverType: "સરકારી માફી (ST)", standard: "10-A", conduct: "સારી", presentDays: "24" },
+  { grNumber: "1205", name: "ગામિત સ્નેહા અરવિંદભાઈ", waiverType: "શિષ્યવૃત્તિ", standard: "10-A", conduct: "સારી", presentDays: "25" },
+  { grNumber: "1208", name: "વણકર અમિત કાંતિભાઈ", waiverType: "સરકારી માફી (SC)", standard: "10-A", conduct: "સારી", presentDays: "23" },
 ];
 
 export const SAMPLE_ADMISSIONS: AdmissionReportRow[] = [
-  { serial: 1, grNumber: "1250", name: "MEHTA KRUNAL JAYESHBHAI", admissionDate: "05/06/2026", note: "નવો દાખલ" },
-  { serial: 2, grNumber: "1251", name: "RATHOD DIPTI MAHESHBHAI", admissionDate: "10/06/2026", note: "" },
+  { serial: 1, grNumber: "1250", name: "મહેતા ક્રુણાલ જયેશભાઈ", admissionDate: "05/06/2026", note: "નવો દાખલ" },
+  { serial: 2, grNumber: "1251", name: "રાઠોડ દીપ્તિ મહેશભાઈ", admissionDate: "10/06/2026", note: "" },
 ];
 
 export const SAMPLE_LEAVERS: LeaverReportRow[] = [
-  { serial: 1, grNumber: "1180", name: "JOSHI MITALI RAJUBHAI", leavingDate: "15/06/2026", reason: "શિક્ષણ પૂર્ણ", standard: "12-Sci", conduct: "સારી", feePaid: "હા", outstanding: "0", note: "" },
+  { serial: 1, grNumber: "1180", name: "જોષી મિતાલી રાજુભાઈ", leavingDate: "15/06/2026", reason: "શિક્ષણ પૂર્ણ", standard: "12-Sci", conduct: "સારી", feePaid: "હા", outstanding: "0", note: "" },
 ];

@@ -1,5 +1,6 @@
 import type { ClassRegisterRow } from "@/lib/certificates/types";
 import { studentFullName } from "@/lib/certificates/date-to-words";
+import { studentFullNameGu, type StudentNameLike } from "@/lib/student-names";
 
 export type AttendanceMark = "P" | "A" | "H" | "";
 
@@ -141,7 +142,7 @@ export function compareRollNumbers(a: string | null | undefined, b: string | nul
 }
 
 export function buildAttendanceRows(
-  students: {
+  students: (StudentNameLike & {
     id: string;
     grNumber?: string | null;
     caste?: string | null;
@@ -151,7 +152,7 @@ export function buildAttendanceRows(
     middleName?: string | null;
     surname: string;
     rollNumber?: string | null;
-  }[],
+  })[],
   saved: Map<
     string,
     {
@@ -204,7 +205,7 @@ export function buildAttendanceRows(
       otherFee,
       totalFee: totalFee ? String(totalFee) : "",
       serial: i + 1,
-      name: studentFullName(s),
+      name: studentFullNameGu(s) || studentFullName(s),
       attendance: days,
       monthTotal: String(monthTotal),
       prevTotal: String(rec?.prevTotal ?? ""),
