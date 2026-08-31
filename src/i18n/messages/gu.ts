@@ -2655,7 +2655,7 @@ const gu: Messages = {
     scannerHardwareReady: "સ્કેનર તૈયાર",
     scannerHardwareHint: "દસ્તાવેજ સ્કેનર કાચ પર મૂકો, પછી 'હવે સ્કેન' દબાવો",
     scannerHardwareHintCanon:
-      "Canon સ્કેન વિન્ડો ખુલશે. કાગળ કાચ પર મૂકો, ત્યાં Scan દબાવો અને રાહ જુઓ — પોર્ટલ ફોટો લઈ લેશે.",
+      "કંપનીની સ્કેન વિન્ડો ખુલશે. ત્યાં Scan દબાવો — પોર્ટલ ફોટો લઈ લેશે.",
     scannerHardwareScan: "હવે સ્કેન",
     scannerHardwareFailed:
       "સ્કેન નિષ્ફળ. સ્કેનર ચાલુ છે (USB અથવા એ જ Wi‑Fi) અને કાગળ કાચ પર છે ચકાસો.",
@@ -2689,8 +2689,6 @@ const gu: Messages = {
       "Windows સ્કેન વિન્ડો ખુલશે. આ PC પરનું કોઈ પણ સ્કેનર પસંદ કરો.",
     scannerHardwareHintVendor:
       "કંપનીની સ્કેન વિન્ડો ખુલશે (HP / Epson / Brother / Canon). ત્યાં સ્કેન કરો — પોર્ટલ ફોટો લઈ લેશે.",
-    scannerHardwareHintCanon:
-      "કંપનીની સ્કેન વિન્ડો ખુલશે. ત્યાં Scan દબાવો — પોર્ટલ ફોટો લઈ લેશે.",
     scannerRetake: "ફરી લો",
     scannerUse: "સ્કેન વાપરો",
     scannerCapture: "કેપ્ચર",
