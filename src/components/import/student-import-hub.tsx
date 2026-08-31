@@ -38,7 +38,6 @@ export function StudentImportHub() {
   const [columnMap, setColumnMap] = useState<Record<string, ImportFieldKey | "">>({});
   const [mappedRows, setMappedRows] = useState<Record<string, unknown>[]>([]);
   const [validations, setValidations] = useState<RowValidation[]>([]);
-  const [skipInvalid, setSkipInvalid] = useState(true);
   const [importProgress, setImportProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -119,13 +118,7 @@ export function StudentImportHub() {
     setImportProgress(0);
     setError(null);
 
-    const validIndexes = new Set(
-      validations.map((v, i) => i).filter((i) => validations[i].status !== "error")
-    );
-
-    const rowsToImport = skipInvalid
-      ? mappedRows.filter((_, i) => validIndexes.has(i))
-      : mappedRows;
+    const rowsToImport = mappedRows;
 
     if (!rowsToImport.length) {
       setError(t("importPage.nothingToImport"));
@@ -507,15 +500,9 @@ export function StudentImportHub() {
               </button>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={skipInvalid}
-                onChange={(e) => setSkipInvalid(e.target.checked)}
-                className="rounded border-slate-300"
-              />
-              {t("importPage.skipInvalid")}
-            </label>
+            <p className="text-sm text-slate-600">
+              {t("importPage.draftImportHint")}
+            </p>
 
             <div className="overflow-x-auto border rounded-lg">
               <table className="w-full text-xs">
@@ -580,8 +567,8 @@ export function StudentImportHub() {
                     </>
                   )}
                 </div>
-                <Button onClick={handleImport} size="lg" disabled={stats.valid + stats.warning === 0}>
-                  {t("importPage.importAll")} ({skipInvalid ? stats.valid + stats.warning : stats.total})
+                <Button onClick={handleImport} size="lg" disabled={mappedRows.length === 0}>
+                  {t("importPage.importAll")} ({stats.total})
                 </Button>
               </div>
             )}

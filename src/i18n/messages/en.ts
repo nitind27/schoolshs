@@ -2141,6 +2141,8 @@ const en = {
     validationTitle: "Pre-Import Validation",
     readyRows: "Ready",
     draftRows: "Draft (incomplete)",
+    draftImportHint:
+      "All rows import as Draft — missing fields are filled automatically. Complete details later in Students.",
     errorRows: "Errors",
     skipInvalid: "Skip rows without Aadhaar / with critical errors",
     colName: "Name",
@@ -2153,8 +2155,7 @@ const en = {
     importAnother: "Import Another File",
     noRowsFound: "No data rows found in file. Check the sheet and header row.",
     parseError: "Could not read file. Use CSV or Excel (.xlsx/.xls).",
-    nothingToImport:
-      "No valid rows to import. Fix errors or disable skip option.",
+    nothingToImport: "No rows to import. Check your file and column mapping.",
     importFailed: "Import failed. Please try again.",
   },
   exportPage: {

@@ -304,13 +304,14 @@ export function validateImportRows(
     const normalized = normalizeStudentRow(raw);
     const errors = validateStudent(normalized);
     const aadhaar = normalized.aadhaarNumber || "";
+    const gr = String(normalized.grNumber || "").trim();
     const name =
       [normalized.firstName, normalized.surname].filter(Boolean).join(" ") ||
       "—";
 
-    let status: RowValidation["status"] = "valid";
-    if (!aadhaar) status = "error";
-    else if (errors.length > 0) status = "warning";
+    const hasIdentity = Boolean(aadhaar || gr || name !== "—");
+    const status: RowValidation["status"] =
+      errors.length > 0 || !hasIdentity ? "warning" : "valid";
 
     return {
       rowIndex: i + 1,

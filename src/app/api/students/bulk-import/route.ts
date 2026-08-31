@@ -7,6 +7,8 @@ import { toStudentUncheckedCreate, toStudentUncheckedUpdate } from "@/lib/studen
 import { applyStudentPlacement } from "@/lib/student-placement";
 import { fillImportDefaults } from "@/lib/import/student-import";
 import { standardToCourseName } from "@/lib/constants";
+import { applyDraftDefaults } from "@/lib/student-draft";
+import { findStudentByGrNumber } from "@/lib/gr-student-sync";
 import {
   assertStudentAccountEmailAvailable,
   syncStudentPortalAccount,
@@ -44,7 +46,9 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < rows.length; i++) {
       const data = await fillStudentGuNames(
-        normalizeStudentRow(fillImportDefaults(rows[i] as Record<string, unknown>)),
+        applyDraftDefaults(
+          normalizeStudentRow(fillImportDefaults(rows[i] as Record<string, unknown>)),
+        ),
       );
 
       let assignedClass = data.classId ? classById.get(data.classId) : undefined;
@@ -76,58 +80,42 @@ export async function POST(request: NextRequest) {
 
       const validationErrors = validateStudent(data);
 
-      if (!data.aadhaarNumber) {
-        results.failed++;
-        results.errors.push({
-          row: i + 1,
-          aadhaarNumber: "N/A",
-          errors: ["Aadhaar number is required"],
-        });
-        continue;
-      }
-
       try {
+        const gr = String(data.grNumber || "").trim();
+        const byGr = gr ? await findStudentByGrNumber(session.schoolId, gr) : null;
+
         const uniqueWhere = {
           schoolId_aadhaarNumber: {
             schoolId: session.schoolId,
-            aadhaarNumber: data.aadhaarNumber,
+            aadhaarNumber: data.aadhaarNumber!,
           },
         };
-        const existing = await prisma.student.findUnique({ where: uniqueWhere });
+        const existing =
+          byGr ||
+          (await prisma.student.findUnique({ where: uniqueWhere }));
 
         await assertStudentAccountEmailAvailable(data.email, existing?.id);
         let student: NonNullable<typeof existing>;
+        const writeExtras = {
+          schoolId: session.schoolId,
+          status: "draft",
+          validationErrors:
+            validationErrors.length > 0 ? JSON.stringify(validationErrors) : null,
+        };
+
         if (existing) {
           student = await prisma.student.update({
-            where: uniqueWhere,
-            data: toStudentUncheckedUpdate(data as Record<string, unknown>, {
-              schoolId: session.schoolId,
-              status: validationErrors.length === 0 ? "ready" : "draft",
-              validationErrors:
-                validationErrors.length > 0 ? JSON.stringify(validationErrors) : null,
-            }),
+            where: { id: existing.id },
+            data: toStudentUncheckedUpdate(data as Record<string, unknown>, writeExtras),
           });
           results.updated++;
         } else {
           student = await prisma.student.create({
-            data: toStudentUncheckedCreate(data as Record<string, unknown>, {
-              schoolId: session.schoolId,
-              status: validationErrors.length === 0 ? "ready" : "draft",
-              validationErrors:
-                validationErrors.length > 0 ? JSON.stringify(validationErrors) : null,
-            }),
+            data: toStudentUncheckedCreate(data as Record<string, unknown>, writeExtras),
           });
           results.created++;
         }
         await syncStudentPortalAccount(student);
-
-        if (validationErrors.length > 0) {
-          results.errors.push({
-            row: i + 1,
-            aadhaarNumber: data.aadhaarNumber,
-            errors: validationErrors.map((e) => e.message),
-          });
-        }
       } catch (err) {
         results.failed++;
         results.errors.push({

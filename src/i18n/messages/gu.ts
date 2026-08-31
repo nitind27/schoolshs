@@ -2118,6 +2118,8 @@ const gu: Messages = {
     validationTitle: "આયાત પહેલાં વેલિડેશન",
     readyRows: "તૈયાર",
     draftRows: "ડ્રાફ્ટ (અપૂર્ણ)",
+    draftImportHint:
+      "બધી પંક્તિઓ ડ્રાફ્ટ તરીકે આયાત થશે — ખૂટતા ફીલ્ડ આપમેળે ભરાશે. વિગતો પછી Students માં પૂર્ણ કરો.",
     errorRows: "ભૂલો",
     skipInvalid: "આધાર વગર / ગંભીર ભૂલ વાળી પંક્તિઓ છોડો",
     colName: "નામ",
@@ -2130,8 +2132,7 @@ const gu: Messages = {
     importAnother: "બીજી ફાઈલ આયાત કરો",
     noRowsFound: "ફાઈલમાં ડેટા નથી. શીટ અને હેડર પંક્તિ તપાસો.",
     parseError: "ફાઈલ વાંચી શકાઈ નહીં. CSV અથવા Excel (.xlsx/.xls) વાપરો.",
-    nothingToImport:
-      "આયાત માટે વૈધ પંક્તિ નથી. ભૂલો સુધારો અથવા સ્કિપ બંધ કરો.",
+    nothingToImport: "આયાત કરવા માટે કોઈ પંક્તિ નથી. ફાઇલ અને કૉલમ મેપિંગ તપાસો.",
     importFailed: "આયાત નિષ્ફળ. ફરી પ્રયાસ કરો.",
   },
   exportPage: {
