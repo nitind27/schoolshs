@@ -12,7 +12,6 @@ import { NavbarChatButton } from "@/components/layout/navbar-chat";
 import { NavbarLetterheadButton } from "@/components/layout/navbar-letterhead";
 import { NavbarMegaMenu } from "@/components/layout/navbar-mega-menu";
 import { NavbarGrSearch } from "@/components/layout/navbar-gr-search";
-import { FeatureTourTrigger } from "@/components/feature-tour/feature-tour-panel";
 import { toast } from "@/components/ui/toast";
 import { AUTH_CHANGED_EVENT, notifyAuthChanged } from "@/lib/auth-client";
 import "./top-navbar.css";
@@ -197,7 +196,6 @@ export function TopNavbar({
           {showLetterhead && <NavbarLetterheadButton role={user?.role} />}
           {showChat && <NavbarChatButton role={user?.role} />}
           {showNotifications && <NotificationBell />}
-          {showMegaMenu && <FeatureTourTrigger />}
         </div>
 
         <span className="tn-divider hidden sm:block" aria-hidden />

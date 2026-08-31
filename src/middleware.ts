@@ -86,6 +86,11 @@ function isHolidayRoute(pathname: string): boolean {
   );
 }
 
+/** Staff passport photo upload/remove — self-service on /profile (API enforces ownership). */
+function isStaffSelfPhotoApi(pathname: string): boolean {
+  return /^\/api\/staff\/[^/]+\/photo\/?$/.test(pathname);
+}
+
 function isSchoolAdminRoute(pathname: string): boolean {
   if (pathMatches(pathname, "/admin") || pathMatches(pathname, "/api/admin"))
     return false;
@@ -373,7 +378,8 @@ export async function middleware(request: NextRequest) {
           pathname.startsWith("/api/staff/holidays") ||
           pathname.startsWith("/api/teacher/holidays") ||
           pathname.startsWith("/profile") ||
-          pathname.startsWith("/api/account"))) ||
+          pathname.startsWith("/api/account") ||
+          isStaffSelfPhotoApi(pathname))) ||
       (session.role === "clerk" &&
         (clerkRoutes.some(
           (r) => pathname === r || pathname.startsWith(r + "/"),
@@ -391,7 +397,8 @@ export async function middleware(request: NextRequest) {
           pathname.startsWith("/api/birthdays") ||
           pathname.startsWith("/api/help") ||
           pathname.startsWith("/profile") ||
-          pathname.startsWith("/api/account")));
+          pathname.startsWith("/api/account") ||
+          isStaffSelfPhotoApi(pathname)));
 
     if (!allowed) {
       if (pathname.startsWith("/api/")) {

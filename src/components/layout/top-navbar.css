@@ -1099,8 +1099,7 @@ html.locale-gu .tn-lang {
   }
 
   .tn-btn,
-  .tn-mega-trigger,
-  .ft-trigger {
+  .tn-mega-trigger {
     height: 2rem;
     min-width: 2rem;
     flex-shrink: 0;
@@ -1128,14 +1127,12 @@ html.locale-gu .tn-lang {
 
   .tn-letterhead,
   .tn-chat,
-  .tn-notification,
-  .ft-trigger {
+  .tn-notification {
     display: inline-flex;
   }
 
   .tn-btn svg,
-  .tn-mega-trigger svg,
-  .ft-trigger svg {
+  .tn-mega-trigger svg {
     width: 1.05rem;
     height: 1.05rem;
   }

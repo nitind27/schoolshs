@@ -237,7 +237,7 @@ function IdCardsContent() {
   const hasSearch = search.trim().length > 0;
 
   return (
-    <div className="space-y-6" data-ft-anchor="main">
+    <div className="space-y-6">
       <div className="id-cards-toolbar flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">

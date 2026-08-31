@@ -6,10 +6,6 @@ import { ArrowRight, ArrowUpRight, ChevronDown, LayoutGrid, X } from "lucide-rea
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/locale-provider";
 import { REPORTS_CERTS_MEGA_MENU } from "@/lib/nav-mega-menu";
-import {
-  FT_MEGA_CLOSE_EVENT,
-  FT_MEGA_OPEN_EVENT,
-} from "@/components/feature-tour/feature-tour-panel";
 import { hrefToFeature, isFeatureEnabled } from "@/lib/school-features";
 import { useSchoolFeatures } from "@/components/school/use-school-features";
 
@@ -37,17 +33,11 @@ export function NavbarMegaMenu() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
-    const onTourOpen = () => setOpen(true);
-    const onTourClose = () => setOpen(false);
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
-    window.addEventListener(FT_MEGA_OPEN_EVENT, onTourOpen);
-    window.addEventListener(FT_MEGA_CLOSE_EVENT, onTourClose);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
-      window.removeEventListener(FT_MEGA_OPEN_EVENT, onTourOpen);
-      window.removeEventListener(FT_MEGA_CLOSE_EVENT, onTourClose);
     };
   }, []);
 

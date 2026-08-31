@@ -16,6 +16,7 @@ type MeUser = {
   email: string;
   role: string;
   staffId?: string | null;
+  photoPath?: string | null;
   schoolName?: string | null;
   schoolCode?: string | null;
 };
@@ -43,20 +44,13 @@ export default function ProfilePage() {
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => r.json())
-      .then((d) => setUser(d.user || null))
+      .then((d) => {
+        const me = d.user || null;
+        setUser(me);
+        setPhotoPath(me?.photoPath ?? null);
+      })
       .finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (!staffId) {
-      setPhotoPath(null);
-      return;
-    }
-    fetch(`/api/staff/${staffId}`)
-      .then((r) => r.json())
-      .then((d) => setPhotoPath(d.photoPath || null))
-      .catch(() => setPhotoPath(null));
-  }, [staffId]);
 
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();

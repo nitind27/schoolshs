@@ -88,7 +88,7 @@ export default function CertificatesHubPage() {
   const pack = getCertificatePack(formats?.certificates);
 
   return (
-    <div className="space-y-6 animate-fade-in" data-ft-anchor="main">
+    <div className="space-y-6 animate-fade-in">
 
       {/* ── Page hero ──────────────────────────────── */}
       <div className="page-hero p-5 md:p-6">

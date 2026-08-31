@@ -40,7 +40,7 @@ export function PageShell({
       : accentColor;
 
   return (
-    <div className="space-y-4 animate-fade-in" data-ft-anchor="main">
+    <div className="space-y-4 animate-fade-in">
       <div className={cn(heroClass, "p-4 md:p-5")}>
         {breadcrumbs.length > 0 && (
           <nav className="mb-2 flex flex-wrap items-center gap-1 text-xs text-slate-500" aria-label="Breadcrumb">

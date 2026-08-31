@@ -13,7 +13,6 @@ import { isUserRole, type UserRole } from "@/lib/roles";
 import { AUTH_CHANGED_EVENT, notifyAuthChanged } from "@/lib/auth-client";
 import { Toaster } from "@/components/ui/toast";
 import { HelpChatbot } from "@/components/help/help-chatbot";
-import { FeatureTourDemoSearchBridge } from "@/components/feature-tour/feature-tour-panel";
 import { PageLoader } from "@/components/ui/loader";
 import { RouteProgressGate } from "@/components/layout/route-progress";
 import { SidebarCollapseProvider } from "@/components/layout/sidebar-collapse";
@@ -262,7 +261,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Suspense>
         <AppShellInner>{children}</AppShellInner>
         <HelpChatbot />
-        <FeatureTourDemoSearchBridge />
       </SidebarCollapseProvider>
     </LocaleProvider>
   );

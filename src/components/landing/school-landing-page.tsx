@@ -59,6 +59,12 @@ const SERVICES = [
 
 const HERO_VIDEO_SRC = "/video/bgvideo.mp4";
 
+const HERO_STATS = [
+  { valKey: "statModulesVal", labelKey: "statModules", icon: BookOpen },
+  { valKey: "statPortalsVal", labelKey: "statPortals", icon: Users },
+  { valKey: "statSecureVal", labelKey: "statSecure", icon: Lock },
+] as const;
+
 type ServiceKey = (typeof SERVICES)[number]["key"];
 
 function ModuleDetailModal({
@@ -323,21 +329,44 @@ export function SchoolLandingPage() {
         </div>
 
         <div className="lp-shell lp-hero-content landing-fade landing-fade--show">
-          <p className="lp-hero-kicker">
-            <span className="lp-hero-dot" />
-            {t("landing.productTag")}
-          </p>
-          <h1 className="lp-brand-title">{t("landing.productName")}</h1>
-          <p className="lp-headline">{t("landing.heroHeadline")}</p>
-          <p className="lp-lede">{t("landing.heroDesc")}</p>
-          <div className="lp-cta-row">
-            <Link href="/login" className="lp-btn-primary">
-              <span>{t("landing.ctaPortal")}</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <a href="#modules" className="lp-btn-ghost">
-              {t("landing.ctaExplore")}
-            </a>
+          <div className="lp-hero-panel">
+            <p className="lp-hero-kicker">
+              <span className="lp-hero-dot" />
+              {t("landing.heroBadge")}
+            </p>
+            <h1 className="lp-hero-title">{t("landing.heroHeadline")}</h1>
+            <p className="lp-hero-brand">
+              {t("landing.productName")}
+              <span className="lp-hero-brand-sep" aria-hidden>
+                ·
+              </span>
+              {t("landing.productTag")}
+            </p>
+            <p className="lp-lede">{t("landing.heroDesc")}</p>
+
+            <ul className="lp-hero-stats" aria-label={t("landing.heroStatsLabel")}>
+              {HERO_STATS.map(({ valKey, labelKey, icon: StatIcon }) => (
+                <li key={labelKey} className="lp-hero-stat">
+                  <span className="lp-hero-stat-icon" aria-hidden>
+                    <StatIcon className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="lp-hero-stat-body">
+                    <span className="lp-hero-stat-val">{t(`landing.${valKey}`)}</span>
+                    <span className="lp-hero-stat-label">{t(`landing.${labelKey}`)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="lp-cta-row">
+              <Link href="/login" className="lp-btn-primary">
+                <span>{t("landing.ctaPortal")}</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <a href="#modules" className="lp-btn-ghost">
+                {t("landing.ctaExplore")}
+              </a>
+            </div>
           </div>
         </div>
       </section>

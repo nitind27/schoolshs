@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { PageLoader } from "@/components/ui/loader";
 import { useT } from "@/i18n/locale-provider";
-import { Images, Plus, CalendarDays } from "lucide-react";
+import { Images, Plus, CalendarDays, X } from "lucide-react";
 import "./gallery.css";
 
 type GalleryCard = {
@@ -43,6 +44,25 @@ export default function GalleryPage() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const [form, setForm] = useState({ activityName: "", eventDate: todayIso(), title: "" });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!modal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !saving) setModal(false);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [modal, saving]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -174,43 +194,66 @@ export default function GalleryPage() {
         )}
       </div>
 
-      {modal ? (
-        <div className="gal-modal-bg" onClick={() => !saving && setModal(false)}>
-          <div className="gal-modal" onClick={(ev) => ev.stopPropagation()}>
-            <h3>{t("gallery.addActivity")}</h3>
-            <p className="gal-modal__desc">{t("gallery.addHint")}</p>
-            {err ? <p className="gal-error">{err}</p> : null}
-            <div className="gal-modal__fields">
-              <Input
-                label={t("gallery.activityName")}
-                value={form.activityName}
-                placeholder={t("gallery.activityPlaceholder")}
-                onChange={(e) => setForm((p) => ({ ...p, activityName: e.target.value }))}
+      {modal && mounted
+        ? createPortal(
+            <div className="gal-modal-root" role="dialog" aria-modal="true" aria-labelledby="gal-add-title">
+              <button
+                type="button"
+                className="gal-modal-bg"
+                aria-label={t("common.cancel")}
+                disabled={saving}
+                onClick={() => setModal(false)}
               />
-              <DateField
-                label={t("gallery.eventDate")}
-                value={form.eventDate}
-                onChange={(v) => setForm((p) => ({ ...p, eventDate: v }))}
-                outputFormat="iso"
-              />
-              <Input
-                label={t("gallery.firstTitle")}
-                value={form.title}
-                placeholder={t("gallery.titlePlaceholder")}
-                onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-              />
-            </div>
-            <div className="gal-modal__actions">
-              <Button type="button" variant="outline" disabled={saving} onClick={() => setModal(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button type="button" disabled={saving} onClick={() => void create()}>
-                {saving ? t("common.saving") : t("gallery.saveActivity")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+              <div className="gal-modal" onClick={(ev) => ev.stopPropagation()}>
+                <div className="gal-modal__head">
+                  <div className="min-w-0">
+                    <h3 id="gal-add-title">{t("gallery.addActivity")}</h3>
+                    <p className="gal-modal__desc">{t("gallery.addHint")}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="gal-modal__close"
+                    aria-label={t("common.cancel")}
+                    disabled={saving}
+                    onClick={() => setModal(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {err ? <p className="gal-error">{err}</p> : null}
+                <div className="gal-modal__fields">
+                  <Input
+                    label={t("gallery.activityName")}
+                    value={form.activityName}
+                    placeholder={t("gallery.activityPlaceholder")}
+                    onChange={(e) => setForm((p) => ({ ...p, activityName: e.target.value }))}
+                  />
+                  <DateField
+                    label={t("gallery.eventDate")}
+                    value={form.eventDate}
+                    onChange={(v) => setForm((p) => ({ ...p, eventDate: v }))}
+                    outputFormat="iso"
+                  />
+                  <Input
+                    label={t("gallery.firstTitle")}
+                    value={form.title}
+                    placeholder={t("gallery.titlePlaceholder")}
+                    onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                  />
+                </div>
+                <div className="gal-modal__actions">
+                  <Button type="button" variant="outline" disabled={saving} onClick={() => setModal(false)}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button type="button" disabled={saving} onClick={() => void create()}>
+                    {saving ? t("common.saving") : t("gallery.saveActivity")}
+                  </Button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </PageShell>
   );
 }

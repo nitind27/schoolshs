@@ -4093,8 +4093,8 @@ html.locale-gu .lp-module-modal-root {
   inset: 0;
   z-index: 2;
   background:
-    linear-gradient(105deg, rgb(8 20 28 / 0.62) 0%, rgb(8 20 28 / 0.28) 48%, rgb(8 20 28 / 0.08) 100%),
-    linear-gradient(0deg, rgb(8 20 28 / 0.42) 0%, transparent 52%);
+    linear-gradient(118deg, rgb(8 20 28 / 0.82) 0%, rgb(8 20 28 / 0.52) 38%, rgb(8 20 28 / 0.18) 68%, rgb(8 20 28 / 0.06) 100%),
+    linear-gradient(0deg, rgb(8 20 28 / 0.58) 0%, transparent 48%);
   pointer-events: none;
 }
 
@@ -4111,7 +4111,7 @@ html.locale-gu .lp-module-modal-root {
 .lp-hero--v2 .lp-hero-content {
   position: relative;
   z-index: 4;
-  max-width: 40rem;
+  max-width: 46rem;
   margin: 0;
   padding-top: 7.5rem;
   padding-bottom: 5.5rem;
@@ -4119,20 +4119,33 @@ html.locale-gu .lp-module-modal-root {
   transform: none;
 }
 
+.lp-hero--v2 .lp-hero-panel {
+  max-width: 42rem;
+  padding: clamp(1.35rem, 3.5vw, 2.1rem);
+  border-radius: 1.35rem;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  background:
+    linear-gradient(148deg, rgb(255 255 255 / 0.12) 0%, rgb(255 255 255 / 0.04) 55%, rgb(13 110 110 / 0.08) 100%);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 28px 72px -36px rgb(0 0 0 / 0.62),
+    inset 0 1px 0 rgb(255 255 255 / 0.16);
+}
+
 .lp-hero--v2 .lp-hero-kicker {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 0 1.1rem;
-  padding: 0.4rem 0.85rem;
+  margin: 0 0 1rem;
+  padding: 0.38rem 0.8rem;
   border-radius: 999px;
-  border: 1px solid rgb(255 255 255 / 0.18);
-  background: rgb(255 255 255 / 0.08);
+  border: 1px solid rgb(94 224 200 / 0.28);
+  background: rgb(13 110 110 / 0.22);
   backdrop-filter: blur(10px);
-  color: #d7efe9;
-  font-size: 0.72rem;
+  color: #c8f5ec;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   animation: lp-title-in 0.9s var(--lp-ease) both;
 }
@@ -4142,44 +4155,102 @@ html.locale-gu .lp-module-modal-root {
   box-shadow: 0 0 0 4px rgb(94 224 200 / 0.2);
 }
 
-.lp-hero--v2 .lp-brand-title {
-  max-width: none;
+.lp-hero--v2 .lp-hero-title {
+  max-width: 18ch;
   margin: 0;
-  font-size: clamp(2.75rem, 8vw, 4.75rem);
+  font-size: clamp(2rem, 5.4vw, 3.15rem);
   font-weight: 800;
-  letter-spacing: -0.045em;
-  line-height: 0.98;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
   color: #fff;
-  background: none;
-  -webkit-background-clip: unset;
-  background-clip: unset;
-  text-shadow: 0 18px 40px rgb(0 0 0 / 0.35);
+  text-shadow: 0 16px 36px rgb(0 0 0 / 0.35);
   animation: lp-title-in 1s var(--lp-ease) 0.05s both;
 }
 
-.lp-hero--v2 .lp-headline {
-  margin: 1.15rem 0 0;
-  max-width: 22ch;
-  font-size: clamp(1.2rem, 2.6vw, 1.55rem);
-  font-weight: 600;
-  line-height: 1.3;
-  color: rgb(255 255 255 / 0.92);
-  animation: lp-title-in 1s var(--lp-ease) 0.12s both;
+.lp-hero--v2 .lp-hero-brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.35;
+  color: rgb(200 245 236 / 0.92);
+}
+
+.lp-hero--v2 .lp-hero-brand-sep {
+  color: rgb(255 255 255 / 0.35);
+  font-weight: 400;
 }
 
 .lp-hero--v2 .lp-lede {
-  margin: 0.85rem 0 0;
-  max-width: 38ch;
-  font-size: 1.05rem;
-  line-height: 1.6;
-  color: rgb(220 235 232 / 0.82);
-  animation: lp-title-in 1s var(--lp-ease) 0.18s both;
+  margin: 0.9rem 0 0;
+  max-width: 42ch;
+  font-size: 1.02rem;
+  line-height: 1.62;
+  color: rgb(220 235 232 / 0.88);
+  animation: lp-title-in 1s var(--lp-ease) 0.14s both;
+}
+
+.lp-hero--v2 .lp-hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 1.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  animation: lp-title-in 1s var(--lp-ease) 0.2s both;
+}
+
+.lp-hero--v2 .lp-hero-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(0 0 0 / 0.2);
+}
+
+.lp-hero--v2 .lp-hero-stat-icon {
+  display: grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.55rem;
+  background: rgb(94 224 200 / 0.14);
+  color: #5ee0c8;
+  flex-shrink: 0;
+}
+
+.lp-hero--v2 .lp-hero-stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.lp-hero--v2 .lp-hero-stat-val {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.lp-hero--v2 .lp-hero-stat-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: rgb(210 230 226 / 0.78);
 }
 
 .lp-hero--v2 .lp-cta-row {
   justify-content: flex-start;
-  margin-top: 1.85rem;
-  animation: lp-title-in 1s var(--lp-ease) 0.26s both;
+  margin-top: 1.65rem;
+  animation: lp-title-in 1s var(--lp-ease) 0.28s both;
 }
 
 .lp-hero--v2 .lp-btn-primary {
@@ -4302,19 +4373,20 @@ html.locale-gu .lp-module-modal-root {
   color: rgb(220 235 232 / 0.88);
 }
 
-html.locale-gu .lp-hero--v2 .lp-brand-title {
-  font-size: clamp(2.2rem, 6.5vw, 3.6rem);
-  line-height: 1.08;
+html.locale-gu .lp-hero--v2 .lp-hero-title {
+  max-width: 22ch;
+  font-size: clamp(1.85rem, 5vw, 2.85rem);
+  line-height: 1.12;
   letter-spacing: 0;
-}
-
-html.locale-gu .lp-hero--v2 .lp-headline {
-  max-width: 28ch;
 }
 
 html.locale-gu .lp-hero--v2 .lp-hero-kicker {
   letter-spacing: 0;
   text-transform: none;
+}
+
+html.locale-gu .lp-hero--v2 .lp-hero-stat-label {
+  font-size: 0.72rem;
 }
 
 @media (max-width: 768px) {
@@ -4333,8 +4405,22 @@ html.locale-gu .lp-hero--v2 .lp-hero-kicker {
     bottom: 1.15rem;
   }
 
-  .lp-hero--v2 .lp-headline {
-    max-width: 28ch;
+  .lp-hero--v2 .lp-hero-title {
+    max-width: 22ch;
+  }
+
+  .lp-hero--v2 .lp-hero-panel {
+    padding: 1.25rem;
+    border-radius: 1.1rem;
+  }
+
+  .lp-hero--v2 .lp-hero-stats {
+    gap: 0.45rem;
+  }
+
+  .lp-hero--v2 .lp-hero-stat {
+    flex: 1 1 calc(50% - 0.45rem);
+    min-width: 7.5rem;
   }
 }
 
@@ -4344,9 +4430,10 @@ html.locale-gu .lp-hero--v2 .lp-hero-kicker {
   }
 
   .lp-hero--v2 .lp-hero-frame,
-  .lp-hero--v2 .lp-brand-title,
-  .lp-hero--v2 .lp-headline,
+  .lp-hero--v2 .lp-hero-title,
+  .lp-hero--v2 .lp-hero-brand,
   .lp-hero--v2 .lp-lede,
+  .lp-hero--v2 .lp-hero-stats,
   .lp-hero--v2 .lp-cta-row,
   .lp-hero--v2 .lp-hero-kicker {
     animation: none !important;
