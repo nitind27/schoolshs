@@ -217,6 +217,15 @@ export function CertificatePrintShell({
               : "A4 portrait"};
           margin: ${pageMargin};
         }
+        ${
+          pageSize === "legal"
+            ? `
+        @page patrak-legal {
+          size: ${landscape ? "14in 8.5in" : "8.5in 14in"};
+          margin: ${pageMargin};
+        }`
+            : ""
+        }
         @media print {
           * {
             print-color-adjust: exact !important;
@@ -239,7 +248,7 @@ export function CertificatePrintShell({
         .cert-preview-frame .cert-page {
           margin: 0 auto;
           max-width: ${pageSize === "legal"
-            ? landscape ? "356mm" : "216mm"
+            ? landscape ? "349.6mm" : "209.9mm"
             : landscape ? "297mm" : "210mm"};
           box-shadow: 0 8px 32px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.1);
           border-radius: 2px;

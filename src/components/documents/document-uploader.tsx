@@ -11,6 +11,7 @@ import { DocumentScanner } from "@/components/documents/document-scanner";
 import "./document-uploader.css";
 
 import type { DocType } from "@/lib/student-documents";
+import { visibleDocTypesForStandard } from "@/lib/student-documents";
 
 export type { DocType };
 
@@ -53,17 +54,23 @@ function apiErrorMessage(t: Translator, data: { errorKey?: string; error?: strin
   return data.error || t(fallbackKey);
 }
 
-export function getDefaultDocuments(t: Translator): Omit<DocumentInfo, "previewUrl" | "fileName" | "mimeType" | "size" | "originalSize" | "dgReady" | "compressMessage">[] {
-  return [
-    { type: "photo", label: t("documents.photo"), description: t("documents.photoDesc"), accept: "image/jpeg,image/jpg,image/png,image/webp", required: true },
-    { type: "aadhaar", label: t("documents.aadhaar"), description: t("documents.aadhaarDesc"), accept: "image/jpeg,image/jpg,image/png,image/webp,application/pdf" },
-    { type: "income", label: t("documents.income"), description: t("documents.incomeDesc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
-    { type: "caste", label: t("documents.caste"), description: t("documents.casteDesc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
-    { type: "marksheet10", label: t("documents.marksheet10"), description: t("documents.marksheet10Desc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
-    { type: "marksheet12", label: t("documents.marksheet12"), description: t("documents.marksheet12Desc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
-    { type: "bankPassbook", label: t("documents.bankPassbook"), description: t("documents.bankPassbookDesc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
-    { type: "feeReceipt", label: t("documents.feeReceipt"), description: t("documents.feeReceiptDesc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
+export function getDefaultDocuments(
+  t: Translator,
+  standard?: string | null,
+): Omit<DocumentInfo, "previewUrl" | "fileName" | "mimeType" | "size" | "originalSize" | "dgReady" | "compressMessage">[] {
+  const all = [
+    { type: "photo" as const, label: t("documents.photo"), description: t("documents.photoDesc"), accept: "image/jpeg,image/jpg,image/png,image/webp", required: true },
+    { type: "aadhaar" as const, label: t("documents.aadhaar"), description: t("documents.aadhaarDesc"), accept: "image/jpeg,image/jpg,image/png,image/webp,application/pdf" },
+    { type: "income" as const, label: t("documents.income"), description: t("documents.incomeDesc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
+    { type: "caste" as const, label: t("documents.caste"), description: t("documents.casteDesc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
+    { type: "marksheet10" as const, label: t("documents.marksheet10"), description: t("documents.marksheet10Desc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
+    { type: "marksheet12" as const, label: t("documents.marksheet12"), description: t("documents.marksheet12Desc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
+    { type: "bankPassbook" as const, label: t("documents.bankPassbook"), description: t("documents.bankPassbookDesc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
+    { type: "feeReceipt" as const, label: t("documents.feeReceipt"), description: t("documents.feeReceiptDesc"), accept: "image/jpeg,image/jpg,image/png,application/pdf" },
   ];
+  if (standard === undefined) return all;
+  const allowed = new Set(visibleDocTypesForStandard(standard));
+  return all.filter((d) => allowed.has(d.type));
 }
 
 /** @deprecated Use getDefaultDocuments(t) instead */

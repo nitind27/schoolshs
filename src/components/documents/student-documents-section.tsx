@@ -33,17 +33,17 @@ export function StudentDocumentsSection({ studentId, apiUrl }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t("documents.loadFailed"));
 
-      const defaults = getDefaultDocuments(t);
+      const defaults = getDefaultDocuments(t, data.standard || null);
       const byType = new Map(
         (
-          data.documents as {
+          (data.documents as {
             type: DocType;
             previewUrl?: string;
             fileName?: string;
             mimeType?: string;
             size?: number;
             dgReady?: boolean;
-          }[]
+          }[]) || []
         ).map((d) => [d.type, d]),
       );
 

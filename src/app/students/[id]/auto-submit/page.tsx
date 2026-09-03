@@ -1,7 +1,7 @@
 "use client";
 
 import { Spinner, PageLoader } from "@/components/ui/loader";
-import { useEffect, useState, use, useCallback, useMemo } from "react";
+import { useEffect, useState, use, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
@@ -59,15 +59,12 @@ export default function AutoSubmitPage({
 }) {
   const t = useT();
   const { id } = use(params);
-  const defaultDocs = useMemo(() => getDefaultDocuments(t), [t]);
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
   const [started, setStarted] = useState(false);
-  const [documents, setDocuments] = useState<DocumentInfo[]>(() =>
-    defaultDocs.map((d) => ({ ...d })),
-  );
+  const [documents, setDocuments] = useState<DocumentInfo[]>([]);
 
   const [form, setForm] = useState({
     dgLoginId: "",
@@ -88,8 +85,9 @@ export default function AutoSubmitPage({
     if (!res.ok) return;
     const data = await res.json();
 
+    const catalog = getDefaultDocuments(t, data.standard || null);
     setDocuments(
-      defaultDocs.map((def) => {
+      catalog.map((def) => {
         const saved = data.documents?.find(
           (d: { type: DocType }) => d.type === def.type,
         );
@@ -104,7 +102,7 @@ export default function AutoSubmitPage({
         };
       }),
     );
-  }, [id, defaultDocs]);
+  }, [id, t]);
 
   useEffect(() => {
     Promise.all([

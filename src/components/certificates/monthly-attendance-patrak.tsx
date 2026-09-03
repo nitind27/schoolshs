@@ -17,13 +17,20 @@ const INK = "#1a5f7a";
 const FONT = '"Noto Sans Gujarati", "Noto Sans", Arial, sans-serif';
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
-/** Legal 8.5×14in landscape — one size for preview and print (no mixed A4 pages). */
+/**
+ * Legal portrait 8.5in × 14in (215.9 × 355.6 mm).
+ * @page margin 3mm → one sheet = one printed page.
+ * Register: left page and right page print as separate Legal portrait sheets.
+ */
 const LEGAL = {
-  margin: "4mm",
-  pageW: "355.6mm",
-  pageH: "215.9mm",
-  w: "347.6mm",
-  h: "207.9mm",
+  margin: "3mm",
+  pageW: "215.9mm",
+  pageH: "355.6mm",
+  /** Printable area inside @page margins */
+  w: "209.9mm",
+  h: "349.6mm",
+  padY: "3mm",
+  padX: "3.5mm",
 } as const;
 
 function g(n: number | string): string {
@@ -135,7 +142,119 @@ const SHEET3_SUMMARY_LABELS = [
   "નવા આવેલાની સંખ્યા",
   "ઉઠી જનારાની સંખ્યા",
   "એકંદરે સંખ્યા",
+] as const;
+
+type Sheet3SummaryKey =
+  | "present"
+  | "leave"
+  | "sick"
+  | "absent"
+  | "total"
+  | "newIn"
+  | "leftOut"
+  | "overall";
+
+const SHEET3_SUMMARY_KEYS: Sheet3SummaryKey[] = [
+  "present",
+  "leave",
+  "sick",
+  "absent",
+  "total",
+  "newIn",
+  "leftOut",
+  "overall",
 ];
+
+function dayInMonth(dateStr: string, month: number, year: number): number | null {
+  const raw = (dateStr || "").trim();
+  if (!raw) return null;
+  let d = 0;
+  let m = 0;
+  let y = 0;
+  const gb = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  const iso = raw.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
+  if (gb) {
+    d = parseInt(gb[1], 10);
+    m = parseInt(gb[2], 10);
+    y = parseInt(gb[3], 10);
+  } else if (iso) {
+    y = parseInt(iso[1], 10);
+    m = parseInt(iso[2], 10);
+    d = parseInt(iso[3], 10);
+  } else {
+    const dt = new Date(raw);
+    if (Number.isNaN(dt.getTime())) return null;
+    d = dt.getDate();
+    m = dt.getMonth() + 1;
+    y = dt.getFullYear();
+  }
+  if (m !== month || y !== year || d < 1 || d > 31) return null;
+  return d;
+}
+
+function buildSheet3DaySummaries(
+  students: ClassRegisterRow[],
+  admissions: AdmissionReportRow[],
+  leavers: LeaverReportRow[],
+  month: string,
+  year: string
+): Record<Sheet3SummaryKey, (number | null)[]> {
+  const monthNum = parseInt(month, 10);
+  const yearNum = parseInt(year, 10);
+  const empty = () => Array.from({ length: 31 }, () => null as number | null);
+  const out: Record<Sheet3SummaryKey, (number | null)[]> = {
+    present: empty(),
+    leave: empty(),
+    sick: empty(),
+    absent: empty(),
+    total: empty(),
+    newIn: empty(),
+    leftOut: empty(),
+    overall: empty(),
+  };
+
+  const newByDay = Array.from({ length: 31 }, () => 0);
+  const leftByDay = Array.from({ length: 31 }, () => 0);
+  for (const a of admissions) {
+    const day = dayInMonth(a.admissionDate, monthNum, yearNum);
+    if (day) newByDay[day - 1] += 1;
+  }
+  for (const l of leavers) {
+    const day = dayInMonth(l.leavingDate, monthNum, yearNum);
+    if (day) leftByDay[day - 1] += 1;
+  }
+
+  for (let i = 0; i < 31; i++) {
+    let present = 0;
+    let absent = 0;
+    let marked = 0;
+    for (const r of students) {
+      const mark = (r.attendance[i] || "").toString().trim().toUpperCase();
+      if (mark === "P" || mark === "H") {
+        present += 1;
+        marked += 1;
+      } else if (mark === "A") {
+        absent += 1;
+        marked += 1;
+      }
+    }
+    const newIn = newByDay[i];
+    const leftOut = leftByDay[i];
+    if (marked === 0 && newIn === 0 && leftOut === 0) continue;
+    out.present[i] = present;
+    out.absent[i] = absent;
+    out.total[i] = present + absent;
+    out.newIn[i] = newIn;
+    out.leftOut[i] = leftOut;
+    out.overall[i] = present + absent + newIn - leftOut;
+  }
+  return out;
+}
+
+function fmtSummaryCount(v: number | null | undefined): string {
+  if (v == null) return "";
+  return g(v);
+}
 
 /** Editable ...... blank in vertical headers — type number, shows Gujarati digits. */
 function HdrDots({
@@ -222,8 +341,8 @@ const LEFT_SHEET2_COLS = 10; // gr dob 4fees caste cat ser name
 const LEFT_SHEET3_COLS = 11; // gr caste dob 5fees sign ser name
 
 /**
- * Open-book register: LEFT | RIGHT as ONE table.
- * Same <tr> = continuous horizontal line (matches physical patrak).
+ * Legal portrait: LEFT + RIGHT as separate print pages.
+ * Screen: joint open-book. Print: joinable single sheets.
  */
 function RegisterSpread({
   rows,
@@ -236,6 +355,9 @@ function RegisterSpread({
   yearShort,
   month,
   year,
+  summaryStudents = [],
+  admissions = [],
+  leavers = [],
 }: {
   rows: ClassRegisterRow[];
   variant: "sheet2" | "sheet3";
@@ -247,16 +369,34 @@ function RegisterSpread({
   yearShort: string;
   month: string;
   year: string;
+  summaryStudents?: ClassRegisterRow[];
+  admissions?: AdmissionReportRow[];
+  leavers?: LeaverReportRow[];
 }) {
   const isSheet3 = variant === "sheet3";
   const leftCols = isSheet3 ? LEFT_SHEET3_COLS : LEFT_SHEET2_COLS;
   const { monthDays, setMonthDays, prevDays, setPrevDays, cumDays, setCumDays } =
     useAttendanceDayBlanks(rows, month, year);
 
+  const daySummaries = isSheet3
+    ? buildSheet3DaySummaries(
+        summaryStudents.length ? summaryStudents : rows,
+        admissions,
+        leavers,
+        month,
+        year
+      )
+    : null;
+
+  const attTotalLabels = [
+    `છેલ્લા માસ સુધીની કુલ ${prevDays ? g(prevDays) : "...."} હાજરી`,
+    `આ માસના કુલ ${monthDays ? g(monthDays) : "...."} દિવસોની હાજરી`,
+  ];
+
   return (
     <div className="patrak-spread-wrap">
       <div className="patrak-screen-label no-print">
-        {"\u0AAA\u0ABE\u0AA8\u0AC1\u0A82"} {g(leftPageNo)}–{g(rightPageNo)} — Legal landscape (8.5 × 14 in)
+        {"\u0AAA\u0ABE\u0AA8\u0AC1\u0A82"} {g(leftPageNo)}–{g(rightPageNo)} — જોડેલું (ડાબું | જમણું) · પ્રિન્ટમાં અલગ પાનાં
       </div>
       <div className="patrak-day-edit no-print">
         <label>
@@ -273,136 +413,222 @@ function RegisterSpread({
         </label>
       </div>
 
-    <div className="patrak-sheet patrak-landscape patrak-reg-page patrak-spread">
-      <div className="patrak-spread-markers">
-        <div className="patrak-spread-marker-slot"><PageMarker n={leftPageNo} centered /></div>
-        <div className="patrak-spread-marker-slot"><PageMarker n={rightPageNo} centered /></div>
-      </div>
-
-      <table className="patrak-tbl patrak-unified">
-        <thead>
-          <tr className="patrak-reg-h1">
-            <th rowSpan={2} className="patrak-w-gr patrak-vhdr"><span>{"\u0A9C\u0AA8\u0AB0\u0AB2 \u0AB0\u0A9C\u0AC0\u0AB8\u0ACD\u0A9F\u0AB0 \u0AA8\u0A82\u0AAC\u0AB0"}</span></th>
-            {isSheet3 && (
-              <th rowSpan={2} className="patrak-vhdr patrak-w-caste"><span>{"\u0A9C\u0ACD\u0A9E\u0ABE\u0AA4\u0ABF"}</span></th>
-            )}
-            <th rowSpan={2} className="patrak-w-dob patrak-vhdr"><span>{"\u0A9C\u0AA8\u0ACD\u0AAE \u0AA4\u0ABE\u0AB0\u0AC0\u0A96"}</span></th>
-            <th colSpan={isSheet3 ? 5 : 4} className="patrak-fee-group">{"\u0AAE\u0AB3\u0AC7\u0AB2\u0AC0 \u0AAB\u0AC0"}</th>
-            {isSheet3 ? (
-              <th rowSpan={2} className="patrak-vhdr patrak-w-sign"><span>{"\u0AAB\u0AC0 \u0AB2\u0AC7\u0AA8\u0ABE\u0AB0\u0AA8\u0AC0 \u0AB8\u0AB9\u0AC0"}</span></th>
-            ) : (
-              <>
+      <div className="patrak-spread-join">
+      {/* ── LEFT page (student / fee columns) ── */}
+      <div className="patrak-sheet patrak-portrait patrak-reg-page patrak-reg-left-sheet">
+        <div className="patrak-spread-markers patrak-spread-markers-single">
+          <PageMarker n={leftPageNo} centered />
+        </div>
+        <table className="patrak-tbl patrak-unified patrak-reg-left-only">
+          <thead>
+            <tr className="patrak-reg-h1">
+              <th rowSpan={2} className="patrak-w-gr patrak-vhdr"><span>{"\u0A9C\u0AA8\u0AB0\u0AB2 \u0AB0\u0A9C\u0AC0\u0AB8\u0ACD\u0A9F\u0AB0 \u0AA8\u0A82\u0AAC\u0AB0"}</span></th>
+              {isSheet3 && (
                 <th rowSpan={2} className="patrak-vhdr patrak-w-caste"><span>{"\u0A9C\u0ACD\u0A9E\u0ABE\u0AA4\u0ABF"}</span></th>
-                <th rowSpan={2} className="patrak-vhdr patrak-w-cat"><span>{"\u0A95\u0AC7\u0A9F\u0AC7\u0A97\u0AB0\u0AC0"}</span></th>
-              </>
-            )}
-            <th rowSpan={2} className="patrak-w-ser patrak-vhdr"><span>{"\u0A95\u0ACD\u0AB0\u0AAE\u0ABE\u0A82\u0A95"}</span></th>
-            <th rowSpan={2} className="patrak-w-name patrak-name-hdr">{STUDENT_NAME_HDR}</th>
-            <th rowSpan={2} className="patrak-fold" aria-hidden />
-            <th colSpan={RIGHT_BODY_COLS} className="patrak-reg-hdr-cell">
-              {"\u0AAE\u0ABE\u0AB9\u0AC7"} <span className="patrak-ul patrak-ul-md">{monthName || "\u00a0".repeat(6)}</span>
-              {" "}{"\u0AE8\u0AE6"}<span className="patrak-ul">{yearShort || "\u00a0\u00a0"}</span>
-              {" "}{"\u0AB9\u0ABE\u0A9C\u0AB0\u0AC0"}
-              {" "}{"\u0AA7\u0ACB\u0AB0\u0AA3"} <span className="patrak-ul">{g(standard) || "\u00a0\u00a0"}</span>
-              {" "}{"\u0AB5\u0AB0\u0ACD\u0A97"} <span className="patrak-ul">{section || "\u00a0\u00a0"}</span>
-            </th>
-          </tr>
-          <tr className="patrak-reg-h2">
-            <th className="patrak-vhdr patrak-fee-sub"><span>{"\u0AB8\u0AA4\u0ACD\u0AB0 \u0AAB\u0AC0"}</span></th>
-            <th className="patrak-vhdr patrak-fee-sub"><span>{"\u0AA6\u0ABE\u0A96\u0AB2 \u0AAB\u0AC0"}</span></th>
-            <th className="patrak-vhdr patrak-fee-sub"><span>{"\u0A85\u0AA8\u0ACD\u0AAF \u0AAB\u0AC0"}</span></th>
-            <th className="patrak-vhdr patrak-fee-sub"><span>{"\u0A95\u0AC1\u0AB2"}</span></th>
-            {isSheet3 && (
-              <th className="patrak-vhdr patrak-fee-sub patrak-w-date"><span>{"\u0AA4\u0ABE\u0AB0\u0AC0\u0A96"}</span></th>
-            )}
-            {DAYS.map((d) => (
-              <th key={d} className="patrak-day-h">{g(d)}</th>
-            ))}
-            <th className="patrak-w-ser patrak-vhdr"><span>{"\u0A95\u0ACD\u0AB0\u0AAE\u0ABE\u0A82\u0A95"}</span></th>
-            <th className="patrak-vhdr patrak-w-sum">
-              <span className="patrak-vstack">
-                {"\u0A86 \u0AAE\u0ABE\u0AB8\u0AA8\u0ABE \u0A95\u0AC1\u0AB2 "}
-                {monthDays ? g(monthDays) : "...."}
-                {" \u0AA6\u0ABF\u0AB5\u0AB8\u0ACB\u0AA8\u0AC0 \u0AB9\u0ABE\u0A9C\u0AB0\u0AC0"}
-              </span>
-            </th>
-            <th className="patrak-vhdr patrak-w-sum">
-              <span className="patrak-vstack">
-                {"\u0A9B\u0AC7\u0AB2\u0ACD\u0AB2\u0ABE \u0AAE\u0ABE\u0AB8 \u0AB8\u0AC1\u0AA7\u0AC0\u0AA8\u0AC0 \u0A95\u0AC1\u0AB2 "}
-                {prevDays ? g(prevDays) : "...."}
-                {" \u0AB9\u0ABE\u0A9C\u0AB0\u0AC0"}
-              </span>
-            </th>
-            <th className="patrak-vhdr patrak-w-sum">
-              <span className="patrak-vstack">
-                {"\u0A86 \u0AAE\u0ABE\u0AB8\u0AA8\u0ABE \u0A85\u0A82\u0AA4 \u0AB8\u0AC1\u0AA7\u0AC0\u0AA8\u0AC0 \u0A95\u0AC1\u0AB2 "}
-                {cumDays ? g(cumDays) : "...."}
-                {" \u0AB9\u0ABE\u0A9C\u0AB0\u0AC0"}
-              </span>
-            </th>
-            <th className="patrak-w-note patrak-vhdr"><span>{"\u0AA8\u0ACB\u0A82\u0AA7"}</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.serial}>
-              <td>{r.grNumber ? g(r.grNumber) : ""}</td>
-              {isSheet3 && <td className="patrak-c">{r.caste}</td>}
-              <td>{r.dob ? g(r.dob) : ""}</td>
-              <td>{r.termFee ? g(r.termFee) : ""}</td>
-              <td>{r.admissionFee ? g(r.admissionFee) : ""}</td>
-              <td>{r.otherFee ? g(r.otherFee) : ""}</td>
-              <td>{r.totalFee ? g(r.totalFee) : ""}</td>
+              )}
+              <th rowSpan={2} className="patrak-w-dob patrak-vhdr"><span>{"\u0A9C\u0AA8\u0ACD\u0AAE \u0AA4\u0ABE\u0AB0\u0AC0\u0A96"}</span></th>
+              <th colSpan={isSheet3 ? 5 : 4} className="patrak-fee-group">{"\u0AAE\u0AB3\u0AC7\u0AB2\u0AC0 \u0AAB\u0AC0"}</th>
               {isSheet3 ? (
-                <>
-                  <td />
-                  <td />
-                </>
+                <th rowSpan={2} className="patrak-vhdr patrak-w-sign"><span>{"\u0AAB\u0AC0 \u0AB2\u0AC7\u0AA8\u0ABE\u0AB0\u0AA8\u0AC0 \u0AB8\u0AB9\u0AC0"}</span></th>
               ) : (
                 <>
-                  <td className="patrak-c">{r.caste}</td>
-                  <td className="patrak-c">{r.category}</td>
+                  <th rowSpan={2} className="patrak-vhdr patrak-w-caste"><span>{"\u0A9C\u0ACD\u0A9E\u0ABE\u0AA4\u0ABF"}</span></th>
+                  <th rowSpan={2} className="patrak-vhdr patrak-w-cat"><span>{"\u0A95\u0AC7\u0A9F\u0AC7\u0A97\u0AB0\u0AC0"}</span></th>
                 </>
               )}
-              <td className="patrak-c patrak-ser-cell">{g(r.serial)}</td>
-              <td className="patrak-name-cell font-gujarati">{r.name}</td>
-              <td className="patrak-fold" aria-hidden />
-              {DAYS.map((d) => (
-                <td key={d} className="patrak-day-c">{r.attendance[d - 1] || ""}</td>
-              ))}
-              <td className="patrak-c patrak-ser-cell">{g(r.serial)}</td>
-              <td className="patrak-c">{r.monthTotal ? g(r.monthTotal) : ""}</td>
-              <td className="patrak-c">{r.prevTotal ? g(r.prevTotal) : ""}</td>
-              <td className="patrak-c">{r.cumulative ? g(r.cumulative) : ""}</td>
-              <td>{r.note}</td>
+              <th rowSpan={2} className="patrak-w-ser patrak-vhdr"><span>{"\u0A95\u0ACD\u0AB0\u0AAE\u0ABE\u0A82\u0A95"}</span></th>
+              <th rowSpan={2} className="patrak-w-name patrak-name-hdr">{STUDENT_NAME_HDR}</th>
             </tr>
-          ))}
-          {isSheet3 &&
-            SHEET3_SUMMARY_LABELS.map((label) => (
-              <tr key={label} className="patrak-summary-row">
-                <td colSpan={leftCols - 1} className="patrak-summary-lbl">{label}</td>
-                <td />
-                <td className="patrak-fold" aria-hidden />
-                {DAYS.map((d) => (
-                  <td key={d} className="patrak-day-c" />
-                ))}
-                <td colSpan={5} />
+            <tr className="patrak-reg-h2">
+              <th className="patrak-vhdr patrak-fee-sub"><span>{"\u0AB8\u0AA4\u0ACD\u0AB0 \u0AAB\u0AC0"}</span></th>
+              <th className="patrak-vhdr patrak-fee-sub"><span>{"\u0AA6\u0ABE\u0A96\u0AB2 \u0AAB\u0AC0"}</span></th>
+              <th className="patrak-vhdr patrak-fee-sub"><span>{"\u0A85\u0AA8\u0ACD\u0AAF \u0AAB\u0AC0"}</span></th>
+              <th className="patrak-vhdr patrak-fee-sub"><span>{"\u0A95\u0AC1\u0AB2"}</span></th>
+              {isSheet3 && (
+                <th className="patrak-vhdr patrak-fee-sub patrak-w-date"><span>{"\u0AA4\u0ABE\u0AB0\u0AC0\u0A96"}</span></th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={`L-${r.serial}`}>
+                <td>{r.grNumber ? g(r.grNumber) : ""}</td>
+                {isSheet3 && <td className="patrak-c">{r.caste}</td>}
+                <td>{r.dob ? g(r.dob) : ""}</td>
+                <td>{r.termFee ? g(r.termFee) : ""}</td>
+                <td>{r.admissionFee ? g(r.admissionFee) : ""}</td>
+                <td>{r.otherFee ? g(r.otherFee) : ""}</td>
+                <td>{r.totalFee ? g(r.totalFee) : ""}</td>
+                {isSheet3 ? (
+                  <>
+                    <td />
+                    <td />
+                  </>
+                ) : (
+                  <>
+                    <td className="patrak-c">{r.caste}</td>
+                    <td className="patrak-c">{r.category}</td>
+                  </>
+                )}
+                <td className="patrak-c patrak-ser-cell">{g(r.serial)}</td>
+                <td className="patrak-name-cell font-gujarati">{r.name}</td>
               </tr>
             ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan={leftCols - 1} className="patrak-foot-lbl">{"\u0A95\u0AC1\u0AB2 \u0AB8\u0AB0\u0AB5\u0ABE\u0AB3\u0ACB"}</td>
-            <td className="patrak-foot-lbl patrak-c">{"\u0AA4\u0ABE\u0AB0\u0AC0\u0A96"}</td>
-            <td className="patrak-fold" aria-hidden />
-            {DAYS.map((d) => (
-              <td key={d} className="patrak-day-f patrak-c">{g(d)}</td>
+            {isSheet3 &&
+              SHEET3_SUMMARY_LABELS.map((label) => (
+                <tr key={`L-${label}`} className="patrak-summary-row">
+                  {Array.from({ length: leftCols - 1 }, (_, i) => (
+                    <td key={i} />
+                  ))}
+                  <td className="patrak-name-cell patrak-summary-lbl font-gujarati">{label}</td>
+                </tr>
+              ))}
+            {isSheet3 &&
+              attTotalLabels.map((label) => (
+                <tr key={`L-att-${label}`} className="patrak-summary-row">
+                  {Array.from({ length: leftCols - 1 }, (_, i) => (
+                    <td key={i} />
+                  ))}
+                  <td className="patrak-name-cell patrak-summary-lbl font-gujarati">{label}</td>
+                </tr>
+              ))}
+          </tbody>
+          <tfoot>
+            {isSheet3 ? (
+              <tr>
+                {Array.from({ length: leftCols - 1 }, (_, i) => (
+                  <td key={i} />
+                ))}
+                <td className="patrak-name-cell patrak-foot-lbl patrak-summary-lbl font-gujarati">
+                  {"\u0A95\u0AC1\u0AB2 \u0AB8\u0AB0\u0AB5\u0ABE\u0AB3\u0ACB"}
+                </td>
+              </tr>
+            ) : (
+              <tr>
+                <td colSpan={leftCols - 1} className="patrak-foot-lbl">
+                  {"\u0A95\u0AC1\u0AB2 \u0AB8\u0AB0\u0AB5\u0ABE\u0AB3\u0ACB"}
+                </td>
+                <td className="patrak-foot-lbl patrak-c">{"\u0AA4\u0ABE\u0AB0\u0AC0\u0A96"}</td>
+              </tr>
+            )}
+          </tfoot>
+        </table>
+      </div>
+      <div className="patrak-join-fold" aria-hidden />
+
+      {/* ── RIGHT page (attendance days) ── */}
+      <div className="patrak-sheet patrak-portrait patrak-reg-page patrak-reg-right-sheet">
+        <div className="patrak-spread-markers patrak-spread-markers-single">
+          <PageMarker n={rightPageNo} centered />
+        </div>
+        <table className="patrak-tbl patrak-unified patrak-reg-right-only">
+          <thead>
+            <tr className="patrak-reg-h1">
+              <th colSpan={RIGHT_BODY_COLS} className="patrak-reg-hdr-cell">
+                {"\u0AAE\u0ABE\u0AB9\u0AC7"} <span className="patrak-ul patrak-ul-md">{monthName || "\u00a0".repeat(6)}</span>
+                {" "}{"\u0AE8\u0AE6"}<span className="patrak-ul">{yearShort || "\u00a0\u00a0"}</span>
+                {" "}{"\u0AB9\u0ABE\u0A9C\u0AB0\u0AC0"}
+                {" "}{"\u0AA7\u0ACB\u0AB0\u0AA3"} <span className="patrak-ul">{g(standard) || "\u00a0\u00a0"}</span>
+                {" "}{"\u0AB5\u0AB0\u0ACD\u0A97"} <span className="patrak-ul">{section || "\u00a0\u00a0"}</span>
+              </th>
+            </tr>
+            <tr className="patrak-reg-h2">
+              {DAYS.map((d) => (
+                <th key={d} className="patrak-day-h">{g(d)}</th>
+              ))}
+              <th className="patrak-w-ser patrak-vhdr"><span>{"\u0A95\u0ACD\u0AB0\u0AAE\u0ABE\u0A82\u0A95"}</span></th>
+              <th className="patrak-vhdr patrak-w-sum">
+                <span className="patrak-vstack">
+                  {"\u0A86 \u0AAE\u0ABE\u0AB8\u0AA8\u0ABE \u0A95\u0AC1\u0AB2 "}
+                  {monthDays ? g(monthDays) : "...."}
+                  {" \u0AA6\u0ABF\u0AB5\u0AB8\u0ACB\u0AA8\u0AC0 \u0AB9\u0ABE\u0A9C\u0AB0\u0AC0"}
+                </span>
+              </th>
+              <th className="patrak-vhdr patrak-w-sum">
+                <span className="patrak-vstack">
+                  {"\u0A9B\u0AC7\u0AB2\u0ACD\u0AB2\u0ABE \u0AAE\u0ABE\u0AB8 \u0AB8\u0AC1\u0AA7\u0AC0\u0AA8\u0AC0 \u0A95\u0AC1\u0AB2 "}
+                  {prevDays ? g(prevDays) : "...."}
+                  {" \u0AB9\u0ABE\u0A9C\u0AB0\u0AC0"}
+                </span>
+              </th>
+              <th className="patrak-vhdr patrak-w-sum">
+                <span className="patrak-vstack">
+                  {"\u0A86 \u0AAE\u0ABE\u0AB8\u0AA8\u0ABE \u0A85\u0A82\u0AA4 \u0AB8\u0AC1\u0AA7\u0AC0\u0AA8\u0AC0 \u0A95\u0AC1\u0AB2 "}
+                  {cumDays ? g(cumDays) : "...."}
+                  {" \u0AB9\u0ABE\u0A9C\u0AB0\u0AC0"}
+                </span>
+              </th>
+              <th className="patrak-w-note patrak-vhdr"><span>{"\u0AA8\u0ACB\u0A82\u0AA7"}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={`R-${r.serial}`}>
+                {DAYS.map((d) => (
+                  <td key={d} className="patrak-day-c">{r.attendance[d - 1] || ""}</td>
+                ))}
+                <td className="patrak-c patrak-ser-cell">{g(r.serial)}</td>
+                <td className="patrak-c">{r.monthTotal ? g(r.monthTotal) : ""}</td>
+                <td className="patrak-c">{r.prevTotal ? g(r.prevTotal) : ""}</td>
+                <td className="patrak-c">{r.cumulative ? g(r.cumulative) : ""}</td>
+                <td>{r.note}</td>
+              </tr>
             ))}
-            <td colSpan={5} />
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+            {isSheet3 &&
+              SHEET3_SUMMARY_LABELS.map((label, idx) => {
+                const key = SHEET3_SUMMARY_KEYS[idx];
+                const dayVals = daySummaries?.[key] ?? [];
+                return (
+                  <tr key={`R-${label}`} className="patrak-summary-row">
+                    {DAYS.map((d) => (
+                      <td key={d} className="patrak-day-c patrak-c">
+                        {fmtSummaryCount(dayVals[d - 1])}
+                      </td>
+                    ))}
+                    <td className="patrak-c patrak-ser-cell" />
+                    <td />
+                    <td />
+                    <td />
+                    <td />
+                  </tr>
+                );
+              })}
+            {isSheet3 && (
+              <>
+                <tr className="patrak-summary-row">
+                  {DAYS.map((d) => (
+                    <td key={d} className="patrak-day-c" />
+                  ))}
+                  <td className="patrak-c patrak-ser-cell" />
+                  <td />
+                  <td className="patrak-c">{prevDays ? g(prevDays) : ""}</td>
+                  <td />
+                  <td />
+                </tr>
+                <tr className="patrak-summary-row">
+                  {DAYS.map((d) => (
+                    <td key={d} className="patrak-day-c" />
+                  ))}
+                  <td className="patrak-c patrak-ser-cell" />
+                  <td className="patrak-c">{monthDays ? g(monthDays) : ""}</td>
+                  <td />
+                  <td />
+                  <td />
+                </tr>
+              </>
+            )}
+          </tbody>
+          <tfoot>
+            <tr>
+              {DAYS.map((d) => (
+                <td key={d} className="patrak-day-f patrak-c">{g(d)}</td>
+              ))}
+              <td colSpan={5} />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      </div>
     </div>
   );
 }
@@ -536,13 +762,13 @@ export function MonthlyAttendancePatrakView({
   return (
     <div className="patrak-root">
       <p className="patrak-print-hint no-print">
-        Print on <strong>Legal (8.5 × 14 in) Landscape</strong> paper.
-        {" "}લીગલ સાઈઝ (૮.૫ × ૧૪ ઇંચ) — લેન્ડસ્કેપ. Print preview આ કાગળના માપે દેખાશે.
+        સ્ક્રીન પર જોડેલું દેખાય છે. Print: <strong>Legal 8.5×14 in · Portrait</strong> —
+        ડાબું પાનું, પછી જમણું (જોડી શકાય). Fit to page બંધ (100%).
       </p>
 
-      {/* ── Sheet 1: summary (legal landscape) ───────────────── */}
-      <div className="patrak-screen-label no-print">પાનું ૧ — સારાંશ · Legal landscape</div>
-      <div className="patrak-sheet patrak-landscape patrak-summary">
+      {/* ── Sheet 1: summary (legal portrait) ───────────────── */}
+      <div className="patrak-screen-label no-print">પાનું ૧ — સારાંશ · Legal portrait</div>
+      <div className="patrak-sheet patrak-portrait patrak-summary">
         <h1 className="patrak-title">વિદ્યાર્થીનું માસિક હાજરી પત્રક</h1>
         <div className="patrak-meta">
           <span>વર્ગ શિક્ષકશ્રી <u className="patrak-fill">{data.classTeacher || "\u00a0".repeat(18)}</u></span>
@@ -703,11 +929,14 @@ export function MonthlyAttendancePatrakView({
         yearShort={yearShort}
         month={data.month}
         year={data.year}
+        summaryStudents={registerRows}
+        admissions={admissions}
+        leavers={leavers}
       />
 
-      {/* ── Last page: reports (legal landscape) ───────────────── */}
-      <div className="patrak-screen-label no-print">છેલ્લું પાનું — અહેવાલ (નવા દાખલ / શાળા છોડી) · Legal landscape</div>
-      <div className="patrak-sheet patrak-landscape patrak-sheet-last patrak-reports">
+      {/* ── Last page: reports (legal portrait) ───────────────── */}
+      <div className="patrak-screen-label no-print">છેલ્લું પાનું — અહેવાલ · Legal portrait</div>
+      <div className="patrak-sheet patrak-portrait patrak-sheet-last patrak-reports">
 
         <h3 className="patrak-sec-title">નવા દાખલ થયેલ વિદ્યાર્થીઓનો અહેવાલ</h3>
         <table className="patrak-tbl patrak-adm">
@@ -766,11 +995,12 @@ export function MonthlyAttendancePatrakView({
           border-radius: 10px;
           padding: 8px 12px;
           margin: 0 auto 14px;
-          max-width: ${LEGAL.pageW};
+          max-width: 100%;
         }
         .patrak-root .patrak-sheet {
           box-sizing: border-box;
           background: #fff;
+          page: patrak-legal;
           page-break-after: always;
           break-after: page;
           page-break-inside: avoid;
@@ -779,20 +1009,22 @@ export function MonthlyAttendancePatrakView({
           box-shadow: 0 6px 24px rgba(0,0,0,.12);
           overflow: hidden;
           border: 1px solid #d8e2e8;
-          width: ${LEGAL.pageW};
-          max-width: ${LEGAL.pageW};
-          height: ${LEGAL.pageH};
-          min-height: ${LEGAL.pageH};
-          padding: 5mm 6mm;
+          width: ${LEGAL.w};
+          max-width: ${LEGAL.w};
+          height: ${LEGAL.h};
+          min-height: ${LEGAL.h};
+          max-height: ${LEGAL.h};
+          padding: ${LEGAL.padY} ${LEGAL.padX};
           display: flex;
           flex-direction: column;
         }
         .patrak-root .patrak-portrait,
         .patrak-root .patrak-landscape {
-          width: ${LEGAL.pageW};
-          max-width: ${LEGAL.pageW};
-          height: ${LEGAL.pageH};
-          min-height: ${LEGAL.pageH};
+          width: ${LEGAL.w};
+          max-width: ${LEGAL.w};
+          height: ${LEGAL.h};
+          min-height: ${LEGAL.h};
+          max-height: ${LEGAL.h};
         }
         .patrak-root .patrak-sheet-last {
           page-break-after: auto;
@@ -803,18 +1035,20 @@ export function MonthlyAttendancePatrakView({
         }
         .patrak-root .patrak-title {
           text-align: center;
-          font-size: 15pt;
+          font-size: 14pt;
           font-weight: 700;
-          margin: 0 0 4mm;
+          margin: 0 0 2.5mm;
           letter-spacing: 0.03em;
+          flex: 0 0 auto;
         }
         .patrak-root .patrak-meta {
           display: flex;
           flex-wrap: wrap;
           justify-content: space-between;
-          gap: 2mm 6mm;
+          gap: 1.5mm 6mm;
           font-size: 10pt;
-          margin-bottom: 3.5mm;
+          margin-bottom: 2.5mm;
+          flex: 0 0 auto;
         }
         .patrak-root .patrak-fill { min-width: 22mm; display: inline-block; }
         .patrak-root .patrak-ul {
@@ -856,6 +1090,7 @@ export function MonthlyAttendancePatrakView({
           max-width: 100%;
           table-layout: fixed;
           box-sizing: border-box;
+          flex: 0 0 auto;
         }
         .patrak-root .patrak-move thead th {
           overflow: hidden;
@@ -868,9 +1103,32 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-move th {
           padding: 1px 1px;
           height: auto;
-          min-height: 5mm;
+          min-height: 5.5mm;
           word-break: break-word;
           overflow: hidden;
+        }
+        .patrak-root .patrak-summary {
+          overflow: hidden;
+          justify-content: flex-start;
+        }
+        .patrak-root .patrak-summary .patrak-move thead tr:nth-child(1),
+        .patrak-root .patrak-summary .patrak-move thead tr:nth-child(2) {
+          height: 6.5mm;
+        }
+        .patrak-root .patrak-summary .patrak-move thead .patrak-vhdr {
+          height: 22mm;
+          max-height: 22mm;
+        }
+        .patrak-root .patrak-summary .patrak-move thead .patrak-vhdr span {
+          max-height: 21mm;
+          font-size: 6pt;
+        }
+        .patrak-root .patrak-summary .patrak-move tbody td {
+          height: 7.2mm;
+          min-height: 7.2mm;
+          max-height: 8mm;
+          padding: 0 1px;
+          font-size: 7.5pt;
         }
         .patrak-root .patrak-type-hdr { width: 16%; }
         .patrak-root .patrak-waiver-side { width: 6mm; padding: 0 !important; overflow: hidden; }
@@ -896,22 +1154,27 @@ export function MonthlyAttendancePatrakView({
           text-align: center;
           font-size: 9.5pt;
           font-weight: 600;
-          margin: 3.5mm 0 2mm;
+          margin: 2mm 0 1.5mm;
+          page-break-before: avoid;
+          break-before: avoid;
         }
         .patrak-root .patrak-keep-footer {
+          flex: 0 0 auto;
+          margin-top: 3mm;
+          page-break-before: avoid;
+          break-before: avoid;
           page-break-inside: avoid;
           break-inside: avoid;
-          margin-top: auto;
         }
         .patrak-root .patrak-cls { font-size: 8.5pt; margin-bottom: 2mm; }
-        .patrak-root .patrak-cls td { height: 9mm; }
+        .patrak-root .patrak-cls td { height: 8mm; }
         .patrak-root .patrak-w-avg { width: 14mm; }
         .patrak-root .patrak-sigs {
           display: flex;
           justify-content: space-between;
           font-size: 10pt;
-          margin-top: 8mm;
-          padding-top: 10mm;
+          margin-top: 6mm;
+          padding-top: 8mm;
           page-break-before: avoid;
           break-before: avoid;
           page-break-inside: avoid;
@@ -924,29 +1187,37 @@ export function MonthlyAttendancePatrakView({
 
         .patrak-root .patrak-reg-page {
           --patrak-meta-h: 7mm;
-          --patrak-colhdr-h: 42mm;
+          --patrak-colhdr-h: 36mm;
           --patrak-hdr-h: calc(var(--patrak-meta-h) + var(--patrak-colhdr-h));
-          --patrak-row-h: 3.55mm;
-          --patrak-foot-h: 4.5mm;
+          --patrak-row-h: 5.8mm;
+          --patrak-foot-h: 5mm;
           width: 100%;
         }
-        /* Joint open-book: one table, continuous lines */
-        .patrak-root .patrak-spread {
+        /* Left / right each fill one Legal portrait sheet */
+        .patrak-root .patrak-reg-left-sheet,
+        .patrak-root .patrak-reg-right-sheet {
           display: flex;
           flex-direction: column;
-          width: ${LEGAL.pageW};
-          max-width: ${LEGAL.pageW};
-          height: ${LEGAL.pageH};
-          min-height: ${LEGAL.pageH};
+          width: ${LEGAL.w};
+          max-width: ${LEGAL.w};
+          height: ${LEGAL.h};
+          min-height: ${LEGAL.h};
+          max-height: ${LEGAL.h};
           box-sizing: border-box;
+        }
+        .patrak-root .patrak-join-fold {
+          display: none;
         }
         .patrak-root .patrak-spread-markers {
           display: flex;
           flex-direction: row;
-          height: 4.5mm;
-          min-height: 4.5mm;
-          margin-bottom: 1mm;
+          height: 5mm;
+          min-height: 5mm;
+          margin-bottom: 1.5mm;
           flex-shrink: 0;
+        }
+        .patrak-root .patrak-spread-markers-single {
+          justify-content: center;
         }
         .patrak-root .patrak-spread-marker-slot {
           flex: 1 1 50%;
@@ -963,13 +1234,7 @@ export function MonthlyAttendancePatrakView({
           border-collapse: collapse;
         }
         .patrak-root .patrak-fold {
-          width: 1.2mm !important;
-          max-width: 1.2mm !important;
-          min-width: 1.2mm !important;
-          padding: 0 !important;
-          border-left: 2px solid ${INK} !important;
-          border-right: 2px solid ${INK} !important;
-          background: #e8f2f6 !important;
+          display: none;
         }
         .patrak-root .patrak-unified thead th[rowspan="2"] {
           height: var(--patrak-hdr-h);
@@ -1011,30 +1276,39 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-unified .patrak-day-h,
         .patrak-root .patrak-unified .patrak-day-c,
         .patrak-root .patrak-unified .patrak-day-f {
-          width: 5.1mm !important;
-          max-width: 5.1mm !important;
+          width: 4.55mm !important;
+          max-width: 4.55mm !important;
           padding: 0 !important;
           text-align: center;
           font-size: 6.5pt;
         }
-        .patrak-root .patrak-unified .patrak-w-gr { width: 10mm; }
-        .patrak-root .patrak-unified .patrak-w-dob { width: 14mm; }
-        .patrak-root .patrak-unified .patrak-w-caste { width: 8mm; }
-        .patrak-root .patrak-unified .patrak-w-cat { width: 9mm; }
-        .patrak-root .patrak-unified .patrak-w-ser { width: 6.5mm !important; min-width: 6.5mm; }
-        .patrak-root .patrak-unified .patrak-w-name { width: 48mm; min-width: 42mm; }
+        .patrak-root .patrak-reg-left-only .patrak-w-gr { width: 14mm; }
+        .patrak-root .patrak-reg-left-only .patrak-w-dob { width: 18mm; }
+        .patrak-root .patrak-reg-left-only .patrak-w-caste { width: 12mm; }
+        .patrak-root .patrak-reg-left-only .patrak-w-cat { width: 14mm; }
+        .patrak-root .patrak-reg-left-only .patrak-w-ser { width: 10mm !important; min-width: 10mm; }
+        .patrak-root .patrak-reg-left-only .patrak-w-name { width: auto; min-width: 55mm; }
+        .patrak-root .patrak-reg-left-only .patrak-fee-sub { width: 10mm; }
+        .patrak-root .patrak-reg-left-only .patrak-w-date { width: 10mm; }
+        .patrak-root .patrak-reg-left-only .patrak-w-sign { width: 10mm; }
+        .patrak-root .patrak-unified .patrak-w-gr { width: 12mm; }
+        .patrak-root .patrak-unified .patrak-w-dob { width: 16mm; }
+        .patrak-root .patrak-unified .patrak-w-caste { width: 10mm; }
+        .patrak-root .patrak-unified .patrak-w-cat { width: 12mm; }
+        .patrak-root .patrak-unified .patrak-w-ser { width: 7mm !important; min-width: 7mm; }
+        .patrak-root .patrak-unified .patrak-w-name { width: 50mm; min-width: 40mm; }
         .patrak-root .patrak-unified .patrak-w-sum {
-          width: 14mm !important;
-          min-width: 14mm !important;
-          max-width: 15mm !important;
+          width: 11mm !important;
+          min-width: 10mm !important;
+          max-width: 12mm !important;
         }
         .patrak-root .patrak-unified .patrak-w-note {
-          width: 9mm !important;
-          min-width: 9mm !important;
+          width: 8mm !important;
+          min-width: 7mm !important;
         }
         .patrak-root .patrak-unified .patrak-w-date { width: 6mm; }
         .patrak-root .patrak-unified .patrak-w-sign { width: 6mm; }
-        .patrak-root .patrak-unified .patrak-fee-sub { width: 5.2mm; }
+        .patrak-root .patrak-unified .patrak-fee-sub { width: 8mm; }
         /* Vertical headers: do not clip long Gujarati labels */
         .patrak-root .patrak-unified th.patrak-vhdr {
           overflow: visible !important;
@@ -1276,10 +1550,18 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-foot-lbl { font-weight: 600; font-size: 8pt; }
         .patrak-root .patrak-summary-row td { font-size: 7.5pt; }
         .patrak-root .patrak-summary-lbl {
-          text-align: left;
-          padding-left: 3px;
+          text-align: left !important;
+          padding-left: 3px !important;
           font-weight: 600;
           white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .patrak-root .patrak-summary-row .patrak-name-cell {
+          white-space: normal;
+          text-align: left;
+          font-size: 6.5pt;
+          line-height: 1.15;
         }
 
         .patrak-root .patrak-rpt-title {
@@ -1385,14 +1667,23 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-decl { text-align: center; font-size: 8.5pt; margin: 5mm 0 3mm; }
         .patrak-root .print-only { display: none; }
 
+        @page patrak-legal {
+          size: 8.5in 14in;
+          margin: ${LEGAL.margin};
+        }
+
         @page {
-          size: 14in 8.5in;
+          size: 8.5in 14in;
           margin: ${LEGAL.margin};
         }
 
         @media print {
+          @page patrak-legal {
+            size: 8.5in 14in;
+            margin: ${LEGAL.margin};
+          }
           @page {
-            size: 14in 8.5in;
+            size: 8.5in 14in;
             margin: ${LEGAL.margin};
           }
 
@@ -1423,7 +1714,9 @@ export function MonthlyAttendancePatrakView({
           .patrak-root .patrak-sheet,
           .patrak-root .patrak-portrait,
           .patrak-root .patrak-landscape,
-          .patrak-root .patrak-spread {
+          .patrak-root .patrak-reg-left-sheet,
+          .patrak-root .patrak-reg-right-sheet {
+            page: patrak-legal;
             margin: 0 !important;
             box-shadow: none !important;
             border: none !important;
@@ -1432,7 +1725,7 @@ export function MonthlyAttendancePatrakView({
             height: ${LEGAL.h} !important;
             min-height: ${LEGAL.h} !important;
             max-height: ${LEGAL.h} !important;
-            padding: 2mm 3mm !important;
+            padding: ${LEGAL.padY} ${LEGAL.padX} !important;
             overflow: hidden !important;
             page-break-after: always !important;
             break-after: page !important;
@@ -1443,25 +1736,80 @@ export function MonthlyAttendancePatrakView({
             page-break-after: auto !important;
             break-after: auto !important;
           }
+          .patrak-root .patrak-spread-join {
+            display: block !important;
+            width: ${LEGAL.w} !important;
+            max-width: ${LEGAL.w} !important;
+          }
+          .patrak-root .patrak-join-fold { display: none !important; }
+          .patrak-root .patrak-reg-left-sheet {
+            padding: ${LEGAL.padY} 1.5mm ${LEGAL.padY} 4.5mm !important;
+          }
+          .patrak-root .patrak-reg-right-sheet {
+            padding: ${LEGAL.padY} 4.5mm ${LEGAL.padY} 1.5mm !important;
+          }
           .patrak-root .patrak-screen-label { display: none !important; }
 
           .patrak-root .patrak-reg-page {
             --patrak-meta-h: 7mm;
-            --patrak-colhdr-h: 42mm;
-            --patrak-row-h: 3.55mm;
-            --patrak-foot-h: 4.5mm;
+            --patrak-colhdr-h: 36mm;
+            --patrak-row-h: 5.8mm;
+            --patrak-foot-h: 5mm;
           }
 
-          .patrak-root .patrak-title { font-size: 14pt; margin-bottom: 2.5mm; }
-          .patrak-root .patrak-meta { font-size: 10pt; margin-bottom: 2mm; gap: 1.5mm 4mm; }
-          .patrak-root .patrak-move { font-size: 7pt; margin-bottom: 2mm; }
+          .patrak-root .patrak-title { font-size: 13pt; margin-bottom: 2mm; }
+          .patrak-root .patrak-meta { font-size: 9.5pt; margin-bottom: 2mm; gap: 1.5mm 4mm; }
+          .patrak-root .patrak-summary.patrak-sheet,
+          .patrak-root .patrak-summary.patrak-portrait {
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: ${LEGAL.h} !important;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: always !important;
+            break-after: page !important;
+          }
+          .patrak-root .patrak-summary .patrak-move {
+            flex: none !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .patrak-root .patrak-summary .patrak-move thead {
+            display: table-row-group !important;
+          }
+          .patrak-root .patrak-summary .patrak-keep-footer {
+            margin-top: 4mm !important;
+            page-break-before: avoid !important;
+            break-before: avoid !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .patrak-root .patrak-summary .patrak-cls-title,
+          .patrak-root .patrak-summary .patrak-cls,
+          .patrak-root .patrak-summary .patrak-sigs {
+            page-break-before: avoid !important;
+            break-before: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          .patrak-root .patrak-move { font-size: 7pt; margin-bottom: 3mm; }
+          .patrak-root .patrak-summary .patrak-move tbody td {
+            height: 6.8mm !important;
+            min-height: 6.8mm !important;
+            max-height: 7.2mm !important;
+          }
+          .patrak-root .patrak-summary .patrak-move thead .patrak-vhdr {
+            height: 20mm !important;
+            max-height: 20mm !important;
+          }
           .patrak-root .patrak-move td,
-          .patrak-root .patrak-move th { padding: 1px 2px; height: auto; min-height: 5mm; }
-          .patrak-root .patrak-cls-title { font-size: 9pt; margin: 2mm 0 1.2mm; }
-          .patrak-root .patrak-cls { font-size: 8pt; margin-bottom: 1.5mm; }
+          .patrak-root .patrak-move th { padding: 1px 2px; }
+          .patrak-root .patrak-cls-title { font-size: 9pt; margin: 2.5mm 0 1.5mm; }
+          .patrak-root .patrak-cls { font-size: 8pt; margin-bottom: 2mm; }
           .patrak-root .patrak-cls td { height: 8mm; }
           .patrak-root .patrak-sigs {
-            margin-top: auto !important;
+            margin-top: 8mm !important;
             padding-top: 6mm !important;
             font-size: 10pt;
             page-break-before: avoid !important;
@@ -1502,7 +1850,7 @@ export function MonthlyAttendancePatrakView({
             font-weight: 600;
             color: #64748b;
             margin: 0 auto 8px;
-            max-width: ${LEGAL.pageW};
+            max-width: none;
             letter-spacing: 0.02em;
           }
           .patrak-root {
@@ -1514,6 +1862,44 @@ export function MonthlyAttendancePatrakView({
           .patrak-root .patrak-sheet {
             margin-left: auto;
             margin-right: auto;
+          }
+          .patrak-root .patrak-spread-join {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            justify-content: center;
+            width: max-content;
+            max-width: none;
+            margin: 0 auto 28px;
+            overflow: visible;
+          }
+          .patrak-root .patrak-spread-join .patrak-sheet {
+            margin: 0 !important;
+            page-break-after: auto;
+            break-after: auto;
+            box-shadow: 0 6px 24px rgba(0,0,0,.12);
+          }
+          .patrak-root .patrak-reg-left-sheet {
+            border-right: none !important;
+            padding: ${LEGAL.padY} 2mm ${LEGAL.padY} ${LEGAL.padX};
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+          }
+          .patrak-root .patrak-reg-right-sheet {
+            border-left: none !important;
+            padding: ${LEGAL.padY} ${LEGAL.padX} ${LEGAL.padY} 2mm;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+          }
+          .patrak-root .patrak-join-fold {
+            display: block;
+            width: 2.4mm;
+            min-width: 2.4mm;
+            align-self: stretch;
+            background: linear-gradient(90deg, #c5d8e0, #e8f2f6 40%, #e8f2f6 60%, #c5d8e0);
+            border-top: 1px solid #d8e2e8;
+            border-bottom: 1px solid #d8e2e8;
+            box-shadow: inset 0 0 6px rgba(26, 95, 122, 0.18);
           }
         }
       `}</style>

@@ -1,3 +1,5 @@
+import { requires10thBoard, requires12thBoard } from "@/lib/student-academic-rules";
+
 export const DOC_TYPES = [
   "photo",
   "aadhaar",
@@ -21,6 +23,150 @@ export const DOC_FIELD_MAP: Record<DocType, string> = {
   bankPassbook: "bankPassbookPath",
   feeReceipt: "feeReceiptPath",
 };
+
+/** Flutter / mobile catalog — EN + GU labels, accept MIME, DG size limit */
+export type DocCatalogItem = {
+  type: DocType;
+  field: string;
+  labelEn: string;
+  labelGu: string;
+  descriptionEn: string;
+  descriptionGu: string;
+  accept: string[];
+  required: boolean;
+  maxKB: number;
+  maxInputBytes: number;
+};
+
+export const DOC_CATALOG: DocCatalogItem[] = [
+  {
+    type: "photo",
+    field: "photoPath",
+    labelEn: "Passport Photo",
+    labelGu: "પાસપોર્ટ ફોટો",
+    descriptionEn: "Recent passport size photo",
+    descriptionGu: "તાજેતરનો પાસપોર્ટ સાઈઝ ફોટો",
+    accept: ["image/jpeg", "image/jpg", "image/png", "image/webp"],
+    required: true,
+    maxKB: 200,
+    maxInputBytes: 10 * 1024 * 1024,
+  },
+  {
+    type: "aadhaar",
+    field: "aadhaarDocPath",
+    labelEn: "Aadhaar Card",
+    labelGu: "આધાર કાર્ડ",
+    descriptionEn: "Front side scan",
+    descriptionGu: "આગળની બાજુ સ્કેન",
+    accept: ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
+    required: false,
+    maxKB: 200,
+    maxInputBytes: 10 * 1024 * 1024,
+  },
+  {
+    type: "income",
+    field: "incomeCertPath",
+    labelEn: "Income Certificate",
+    labelGu: "આવક પ્રમાણપત્ર",
+    descriptionEn: "Family income proof",
+    descriptionGu: "પરિવાર આવક પુરાવો",
+    accept: ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
+    required: false,
+    maxKB: 200,
+    maxInputBytes: 10 * 1024 * 1024,
+  },
+  {
+    type: "caste",
+    field: "casteCertPath",
+    labelEn: "Caste Certificate",
+    labelGu: "જાતિ પ્રમાણપત્ર",
+    descriptionEn: "SC/ST/OBC certificate",
+    descriptionGu: "SC/ST/OBC પ્રમાણપત્ર",
+    accept: ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
+    required: false,
+    maxKB: 200,
+    maxInputBytes: 10 * 1024 * 1024,
+  },
+  {
+    type: "marksheet10",
+    field: "marksheet10Path",
+    labelEn: "10th Marksheet",
+    labelGu: "10મું માર્કશીટ",
+    descriptionEn: "Standard 10 marksheet",
+    descriptionGu: "ધોરણ 10 માર્કશીટ",
+    accept: ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
+    required: false,
+    maxKB: 200,
+    maxInputBytes: 10 * 1024 * 1024,
+  },
+  {
+    type: "marksheet12",
+    field: "marksheet12Path",
+    labelEn: "12th Marksheet",
+    labelGu: "12મું માર્કશીટ",
+    descriptionEn: "Standard 12 marksheet",
+    descriptionGu: "ધોરણ 12 માર્કશીટ",
+    accept: ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
+    required: false,
+    maxKB: 200,
+    maxInputBytes: 10 * 1024 * 1024,
+  },
+  {
+    type: "bankPassbook",
+    field: "bankPassbookPath",
+    labelEn: "Bank Passbook",
+    labelGu: "બેંક પાસબુક",
+    descriptionEn: "First page with account details",
+    descriptionGu: "ખાતા વિગતો સાથે પહેલું પાનું",
+    accept: ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
+    required: false,
+    maxKB: 200,
+    maxInputBytes: 10 * 1024 * 1024,
+  },
+  {
+    type: "feeReceipt",
+    field: "feeReceiptPath",
+    labelEn: "Fee Receipt",
+    labelGu: "ફી રસીદ",
+    descriptionEn: "Current year fee receipt",
+    descriptionGu: "હાલના વર્ષની ફી રસીદ",
+    accept: ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
+    required: false,
+    maxKB: 200,
+    maxInputBytes: 10 * 1024 * 1024,
+  },
+];
+
+export function getDocCatalogItem(type: DocType): DocCatalogItem {
+  return DOC_CATALOG.find((d) => d.type === type)!;
+}
+
+/**
+ * Which docs to show for a student:
+ * - 10th marksheet only after 10th is passed (Std 11+)
+ * - 12th marksheet only after 12th is passed (above Std 12) — never show early
+ */
+export function visibleDocTypesForStandard(standard: string | null | undefined): DocType[] {
+  const show10 = requires10thBoard(standard);
+  const show12 = requires12thBoard(standard);
+  return DOC_TYPES.filter((type) => {
+    if (type === "marksheet10") return show10;
+    if (type === "marksheet12") return show12;
+    return true;
+  });
+}
+
+export function catalogForStandard(standard: string | null | undefined): DocCatalogItem[] {
+  const allowed = new Set(visibleDocTypesForStandard(standard));
+  return DOC_CATALOG.filter((d) => allowed.has(d.type));
+}
+
+export function isDocVisibleForStandard(
+  docType: string,
+  standard: string | null | undefined,
+): docType is DocType {
+  return isDocType(docType) && visibleDocTypesForStandard(standard).includes(docType);
+}
 
 /** Folder name per document type under uploads/students/{studentId}/ */
 export const DOC_FOLDER_MAP: Record<DocType, string> = {

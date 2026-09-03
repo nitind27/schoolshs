@@ -1,0 +1,309 @@
+================================================================================
+STUDENT DOCUMENTS API  (Flutter / curl)
+Scholarship Portal — school student documents upload
+================================================================================
+
+BASE URL
+  Local:   http://localhost:3000
+  Live:    https://YOUR-DOMAIN.com     (Flutter me yahi use karo)
+
+Har authenticated request:
+  Authorization: Bearer <TOKEN>
+  Accept: application/json
+
+
+================================================================================
+1) DOCUMENT LIST  (UI me yehi dikhana)
+================================================================================
+
+Hamesha:
+  photo          Passport Photo *          પાસપોર્ટ ફોટો *
+  aadhaar        Aadhaar Card              આધાર કાર્ડ
+  income         Income Certificate        આવક પ્રમાણપત્ર
+  caste          Caste Certificate         જાતિ પ્રમાણપત્ર
+  bankPassbook   Bank Passbook             બેંક પાસબુક
+  feeReceipt     Fee Receipt               ફી રસીદ
+
+Conditional (API list me aaye tabhi dikhao — hardcode mat karo):
+  marksheet10    10th Marksheet            10મું માર્કશીટ
+                 → sirf 10 PASS ke baad (Std 11+)
+                 → Std 9 / 10 me NAHI
+
+  marksheet12    12th Marksheet            12મું માર્કશીટ
+                 → sirf 12 PASS ke baad
+                 → pehle kabhi NAHI
+
+Std 9–10 school (jaise Songadh) me list:
+  Passport Photo*, Aadhaar, Income, Caste, Bank Passbook, Fee Receipt
+
+GET response ke "documents" array ko UI list banao.
+
+
+================================================================================
+2) FILE RULES
+================================================================================
+
+Allowed MIME:  image/jpeg, image/jpg, image/png, image/webp, application/pdf
+Max input:     10 MB
+Server:        Digital Gujarat ke liye auto-compress (target ≤ 200 KB)
+
+Form fields (multipart):
+  file           = binary file
+  docType        = photo | aadhaar | income | caste | marksheet10 | marksheet12 | bankPassbook | feeReceipt
+  originalSize   = optional bytes
+
+
+================================================================================
+3) LOGIN  (token lene ke liye)
+================================================================================
+
+--- Captcha ---
+GET /api/auth/captcha
+
+curl -s "http://localhost:3000/api/auth/captcha"
+
+Response:
+  {
+    "captchaToken": "...",
+    "imageSvg": "<svg>....</svg>",
+    "expiresIn": 300
+  }
+
+SVG me 5-letter code padho → captchaAnswer (uppercase).
+
+
+--- Mobile login (student OR teacher) ---
+POST /api/auth/mobile/login
+Content-Type: application/json
+
+curl -s -X POST "http://localhost:3000/api/auth/mobile/login" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"email\":\"STUDENT_EMAIL\",\"password\":\"PASSWORD\",\"captchaToken\":\"CAPTCHA_TOKEN\",\"captchaAnswer\":\"CODE\"}"
+
+Linux / mac / Git Bash (same, line continue \ ):
+curl -s -X POST "http://localhost:3000/api/auth/mobile/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"STUDENT_EMAIL","password":"PASSWORD","captchaToken":"CAPTCHA_TOKEN","captchaAnswer":"CODE"}'
+
+Success:
+  {
+    "token": "eyJ...",
+    "expiresIn": 604800,
+    "user": {
+      "role": "student",
+      "studentId": "...",
+      "schoolId": "...",
+      "name": "...",
+      "email": "..."
+    }
+  }
+
+TOKEN save karo. Student app: role=student. Teacher app: role=teacher.
+
+PowerShell token set:
+  $TOKEN = "eyJ..."
+  $BASE  = "http://localhost:3000"
+
+
+================================================================================
+4) STUDENT APP  (apna documents — studentId URL me nahi)
+================================================================================
+
+--- LIST ---
+GET /api/student-portal/documents
+
+curl -s "$BASE/api/student-portal/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: application/json"
+
+Windows CMD:
+curl -s "%BASE%/api/student-portal/documents" -H "Authorization: Bearer %TOKEN%" -H "Accept: application/json"
+
+Response sample:
+  {
+    "studentId": "clx...",
+    "standard": "9",
+    "catalog": [ ... ],
+    "documents": [
+      {
+        "type": "photo",
+        "field": "photoPath",
+        "labelEn": "Passport Photo",
+        "labelGu": "પાસપોર્ટ ફોટો",
+        "descriptionEn": "Recent passport size photo",
+        "descriptionGu": "તાજેતરનો પાસપોર્ટ સાઈઝ ફોટો",
+        "accept": ["image/jpeg","image/jpg","image/png","image/webp"],
+        "required": true,
+        "maxKB": 200,
+        "maxInputBytes": 10485760,
+        "uploaded": false,
+        "dgReady": false,
+        "previewUrl": null,
+        "fileName": null,
+        "size": null,
+        "mimeType": null
+      }
+    ],
+    "summary": { "total": 6, "uploaded": 0, "dgReady": 0 },
+    "rules": {
+      "maxInputBytes": 10485760,
+      "allowedMimeTypes": ["image/jpeg","image/png","image/webp","application/pdf"],
+      "dgMaxKB": 200
+    }
+  }
+
+--- UPLOAD ---
+POST /api/student-portal/documents
+multipart/form-data
+
+curl -s -X POST "$BASE/api/student-portal/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "docType=photo" \
+  -F "file=@/path/to/photo.jpg;type=image/jpeg"
+
+Examples:
+  -F "docType=aadhaar"      -F "file=@aadhaar.jpg;type=image/jpeg"
+  -F "docType=income"       -F "file=@income.pdf;type=application/pdf"
+  -F "docType=caste"        -F "file=@caste.jpg;type=image/jpeg"
+  -F "docType=bankPassbook" -F "file=@passbook.jpg;type=image/jpeg"
+  -F "docType=feeReceipt"   -F "file=@fee.jpg;type=image/jpeg"
+
+--- PREVIEW / DOWNLOAD ---
+GET {BASE}{previewUrl}
+
+curl -s -o out.jpg \
+  -H "Authorization: Bearer $TOKEN" \
+  "$BASE/api/uploads/students/STUDENT_ID/passport-photo/photo.jpg"
+
+previewUrl list se lo. Bearer header zaroori hai.
+
+--- DELETE ---
+DELETE /api/student-portal/documents
+Content-Type: application/json
+Body: { "docType": "aadhaar" }
+
+curl -s -X DELETE "$BASE/api/student-portal/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"docType\":\"aadhaar\"}"
+
+
+================================================================================
+5) TEACHER / STAFF APP  (kisi student ke documents)
+================================================================================
+
+Login teacher token se. studentId path me do.
+
+LIST
+GET /api/students/{studentId}/documents
+
+curl -s "$BASE/api/students/STUDENT_ID/documents" \
+  -H "Authorization: Bearer $TOKEN"
+
+UPLOAD
+POST /api/students/{studentId}/documents
+
+curl -s -X POST "$BASE/api/students/STUDENT_ID/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "docType=aadhaar" \
+  -F "file=@/path/to/aadhaar.jpg;type=image/jpeg"
+
+DELETE
+DELETE /api/students/{studentId}/documents
+Body: { "docType": "aadhaar" }
+
+curl -s -X DELETE "$BASE/api/students/STUDENT_ID/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"docType\":\"aadhaar\"}"
+
+
+================================================================================
+6) FLUTTER HINT
+================================================================================
+
+1. GET captcha → login → save token
+2. GET /api/student-portal/documents
+3. documents[] se list banao (labelEn / labelGu)
+4. Upload:
+
+  final req = http.MultipartRequest(
+    'POST',
+    Uri.parse('$baseUrl/api/student-portal/documents'),
+  );
+  req.headers['Authorization'] = 'Bearer $token';
+  req.fields['docType'] = 'photo';   // aadhaar, income, caste, ...
+  req.files.add(await http.MultipartFile.fromPath('file', filePath));
+  final streamed = await req.send();
+  final body = await streamed.stream.bytesToString();
+
+5. Preview: GET baseUrl + previewUrl  with same Bearer header
+6. Delete: JSON body { "docType": "..." }
+
+
+================================================================================
+7) ERRORS
+================================================================================
+
+401  Login required / token invalid
+403  Student account inactive / password change pending
+400  Invalid file or document type
+     File too large (10 MB)
+     Only JPG, PNG, WEBP or PDF
+     10th/12th marksheet class ke liye allowed nahi
+404  Student not found
+
+errorKey (optional):
+  documents.invalidFileType
+  documents.fileTooLarge
+
+
+================================================================================
+8) QUICK COPY  (bash)
+================================================================================
+
+BASE=http://localhost:3000
+TOKEN=PASTE_TOKEN_HERE
+
+# list
+curl -s "$BASE/api/student-portal/documents" -H "Authorization: Bearer $TOKEN"
+
+# photo
+curl -s -X POST "$BASE/api/student-portal/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "docType=photo" -F "file=@photo.jpg;type=image/jpeg"
+
+# aadhaar
+curl -s -X POST "$BASE/api/student-portal/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "docType=aadhaar" -F "file=@aadhaar.jpg;type=image/jpeg"
+
+# income
+curl -s -X POST "$BASE/api/student-portal/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "docType=income" -F "file=@income.jpg;type=image/jpeg"
+
+# caste
+curl -s -X POST "$BASE/api/student-portal/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "docType=caste" -F "file=@caste.jpg;type=image/jpeg"
+
+# bank passbook
+curl -s -X POST "$BASE/api/student-portal/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "docType=bankPassbook" -F "file=@passbook.jpg;type=image/jpeg"
+
+# fee receipt
+curl -s -X POST "$BASE/api/student-portal/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "docType=feeReceipt" -F "file=@fee.jpg;type=image/jpeg"
+
+# delete photo
+curl -s -X DELETE "$BASE/api/student-portal/documents" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"docType":"photo"}'
+
+================================================================================
+END
+================================================================================
