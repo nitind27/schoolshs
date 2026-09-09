@@ -1,0 +1,436 @@
+================================================================================
+GALLERY + ACTIVITIES API  (Flutter / curl — Staff / Teacher)
+Scholarship Portal
+================================================================================
+
+BASE URL
+  Local:   http://localhost:3000
+  Live:    https://YOUR-DOMAIN.com
+
+Har request:
+  Authorization: Bearer <TOKEN>
+  Accept: application/json
+
+Roles:
+  Gallery upload/list : school_admin | clerk | teacher
+  Activities list     : school_admin | clerk | teacher
+  Activities create/release : school_admin | clerk only (web)
+  Teacher activities  : sirf RELEASED + apne class ke students
+
+
+================================================================================
+0) LOGIN (token)
+================================================================================
+
+# Captcha
+curl -s "$BASE/api/auth/captcha"
+
+# Mobile login (teacher / staff)
+curl -s -X POST "$BASE/api/auth/mobile/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"TEACHER_EMAIL","password":"PASSWORD","captchaToken":"TOKEN","captchaAnswer":"CODE"}'
+
+# Response: { "token": "eyJ...", "user": { "role": "teacher", ... } }
+TOKEN=eyJ...
+BASE=http://localhost:3000
+
+
+################################################################################
+# PART A — GALLERY (staff photos / videos)
+################################################################################
+
+Hierarchy:
+  Event (activityName + date)
+    └── Title (album section, e.g. "Prize distribution")
+          └── Images / Videos
+
+Allowed:
+  Images: JPG, PNG, WEBP, GIF  (compress; keep under ~8 MB input)
+  Videos: MP4, WEBM, MOV, M4V  (max 80 MB)
+  Max files per upload: 20
+
+
+--------------------------------------------------------------------------------
+A1) LIST gallery events
+--------------------------------------------------------------------------------
+GET /api/gallery
+
+curl -s "$BASE/api/gallery" \
+  -H "Authorization: Bearer $TOKEN"
+
+Response sample:
+{
+  "canDelete": false,
+  "events": [
+    {
+      "id": "clx_event...",
+      "activityName": "Annual Day",
+      "eventDate": "2026-01-15",
+      "titleCount": 2,
+      "imageCount": 12,
+      "coverUrl": "/api/uploads/gallery/.../photo.jpg",
+      "createdAt": "..."
+    }
+  ]
+}
+
+Cover / media preview:
+  GET $BASE{coverUrl}   + Header Authorization: Bearer $TOKEN
+
+
+--------------------------------------------------------------------------------
+A2) CREATE event (activity folder)
+--------------------------------------------------------------------------------
+POST /api/gallery
+Content-Type: application/json
+
+curl -s -X POST "$BASE/api/gallery" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"activityName":"Sports Day","eventDate":"2026-02-10","title":"Opening ceremony"}'
+
+# title optional — pehle se ek title bana sakte ho
+# Response 201: { "event": { "id": "...", "titles": [ { "id": "...", "title": "..." } ] } }
+
+EVENT_ID=clx_event...
+TITLE_ID=clx_title...   # from response.titles[0].id
+
+
+--------------------------------------------------------------------------------
+A3) EVENT DETAIL (titles + all images)
+--------------------------------------------------------------------------------
+GET /api/gallery/{eventId}
+
+curl -s "$BASE/api/gallery/$EVENT_ID" \
+  -H "Authorization: Bearer $TOKEN"
+
+Response:
+{
+  "event": {
+    "id": "...",
+    "activityName": "Sports Day",
+    "eventDate": "2026-02-10",
+    "canDelete": false,
+    "titles": [
+      {
+        "id": "clx_title...",
+        "title": "Opening ceremony",
+        "images": [
+          {
+            "id": "clx_img...",
+            "url": "/api/uploads/gallery/.../xxx.jpg",
+            "kind": "image",
+            "originalName": "photo1.jpg",
+            "uploadedByName": "Teacher Name",
+            "canDelete": true,
+            "createdAt": "..."
+          }
+        ]
+      }
+    ]
+  }
+}
+
+
+--------------------------------------------------------------------------------
+A4) ADD new title under event
+--------------------------------------------------------------------------------
+POST /api/gallery/{eventId}/titles
+Content-Type: application/json
+
+curl -s -X POST "$BASE/api/gallery/$EVENT_ID/titles" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Prize distribution"}'
+
+# Response 201: { "title": { "id": "...", "title": "...", "images": [] } }
+
+
+--------------------------------------------------------------------------------
+A5) UPLOAD images / videos to a title  ★ main Flutter upload
+--------------------------------------------------------------------------------
+POST /api/gallery/titles/{titleId}/images
+multipart/form-data
+
+Field name: files   (multiple OK)  OR  file  (single)
+
+curl -s -X POST "$BASE/api/gallery/titles/$TITLE_ID/images" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "files=@/path/to/photo1.jpg;type=image/jpeg" \
+  -F "files=@/path/to/photo2.jpg;type=image/jpeg"
+
+# single:
+curl -s -X POST "$BASE/api/gallery/titles/$TITLE_ID/images" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/path/to/photo.jpg;type=image/jpeg"
+
+# video:
+curl -s -X POST "$BASE/api/gallery/titles/$TITLE_ID/images" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "files=@/path/to/clip.mp4;type=video/mp4"
+
+Response 201:
+{
+  "images": [
+    {
+      "id": "...",
+      "url": "/api/uploads/gallery/SCHOOL/EVENT/TITLE/xxx.jpg",
+      "kind": "image",
+      "canDelete": true,
+      ...
+    }
+  ]
+}
+
+
+--------------------------------------------------------------------------------
+A6) VIEW / DOWNLOAD media
+--------------------------------------------------------------------------------
+GET {BASE}{url}   e.g. /api/uploads/gallery/...
+
+curl -s -o out.jpg \
+  -H "Authorization: Bearer $TOKEN" \
+  "$BASE/api/uploads/gallery/SCHOOL_ID/EVENT_ID/TITLE_ID/file.jpg"
+
+# Single image download (attachment)
+curl -s -OJ \
+  -H "Authorization: Bearer $TOKEN" \
+  "$BASE/api/gallery/images/IMAGE_ID/download"
+
+# Whole title as ZIP
+curl -s -OJ \
+  -H "Authorization: Bearer $TOKEN" \
+  "$BASE/api/gallery/titles/TITLE_ID/download"
+
+
+--------------------------------------------------------------------------------
+A7) DELETE image (teacher = own upload; admin/clerk = any)
+--------------------------------------------------------------------------------
+DELETE /api/gallery/images/{imageId}
+
+curl -s -X DELETE "$BASE/api/gallery/images/$IMAGE_ID" \
+  -H "Authorization: Bearer $TOKEN"
+
+
+--------------------------------------------------------------------------------
+A8) Flutter gallery upload example
+--------------------------------------------------------------------------------
+
+final req = http.MultipartRequest(
+  'POST',
+  Uri.parse('$baseUrl/api/gallery/titles/$titleId/images'),
+);
+req.headers['Authorization'] = 'Bearer $token';
+req.files.add(await http.MultipartFile.fromPath('files', photoPath));
+// add more files with same field name 'files'
+final streamed = await req.send();
+final body = await streamed.stream.bytesToString();
+
+Flutter UI flow:
+  1) GET /api/gallery → event cards
+  2) Create event POST /api/gallery  OR open existing
+  3) GET /api/gallery/{eventId} → titles
+  4) Add title if needed
+  5) Camera/gallery → POST images to titleId
+  6) Show Image.network with Authorization header OR download to cache
+
+
+################################################################################
+# PART B — SCHOOL ACTIVITIES (participant lists)
+#  /activities  — admin create + release
+#  Teacher app  — released activities, ONLY own class students
+################################################################################
+
+Types (docType / type field):
+  party | sports | cultural | trip | competition | other
+
+
+--------------------------------------------------------------------------------
+B1) LIST activities (Teacher Flutter)
+--------------------------------------------------------------------------------
+GET /api/activities
+
+curl -s "$BASE/api/activities" \
+  -H "Authorization: Bearer $TOKEN"
+
+Teacher response sample:
+{
+  "activities": [
+    {
+      "id": "clx_act...",
+      "title": "Independence Day Celebration",
+      "titleGu": "સ્વતંત્રતા દિવસ",
+      "type": "cultural",
+      "date": "2026-08-15",
+      "venue": "School ground",
+      "released": true,
+      "_count": {
+        "participants": 12,
+        "schoolTotal": 85
+      }
+    }
+  ],
+  "readOnly": true,
+  "scopedToTeacher": true,
+  "teacherClasses": ["Class 9-D"]
+}
+
+IMPORTANT (Teacher):
+  _count.participants = sirf USKE CLASS ke students
+  schoolTotal         = school-wide total (optional show)
+  Admin/clerk token pe poori list + full counts (scopedToTeacher nahi)
+
+
+Filter by type (optional):
+curl -s "$BASE/api/activities?type=sports" \
+  -H "Authorization: Bearer $TOKEN"
+
+
+--------------------------------------------------------------------------------
+B2) ACTIVITY DETAIL + participant list (Teacher)
+--------------------------------------------------------------------------------
+GET /api/activities?id={activityId}
+
+curl -s "$BASE/api/activities?id=$ACTIVITY_ID" \
+  -H "Authorization: Bearer $TOKEN"
+
+Teacher response:
+{
+  "activity": {
+    "id": "...",
+    "title": "...",
+    "titleGu": "...",
+    "type": "cultural",
+    "date": "2026-08-15",
+    "venue": "...",
+    "description": "...",
+    "academicYear": "2026-27",
+    "released": true,
+    "participants": [
+      {
+        "id": "part...",
+        "note": null,
+        "classId": "...",
+        "student": {
+          "id": "...",
+          "firstName": "HARI",
+          "middleName": "ALPESHBHAI",
+          "surname": "BAROT",
+          "firstNameGu": "હરિ",
+          "surnameGu": "બારોટ",
+          "rollNumber": "1",
+          "grNumber": "24105",
+          "gender": "Female",
+          "standard": "9",
+          "section": "D",
+          "schoolClass": { "name": "Class 9-D", "standard": "9", "section": "D" }
+        }
+      }
+    ],
+    "_count": { "participants": 12, "schoolTotal": 85 }
+  },
+  "school": {
+    "name": "SARVAJANIK HIGH SCHOOL SONGADH",
+    "address": "...",
+    "district": "Tapi",
+    "phone": "...",
+    "code": "24261004405"
+  },
+  "readOnly": true,
+  "scopedToTeacher": true,
+  "teacherClasses": ["Class 9-D"]
+}
+
+UI rule:
+  participants[] ko list dikhao — YEHI class teacher ke students hain.
+  Hardcode mat karo; API already filter karti hai.
+
+
+--------------------------------------------------------------------------------
+B3) Admin create / release (optional — usually web)
+--------------------------------------------------------------------------------
+# Create
+curl -s -X POST "$BASE/api/activities" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"create","title":"Sports Day","titleGu":"સ્પોર્ટ્સ ડે","type":"sports","date":"2026-02-10","venue":"Ground"}'
+
+# Add students
+curl -s -X POST "$BASE/api/activities" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"add_participants","id":"ACTIVITY_ID","studentIds":["stu1","stu2"]}'
+
+# Release to teachers
+curl -s -X POST "$BASE/api/activities" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"release","id":"ACTIVITY_ID"}'
+
+# Unrelease
+curl -s -X POST "$BASE/api/activities" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"unrelease","id":"ACTIVITY_ID"}'
+
+
+--------------------------------------------------------------------------------
+B4) Flutter activities screen flow
+--------------------------------------------------------------------------------
+
+1. Login teacher → save token
+2. GET /api/activities
+3. Cards: title, date, venue, type, participant count (_count.participants)
+4. Banner: teacherClasses (e.g. "Class 9-D")
+5. Tap → GET /api/activities?id=...
+6. List students: roll, GR, name EN/GU, class
+7. Print / share from Flutter using same list
+
+Name display:
+  locale GU → firstNameGu + surnameGu (fallback English)
+  locale EN → firstName + middleName + surname
+
+
+################################################################################
+# QUICK COPY
+################################################################################
+
+BASE=http://localhost:3000
+TOKEN=PASTE_TOKEN_HERE
+
+# --- Gallery ---
+curl -s "$BASE/api/gallery" -H "Authorization: Bearer $TOKEN"
+
+curl -s -X POST "$BASE/api/gallery" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"activityName":"Annual Day","eventDate":"2026-01-15","title":"Stage"}'
+
+curl -s "$BASE/api/gallery/EVENT_ID" -H "Authorization: Bearer $TOKEN"
+
+curl -s -X POST "$BASE/api/gallery/EVENT_ID/titles" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"title":"Group photo"}'
+
+curl -s -X POST "$BASE/api/gallery/titles/TITLE_ID/images" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "files=@photo.jpg;type=image/jpeg"
+
+# --- Activities (teacher) ---
+curl -s "$BASE/api/activities" -H "Authorization: Bearer $TOKEN"
+
+curl -s "$BASE/api/activities?id=ACTIVITY_ID" -H "Authorization: Bearer $TOKEN"
+
+
+################################################################################
+# ERRORS
+################################################################################
+
+401  Login / token invalid
+403  Role not allowed / gallery feature off for school
+400  Missing fields / invalid date / invalid file
+404  Event / title / activity not found
+     Teacher + unreleased activity → 404
+
+================================================================================
+END
+================================================================================

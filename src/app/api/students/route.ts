@@ -180,6 +180,12 @@ export async function GET(request: NextRequest) {
       firstNameGu: true,
       middleNameGu: true,
       surnameGu: true,
+      fatherName: true,
+      fatherNameGu: true,
+      motherName: true,
+      motherNameGu: true,
+      aadhaarName: true,
+      aadhaarNameGu: true,
       schoolClass: { select: classSelect },
     } as const;
 

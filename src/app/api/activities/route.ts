@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import type { Prisma } from "@/generated/prisma/client";
+import { getTeacherScope } from "@/lib/teacher-scope";
 
 const ACTIVITY_TYPES = [
   "party",
@@ -48,6 +49,22 @@ function participantSelect() {
   } satisfies Prisma.ActivityParticipantSelect;
 }
 
+/** Class teacher sees only participants from their homeroom class(es). */
+function teacherParticipantWhere(
+  classIds: string[],
+): Prisma.ActivityParticipantWhereInput {
+  if (!classIds.length) {
+    // No class assigned → no students
+    return { id: { in: [] } };
+  }
+  return {
+    OR: [
+      { classId: { in: classIds } },
+      { student: { classId: { in: classIds } } },
+    ],
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth([
@@ -60,6 +77,19 @@ export async function GET(request: NextRequest) {
     const id = searchParams.get("id") || "";
     const isTeacher = session.role === "teacher";
 
+    let teacherClassIds: string[] = [];
+    let teacherClassNames: string[] = [];
+    if (isTeacher) {
+      const scope = await getTeacherScope(session);
+      teacherClassIds = scope.homeroomClassIds;
+      teacherClassNames = scope.classes
+        .filter((c) => c.isHomeroom)
+        .map((c) => c.name);
+    }
+    const teacherPartWhere = isTeacher
+      ? teacherParticipantWhere(teacherClassIds)
+      : undefined;
+
     if (id) {
       const activity = await prisma.activity.findFirst({
         where: {
@@ -69,6 +99,7 @@ export async function GET(request: NextRequest) {
         },
         include: {
           participants: {
+            where: teacherPartWhere,
             orderBy: [
               { student: { rollNumber: "asc" } },
               { student: { surname: "asc" } },
@@ -94,10 +125,19 @@ export async function GET(request: NextRequest) {
         },
       });
 
+      const myCount = activity.participants.length;
       return NextResponse.json({
-        activity,
+        activity: {
+          ...activity,
+          _count: {
+            participants: isTeacher ? myCount : activity._count.participants,
+            schoolTotal: activity._count.participants,
+          },
+        },
         school,
         readOnly: isTeacher,
+        scopedToTeacher: isTeacher,
+        teacherClasses: teacherClassNames,
       });
     }
 
@@ -112,6 +152,33 @@ export async function GET(request: NextRequest) {
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       include: { _count: { select: { participants: true } } },
     });
+
+    if (isTeacher && activities.length) {
+      const counts = await prisma.activityParticipant.groupBy({
+        by: ["activityId"],
+        where: {
+          activityId: { in: activities.map((a) => a.id) },
+          ...teacherPartWhere,
+        },
+        _count: { _all: true },
+      });
+      const countMap = new Map(
+        counts.map((c) => [c.activityId, c._count._all]),
+      );
+      const scoped = activities.map((a) => ({
+        ...a,
+        _count: {
+          participants: countMap.get(a.id) ?? 0,
+          schoolTotal: a._count.participants,
+        },
+      }));
+      return NextResponse.json({
+        activities: scoped,
+        readOnly: true,
+        scopedToTeacher: true,
+        teacherClasses: teacherClassNames,
+      });
+    }
 
     return NextResponse.json({ activities, readOnly: isTeacher });
   } catch (e) {

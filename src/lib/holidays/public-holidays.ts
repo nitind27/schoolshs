@@ -22,12 +22,12 @@ export const FIXED_PUBLIC_HOLIDAYS: Array<{
   nameGu: string;
   type: HolidayKind;
 }> = [
-  { md: "01-14", name: "Makar Sankranti / Uttarayan", nameGu: "ઉત્તરાયણ", type: "public" },
+  { md: "01-14", name: "Makar Sankranti / Uttarayan", nameGu: "મકર સંક્રાંતિ / ઉત્તરાયણ", type: "public" },
   { md: "01-26", name: "Republic Day", nameGu: "પ્રજાસત્તાક દિન", type: "public" },
-  { md: "04-14", name: "Dr. Ambedkar Jayanti", nameGu: "ડૉ. આંબેડકર જ્યંતી", type: "public" },
+  { md: "04-14", name: "Dr. Ambedkar Jayanti", nameGu: "ડૉ. બાબાસાહેબ આંબેડકર જયંતી", type: "public" },
   { md: "05-01", name: "Gujarat Day / Labour Day", nameGu: "ગુજરાત સ્થાપના / મજૂર દિન", type: "public" },
-  { md: "08-15", name: "Independence Day", nameGu: "સ્વતંત્રતા દિવસ", type: "public" },
-  { md: "10-02", name: "Gandhi Jayanti", nameGu: "ગાંધી જ્યંતી", type: "public" },
+  { md: "08-15", name: "Independence Day / Pateti", nameGu: "સ્વતંત્રતા દિવસ / પારસી નવું વર્ષ", type: "public" },
+  { md: "10-02", name: "Gandhi Jayanti", nameGu: "ગાંધી જયંતી", type: "public" },
   { md: "12-25", name: "Christmas", nameGu: "નાતાલ", type: "public" },
 ];
 
@@ -61,27 +61,35 @@ export const VARIABLE_HOLIDAYS_BY_YEAR: Record<
     { md: "11-05", name: "Guru Nanak Jayanti", nameGu: "ગુરુ નાનક જયંતી", type: "optional" },
   ],
   2026: [
-    { md: "02-15", name: "Maha Shivratri", nameGu: "મહા શિવરાત્રી", type: "public" },
-    { md: "03-03", name: "Holi", nameGu: "હોળી", type: "public" },
-    { md: "03-04", name: "Dhuleti", nameGu: "ધૂળેટી", type: "public" },
-    { md: "03-19", name: "Ram Navami", nameGu: "રામ નવમી", type: "public" },
-    { md: "03-21", name: "Eid ul-Fitr", nameGu: "ઈદ ઉલ ફિત્ર", type: "public" },
-    { md: "04-03", name: "Good Friday", nameGu: "ગુડ ફ્રાઇડે", type: "optional" },
-    { md: "05-31", name: "Buddha Purnima", nameGu: "બુદ્ધ પૂર્ણિમા", type: "public" },
-    { md: "06-27", name: "Muharram", nameGu: "મહોરમ", type: "optional" },
-    { md: "08-26", name: "Janmashtami", nameGu: "જન્માષ્ટમી", type: "public" },
-    { md: "08-27", name: "Janmashtami (2nd day)", nameGu: "જન્માષ્ટમી (બીજો દિવસ)", type: "public" },
-    { md: "08-28", name: "Local Public Holiday", nameGu: "સ્થાનિક જાહેર રજા", type: "public" },
-    { md: "09-04", name: "Eid Milad-un-Nabi", nameGu: "ઈદ-એ-મિલાદ", type: "optional" },
-    { md: "09-14", name: "Ganesh Chaturthi", nameGu: "ગણેશ ચતુર્થી", type: "public" },
-    { md: "10-11", name: "Navratri (Start)", nameGu: "નવરાત્રિ", type: "school" },
-    { md: "10-20", name: "Dussehra", nameGu: "દશેરા", type: "public" },
-    { md: "11-08", name: "Diwali", nameGu: "દિવાળી", type: "public" },
-    { md: "11-09", name: "Diwali (Govardhan)", nameGu: "ગોવર્ધન પૂજા", type: "public" },
-    { md: "11-10", name: "Bhai Beej", nameGu: "ભાઈ બીજ", type: "public" },
-    { md: "11-11", name: "New Year (Vikram Samvat)", nameGu: "નૂતન વર્ષ", type: "public" },
-    { md: "11-20", name: "Diwali Vacation Ends", nameGu: "દિવાળી રજા સમાપ્ત", type: "school" },
-    { md: "11-24", name: "Guru Nanak Jayanti", nameGu: "ગુરુ નાનક જયંતી", type: "optional" },
+    // Source: Gujarat Government Gazette — Public Holidays 2026 (27 Nov 2025)
+    // + GSHSEB academic calendar 2026–27 (Diwali vacation 5–25 Nov)
+    { md: "02-15", name: "Maha Shivratri", nameGu: "મહા શિવરાત્રી", type: "optional" }, // Sunday
+    { md: "03-03", name: "Holi", nameGu: "હોળી", type: "optional" },
+    { md: "03-04", name: "Dhuleti (Holi 2nd day)", nameGu: "ધૂળેટી", type: "public" },
+    { md: "03-19", name: "Chetichand", nameGu: "ચેટીચંદ", type: "public" },
+    { md: "03-21", name: "Eid ul-Fitr (Ramzan Eid)", nameGu: "ઈદ ઉલ ફિત્ર (રમઝાન ઈદ)", type: "public" },
+    { md: "03-26", name: "Ram Navami", nameGu: "રામ નવમી", type: "public" },
+    { md: "03-31", name: "Mahavir Jayanti", nameGu: "મહાવીર જન્મ કલ્યાણક", type: "public" },
+    { md: "04-03", name: "Good Friday", nameGu: "ગુડ ફ્રાઇડે", type: "public" },
+    { md: "05-01", name: "Buddha Purnima", nameGu: "બુદ્ધ પૂર્ણિમા", type: "optional" },
+    { md: "05-27", name: "Eid ul-Adha (Bakri Eid)", nameGu: "ઈદ ઉલ અઝહા (બકરી ઈદ)", type: "public" },
+    { md: "06-26", name: "Muharram (Ashoora)", nameGu: "મહોરમ (આશુરા)", type: "public" },
+    { md: "08-26", name: "Eid Milad-un-Nabi", nameGu: "ઈદ-એ-મિલાદુન્નબી", type: "public" },
+    { md: "08-28", name: "Raksha Bandhan", nameGu: "રક્ષાબંધન", type: "public" },
+    { md: "09-04", name: "Janmashtami", nameGu: "જન્માષ્ટમી", type: "public" },
+    { md: "09-14", name: "Ganesh Chaturthi", nameGu: "ગણેશ ચતુર્થી", type: "optional" },
+    { md: "09-15", name: "Samvatsari", nameGu: "સંવત્સરી", type: "public" },
+    { md: "10-11", name: "Navratri (Start)", nameGu: "નવરાત્રિ પ્રારંભ", type: "school" },
+    { md: "10-20", name: "Dussehra (Vijaya Dashami)", nameGu: "દશેરા (વિજયા દશમી)", type: "public" },
+    { md: "10-31", name: "Sardar Patel Jayanti", nameGu: "સરદાર પટેલ જયંતી", type: "public" },
+    { md: "11-05", name: "Diwali Vacation Starts", nameGu: "દિવાળી રજા પ્રારંભ", type: "school" },
+    { md: "11-07", name: "Dhanteras", nameGu: "ધનતેરસ", type: "optional" },
+    { md: "11-08", name: "Diwali", nameGu: "દિવાળી", type: "public" }, // Sunday
+    { md: "11-09", name: "Govardhan Puja / New Year Eve", nameGu: "ગોવર્ધન પૂજા", type: "school" },
+    { md: "11-10", name: "Vikram Samvat New Year", nameGu: "વિક્રમ સંવત નૂતન વર્ષ", type: "public" },
+    { md: "11-11", name: "Bhai Bij", nameGu: "ભાઈ બીજ", type: "public" },
+    { md: "11-24", name: "Guru Nanak Jayanti", nameGu: "ગુરુ નાનક જયંતી", type: "public" },
+    { md: "11-25", name: "Diwali Vacation Ends", nameGu: "દિવાળી રજા સમાપ્ત", type: "school" },
   ],
 };
 

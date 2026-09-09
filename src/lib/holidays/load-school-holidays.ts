@@ -30,8 +30,14 @@ export async function loadSchoolHolidays(opts: {
   const where: Prisma.HolidayWhereInput = {
     schoolId: opts.schoolId,
     date: month
-      ? { startsWith: `${yearNum}-${padMonth(month)}-` }
-      : { startsWith: `${yearNum}-` },
+      ? {
+          gte: `${yearNum}-${padMonth(month)}-01`,
+          lte: `${yearNum}-${padMonth(month)}-31`,
+        }
+      : {
+          gte: `${yearNum}-01-01`,
+          lte: `${yearNum}-12-31`,
+        },
   };
   if (type) where.type = type;
 

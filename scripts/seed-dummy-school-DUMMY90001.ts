@@ -609,7 +609,10 @@ async function main() {
     { date: "2025-10-02", name: "Gandhi Jayanti", nameGu: "ગાંધી જયંતિ", type: "public" },
     { date: "2025-10-20", name: "Diwali Vacation Start", nameGu: "દિવાળી રજા", type: "school" },
     { date: "2026-01-26", name: "Republic Day", nameGu: "પ્રજાસત્તાક દિવસ", type: "public" },
-    { date: "2026-03-14", name: "Holi", nameGu: "હોળી", type: "public" },
+    { date: "2026-03-04", name: "Dhuleti", nameGu: "ધૂળેટી", type: "public" },
+    { date: "2026-08-15", name: "Independence Day", nameGu: "સ્વતંત્રતા દિવસ", type: "public" },
+    { date: "2026-10-02", name: "Gandhi Jayanti", nameGu: "ગાંધી જયંતી", type: "public" },
+    { date: "2026-11-08", name: "Diwali", nameGu: "દિવાળી", type: "public" },
   ];
   for (const h of holidays) {
     await prisma.holiday.create({

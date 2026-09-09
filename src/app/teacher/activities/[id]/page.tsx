@@ -34,6 +34,7 @@ export default function TeacherActivityDetailPage({
   const t = useT();
   const [activity, setActivity] = useState<ActivityDetail | null>(null);
   const [school, setSchool] = useState<ActivityPrintSchool>(null);
+  const [teacherClasses, setTeacherClasses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -43,8 +44,10 @@ export default function TeacherActivityDetailPage({
     if (res.ok && data.activity) {
       setActivity(data.activity);
       setSchool(data.school || null);
+      setTeacherClasses(data.teacherClasses || []);
     } else {
       setActivity(null);
+      setTeacherClasses([]);
     }
     setLoading(false);
   }, [id]);
@@ -104,6 +107,13 @@ export default function TeacherActivityDetailPage({
       }
     >
       <div className="act-detail">
+        <p className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900 no-print">
+          {teacherClasses.length
+            ? t("activities.teacherScopeNote", {
+                classes: teacherClasses.join(", "),
+              })
+            : t("activities.teacherScopeNone")}
+        </p>
         <div className="act-detail__banner">
           <div>
             <div className="act-detail__badges">
@@ -131,6 +141,12 @@ export default function TeacherActivityDetailPage({
             </div>
           </div>
         </div>
+
+        {!activity.participants.length ? (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 no-print">
+            {t("activities.teacherNoClassStudents")}
+          </p>
+        ) : null}
 
         <section className="act-print-wrap">
           <ActivityPrintView

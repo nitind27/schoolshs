@@ -27,6 +27,7 @@ type ActivityRow = {
 export default function TeacherActivitiesPage() {
   const t = useT();
   const [rows, setRows] = useState<ActivityRow[]>([]);
+  const [teacherClasses, setTeacherClasses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -34,6 +35,7 @@ export default function TeacherActivitiesPage() {
     const res = await fetch("/api/activities");
     const data = await res.json().catch(() => ({}));
     setRows(res.ok ? data.activities || [] : []);
+    setTeacherClasses(res.ok ? data.teacherClasses || [] : []);
     setLoading(false);
   }, []);
 
@@ -51,6 +53,15 @@ export default function TeacherActivitiesPage() {
       ]}
     >
       <div className="act-page">
+        {!loading && (
+          <p className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
+            {teacherClasses.length
+              ? t("activities.teacherScopeNote", {
+                  classes: teacherClasses.join(", "),
+                })
+              : t("activities.teacherScopeNone")}
+          </p>
+        )}
         {loading ? (
           <PageLoader />
         ) : rows.length === 0 ? (
