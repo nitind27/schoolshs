@@ -13,6 +13,7 @@ import "@/components/id-cards/id-card-print.css";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import { ID_CARD_BRAND } from "@/lib/id-card-brand";
 import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
+import { studentListName } from "@/lib/student-names";
 import { useT } from "@/i18n/locale-provider";
 import { useSchoolFeatures } from "@/components/school/use-school-features";
 import { ChevronDown, CreditCard, Printer, Search, Settings, Sparkles, X } from "lucide-react";
@@ -526,7 +527,7 @@ function IdCardsContent() {
           <div className="id-cards-preview-grid print:hidden">
             {settings &&
               visibleStudents.map((s, index) => {
-                const studentName = [s.firstName, s.surname].filter(Boolean).join(" ").trim();
+                const studentName = studentListName(s);
                 return (
                   <div key={s.id} className="id-cards-stage">
                     <div className="id-cards-stage-inner">

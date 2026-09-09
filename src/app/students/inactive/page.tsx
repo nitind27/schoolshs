@@ -3,8 +3,7 @@
 import { Spinner } from "@/components/ui/loader";
 import {
   studentDisplayFatherName,
-  studentFullNameGu,
-  studentShortNameGu,
+  studentListName,
 } from "@/lib/student-names";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -164,7 +163,7 @@ export default function InactiveStudentsPage() {
   };
 
   const deleteStudent = async (student: StudentRow) => {
-    const name = studentFullNameGu(student) || studentShortNameGu(student) || "—";
+    const name = studentListName(student);
     const gr = student.grNumber ? ` · GR ${student.grNumber}` : "";
     await confirm({
       title: t("students.deleteTitle"),
@@ -203,10 +202,9 @@ export default function InactiveStudentsPage() {
       },
       {
         header: t("common.name"),
-        accessorFn: (s) => studentFullNameGu(s) || studentShortNameGu(s) || "",
+        accessorFn: (s) => studentListName(s),
         cell: ({ row }) => {
-          const name =
-            studentFullNameGu(row.original) || studentShortNameGu(row.original) || "—";
+          const name = studentListName(row.original);
           const father = studentDisplayFatherName(row.original);
           return (
             <div>

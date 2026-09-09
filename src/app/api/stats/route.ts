@@ -9,6 +9,7 @@ import {
 } from "@/lib/dashboard-analytics";
 import { normalizeGender } from "@/lib/gender-utils";
 import { FINANCIAL_YEARS } from "@/lib/constants";
+import { studentFullNameEn, studentFullNameGu } from "@/lib/student-names";
 
 function parseFilters(searchParams: URLSearchParams): DashboardFilters {
   return {
@@ -92,9 +93,13 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           firstName: true,
+          middleName: true,
           surname: true,
           firstNameGu: true,
+          middleNameGu: true,
           surnameGu: true,
+          fatherName: true,
+          fatherNameGu: true,
           standard: true,
           section: true,
           category: true,
@@ -184,7 +189,7 @@ export async function GET(request: NextRequest) {
 
     const admissionRecent = recentVerified.map((s) => ({
       id: s.id,
-      name: [s.firstNameGu || s.firstName, s.surnameGu || s.surname].filter(Boolean).join(" "),
+      name: studentFullNameGu(s) || studentFullNameEn(s),
       classLabel: s.schoolClass?.name || [s.standard, s.section].filter(Boolean).join("-") || "—",
       category: s.category || null,
       verifiedAt: s.verifiedAt || s.updatedAt,

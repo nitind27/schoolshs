@@ -39,7 +39,10 @@ type StudentOpt = {
   middleName?: string | null;
   surname: string;
   firstNameGu?: string | null;
+  middleNameGu?: string | null;
   surnameGu?: string | null;
+  fatherName?: string | null;
+  fatherNameGu?: string | null;
   rollNumber?: string | null;
   grNumber?: string | null;
   gender?: string | null;
@@ -76,11 +79,10 @@ type ActivityDetail = {
   participants: Participant[];
 };
 
-function studentName(s: StudentOpt, locale: string): string {
-  if (locale === "gu" && (s.firstNameGu || s.surnameGu)) {
-    return [s.firstNameGu, s.surnameGu].filter(Boolean).join(" ");
-  }
-  return [s.firstName, s.middleName, s.surname].filter(Boolean).join(" ");
+import { studentListName } from "@/lib/student-names";
+
+function studentName(s: StudentOpt, _locale: string): string {
+  return studentListName(s);
 }
 
 export default function ActivityDetailPage({

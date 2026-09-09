@@ -12,6 +12,7 @@ import { PAGE_SIZE } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { GlobalDataTable } from "@/components/ui/global-data-table";
+import { studentListName } from "@/lib/student-names";
 
 const STATUS_FILTERS = ["draft", "ready", "pending", "submitted", "approved", "rejected"] as const;
 
@@ -20,6 +21,11 @@ type ClerkStudent = {
   firstName?: string | null;
   middleName?: string | null;
   surname?: string | null;
+  firstNameGu?: string | null;
+  middleNameGu?: string | null;
+  surnameGu?: string | null;
+  fatherName?: string | null;
+  fatherNameGu?: string | null;
   standard?: string | null;
   section?: string | null;
   category?: string | null;
@@ -63,12 +69,12 @@ function ClerkScholarshipContent() {
     () => [
       {
         header: "Name",
-        accessorFn: (st) => [st.firstName, st.middleName, st.surname].filter(Boolean).join(" "),
+        accessorFn: (st) => studentListName(st),
         cell: ({ row }) => {
           const st = row.original;
           return (
             <Link href={`/students/${st.id}`} className="font-medium text-slate-800 hover:text-cyan-700">
-              {[st.firstName, st.middleName, st.surname].filter(Boolean).join(" ")}
+              {studentListName(st)}
             </Link>
           );
         },

@@ -33,8 +33,18 @@ export function dateToWords(dateStr: string, lang: "en" | "gu" = "en"): string {
   return `${day} ${month} ${year}`;
 }
 
-export function studentFullName(s: { firstName: string; middleName?: string | null; surname: string }): string {
-  return [s.firstName, s.middleName, s.surname].filter(Boolean).join(" ");
+export function studentFullName(s: {
+  firstName: string;
+  middleName?: string | null;
+  surname: string;
+  fatherName?: string | null;
+}): string {
+  const middle =
+    (s.middleName && String(s.middleName).trim()) ||
+    (s.fatherName && String(s.fatherName).trim()) ||
+    "";
+  const weak = !middle || middle === "—" || middle.toUpperCase() === "NA";
+  return [s.firstName, weak ? null : middle, s.surname].filter(Boolean).join(" ");
 }
 
 export function formatToday(): string {

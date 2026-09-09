@@ -21,9 +21,10 @@ import {
   pendingWorkWhere,
 } from "@/lib/student-list-filters";
 import { searchStudentIds } from "@/lib/student-search.server";
+import { studentListName, type StudentNameLike } from "@/lib/student-names";
 
-function studentDisplayName(s: { firstName?: string | null; surname?: string | null }) {
-  return [s.firstName, s.surname].filter(Boolean).join(" ").trim() || "Student";
+function studentDisplayName(s: StudentNameLike) {
+  return studentListName(s) || "Student";
 }
 
 export async function GET(request: NextRequest) {

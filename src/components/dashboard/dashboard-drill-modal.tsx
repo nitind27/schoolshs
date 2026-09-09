@@ -11,7 +11,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { useT } from "@/i18n/locale-provider";
 import { PAGE_SIZE } from "@/lib/pagination";
 import { cachedGetJson, peekCachedJson } from "@/lib/client-fetch-cache";
-import { studentShortNameGu } from "@/lib/student-names";
+import { studentListName } from "@/lib/student-names";
 import {
   EMPTY_FILTERS,
   type DashboardFilterMeta,
@@ -398,7 +398,7 @@ export function DashboardDrillModal({
                       <td>{s.rollNumber || "—"}</td>
                       <td>
                         <Link href={`/students/${s.id}`} className="ops-drill-name">
-                          {studentShortNameGu(s)}
+                          {studentListName(s)}
                         </Link>
                       </td>
                       <td>{classLabel(s)}</td>

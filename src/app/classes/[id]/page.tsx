@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useT } from "@/i18n/locale-provider";
 import { Edit, UserPlus, CreditCard, Users, ClipboardList, Pencil } from "lucide-react";
 import type { SchoolClass, Student, Staff } from "@/generated/prisma/client";
-import { studentShortNameGu } from "@/lib/student-names";
+import { studentListName } from "@/lib/student-names";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGE_SIZE, paginateSlice } from "@/lib/pagination";
 import { ClassSubjectsPanel } from "@/components/classes/class-subjects-panel";
@@ -135,7 +135,7 @@ export default function ClassDetailPage() {
                   {pagedStudents.map((s) => (
                     <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="p-3 font-mono">{s.rollNumber || "—"}</td>
-                      <td className="p-3 font-medium">{studentShortNameGu(s)}</td>
+                      <td className="p-3 font-medium">{studentListName(s)}</td>
                       <td className="p-3 font-mono text-xs">{s.aadhaarNumber}</td>
                       <td className="p-3">{s.mobileNumber}</td>
                       <td className="p-3"><Badge status={s.status} /></td>

@@ -2,6 +2,7 @@
 
 import { Printer } from "lucide-react";
 import { useT, useLocale } from "@/i18n/locale-provider";
+import { studentListName } from "@/lib/student-names";
 import "./activity-print.css";
 
 export type ActivityPrintSchool = {
@@ -19,7 +20,10 @@ export type ActivityPrintParticipant = {
     middleName?: string | null;
     surname: string;
     firstNameGu?: string | null;
+    middleNameGu?: string | null;
     surnameGu?: string | null;
+    fatherName?: string | null;
+    fatherNameGu?: string | null;
     rollNumber?: string | null;
     grNumber?: string | null;
     gender?: string | null;
@@ -47,12 +51,9 @@ export type ActivityPrintData = {
 
 function fullName(
   s: ActivityPrintParticipant["student"],
-  locale: string,
+  _locale: string,
 ): string {
-  if (locale === "gu" && (s.firstNameGu || s.surnameGu)) {
-    return [s.firstNameGu, s.surnameGu].filter(Boolean).join(" ");
-  }
-  return [s.firstName, s.middleName, s.surname].filter(Boolean).join(" ");
+  return studentListName(s);
 }
 
 function classLabel(s: ActivityPrintParticipant["student"]): string {

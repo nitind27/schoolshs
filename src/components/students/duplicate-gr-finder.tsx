@@ -16,8 +16,7 @@ import {
 import { useT } from "@/i18n/locale-provider";
 import {
   studentDisplayFatherName,
-  studentFullNameGu,
-  studentShortNameGu,
+  studentListName,
 } from "@/lib/student-names";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
@@ -56,7 +55,7 @@ function classText(s: DuplicateGrStudent) {
 }
 
 function studentName(s: DuplicateGrStudent) {
-  return studentFullNameGu(s) || studentShortNameGu(s) || "—";
+  return studentListName(s);
 }
 
 export function DuplicateGrFinder({

@@ -35,6 +35,7 @@ import {
   formatAdmissionDate,
   type AdmissionCompleteness,
 } from "@/lib/admissions";
+import { studentListName } from "@/lib/student-names";
 import { cn } from "@/lib/utils";
 
 export type AdmissionCardStudent = {
@@ -170,9 +171,7 @@ export function AdmissionStudentCard({
   t: (k: string, p?: Record<string, string | number>) => string;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const fullName = [s.firstName, s.middleName, s.surname]
-    .filter(Boolean)
-    .join(" ");
+  const fullName = studentListName(s);
   const levelStyle = {
     complete: "text-emerald-700",
     partial: "text-amber-700",

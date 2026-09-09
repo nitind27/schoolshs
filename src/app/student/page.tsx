@@ -1,6 +1,6 @@
 "use client";
 
-import { studentShortNameGu } from "@/lib/student-names";
+import { studentListName } from "@/lib/student-names";
 import { Badge } from "@/components/ui/badge";
 import {
   useStudentData,
@@ -35,7 +35,7 @@ export default function StudentDashboard() {
   const examSeats = (student.examSeatAssignments as unknown[]) || [];
 
   const quickLinks = [
-    { href: "/student/profile", icon: User, label: t("studentNav.myProfile"), desc: studentShortNameGu(student) },
+    { href: "/student/profile", icon: User, label: t("studentNav.myProfile"), desc: studentListName(student) },
     { href: "/student/results", icon: Award, label: t("studentNav.myResults"), desc: `${reportCards.length} ${t("studentPortal.reportCards")}` },
     { href: "/student/exam-seat-numbers", icon: Armchair, label: t("examSeats.myTitle"), desc: `${examSeats.length} ${t("examSeats.assigned")}` },
     { href: "/student/board", icon: GraduationCap, label: t("studentNav.boardRecords"), desc: String(student.board10th || "GSEB") },
@@ -48,7 +48,7 @@ export default function StudentDashboard() {
       <section className="student-hero relative">
         <div className="relative z-10">
           <p className="student-hero-kicker">{t("studentPortal.welcomeBack")}</p>
-          <h1 className="student-hero-name">{studentShortNameGu(student)}</h1>
+          <h1 className="student-hero-name">{studentListName(student)}</h1>
           <p className="student-hero-meta">
             {t("studentPortal.classRoll", {
               standard: student.standard || "—",

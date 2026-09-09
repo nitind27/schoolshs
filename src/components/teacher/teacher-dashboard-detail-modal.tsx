@@ -6,6 +6,7 @@ import { InfoModal } from "@/components/ui/info-modal";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/loader";
 import { useT } from "@/i18n/locale-provider";
+import { studentListName } from "@/lib/student-names";
 
 export type TeacherDetailKind =
   "classes" | "students" | "attendance" | "schedule";
@@ -219,9 +220,7 @@ export function TeacherDashboardDetailModal({
                       {student.rollNumber || "—"}
                     </td>
                     <td className="px-3 py-2 font-semibold">
-                      {[student.firstName, student.middleName, student.surname]
-                        .filter(Boolean)
-                        .join(" ")}
+                      {studentListName(student)}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs">
                       {student.grNumber || "—"}

@@ -18,7 +18,7 @@ import {
   Phone,
   Hash,
 } from "lucide-react";
-import { studentShortNameGu } from "@/lib/student-names";
+import { studentListName, studentDisplayFatherName } from "@/lib/student-names";
 import type { ColumnDef } from "@tanstack/react-table";
 import { GlobalDataTable } from "@/components/ui/global-data-table";
 import { normalizeGender, GENDER_FILTER_OPTIONS } from "@/lib/gender-utils";
@@ -269,9 +269,10 @@ export default function TeacherStudentsPage() {
       },
       {
         header: t("common.name"),
-        accessorFn: (s) => studentShortNameGu(s),
+        accessorFn: (s) => studentListName(s),
         cell: ({ row }) => {
           const s = row.original;
+          const father = studentDisplayFatherName(s);
           return (
             <div className="flex items-center gap-2">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-700">
@@ -279,13 +280,13 @@ export default function TeacherStudentsPage() {
               </span>
               <div className="min-w-0">
                 <p className="truncate font-semibold text-slate-900">
-                  {studentShortNameGu(s)}
+                  {studentListName(s)}
                 </p>
-                {s.fatherName && (
+                {father ? (
                   <p className="truncate text-[11px] text-slate-500">
-                    S/O {s.fatherName}
+                    S/O {father}
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
           );

@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
-import { studentShortNameGu } from "@/lib/student-names";
+import { studentListName } from "@/lib/student-names";
 import { PageLoader } from "@/components/ui/loader";
 
 type ExtraFields = {
@@ -126,7 +126,7 @@ function LCContent() {
   const lockedLabel = useMemo(() => {
     const s = students.find((x) => x.id === lockedStudentId) || lcData?.student;
     if (!s) return "";
-    const name = studentShortNameGu(s as { firstName: string; surname: string });
+    const name = studentListName(s as Parameters<typeof studentListName>[0]);
     const gr = s.grNumber ? `GR ${s.grNumber}` : "";
     return [gr, name].filter(Boolean).join(" · ");
   }, [students, lcData, lockedStudentId]);

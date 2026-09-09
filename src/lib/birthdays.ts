@@ -7,6 +7,7 @@ import {
   schoolDateKey,
   schoolDayStartUtc,
 } from "@/lib/school-timezone";
+import { studentFullNameEn, studentFullNameGu } from "@/lib/student-names";
 
 export type BirthdayPerson = {
   id: string;
@@ -134,9 +135,13 @@ export async function getTodayBirthdays(
       select: {
         id: true,
         firstName: true,
+        middleName: true,
         surname: true,
         firstNameGu: true,
+        middleNameGu: true,
         surnameGu: true,
+        fatherName: true,
+        fatherNameGu: true,
         dateOfBirth: true,
         photoPath: true,
         standard: true,
@@ -172,7 +177,10 @@ export async function getTodayBirthdays(
     if (!isBirthdayToday(s.dateOfBirth, onDate)) continue;
     const age = ageFromDob(born, onDate, "student");
     if (age == null) continue;
-    const { en, gu } = personName(s.firstName, s.surname, s.firstNameGu, s.surnameGu);
+    const { en, gu } = {
+      en: studentFullNameEn(s),
+      gu: studentFullNameGu(s) || null,
+    };
     if (!en) continue;
     const classLabel =
       s.schoolClass?.name ||

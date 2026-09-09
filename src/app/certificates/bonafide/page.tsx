@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
-import { studentShortNameGu } from "@/lib/student-names";
+import { studentListName } from "@/lib/student-names";
 
 function BonafideContent() {
   const t = useT();
@@ -72,7 +72,7 @@ function BonafideContent() {
   const lockedLabel = useMemo(() => {
     const s = students.find((x) => x.id === lockedStudentId) || liveStudent;
     if (!s) return "";
-    const name = studentShortNameGu(s as { firstName: string; surname: string });
+    const name = studentListName(s as Parameters<typeof studentListName>[0]);
     const gr = "grNumber" in s && s.grNumber ? `GR ${s.grNumber}` : "";
     return [gr, name].filter(Boolean).join(" · ");
   }, [students, liveStudent, lockedStudentId]);

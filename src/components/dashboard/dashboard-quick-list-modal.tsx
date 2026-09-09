@@ -9,7 +9,7 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { useT } from "@/i18n/locale-provider";
 import { PAGE_SIZE } from "@/lib/pagination";
 import { cachedGetJson, peekCachedJson } from "@/lib/client-fetch-cache";
-import { studentShortNameGu } from "@/lib/student-names";
+import { studentListName } from "@/lib/student-names";
 
 export type QuickListKind = "admission" | "staff";
 
@@ -239,7 +239,7 @@ export function DashboardQuickListModal({ open, onClose, kind, value, label }: P
                       <td className="ops-drill-gr">{s.grNumber?.trim() || "—"}</td>
                       <td>
                         <Link href={`/students/${s.id}`} className="ops-drill-name">
-                          {studentShortNameGu(s)}
+                          {studentListName(s)}
                         </Link>
                       </td>
                       <td>{s.className || [s.standard, s.section].filter(Boolean).join("-") || "—"}</td>

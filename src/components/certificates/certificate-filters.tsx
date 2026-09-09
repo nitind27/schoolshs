@@ -9,7 +9,7 @@ import { ENGLISH_MONTHS } from "@/lib/certificates/types";
 import { useT } from "@/i18n/locale-provider";
 import { Lock, RefreshCw, Search, UserRound } from "lucide-react";
 import type { SchoolClass } from "@/generated/prisma/client";
-import { studentShortNameGu } from "@/lib/student-names";
+import { studentListName } from "@/lib/student-names";
 
 export interface CertFilters {
   classId: string;
@@ -191,7 +191,7 @@ export function CertificateFilters({
                 emptyLabel={t("certificates.chooseStudent")}
                 options={students.map((s) => ({
                   value: s.id,
-                  label: `${s.grNumber ? `[${s.grNumber}] ` : ""}${studentShortNameGu(s)}`,
+                  label: `${s.grNumber ? `[${s.grNumber}] ` : ""}${studentListName(s)}`,
                 }))}
                 value={value.studentId}
                 onChange={(e) => set({ studentId: e.target.value })}

@@ -3,8 +3,7 @@
 import { Spinner } from "@/components/ui/loader";
 import {
   studentDisplayFatherName,
-  studentFullNameGu,
-  studentShortNameGu,
+  studentListName,
 } from "@/lib/student-names";
 import { useEffect, useState, useCallback, useMemo, Suspense, useRef } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -733,7 +732,7 @@ function StudentsContent() {
   };
 
   const deleteStudent = async (student: StudentRow) => {
-    const name = studentFullNameGu(student) || studentShortNameGu(student) || "—";
+    const name = studentListName(student);
     const gr = student.grNumber ? ` · GR ${student.grNumber}` : "";
     await confirm({
       title: t("students.deleteTitle"),
@@ -836,10 +835,10 @@ function StudentsContent() {
       {
         id: "student",
         header: t("common.name"),
-        accessorFn: (s) => studentFullNameGu(s) || studentShortNameGu(s) || "",
+        accessorFn: (s) => studentListName(s),
         cell: ({ row }) => {
           const s = row.original;
-          const name = studentFullNameGu(s) || studentShortNameGu(s) || "—";
+          const name = studentListName(s);
           const father = studentDisplayFatherName(s);
           return (
             <div className="flex min-w-[14rem] max-w-sm items-start gap-3">
@@ -1463,10 +1462,7 @@ function StudentsContent() {
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {students.map((student) => {
-                          const name =
-                            studentFullNameGu(student) ||
-                            studentShortNameGu(student) ||
-                            "—";
+                          const name = studentListName(student);
                           const father = studentDisplayFatherName(student);
                           return (
                             <tr

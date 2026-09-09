@@ -9,6 +9,7 @@ import { PageLoader, Spinner } from "@/components/ui/loader";
 import { useT } from "@/i18n/locale-provider";
 import { teacherTheme as tp } from "@/components/teacher/teacher-theme";
 import { assignedRollsById, sortStudentsForRollAssign } from "@/lib/roll-order";
+import { studentListName } from "@/lib/student-names";
 
 type ClassOption = {
   id: string;
@@ -25,6 +26,11 @@ type StudentRow = {
   firstName: string;
   middleName?: string | null;
   surname: string;
+  firstNameGu?: string | null;
+  middleNameGu?: string | null;
+  surnameGu?: string | null;
+  fatherName?: string | null;
+  fatherNameGu?: string | null;
   grNumber?: string | null;
   rollNumber?: string | null;
   gender?: string | null;
@@ -338,9 +344,7 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
                 <div className="divide-y divide-slate-100 md:hidden">
                   {filtered.map((student, index) => {
                     const boardSeat = getBoardSeat(student);
-                    const fullName = [student.firstName, student.middleName, student.surname]
-                      .filter(Boolean)
-                      .join(" ");
+                    const fullName = studentListName(student);
                     return (
                       <article key={student.id} className="space-y-3 p-3.5">
                         <div className="flex min-w-0 items-start gap-3">
@@ -416,13 +420,7 @@ export function RollNumberManager({ teacher = false }: { teacher?: boolean }) {
                           <tr key={student.id} className="hover:bg-slate-50">
                             <td className="px-4 py-3 text-slate-400">{index + 1}</td>
                             <td className="max-w-[16rem] break-words px-4 py-3 font-semibold text-slate-900">
-                              {[
-                                student.firstName,
-                                student.middleName,
-                                student.surname,
-                              ]
-                                .filter(Boolean)
-                                .join(" ")}
+                              {studentListName(student)}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
                               {student.grNumber || "—"}

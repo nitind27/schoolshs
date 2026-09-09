@@ -18,7 +18,7 @@ import {
   teacherExportFilename,
   type TeacherExportPayload,
 } from "@/lib/teacher-export";
-import { studentShortNameGu } from "@/lib/student-names";
+import { studentListName } from "@/lib/student-names";
 import { mobileJson, corsHeaders } from "@/lib/mobile-api";
 
 export const dynamic = "force-dynamic";
@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
           i + 1,
           s.rollNumber || "",
           s.grNumber || "",
-          studentShortNameGu(s),
+          studentListName(s),
           s.gender || "",
           s.category || "",
           s.mobileNumber || "",
@@ -244,7 +244,7 @@ export async function GET(request: NextRequest) {
           return [
             i + 1,
             s.rollNumber || "",
-            studentShortNameGu(s),
+            studentListName(s),
             ...days.map((d) => d || ""),
             present,
             absent,
