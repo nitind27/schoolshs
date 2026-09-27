@@ -18,6 +18,7 @@ import {
   GR_STUDENTS_PER_PAGE,
 } from "@/lib/certificates/general-register";
 import { useT } from "@/i18n/locale-provider";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 const GR_ZOOM_MIN = 0.85;
 const GR_ZOOM_MAX = 1.35;
@@ -28,7 +29,7 @@ function filtersFromParams(searchParams: URLSearchParams) {
     classId: searchParams.get("classId") || "",
     standard: searchParams.get("standard") || "",
     section: searchParams.get("section") || "",
-    academicYear: searchParams.get("academicYear") || "2025-26",
+    academicYear: searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR,
     studentId: searchParams.get("studentId") || "",
     month: "",
     year: "",

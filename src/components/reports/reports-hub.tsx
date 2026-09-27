@@ -16,7 +16,7 @@ import {
   type ReportDefinition,
   type ReportFormat,
 } from "@/lib/reports/catalog";
-import { CATEGORIES, STUDENT_STATUSES } from "@/lib/constants";
+import { CATEGORIES, STUDENT_STATUSES, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import type { ReportPayload } from "@/lib/reports/types";
 import { cn } from "@/lib/utils";
 import { DEFAULT_EXPORT_OPTIONS } from "@/lib/dashboard-export-options";
@@ -114,7 +114,7 @@ export function ReportsHub() {
     admissionStatus: "",
     month: String(new Date().getMonth() + 1),
     year: String(new Date().getFullYear()),
-    academicYear: "2025-26",
+    academicYear: DEFAULT_ACADEMIC_YEAR,
     examId: "",
     standard10or12: "10",
     dateFrom: "",

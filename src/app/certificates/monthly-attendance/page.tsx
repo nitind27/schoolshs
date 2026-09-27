@@ -18,12 +18,13 @@ import type {
   LeaverReportRow,
 } from "@/lib/certificates/types";
 import { useT } from "@/i18n/locale-provider";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 function MonthlyAttendanceContent() {
   const t = useT();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState({
-    classId: "", standard: "", section: "", academicYear: "2025-26",
+    classId: "", standard: "", section: "", academicYear: DEFAULT_ACADEMIC_YEAR,
     studentId: "", month: String(new Date().getMonth() + 1), year: String(new Date().getFullYear()),
   });
   const [source, setSource] = useState<"none" | "preview" | "live">("none");

@@ -15,6 +15,7 @@ import {
   mapEntryToGrRow,
   mapStudentToGrRow,
 } from "@/lib/certificates/general-register";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export async function GET(
   request: NextRequest,
@@ -88,7 +89,7 @@ export async function GET(
     const yearPercent = attendancePercent(yearTotals.present, yearTotals.markedDays);
 
     // —— General register ——
-    let academicYear = student.financialYear || student.schoolClass?.academicYear || "2025-26";
+    let academicYear = student.financialYear || student.schoolClass?.academicYear || DEFAULT_ACADEMIC_YEAR;
     let classLabel = student.schoolClass?.name || "";
     let classId = student.classId || student.schoolClass?.id || "";
 

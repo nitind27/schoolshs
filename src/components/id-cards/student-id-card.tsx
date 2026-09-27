@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import QRCode from "qrcode";
 import { buildPublicStudentIdScanUrl } from "@/lib/id-card-public-url";
 import "./student-id-card.css";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 interface StudentIdCardProps {
   student: Student & {
@@ -197,8 +198,7 @@ export function StudentIdCard({
     academicYear ||
     student.schoolClass?.academicYear ||
     student.financialYear ||
-    settings.academicYear ||
-    "2025-26";
+    settings.academicYear || DEFAULT_ACADEMIC_YEAR;
 
   const tagline = settings.tagline?.trim() || "સાર્વજનિક એજ્યુકેશન સંચાલિત";
   const schoolTitle = /[\u0A80-\u0AFF]/.test(settings.schoolName || "")

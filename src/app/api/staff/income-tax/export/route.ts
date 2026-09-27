@@ -85,35 +85,35 @@ export async function GET(request: NextRequest) {
     if (data.texts.bankBranch) line("", `બેંક/શાખા: ${data.texts.bankBranch}`);
     r++;
 
-    line("૧", "પગારની આવક", undefined, c.salaryIncome, true);
-    line("૨", "બાદ: વાહનભથ્થું u/s 10(14)", num("vehicleAllowance"));
+    line("1", "પગારની આવક", undefined, c.salaryIncome, true);
+    line("2", "બાદ: વાહનભથ્થું u/s 10(14)", num("vehicleAllowance"));
     line("", "બાદ: વ્યવસાયવેરો u/s 16(i)", num("professionalTax"));
     line("", "બાદ: સ્ટાન્ડર્ડ ડિડક્શન u/s 16", num("standardDeduction"));
     line("", "કુલ", undefined, c.salaryDeductionsTotal, true);
-    line("૩", "મકાન લોન વ્યાજ u/s 24 (Rs.2,00,000 સુધી)", undefined, c.housingLoanInterest);
-    line("૪", "કુલ (૨+૩ બાદ પછી)", undefined, c.incomeAfterHousing, true);
-    line("૫", "અન્ય આવક (NSC વ્યાજ + બચત + FD + અન્ય)", undefined, c.otherIncomeTotal);
-    line("૬", "ગ્રોસ ટોટલ આવક (૪+૫)", undefined, c.grossTotalIncome, true);
+    line("3", "મકાન લોન વ્યાજ u/s 24 (Rs.2,00,000 સુધી)", undefined, c.housingLoanInterest);
+    line("4", "કુલ (2+3 બાદ પછી)", undefined, c.incomeAfterHousing, true);
+    line("5", "અન્ય આવક (NSC વ્યાજ + બચત + FD + અન્ય)", undefined, c.otherIncomeTotal);
+    line("6", "ગ્રોસ ટોટલ આવક (4+5)", undefined, c.grossTotalIncome, true);
 
-    line("૭", "ડિડક્શન ચેપ્ટર VI-A (80C વગેરે, મહત્તમ Rs.1,50,000)", undefined, undefined, true);
+    line("7", "ડિડક્શન ચેપ્ટર VI-A (80C વગેરે, મહત્તમ Rs.1,50,000)", undefined, undefined, true);
     IT_80C_FIELDS.forEach((f, i) => line("", `(${i + 1}) ${f.labelGu}`, num(f.key)));
     line("", "કુલ 80C (મહત્તમ 1,50,000)", undefined, c.ded80CTotal, true);
     IT_OTHER_DED_FIELDS.forEach((f) => line("", f.labelGu, num(f.key)));
     line("", "કુલ (બી થી જી)", undefined, c.dedOtherTotal, true);
     line("", "કુલ ડિડક્શન VI-A", undefined, c.deductionVIATotal, true);
 
-    line("૮", "ચોખ્ખી કરપાત્ર આવક (૬-૭)", undefined, c.netTaxableIncome, true);
-    line("૯", "કુલ કરપાત્ર આવક પુરા દશ રૂપિયામાં", undefined, c.roundedTaxable, true);
+    line("8", "ચોખ્ખી કરપાત્ર આવક (6-7)", undefined, c.netTaxableIncome, true);
+    line("9", "કુલ કરપાત્ર આવક પુરા દશ રૂપિયામાં", undefined, c.roundedTaxable, true);
 
-    line("૧૦", "ટેક્સ ગણતરી (સ્લેબ પ્રમાણે):", undefined, undefined, true);
+    line("10", "ટેક્સ ગણતરી (સ્લેબ પ્રમાણે):", undefined, undefined, true);
     const slabLabels = ["3,00,000 to 6,00,000 — 5%", "6,00,000 to 9,00,000 — 10%", "9,00,000 to 12,00,000 — 15%", "12,00,000 to 15,00,000 — 20%", "> 15,00,000 — 30%"];
     c.slabTaxes.forEach((s, i) => line("", slabLabels[i], s.amount));
     line("", "કર રાહત (87A)", undefined, c.rebate87A);
-    line("૧૧", "ભરવાપાત્ર ઇન્કમટેક્ષ", undefined, c.taxBeforeRebate - c.rebate87A, true);
-    line("૧૨", "એજ્યુકેશન સેસ ૪%", undefined, c.cess);
-    line("૧૩", "કુલ ભરવાપાત્ર ટેક્ષ (૧૧+૧૨)", undefined, c.totalTaxPayable, true);
-    line("૧૪", "વર્ષ દરમ્યાન થયેલ કપાત (TDS)", undefined, c.tdsPaid);
-    line("૧૫", c.refundOrPayable >= 0 ? "રિફંડ પાત્ર રકમ (૧૪-૧૩) — Paid Extra TDS" : "બાકી ભરવાપાત્ર રકમ (૧૩-૧૪)", undefined, Math.abs(c.refundOrPayable), true);
+    line("11", "ભરવાપાત્ર ઇન્કમટેક્ષ", undefined, c.taxBeforeRebate - c.rebate87A, true);
+    line("12", "એજ્યુકેશન સેસ 4%", undefined, c.cess);
+    line("13", "કુલ ભરવાપાત્ર ટેક્ષ (11+12)", undefined, c.totalTaxPayable, true);
+    line("14", "વર્ષ દરમ્યાન થયેલ કપાત (TDS)", undefined, c.tdsPaid);
+    line("15", c.refundOrPayable >= 0 ? "રિફંડ પાત્ર રકમ (14-13) — Paid Extra TDS" : "બાકી ભરવાપાત્ર રકમ (13-14)", undefined, Math.abs(c.refundOrPayable), true);
 
     const buffer = Buffer.from(await wb.xlsx.writeBuffer());
     const empTag = (staff.employeeId || staff.firstName).replace(/[^\w-]/g, "");

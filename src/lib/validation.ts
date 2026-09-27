@@ -2,6 +2,7 @@ import type { Student } from "@/generated/prisma/client";
 import { normalizeCategory } from "@/lib/category-inference";
 import { isSpecificScholarshipScheme } from "@/lib/dg-portal";
 import { parseImportDate } from "@/lib/import/import-formats";
+import { toLatinDigits } from "@/lib/digits";
 import {
   isScholarshipRequired,
   isValidAccountNumber,
@@ -10,6 +11,7 @@ import {
   requires12thBoard,
 } from "@/lib/student-academic-rules";
 import { calcAgeYears } from "@/lib/student-age";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export type StudentInput = Omit<Student, "id" | "createdAt" | "updatedAt" | "submissionDate" | "validationErrors">;
 
@@ -240,7 +242,7 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     hostelType: String(row.hostelType || "").trim() || null,
     hostelName: String(row.hostelName || "").trim() || null,
     scholarshipScheme: String(row.scholarshipScheme || "").trim(),
-    financialYear: String(row.financialYear || "2025-26").trim(),
+    financialYear: String(row.financialYear || DEFAULT_ACADEMIC_YEAR).trim(),
     courseType: String(row.courseType || "").trim(),
     courseName: String(row.courseName || "").trim(),
     institutionDistrict: String(row.institutionDistrict || "").trim(),
@@ -262,13 +264,13 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     ifscCode: String(row.ifscCode || "").toUpperCase().trim(),
     accountHolderName: String(row.accountHolderName || "").trim(),
     classId: String(row.classId || "").trim() || null,
-    rollNumber: String(row.rollNumber || "").trim() || null,
-    grNumber: String(row.grNumber || "").trim() || null,
+    rollNumber: toLatinDigits(row.rollNumber).trim() || null,
+    grNumber: toLatinDigits(row.grNumber).trim() || null,
     section: String(row.section || "").trim() || null,
-    standard: String(row.standard || "").trim() || null,
-    childUid: String(row.childUid || "").replace(/\s/g, "").trim() || null,
-    apaarId: String(row.apaarId || "").replace(/\s/g, "").trim().toUpperCase() || null,
-    penNumber: String(row.penNumber || "").replace(/\s/g, "").trim() || null,
+    standard: toLatinDigits(row.standard).trim() || null,
+    childUid: toLatinDigits(row.childUid).replace(/\s/g, "").trim() || null,
+    apaarId: toLatinDigits(row.apaarId).replace(/\s/g, "").trim().toUpperCase() || null,
+    penNumber: toLatinDigits(row.penNumber).replace(/\s/g, "").trim() || null,
     panNumber: String(row.panNumber || "")
       .replace(/\s/g, "")
       .trim()
@@ -276,9 +278,9 @@ export function normalizeStudentRow(row: Record<string, unknown>): Partial<Stude
     bloodGroup: String(row.bloodGroup || "").trim() || null,
     idCardValidUpto: parseImportDate(row.idCardValidUpto) || null,
     sscSeatPrefix: String(row.sscSeatPrefix || "").trim().toUpperCase() || null,
-    sscSeatNumber: String(row.sscSeatNumber || "").replace(/\s/g, "").trim() || null,
+    sscSeatNumber: toLatinDigits(row.sscSeatNumber).replace(/\s/g, "").trim() || null,
     hscSeatPrefix: String(row.hscSeatPrefix || "").trim().toUpperCase() || null,
-    hscSeatNumber: String(row.hscSeatNumber || "").replace(/\s/g, "").trim() || null,
+    hscSeatNumber: toLatinDigits(row.hscSeatNumber).replace(/\s/g, "").trim() || null,
     status: "draft",
     notes: null,
   };

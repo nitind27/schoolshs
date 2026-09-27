@@ -13,6 +13,7 @@ import {
   studentDisplayMiddleName,
   studentDisplaySurname,
 } from "@/lib/student-names";
+import { toLatinDigits } from "@/lib/digits";
 import "./songadh-exam-report.css";
 
 export type ExamReportCardData = Omit<ResultCardData, "subjects"> & {
@@ -47,9 +48,7 @@ const ASSESSMENT_ROW_KEYS = new Set([
 ]);
 
 function toGuDigits(n: number | string | null | undefined): string {
-  if (n == null || n === "") return "";
-  const gu = ["૦", "૧", "૨", "૩", "૪", "૫", "૬", "૭", "૮", "૯"];
-  return String(n).replace(/\d/g, (d) => gu[parseInt(d, 10)]);
+  return toLatinDigits(n);
 }
 
 function cellVal(v: string | number | null | undefined): string {

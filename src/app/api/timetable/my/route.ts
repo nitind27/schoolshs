@@ -11,11 +11,12 @@ import {
   SCHOOL_SUBJECTS,
   type TimetableCell,
 } from "@/lib/timetable";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["teacher", "clerk", "school_admin"]);
-    const academicYear = request.nextUrl.searchParams.get("academicYear") || "2025-26";
+    const academicYear = request.nextUrl.searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
     const staffIdParam = request.nextUrl.searchParams.get("staffId");
 
     // Prefer live DB link — session JWT staffId can go stale after re-seed

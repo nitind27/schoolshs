@@ -25,6 +25,16 @@ export type LetterheadDocumentState = {
   pageCount?: number;
   logo?: string | null;
   stamps?: unknown[];
+  /** School's uploaded stamp images (server-managed via /api/school/letterhead/stamps) */
+  stampLibrary?: LetterheadStamp[];
+};
+
+export type LetterheadStamp = {
+  id: string;
+  label: string;
+  /** Relative to uploads/, served at /api/uploads/{path} */
+  path: string;
+  createdAt?: string;
 };
 
 /** Joint Songadh Primary letterhead (403 + 404 on one pad) — from official scan */

@@ -25,6 +25,7 @@ import {
   AlertCircle,
   Send,
   CalendarRange,
+  Printer,
 } from "lucide-react";
 import { formatIndianCurrency } from "@/lib/accounting";
 import { FINANCIAL_YEARS } from "@/lib/constants";
@@ -222,7 +223,8 @@ export default function AccountingPage() {
   const step2Done = accountCount > 0;
   const step3Done = voucherCount > 0;
   const step4Done = voucherCount > 0; // reports available once vouchers exist
-  const step5Done = ["submitted", "in_review", "verified"].includes(
+  const step5Done = voucherCount > 0; // CA pack printable once vouchers exist
+  const step6Done = ["submitted", "in_review", "verified"].includes(
     fy?.auditStatus || "",
   );
   const canSubmitCa =
@@ -261,18 +263,25 @@ export default function AccountingPage() {
         title: t("accounting.flow4Title"),
         desc: t("accounting.flow4Desc"),
         done: step4Done && step3Done,
-        active: step3Done && !step5Done,
+        active: step3Done && !step6Done,
       },
       {
         n: 5,
         title: t("accounting.flow5Title"),
         desc: t("accounting.flow5Desc"),
-        done: step5Done,
+        done: step5Done && step3Done,
+        active: step3Done && !step6Done,
+      },
+      {
+        n: 6,
+        title: t("accounting.flow6Title"),
+        desc: t("accounting.flow6Desc"),
+        done: step6Done,
         active: canSubmitCa,
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [step1Done, step2Done, step3Done, step4Done, step5Done, canSubmitCa, t],
+    [step1Done, step2Done, step3Done, step4Done, step5Done, step6Done, canSubmitCa, t],
   );
 
   if (loading) return <PageLoader />;
@@ -340,7 +349,7 @@ export default function AccountingPage() {
               )}
             </div>
 
-            <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {flowSteps.map((s) => (
                 <li
                   key={s.n}
@@ -502,11 +511,46 @@ export default function AccountingPage() {
             </div>
           )}
 
-          {/* ── Step 5: Submit CA ── */}
+          {/* ── Step 5: Print CA pack ── */}
+          {fy && (
+            <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-sky-50 p-5">
+              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600">
+                    <Printer className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-blue-950">
+                      {t("accounting.caPackCardTitle")}
+                    </p>
+                    <p className="mt-0.5 text-sm text-blue-800">
+                      {t("accounting.caPackCardDesc")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
+                  {step3Done ? (
+                    <Link href="/accounting/ca-pack">
+                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        <Printer className="h-3.5 w-3.5" />
+                        {t("accounting.caPackOpen")}
+                      </Button>
+                    </Link>
+                  ) : (
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
+                      {t("accounting.caPackNeedVouchers")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 6: Submit CA ── */}
           {fy && (
             <div
               className={`rounded-xl border p-5 ${
-                step5Done
+                step6Done
                   ? "border-emerald-200 bg-emerald-50"
                   : "border-violet-200 bg-gradient-to-br from-violet-50 to-indigo-50"
               }`}
@@ -518,7 +562,7 @@ export default function AccountingPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-violet-900">
-                      {t("accounting.flow5Title")} — {t("accounting.submitToCa")}
+                      {t("accounting.flow6Title")} — {t("accounting.submitToCa")}
                     </p>
                     <p className="mt-0.5 text-sm text-violet-700">
                       {t("accounting.submitToCaEasy")}
@@ -606,7 +650,7 @@ export default function AccountingPage() {
                               : "font-medium text-amber-800"
                           }
                         >
-                          {step5Done
+                          {step6Done
                             ? t("accounting.submitCheckAlreadySent")
                             : fyLocked
                               ? t("accounting.booksLocked")
@@ -632,7 +676,7 @@ export default function AccountingPage() {
                       <Send className="h-3.5 w-3.5" />
                       {submitting
                         ? t("common.saving")
-                        : step5Done
+                        : step6Done
                           ? t("accounting.submittedToCa")
                           : t("accounting.submitToCa")}
                     </Button>
@@ -641,7 +685,7 @@ export default function AccountingPage() {
                       {t("accounting.submitOnlyAdmin")}
                     </p>
                   )}
-                  {userRole === "school_admin" && !canSubmitCa && !step5Done && (
+                  {userRole === "school_admin" && !canSubmitCa && !step6Done && (
                     <p className="max-w-[220px] text-right text-[11px] text-violet-700">
                       {t("accounting.submitButtonWhenReady")}
                     </p>
@@ -758,6 +802,14 @@ export default function AccountingPage() {
                     desc: t("accounting.financialReportsDesc"),
                     icon: Calculator,
                     color: "amber",
+                    writeOnly: false,
+                  },
+                  {
+                    href: "/accounting/ca-pack",
+                    label: t("accounting.caPackTitle"),
+                    desc: t("accounting.caPackCardDesc"),
+                    icon: Printer,
+                    color: "blue",
                     writeOnly: false,
                   },
                 ]

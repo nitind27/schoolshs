@@ -46,7 +46,7 @@ import type { DashboardExportOptions } from "@/lib/dashboard-export-options";
 import type { OpsOverview } from "@/components/dashboard/dashboard-command-center";
 import type { HrModalKind } from "@/components/dashboard/dashboard-hr-data-modal";
 import { MONTH_NAMES } from "@/lib/staff-hr";
-import { FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { DashboardStaffExportDialog, type StaffExportMode } from "@/components/dashboard/dashboard-staff-export-dialog";
 import {
   DashboardStaffPrintReport,
@@ -243,7 +243,7 @@ export function DashboardReportsPanel({
   const classes = stats?.totalClasses || ops?.classes?.total || 0;
   const unmarked =
     hr?.attendanceUnmarked ?? Math.max(0, staff - (hr?.attendanceMarked || 0));
-  const fy = filters.academicYear || defaultAcademicYear || "2025-26";
+  const fy = filters.academicYear || defaultAcademicYear || DEFAULT_ACADEMIC_YEAR;
   const statementFy = staffFy || fy;
   const hrMonth = hr?.month || new Date().getMonth() + 1;
   const hrYear = hr?.year || new Date().getFullYear();

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { StudentIdCard } from "@/components/id-cards/student-id-card";
 import { IdCardShareLinkManager } from "@/components/id-cards/id-card-share-link-manager";
 import "@/components/id-cards/id-card-print.css";
-import { FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { ID_CARD_BRAND } from "@/lib/id-card-brand";
 import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import { studentListName } from "@/lib/student-names";
@@ -78,7 +78,7 @@ function IdCardsContent() {
   const [processing, setProcessing] = useState(false);
   const [uploading, setUploading] = useState<"logo" | "signature" | null>(null);
   const [classId, setClassId] = useState(initialClassId);
-  const [academicYear, setAcademicYear] = useState("2025-26");
+  const [academicYear, setAcademicYear] = useState(DEFAULT_ACADEMIC_YEAR);
   const [visibleCount, setVisibleCount] = useState(ID_CARDS_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [showSettings, setShowSettings] = useState(false);

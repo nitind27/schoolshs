@@ -12,6 +12,7 @@ import { ResultListGsebFetch } from "@/components/board-records/gseb-bulk-fetch"
 import type { BoardResultListConfig } from "@/lib/board-records/result-list-config";
 import type { BoardResultListRow } from "@/lib/board-records/result-list-data";
 import { useT } from "@/i18n/locale-provider";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 type Loaded = {
   class: { id: string; name: string; standard: string; section: string; stream?: string | null };
@@ -38,7 +39,7 @@ function BoardResultListContent() {
     classId: searchParams.get("classId") || "",
     standard: "",
     section: "",
-    academicYear: "2025-26",
+    academicYear: DEFAULT_ACADEMIC_YEAR,
     studentId: "",
     month: "1",
     year: String(new Date().getFullYear()),

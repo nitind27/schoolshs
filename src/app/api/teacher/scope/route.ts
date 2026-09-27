@@ -2,12 +2,13 @@ import { NextRequest } from "next/server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import { mobileJson, mobileOptions } from "@/lib/mobile-api";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Flutter + web: teacher class/subject scope from class-teacher + released timetable.
- * GET /api/teacher/scope?academicYear=2025-26
+ * GET /api/teacher/scope?academicYear=${DEFAULT_ACADEMIC_YEAR}
  * Fallback if this path 404s on an old deploy: GET /api/teacher?view=scope
  */
 export async function OPTIONS(request: NextRequest) {

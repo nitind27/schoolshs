@@ -4,13 +4,14 @@ import { requireSchoolAuth, AuthError } from "@/lib/auth";
 import { ensureClassExam, getClassMarksSheetConfig } from "@/lib/class-subjects";
 import { computeStudentTotals, subjectFinalMarks } from "@/lib/results/calculations";
 import { getTeacherScope, assertTeacherMarksAccess } from "@/lib/teacher-scope";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get("classId");
-    const academicYear = searchParams.get("academicYear") || "2025-26";
+    const academicYear = searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
 
     if (!classId) {
       const teacherScope =

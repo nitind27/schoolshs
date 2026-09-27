@@ -103,7 +103,7 @@ function DobUnit({
 }
 
 /**
- * English label + value on one underline; Gujarati caption under the label (no extra empty line).
+ * English label + value on one underline; Gujarati caption + value on the line below.
  */
 function FieldRow({
   n,
@@ -111,19 +111,17 @@ function FieldRow({
   gu,
   value,
   valueGu,
-  longLabel,
 }: {
   n: number;
   en: string;
   gu: string;
   value?: string;
   valueGu?: string;
-  longLabel?: boolean;
 }) {
   return (
     <div className="lc-up-field">
       <div className="lc-up-field-top">
-        <span className={`lc-up-field-en${longLabel ? " lc-up-field-en--long" : ""}`}>
+        <span className="lc-up-field-en">
           {n}. {en}
         </span>
         <Fill value={value} />
@@ -206,11 +204,11 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
           </div>
 
           <div className="lc-up-id-row">
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, flex: "1 1 0", minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flex: "1 1 0", minWidth: 0 }}>
               <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>G.R.No./જી.આર.નં. :</span>
               <Fill value={S.grNumber || ""} />
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, flex: "1.2 1 0", minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flex: "1.2 1 0", minWidth: 0 }}>
               <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>
                 School Dise No.(સ્કૂલ ડાયસ નં.)
               </span>
@@ -218,7 +216,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                 {school.diseCode}
               </span>
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
               <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>Medium/માધ્યમ :</span>
               <Fill
                 value={medium}
@@ -250,7 +248,6 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             gu="જન્મ સ્થળ (તાલુકા, જિલ્લા સહિત)"
             value={birthPlaceEn}
             valueGu={birthPlaceGu}
-            longLabel
           />
           <FieldRow n={5} en="Native Place" gu="વતન" value={nativePlaceEn} valueGu={nativePlaceGu} />
 
@@ -299,7 +296,6 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             gu="કયા ધોરણમાં અભ્યાસ કરે છે? ક્યારથી?"
             value={studyingLine}
             valueGu={studyingLineGu}
-            longLabel
           />
           <FieldRow
             n={11}
@@ -317,7 +313,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
               <Fill value={bankAccount} />
             </div>
             <div className="lc-up-bank-row">
-              <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>Bank Name & IFSC Code</span>
+              <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>Bank Name &amp; IFSC Code</span>
               <Fill value={bankIfsc} />
             </div>
           </div>

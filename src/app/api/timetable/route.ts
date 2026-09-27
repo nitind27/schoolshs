@@ -12,13 +12,14 @@ import {
   SCHOOL_SUBJECTS,
   totalSlots,
 } from "@/lib/timetable";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth();
     const params = request.nextUrl.searchParams;
     const classId = params.get("classId") || "";
-    const academicYear = params.get("academicYear") || "2025-26";
+    const academicYear = params.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
 
     const [classes, staff, days, settings] = await Promise.all([
       prisma.schoolClass.findMany({
@@ -99,7 +100,7 @@ export async function PUT(request: NextRequest) {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
     const body = await request.json();
     const classId = String(body.classId || "").trim();
-    const academicYear = String(body.academicYear || "2025-26").trim();
+    const academicYear = String(body.academicYear || DEFAULT_ACADEMIC_YEAR).trim();
     const dayOfWeek = Number(body.dayOfWeek);
     const periodIndex = Number(body.periodIndex);
     const subject = String(body.subject || "").trim();

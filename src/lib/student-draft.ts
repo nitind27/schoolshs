@@ -1,6 +1,7 @@
 import type { Student } from "@/generated/prisma/client";
 import { stableDraftAadhaarFromGr } from "@/lib/gr-student-utils";
 import { todayDobDisplay } from "@/lib/student-age";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 type StudentDraftInput = Partial<Student>;
 
@@ -151,7 +152,7 @@ export function applyDraftDefaults(data: StudentDraftInput): StudentDraftInput {
   // Never seed a vague placeholder like "Pre-Matric" — that blocked Auto-Apply
   // and looked like a real scheme. Empty keeps drafts from becoming "ready".
   setStr("scholarshipScheme", "");
-  setStr("financialYear", "2025-26");
+  setStr("financialYear", DEFAULT_ACADEMIC_YEAR);
   setStr("courseType", "School");
   setStr("courseName", "Class");
   setStr("institutionDistrict", "Ahmedabad");

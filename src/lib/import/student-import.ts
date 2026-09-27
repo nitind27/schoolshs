@@ -1,7 +1,7 @@
 import { normalizeGender, parseImportDate } from "@/lib/import/import-formats";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { CSV_HEADERS, CSV_HEADER_LABELS, standardToCourseName, standardToCurrentYear } from "@/lib/constants";
+import { CSV_HEADERS, CSV_HEADER_LABELS, standardToCourseName, standardToCurrentYear, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { defaultCourseTypeForStandard } from "@/lib/student-academic-rules";
 import {
   normalizeStudentRow,
@@ -267,7 +267,7 @@ export function fillImportDefaults(row: Record<string, unknown>): Record<string,
     if (!String(out.courseType || "").trim()) out.courseType = defaultCourseTypeForStandard(std);
     if (!String(out.currentYear || "").trim()) out.currentYear = standardToCurrentYear(std);
   }
-  if (!String(out.financialYear || "").trim()) out.financialYear = "2025-26";
+  if (!String(out.financialYear || "").trim()) out.financialYear = DEFAULT_ACADEMIC_YEAR;
   if (!String(out.maritalStatus || "").trim()) out.maritalStatus = "Unmarried";
   if (!String(out.habitationType || "").trim()) out.habitationType = "Own";
   if (!String(out.residentType || "").trim()) out.residentType = "Rural";
@@ -467,7 +467,7 @@ export const SAMPLE_IMPORT_ROW: Record<ImportFieldKey, string | number> = {
   hostelType: "",
   hostelName: "",
   scholarshipScheme: "Post Matric Scholarship - OBC",
-  financialYear: "2025-26",
+  financialYear: DEFAULT_ACADEMIC_YEAR,
   courseType: "Secondary",
   courseName: "Class 10 (SSC)",
   institutionDistrict: "Tapi",

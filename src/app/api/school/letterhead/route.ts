@@ -37,7 +37,11 @@ export async function GET() {
     }
 
     const saved = school.settings?.letterheadJson;
-    const fromDb = isLetterheadDocumentState(saved) ? (saved as LetterheadDocumentState) : null;
+    const fromDb =
+      isLetterheadDocumentState(saved) &&
+      Object.keys(saved as object).some((k) => k !== "stampLibrary")
+        ? (saved as LetterheadDocumentState)
+        : null;
     const data =
       fromDb ||
       defaultLetterheadForSchoolCode(school.code, {
@@ -86,21 +90,28 @@ export async function PUT(request: NextRequest) {
 
     const school = await prisma.school.findUnique({
       where: { id: session.schoolId },
-      select: { id: true, code: true, name: true },
+      select: { id: true, code: true, name: true, settings: { select: { letterheadJson: true } } },
     });
     if (!school) {
       return NextResponse.json({ error: "School not found" }, { status: 404 });
     }
+
+    // Stamp library is managed by /api/school/letterhead/stamps — never overwrite it from the editor
+    const existing = school.settings?.letterheadJson;
+    const stampLibrary = isLetterheadDocumentState(existing)
+      ? (existing as LetterheadDocumentState).stampLibrary
+      : undefined;
+    const toSave = { ...data, ...(stampLibrary ? { stampLibrary } : {}) } as object;
 
     await prisma.schoolSettings.upsert({
       where: { schoolId: session.schoolId },
       create: {
         schoolId: session.schoolId,
         schoolName: session.schoolName || school.name || "My School",
-        letterheadJson: data as object,
+        letterheadJson: toSave,
       },
       update: {
-        letterheadJson: data as object,
+        letterheadJson: toSave,
       },
     });
 

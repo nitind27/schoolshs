@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { ID_CARD_BRAND } from "@/lib/id-card-brand";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export async function GET() {
   try {
@@ -45,7 +46,7 @@ export async function PUT(request: NextRequest) {
         schoolAddress: body.schoolAddress || null,
         schoolPhone: body.schoolPhone || null,
         schoolEmail: body.schoolEmail || null,
-        academicYear: body.academicYear || "2025-26",
+        academicYear: body.academicYear || DEFAULT_ACADEMIC_YEAR,
         logoPath: body.logoPath || null,
         signaturePath: body.signaturePath || null,
         idCardWebsite: body.idCardWebsite?.trim() || null,
@@ -63,7 +64,7 @@ export async function PUT(request: NextRequest) {
         schoolAddress: body.schoolAddress || null,
         schoolPhone: body.schoolPhone || null,
         schoolEmail: body.schoolEmail || null,
-        academicYear: body.academicYear || "2025-26",
+        academicYear: body.academicYear || DEFAULT_ACADEMIC_YEAR,
         ...(body.logoPath !== undefined && { logoPath: body.logoPath || null }),
         ...(body.signaturePath !== undefined && { signaturePath: body.signaturePath || null }),
         ...(body.idCardWebsite !== undefined && {

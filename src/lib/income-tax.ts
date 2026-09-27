@@ -17,7 +17,7 @@ export const IT_80C_FIELDS = [
   { key: "ppf", labelEn: "P.P.F.", labelGu: "પી.પી.એફ." },
   { key: "lifeInsurance", labelEn: "Life Insurance Premium", labelGu: "જીવન વિમા પ્રીમિયમ" },
   { key: "pli", labelEn: "P.L.I.", labelGu: "પી.એલ.આઇ." },
-  { key: "postOfficeCtd", labelEn: "Post Office 10–15 yr Deposit (C.T.D.)", labelGu: "પોસ્ટ ઓફિસ ડિપોઝીટ ૧૦-૧૫ વર્ષ (સી.ટી.ડી.)" },
+  { key: "postOfficeCtd", labelEn: "Post Office 10–15 yr Deposit (C.T.D.)", labelGu: "પોસ્ટ ઓફિસ ડિપોઝીટ 10-15 વર્ષ (સી.ટી.ડી.)" },
   { key: "nsc", labelEn: "N.S.C.", labelGu: "એન.એસ.સી." },
   { key: "nscInterest", labelEn: "N.S.C. Interest", labelGu: "એન.એસ.સી. વ્યાજ" },
   { key: "ulipMf", labelEn: "ULIP / Tax Saving Mutual Fund", labelGu: "ULIP / ટેક્સ સેવિંગ્સ મ્યુ. ફંડ" },

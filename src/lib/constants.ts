@@ -77,6 +77,9 @@ export const FINANCIAL_YEARS = [
   "2026-27", "2025-26", "2024-25", "2023-24",
 ] as const;
 
+/** Portal-wide default academic / financial year for selects & fallbacks. */
+export const DEFAULT_ACADEMIC_YEAR: string = "2026-27";
+
 export const COURSE_TYPES = [
   "Medical", "Para-Medical", "Engineering", "Management", "Pharmacy",
   "Architecture", "Law", "Arts", "Commerce", "Science", "Diploma",

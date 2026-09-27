@@ -11,6 +11,7 @@ import { ExamResultSheetRegister } from "@/components/board-records/exam-result-
 import { ResultListGsebFetch } from "@/components/board-records/gseb-bulk-fetch";
 import type { ExamResultSheetMeta, ExamResultSheetRow, ExamResultSubjectCol } from "@/lib/board-records/exam-result-sheet";
 import { useT } from "@/i18n/locale-provider";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 type Loaded = {
   class: { id: string; name: string; standard: string; section: string; stream?: string | null; academicYear: string };
@@ -38,7 +39,7 @@ function ExamResultSheetContent() {
     classId: searchParams.get("classId") || "",
     standard: "",
     section: "",
-    academicYear: "2025-26",
+    academicYear: DEFAULT_ACADEMIC_YEAR,
     studentId: "",
     month: "1",
     year: String(new Date().getFullYear()),

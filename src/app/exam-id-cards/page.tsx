@@ -26,6 +26,7 @@ import {
   CameraOff,
 } from "lucide-react";
 import Link from "next/link";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 type SettingsLite = {
   schoolName?: string | null;
@@ -105,7 +106,7 @@ export default function ExamIdCardsPage() {
   const [meta, setMeta] = useState<ExamStaffCardMeta>({
     examTitle: "Annual Examination",
     examSession: "All Classes",
-    academicYear: "2025-26",
+    academicYear: DEFAULT_ACADEMIC_YEAR,
     roleLabel: "EXAMINER / INVIGILATOR",
     validFrom: "",
     validTo: "",

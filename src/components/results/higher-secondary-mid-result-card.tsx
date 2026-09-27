@@ -2,6 +2,7 @@
 
 import { CERTIFICATE_SCHOOL } from "@/lib/certificates/config";
 import { studentFullNameGu } from "@/lib/student-names";
+import { toLatinDigits } from "@/lib/digits";
 
 export type HigherSecondaryTermPrintData = {
   class: {
@@ -44,11 +45,8 @@ type HigherSecondaryTermStudent = {
   }>;
 };
 
-const GU_DIGITS = ["૦", "૧", "૨", "૩", "૪", "૫", "૬", "૭", "૮", "૯"];
-
 function toGuDigits(value: string | number | null | undefined): string {
-  if (value == null || value === "") return "";
-  return String(value).replace(/\d/g, (digit) => GU_DIGITS[Number(digit)] || digit);
+  return toLatinDigits(value);
 }
 
 function streamLabel(stream?: string | null): string {

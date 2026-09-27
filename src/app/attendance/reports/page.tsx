@@ -15,6 +15,7 @@ import { useT } from "@/i18n/locale-provider";
 import type { AttendanceStudentReport } from "@/lib/attendance";
 import { ENGLISH_MONTHS } from "@/lib/certificates/types";
 import { BarChart3, X } from "lucide-react";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 interface ReportSummary {
   totalStudents: number;
@@ -55,7 +56,7 @@ function ReportsContent() {
     classId: searchParams.get("classId") || "",
     standard: searchParams.get("standard") || "",
     section: searchParams.get("section") || "",
-    academicYear: "2025-26",
+    academicYear: DEFAULT_ACADEMIC_YEAR,
     studentId: lockedStudentId,
     month: searchParams.get("month") || String(new Date().getMonth() + 1),
     year: searchParams.get("year") || String(new Date().getFullYear()),

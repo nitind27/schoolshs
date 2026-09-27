@@ -140,11 +140,11 @@ export const PRAGATI_PATRAK_SUBJECTS: PragatiSubjectDef[] = [
 
 /** Official grade key printed on the card */
 export const PRAGATI_GRADE_BANDS = [
-  { grade: "A", min: 80, label: "૮૦% કે તેથી વધુ" },
-  { grade: "B", min: 65, label: "૬૫% થી ૭૯%" },
-  { grade: "C", min: 50, label: "૫૦% થી ૬૪%" },
-  { grade: "D", min: 35, label: "૩૫% થી ૪૯%" },
-  { grade: "E", min: 0, label: "૩૫% થી ઓછા" },
+  { grade: "A", min: 80, label: "80% કે તેથી વધુ" },
+  { grade: "B", min: 65, label: "65% થી 79%" },
+  { grade: "C", min: 50, label: "50% થી 64%" },
+  { grade: "D", min: 35, label: "35% થી 49%" },
+  { grade: "E", min: 0, label: "35% થી ઓછા" },
 ] as const;
 
 export const PRAGATI_PASS_PERCENTAGE = 35;

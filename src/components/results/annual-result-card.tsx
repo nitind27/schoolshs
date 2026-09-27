@@ -6,6 +6,7 @@ import {
   formatAcademicYearLabel,
 } from "@/lib/results/config";
 import { studentFullNameGu } from "@/lib/student-names";
+import { toLatinDigits } from "@/lib/digits";
 
 export type ResultCardData = {
   student: {
@@ -65,9 +66,7 @@ export type ResultCardData = {
 const INK = "#b83280";
 
 function toGuDigits(n: number | string | null | undefined): string {
-  if (n == null || n === "") return "";
-  const gu = ["૦", "૧", "૨", "૩", "૪", "૫", "૬", "૭", "૮", "૯"];
-  return String(n).replace(/\d/g, (d) => gu[parseInt(d, 10)]);
+  return toLatinDigits(n);
 }
 
 function Dot({ w = 100, val }: { w?: number; val?: React.ReactNode }) {
@@ -283,7 +282,7 @@ function ResultBack({ data }: { data: ResultCardData }) {
       <div className="rc-back-left">
         <div className="rc-back-msg">
           <div>
-            (૧) રજાઓ પૂરી થતાં તા. <Dot w={70} val={reopening} /> થી
+            (1) રજાઓ પૂરી થતાં તા. <Dot w={70} val={reopening} /> થી
           </div>
           <div className="rc-back-indent">
             <Dot w={80} /> વાર <Dot w={60} /> થી

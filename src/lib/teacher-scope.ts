@@ -7,6 +7,7 @@ import {
   getReleasedClassIds,
 } from "@/lib/timetable-server";
 import { periodForDay, type DayScheduleConfig } from "@/lib/timetable";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export type TeacherClassScope = {
   id: string;
@@ -153,7 +154,7 @@ async function resolveAcademicYear(schoolId: string, fallback?: string | null) {
     where: { schoolId },
     select: { academicYear: true },
   });
-  return settings?.academicYear || fallback || "2025-26";
+  return settings?.academicYear || fallback || DEFAULT_ACADEMIC_YEAR;
 }
 
 function emptyScope(academicYear: string): TeacherScope {

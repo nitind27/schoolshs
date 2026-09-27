@@ -115,6 +115,24 @@ function emptyLeaver(serial: number): LeaverReportRow {
   };
 }
 
+const PATRAK_SUCHNA = [
+  "પત્રકમાં વિદ્યાર્થીનાં નામ, અટક, જ. ર. નંબર, ઉંમર, જ્ઞાતિ વગેરે જ. ર. પ્રમાણે જ હોવા જોઈએ.",
+  "દરરોજ પહેલા સમયની શરૂઆતમાં હાજરી પુરવી, ત્યારે જે ગેરહાજર હોય તેની જગ્યા ખાલી રાખી તે સમયનાં અંતે તેમની હાજરી પુરવી મોડા આવનાર માટે (D), હાજર માટે (P), રજા વિના ગેરહાજર માટે (A), રજા લઈ ગેરહાજર માટે (L), અને માંદા માટે (S) લખવુ. પછી તે પ્રમાણે હાજરી આ પત્રકમાં, વર્ગના પાટીયા પર અને ડેઈલી બુકમાં ભરવી.",
+  "ગયા માસની છેવટેની સંખ્યા અને ચાલુ માસની શરૂઆતની સંખ્યા સરખી રહેવી જોઈએ.",
+  "શાળા ફી દરેક મહિનાની બીજી, પાંચમી અને સાતમી તારીખે લેવી. મોડી ફી વીસમી તારીખે અને શાળાના છેલ્લા કાર્ય દિને લેવી. ઉપરની તારીખોએ રજા હોય તો પછી આવતા કાર્ય દિને ફી લેવી. શાળા છોડનાર વિદ્યાર્થીની ફી ગમે તે દિવસે લેવી.",
+  "લાગ લગાટ ત્રણ દિવસ રજા વિના ગેરહાજર રહેનાર વિદ્યાર્થીના વાલીને કાર્ડથી ખબર આપવી. અનિયમિત હાજરી ઉપર ખાસ ધ્યાન આપવું.",
+  "વર્ગમાં લીધેલી ફી તેજ દિવસે ઓફિસમાં જમા કરાવવી.",
+  "મહિનાના છેલ્લા દિવસે આખુ પત્રક તૈયાર કરી ઓફિસમાં આપવું અને નવું પત્રક તૈયાર કરી લેવું. મોડામાં મોડું નવા માસની પાંચમી તારીખ સુધીમાં જુનું પત્રક પુરેપુરું તૈયાર કરી લેવું.",
+  "પત્રક અસલ દસ્તાવેજી નોંધ હોય તે ભરવામાં ખુબ કાળજી અને સ્વચ્છતા રાખવી.",
+];
+
+function patrakDivision(standard: string): string {
+  const n = parseInt(standard, 10);
+  if (n >= 11) return "ઉચ્ચતર માધ્યમિક વિભાગ";
+  if (n >= 9) return "માધ્યમિક વિભાગ";
+  return "પ્રાથમિક વિભાગ";
+}
+
 function initLeavers(rows: LeaverReportRow[]): LeaverReportRow[] {
   if (rows.length > 0) {
     return rows.map((r, i) => ({ ...r, serial: i + 1 }));
@@ -337,7 +355,7 @@ function useAttendanceDayBlanks(rows: ClassRegisterRow[], month: string, year: s
 }
 
 const RIGHT_BODY_COLS = 31 + 1 + 3 + 1; // days | ser | 3 totals | note
-const LEFT_SHEET2_COLS = 10; // gr dob 4fees caste cat ser name
+const LEFT_SHEET2_COLS = 10; // gr caste dob 4fees cat ser name
 const LEFT_SHEET3_COLS = 11; // gr caste dob 5fees sign ser name
 
 /**
@@ -423,18 +441,13 @@ function RegisterSpread({
           <thead>
             <tr className="patrak-reg-h1">
               <th rowSpan={2} className="patrak-w-gr patrak-vhdr"><span>{"\u0A9C\u0AA8\u0AB0\u0AB2 \u0AB0\u0A9C\u0AC0\u0AB8\u0ACD\u0A9F\u0AB0 \u0AA8\u0A82\u0AAC\u0AB0"}</span></th>
-              {isSheet3 && (
-                <th rowSpan={2} className="patrak-vhdr patrak-w-caste"><span>{"\u0A9C\u0ACD\u0A9E\u0ABE\u0AA4\u0ABF"}</span></th>
-              )}
+              <th rowSpan={2} className="patrak-vhdr patrak-w-caste"><span>{"\u0A9C\u0ACD\u0A9E\u0ABE\u0AA4\u0ABF"}</span></th>
               <th rowSpan={2} className="patrak-w-dob patrak-vhdr"><span>{"\u0A9C\u0AA8\u0ACD\u0AAE \u0AA4\u0ABE\u0AB0\u0AC0\u0A96"}</span></th>
               <th colSpan={isSheet3 ? 5 : 4} className="patrak-fee-group">{"\u0AAE\u0AB3\u0AC7\u0AB2\u0AC0 \u0AAB\u0AC0"}</th>
               {isSheet3 ? (
                 <th rowSpan={2} className="patrak-vhdr patrak-w-sign"><span>{"\u0AAB\u0AC0 \u0AB2\u0AC7\u0AA8\u0ABE\u0AB0\u0AA8\u0AC0 \u0AB8\u0AB9\u0AC0"}</span></th>
               ) : (
-                <>
-                  <th rowSpan={2} className="patrak-vhdr patrak-w-caste"><span>{"\u0A9C\u0ACD\u0A9E\u0ABE\u0AA4\u0ABF"}</span></th>
-                  <th rowSpan={2} className="patrak-vhdr patrak-w-cat"><span>{"\u0A95\u0AC7\u0A9F\u0AC7\u0A97\u0AB0\u0AC0"}</span></th>
-                </>
+                <th rowSpan={2} className="patrak-vhdr patrak-w-cat"><span>{"\u0A95\u0AC7\u0A9F\u0AC7\u0A97\u0AB0\u0AC0"}</span></th>
               )}
               <th rowSpan={2} className="patrak-w-ser patrak-vhdr"><span>{"\u0A95\u0ACD\u0AB0\u0AAE\u0ABE\u0A82\u0A95"}</span></th>
               <th rowSpan={2} className="patrak-w-name patrak-name-hdr">{STUDENT_NAME_HDR}</th>
@@ -453,7 +466,7 @@ function RegisterSpread({
             {rows.map((r) => (
               <tr key={`L-${r.serial}`}>
                 <td>{r.grNumber ? g(r.grNumber) : ""}</td>
-                {isSheet3 && <td className="patrak-c">{r.caste}</td>}
+                <td className="patrak-c">{r.caste}</td>
                 <td>{r.dob ? g(r.dob) : ""}</td>
                 <td>{r.termFee ? g(r.termFee) : ""}</td>
                 <td>{r.admissionFee ? g(r.admissionFee) : ""}</td>
@@ -465,10 +478,7 @@ function RegisterSpread({
                     <td />
                   </>
                 ) : (
-                  <>
-                    <td className="patrak-c">{r.caste}</td>
-                    <td className="patrak-c">{r.category}</td>
-                  </>
+                  <td className="patrak-c">{r.category}</td>
                 )}
                 <td className="patrak-c patrak-ser-cell">{g(r.serial)}</td>
                 <td className="patrak-name-cell font-gujarati">{r.name}</td>
@@ -759,6 +769,16 @@ export function MonthlyAttendancePatrakView({
   const sheet3Rows = padRegister(registerRows, 41, 32);
   const adm = padAdmission(admissions, 6);
 
+  const computerNoKey = `patrak-computer-no-${data.standard}-${data.section}`;
+  const [computerNo, setComputerNo] = useState("");
+  useEffect(() => {
+    setComputerNo(localStorage.getItem(computerNoKey) ?? "");
+  }, [computerNoKey]);
+  useEffect(() => {
+    if (computerNo) localStorage.setItem(computerNoKey, computerNo);
+    else localStorage.removeItem(computerNoKey);
+  }, [computerNo, computerNoKey]);
+
   return (
     <div className="patrak-root">
       <p className="patrak-print-hint no-print">
@@ -767,13 +787,34 @@ export function MonthlyAttendancePatrakView({
       </p>
 
       {/* ── Sheet 1: summary (legal portrait) ───────────────── */}
-      <div className="patrak-screen-label no-print">પાનું ૧ — સારાંશ · Legal portrait</div>
+      <div className="patrak-screen-label no-print">પાનું 1 — સારાંશ · Legal portrait</div>
       <div className="patrak-sheet patrak-portrait patrak-summary">
-        <h1 className="patrak-title">વિદ્યાર્થીનું માસિક હાજરી પત્રક</h1>
-        <div className="patrak-meta">
-          <span>વર્ગ શિક્ષકશ્રી <u className="patrak-fill">{data.classTeacher || "\u00a0".repeat(18)}</u></span>
-          <span>માહે <u className="patrak-fill">{monthName}</u> ૨૦<u className="patrak-fill">{yearShort}</u></span>
-          <span>ધોરણ <u className="patrak-fill">{g(data.standard)}</u> વર્ગ <u className="patrak-fill">{data.section}</u></span>
+        <div className="patrak-head">
+          <div className="patrak-head-school">સાર્વજનિક હાઈસ્કુલ – ફોર્ટ-સોનગઢ</div>
+          <div className="patrak-head-row">
+            <span />
+            <span className="patrak-head-div">{patrakDivision(data.standard)}</span>
+            <span className="patrak-head-comp">
+              કોમ્પ્યુટર નંબર :-{" "}
+              <input
+                className="patrak-head-comp-inp"
+                value={computerNo}
+                onChange={(e) => setComputerNo(e.target.value)}
+                aria-label="કોમ્પ્યુટર નંબર"
+              />
+            </span>
+          </div>
+          <h1 className="patrak-title">માસિક હાજરી પત્રક</h1>
+          <div className="patrak-head-meta">
+            <span>માહે <u className="patrak-ul-line patrak-ul-lg">{monthName}</u></span>
+            <span><u className="patrak-ul-line patrak-ul-sm">{g(data.year)}</u></span>
+            <span>ધોરણ <u className="patrak-ul-line patrak-ul-sm">{g(data.standard)}</u></span>
+            <span>વર્ગ <u className="patrak-ul-line patrak-ul-sm">{data.section}</u></span>
+            <span className="patrak-head-teacher">
+              વર્ગ શિક્ષક <u className="patrak-ul-line patrak-ul-xl">{data.classTeacher || "\u00a0"}</u>
+            </span>
+          </div>
+          <div className="patrak-head-sub">વિદ્યાર્થીઓની હકીકત</div>
         </div>
 
         <table className="patrak-tbl patrak-move">
@@ -969,9 +1010,25 @@ export function MonthlyAttendancePatrakView({
 
         <p className="patrak-decl">ઉપરના ખાનાઓમાં ભરેલી હકીકત જનરલ રજીસ્ટર પ્રમાણે ખરી છે.</p>
         <div className="patrak-sigs patrak-sigs-rpt">
-          <span>વર્ગ શિક્ષક<br /><small className="patrak-sig-date">તા.{"\u00a0".repeat(8)}- ૨૦</small></span>
-          <span>તપાસનીશ<br /><small className="patrak-sig-date">તા.{"\u00a0".repeat(8)}- ૨૦</small></span>
-          <span>આચાર્ય / આચાર્યા<br /><small className="patrak-sig-date">તા.{"\u00a0".repeat(8)}- ૨૦</small></span>
+          <span>વર્ગ શિક્ષક<br /><small className="patrak-sig-date">તા.{"\u00a0".repeat(8)}- 20</small></span>
+          <span>તપાસનીશ<br /><small className="patrak-sig-date">તા.{"\u00a0".repeat(8)}- 20</small></span>
+          <span>આચાર્ય / આચાર્યા<br /><small className="patrak-sig-date">તા.{"\u00a0".repeat(8)}- 20</small></span>
+        </div>
+
+        <div className="patrak-suchna">
+          <div className="patrak-suchna-head">
+            <span className="patrak-suchna-lines" aria-hidden="true" />
+            <span className="patrak-suchna-title">સૂચના</span>
+            <span className="patrak-suchna-lines" aria-hidden="true" />
+          </div>
+          <ul className="patrak-suchna-list">
+            {PATRAK_SUCHNA.map((text, i) => (
+              <li key={i}>
+                <span className="patrak-suchna-icon" aria-hidden="true">☞</span>
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
@@ -1051,6 +1108,75 @@ export function MonthlyAttendancePatrakView({
           flex: 0 0 auto;
         }
         .patrak-root .patrak-fill { min-width: 22mm; display: inline-block; }
+
+        .patrak-root .patrak-head {
+          border: 1.5px solid ${INK};
+          border-bottom: none;
+          padding: 2.5mm 3mm 1.5mm;
+          text-align: center;
+          flex: 0 0 auto;
+        }
+        .patrak-root .patrak-head + .patrak-move { margin-top: 0; }
+        .patrak-root .patrak-head-school {
+          font-size: 19pt;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+          line-height: 1.2;
+        }
+        .patrak-root .patrak-head-row {
+          display: grid;
+          grid-template-columns: 1fr auto 1fr;
+          align-items: center;
+          margin-top: 0.5mm;
+        }
+        .patrak-root .patrak-head-div { font-size: 11pt; font-weight: 600; }
+        .patrak-root .patrak-head-comp {
+          justify-self: end;
+          font-size: 10pt;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .patrak-root .patrak-head-comp-inp {
+          width: 18mm;
+          border: none;
+          border-bottom: 1px solid ${INK};
+          background: transparent;
+          color: ${INK};
+          font: inherit;
+          text-align: center;
+          outline: none;
+          padding: 0;
+        }
+        .patrak-root .patrak-head .patrak-title {
+          font-size: 16pt;
+          font-weight: 800;
+          margin: 0.5mm 0 2mm;
+        }
+        .patrak-root .patrak-head-meta {
+          display: flex;
+          align-items: baseline;
+          gap: 3mm;
+          font-size: 10.5pt;
+          text-align: left;
+          white-space: nowrap;
+        }
+        .patrak-root .patrak-head-teacher { flex: 1; display: flex; gap: 1.5mm; }
+        .patrak-root .patrak-ul-line {
+          display: inline-block;
+          text-decoration: none;
+          border-bottom: 1px solid ${INK};
+          text-align: center;
+          font-weight: 600;
+          padding: 0 1mm;
+        }
+        .patrak-root .patrak-ul-sm { min-width: 16mm; }
+        .patrak-root .patrak-ul-lg { min-width: 32mm; }
+        .patrak-root .patrak-ul-xl { flex: 1; min-width: 40mm; }
+        .patrak-root .patrak-head-sub {
+          font-size: 14pt;
+          font-weight: 800;
+          margin-top: 2mm;
+        }
         .patrak-root .patrak-ul {
           display: inline-block;
           min-width: 12mm;
@@ -1185,6 +1311,63 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-sigs-rpt small { font-size: 7pt; }
         .patrak-root .patrak-sig-date { letter-spacing: 0.05em; }
 
+        .patrak-root .patrak-suchna {
+          margin-top: 8mm;
+          font-size: 9.5pt;
+          line-height: 1.55;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        .patrak-root .patrak-suchna-head {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 3mm;
+          margin-bottom: 3mm;
+        }
+        .patrak-root .patrak-suchna-lines {
+          display: inline-block;
+          width: 12mm;
+          height: 2.4mm;
+          border-top: 1.5px solid ${INK};
+          border-bottom: 1.5px solid ${INK};
+          position: relative;
+        }
+        .patrak-root .patrak-suchna-lines::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 50%;
+          border-top: 1.5px solid ${INK};
+          transform: translateY(-50%);
+        }
+        .patrak-root .patrak-suchna-title {
+          font-size: 13pt;
+          font-weight: 700;
+          padding: 0.5mm 5mm;
+          border: 1.5px solid ${INK};
+          border-radius: 999px;
+        }
+        .patrak-root .patrak-suchna-list {
+          list-style: none;
+          margin: 0;
+          padding: 0 2mm;
+        }
+        .patrak-root .patrak-suchna-list li {
+          display: flex;
+          align-items: flex-start;
+          gap: 2.5mm;
+          margin-bottom: 2mm;
+          text-align: justify;
+        }
+        .patrak-root .patrak-suchna-icon {
+          flex: 0 0 auto;
+          font-size: 14pt;
+          line-height: 1.1;
+          font-family: "Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols", sans-serif;
+        }
+
         .patrak-root .patrak-reg-page {
           --patrak-meta-h: 7mm;
           --patrak-colhdr-h: 36mm;
@@ -1284,7 +1467,7 @@ export function MonthlyAttendancePatrakView({
         }
         .patrak-root .patrak-reg-left-only .patrak-w-gr { width: 14mm; }
         .patrak-root .patrak-reg-left-only .patrak-w-dob { width: 18mm; }
-        .patrak-root .patrak-reg-left-only .patrak-w-caste { width: 12mm; }
+        .patrak-root .patrak-reg-left-only .patrak-w-caste { width: 22mm; }
         .patrak-root .patrak-reg-left-only .patrak-w-cat { width: 14mm; }
         .patrak-root .patrak-reg-left-only .patrak-w-ser { width: 10mm !important; min-width: 10mm; }
         .patrak-root .patrak-reg-left-only .patrak-w-name { width: auto; min-width: 55mm; }
@@ -1293,7 +1476,7 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-reg-left-only .patrak-w-sign { width: 10mm; }
         .patrak-root .patrak-unified .patrak-w-gr { width: 12mm; }
         .patrak-root .patrak-unified .patrak-w-dob { width: 16mm; }
-        .patrak-root .patrak-unified .patrak-w-caste { width: 10mm; }
+        .patrak-root .patrak-unified .patrak-w-caste { width: 20mm; }
         .patrak-root .patrak-unified .patrak-w-cat { width: 12mm; }
         .patrak-root .patrak-unified .patrak-w-ser { width: 7mm !important; min-width: 7mm; }
         .patrak-root .patrak-unified .patrak-w-name { width: 50mm; min-width: 40mm; }
@@ -1540,7 +1723,7 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-w-gr { width: 13mm; }
         .patrak-root .patrak-w-dob { width: 15mm; }
         .patrak-root .patrak-w-name { width: auto; }
-        .patrak-root .patrak-w-caste { width: 11mm; }
+        .patrak-root .patrak-w-caste { width: 20mm; }
         .patrak-root .patrak-w-cat { width: 13mm; }
         .patrak-root .patrak-w-ser { width: 9mm; }
         .patrak-root .patrak-w-date { width: 10mm; }

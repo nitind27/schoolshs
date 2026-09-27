@@ -1,4 +1,4 @@
-const GUJ_DIGITS = ["૦", "૧", "૨", "૩", "૪", "૫", "૬", "૭", "૮", "૯"];
+import { toLatinDigits } from "@/lib/digits";
 
 const DAY_ORDINAL_GU: Record<number, string> = {
   1: "પહેલી",
@@ -64,8 +64,9 @@ const TEENS_GU = [
   "ઓગણીસ",
 ];
 
+/** Keep figure digits Latin/English (0–9) everywhere in the portal. */
 export function toGujaratiDigits(input: string): string {
-  return input.replace(/\d/g, (d) => GUJ_DIGITS[parseInt(d, 10)] ?? d);
+  return toLatinDigits(input);
 }
 
 function parseDateParts(dateStr: string): { d: number; m: number; y: number } | null {
@@ -107,8 +108,9 @@ export function formatDobFigures(dateStr: string): string {
   return `${dd}-${mm}-${p.y}`;
 }
 
+/** DD-MM-YYYY figures — Latin digits (portal standard) */
 export function formatDobFiguresGu(dateStr: string): string {
-  return toGujaratiDigits(formatDobFigures(dateStr));
+  return toLatinDigits(formatDobFigures(dateStr));
 }
 
 /** Register-style Gujarati DOB words e.g. સત્તાવીસમી સપ્ટેમ્બર બે હજાર બાર */

@@ -13,6 +13,7 @@ import {
 } from "@/lib/timetable-server";
 import { periodForDay } from "@/lib/timetable";
 import { getTeacherScope, nowInIndia } from "@/lib/teacher-scope";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 /** Aggregated dashboard — homeroom class + timetable teaching classes */
 export async function GET() {
@@ -70,7 +71,7 @@ export async function GET() {
     ]);
 
     const academicYear =
-      school?.settings?.academicYear || scope.academicYear || "2025-26";
+      school?.settings?.academicYear || scope.academicYear || DEFAULT_ACADEMIC_YEAR;
     const classIds = scope.classes.map((c) => c.id);
 
     const classes = classIds.length

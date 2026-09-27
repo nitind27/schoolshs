@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, ChevronRight, Users, Award, ClipboardCheck, FileSpreadsheet, Printer } from "lucide-react";
-import { FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { useT } from "@/i18n/locale-provider";
 
 type ClassRow = {
@@ -27,7 +27,7 @@ type ClassRow = {
 
 export default function ResultsPage() {
   const t = useT();
-  const [academicYear, setAcademicYear] = useState("2025-26");
+  const [academicYear, setAcademicYear] = useState(DEFAULT_ACADEMIC_YEAR);
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [loading, setLoading] = useState(true);
 

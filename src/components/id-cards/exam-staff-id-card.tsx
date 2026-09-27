@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { buildPublicExamIdScanUrl } from "@/lib/id-card-public-url";
 import QRCode from "qrcode";
 import "./exam-staff-id-card.css";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export type ExamStaffCardPerson = {
   id: string;
@@ -127,7 +128,7 @@ export function ExamStaffIdCard({
   const name = staffName(staff);
   const nameGu = staffName(staff, true);
   const role = meta.roleLabel || "EXAMINER / INVIGILATOR";
-  const year = meta.academicYear || settings?.academicYear || "2025-26";
+  const year = meta.academicYear || settings?.academicYear || DEFAULT_ACADEMIC_YEAR;
   const [pageOrigin, setPageOrigin] = useState("");
 
   useEffect(() => {

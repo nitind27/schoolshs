@@ -7,7 +7,7 @@ import { DailyAttendanceBookView } from "@/components/certificates/daily-attenda
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/ui/date-field";
 import { Select } from "@/components/ui/select";
-import { FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import {
   computeAvgPercent,
   sumGrandTotals,
@@ -25,7 +25,7 @@ function todayIso() {
 export default function DailyAttendanceBookPage() {
   const t = useT();
   const [dateIso, setDateIso] = useState(todayIso());
-  const [academicYear, setAcademicYear] = useState("2025-26");
+  const [academicYear, setAcademicYear] = useState(DEFAULT_ACADEMIC_YEAR);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [meta, setMeta] = useState<DailyAttendanceBookMeta | null>(null);

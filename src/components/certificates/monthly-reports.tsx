@@ -79,7 +79,7 @@ export function MonthlyReportsView({
         <div style={{ fontSize: "10px", marginTop: 4 }}>
           સરકારી માફી, શાળા માફી અને શિષ્યવૃત્તિ મેળવનાર વિદ્યાર્થીઓનો અહેવાલ
         </div>
-        <div style={{ fontSize: "8px", marginTop: 2 }}>માહે {month} ૨૦{year.slice(-2)}</div>
+        <div style={{ fontSize: "8px", marginTop: 2 }}>માહે {month} 20{year.slice(-2)}</div>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -153,9 +153,9 @@ export function MonthlyReportsView({
         ઉપરના ખાનાઓમાં ભરેલી હકીકત જનરલ રજીસ્ટર પ્રમાણે ખરી છે.
       </p>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, fontSize: "8px" }}>
-        <span>વર્ગ શિક્ષક<br />તા. - ૨૦{year.slice(-2)}</span>
-        <span>તપાસનીશ<br />તા. - ૨૦{year.slice(-2)}</span>
-        <span>આચાર્ય / આચાર્યા<br />તા. - ૨૦{year.slice(-2)}</span>
+        <span>વર્ગ શિક્ષક<br />તા. - 20{year.slice(-2)}</span>
+        <span>તપાસનીશ<br />તા. - 20{year.slice(-2)}</span>
+        <span>આચાર્ય / આચાર્યા<br />તા. - 20{year.slice(-2)}</span>
       </div>
     </div>
   );

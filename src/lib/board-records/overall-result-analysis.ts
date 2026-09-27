@@ -2,6 +2,8 @@
 
 import { parseBoardResultJson } from "@/lib/board-records/result-list-config";
 import { resultStatus } from "@/lib/board-records/gseb";
+import { toLatinDigits } from "@/lib/digits";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export const ANALYSIS_GRADES = ["A1", "A2", "B1", "B2", "C1", "C2", "D", "E1", "E2"] as const;
 export type AnalysisGrade = (typeof ANALYSIS_GRADES)[number];
@@ -24,12 +26,12 @@ export const ANALYSIS_SUBJECTS: {
   label: string;
   altKeys?: string[];
 }[] = [
-  { key: "GUJ", label: "ગુજરાતી(૦૧)" },
-  { key: "SS", label: "સા. વિજ્ઞાન(૧૦)" },
-  { key: "SCI", label: "વિ. & ટેકનોલોજી(૧૧)" },
-  { key: "MATH", label: "ગણિત(૧૨) (સ્ટાન્ડર્ડ)" },
-  { key: "MATH_BASIC", label: "ગણિત(૧૮) (બેઝિક)", altKeys: ["MATHB", "BASIC"] },
-  { key: "ENG", label: "અંગ્રેજી(૧૬)" },
+  { key: "GUJ", label: "ગુજરાતી(01)" },
+  { key: "SS", label: "સા. વિજ્ઞાન(10)" },
+  { key: "SCI", label: "વિ. & ટેકનોલોજી(11)" },
+  { key: "MATH", label: "ગણિત(12) (સ્ટાન્ડર્ડ)" },
+  { key: "MATH_BASIC", label: "ગણિત(18) (બેઝિક)", altKeys: ["MATHB", "BASIC"] },
+  { key: "ENG", label: "અંગ્રેજી(16)" },
   { key: "SAN", label: "સંસ્કૃત/હિન્દી (  )", altKeys: ["HIN"] },
   { key: "EL1", label: "કમ્પ્યુટર/શા.શિ. (  )", altKeys: ["PE", "COMP", "EL2"] },
 ];
@@ -47,18 +49,17 @@ export const CATEGORY_COLS: { key: CategoryKey; label: string }[] = [
 
 export type MarksRangeKey = "lt40" | "from40to60" | "from60to80" | "gte80" | "fail" | "total";
 
-/** Convert ASCII digits → Gujarati digits (૦–૯) */
+/** @deprecated Use toLatinDigits — portal shows English digits only. */
 export function toGujaratiDigits(value: string | number): string {
-  const map = ["૦", "૧", "૨", "૩", "૪", "૫", "૬", "૭", "૮", "૯"];
-  return String(value).replace(/\d/g, (d) => map[Number(d)] ?? d);
+  return toLatinDigits(value);
 }
 
-/** 40% bands (not 35%) — digits always Gujarati */
+/** 40% bands (not 35%) — digits always Latin/English */
 export const MARKS_RANGES: { key: MarksRangeKey; label: string }[] = [
-  { key: "lt40", label: `${toGujaratiDigits(40)}% થી ઓછા` },
-  { key: "from40to60", label: `${toGujaratiDigits(40)}% થી વધુ અને ${toGujaratiDigits(60)}% થી ઓછા` },
-  { key: "from60to80", label: `${toGujaratiDigits(60)}% થી વધુ અને ${toGujaratiDigits(80)}% થી ઓછા` },
-  { key: "gte80", label: `${toGujaratiDigits(80)}% થી વધુ` },
+  { key: "lt40", label: `40% થી ઓછા` },
+  { key: "from40to60", label: `40% થી વધુ અને 60% થી ઓછા` },
+  { key: "from60to80", label: `60% થી વધુ અને 80% થી ઓછા` },
+  { key: "gte80", label: `80% થી વધુ` },
   { key: "fail", label: "નાપાસ" },
   { key: "total", label: "કુલ" },
 ];
@@ -281,7 +282,7 @@ export function buildOverallResultAnalysis(
   const regular = students.filter((s) => isRegularStudent(s.admissionType));
   const nonRegular = students.filter((s) => !isRegularStudent(s.admissionType));
 
-  const year = meta.academicYear || "2025-26";
+  const year = meta.academicYear || DEFAULT_ACADEMIC_YEAR;
   const [ya, yb] = year.split("-");
 
   return {

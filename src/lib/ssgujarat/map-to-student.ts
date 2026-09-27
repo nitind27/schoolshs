@@ -1,7 +1,7 @@
 import type { Student } from "@/generated/prisma/client";
 import type { SsgujaratStudentRecord } from "./types";
 import { pasteDataToRecord, type SsgPasteData } from "./parse-ssg-paste";
-import { standardToCourseName, standardToCurrentYear } from "@/lib/constants";
+import { standardToCourseName, standardToCurrentYear, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { bilingualNamePair } from "@/lib/gujarati/transliterate-core";
 
 type StudentPartial = Partial<Student>;
@@ -139,7 +139,7 @@ export function mapSsgujaratToStudent(
     childUid: record.childUid || undefined,
     currentYear: classNum ? standardToCurrentYear(record.studyingClass) : undefined,
     board10th: "GSEB",
-    financialYear: record.academicYear?.match(/^\d{4}-\d{2}$/) ? record.academicYear : "2025-26",
+    financialYear: record.academicYear?.match(/^\d{4}-\d{2}$/) ? record.academicYear : DEFAULT_ACADEMIC_YEAR,
     gender: mapGender(record.gender || ""),
     religion: mapReligion(record.religion || ""),
     category: record.socialCategory ? mapSocialCategory(record.socialCategory) : undefined,

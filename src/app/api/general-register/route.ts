@@ -7,6 +7,7 @@ import {
   dedupeGrRows,
   mergeStudentsWithGrEntries,
 } from "@/lib/certificates/general-register";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 function entryToDbData(body: Record<string, unknown>) {
   const birthPlaceLines = Array.isArray(body.birthPlaceLines)
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
     const params = request.nextUrl.searchParams;
-    const academicYear = params.get("academicYear") || "2025-26";
+    const academicYear = params.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
     const prefillStudentId = params.get("prefillStudentId");
     const classId = params.get("classId");
 
@@ -196,7 +197,7 @@ export async function POST(request: NextRequest) {
     const action = String(body.action || "save");
 
     if (action === "import-class") {
-      const academicYear = String(body.academicYear || "2025-26");
+      const academicYear = String(body.academicYear || DEFAULT_ACADEMIC_YEAR);
       const params = new URLSearchParams();
       if (body.classId) params.set("classId", String(body.classId));
       if (body.standard) params.set("standard", String(body.standard));
@@ -263,7 +264,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, imported });
     }
 
-    const academicYear = String(body.academicYear || "2025-26");
+    const academicYear = String(body.academicYear || DEFAULT_ACADEMIC_YEAR);
     const data = entryToDbData(body);
     if (!data.grNumber) return NextResponse.json({ error: "Register number required" }, { status: 400 });
 

@@ -918,7 +918,9 @@
                 0 12px 40px -12px rgb(15 39 68 / .18),
                 0 4px 12px -4px rgb(15 39 68 / .08);
             border-radius: 2px;
-            padding: 8mm 15mm 15mm 15mm;
+            --page-pad-x: 15mm;
+            --lh-edge: 5mm;
+            padding: 8mm var(--page-pad-x) 15mm var(--page-pad-x);
             position: relative;
             page-break-after: always;
         }
@@ -936,10 +938,13 @@
             color: #666;
         }
 
+        /* Header spans the page edge-to-edge; letter body keeps the page padding */
         .letterhead {
             border-bottom: 2px solid #c41e3a;
             padding-bottom: 10px;
             margin-bottom: 15px;
+            margin-left: min(0px, calc(var(--lh-edge, 5mm) - var(--page-pad-x, 15mm)));
+            margin-right: min(0px, calc(var(--lh-edge, 5mm) - var(--page-pad-x, 15mm)));
         }
 
         /* Header Top Text */
@@ -1106,6 +1111,30 @@
             padding: 0 5px;
         }
 
+        .date-inline {
+            display: inline-flex;
+            align-items: baseline;
+            white-space: nowrap;
+        }
+
+        .date-inline .underline-field {
+            padding: 0 1px;
+            text-align: center;
+        }
+
+        .date-inline .date-dd,
+        .date-inline .date-mm {
+            min-width: 2.2ch;
+        }
+
+        .date-inline .date-yyyy {
+            min-width: 4.4ch;
+        }
+
+        .date-inline .date-sep {
+            padding: 0 1px;
+        }
+
         /* Content Area — keep compact on screen; grow with typing */
         .content-area {
             min-height: 80mm;
@@ -1162,7 +1191,7 @@
         @media print {
             @page {
                 size: A4;
-                margin: 8mm 12mm 10mm 12mm;
+                margin: 8mm 5mm 10mm 5mm;
             }
 
             html,
@@ -1257,10 +1286,14 @@
                 vertical-align: top;
             }
 
+            .print-table tbody > tr > td {
+                padding: 0 8mm !important;
+            }
+
             .letterhead {
                 border-bottom: 2px solid #c41e3a !important;
                 padding-bottom: 8px !important;
-                margin-bottom: 10px !important;
+                margin: 0 0 10px 0 !important;
             }
 
             .header-table,
@@ -1662,6 +1695,71 @@
             font-weight: 600;
         }
 
+        .stamp-school-section {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .stamp-school-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            color: #e2e8f0;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .stamp-school-head small {
+            font-weight: 500;
+            color: #a0aec0;
+        }
+
+        .stamp-upload-btn {
+            padding: 7px 14px;
+            border: none;
+            border-radius: 8px;
+            background: #0e7490;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .stamp-upload-btn:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .stamp-school-empty {
+            color: #a0aec0;
+            font-size: 12px;
+            margin: 4px 0;
+        }
+
+        .stamp-option {
+            position: relative;
+        }
+
+        .stamp-option-remove {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: none;
+            background: #e53e3e;
+            color: #fff;
+            font-size: 12px;
+            line-height: 22px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        }
+
         .stamp-instructions {
             color: #a0aec0;
             font-size: 12px;
@@ -1678,11 +1776,16 @@
             cursor: move;
             z-index: 100;
             user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
             transition: box-shadow 0.2s;
         }
 
-        .draggable-stamp:hover {
+        .draggable-stamp:hover,
+        .draggable-stamp.is-active {
             box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            outline: 2px dashed rgba(102,126,234,0.8);
+            outline-offset: 2px;
         }
 
         .draggable-stamp img {
@@ -1727,13 +1830,63 @@
             display: none;
         }
 
-        .draggable-stamp:hover .stamp-resize {
+        .draggable-stamp:hover .stamp-resize,
+        .draggable-stamp.is-active .stamp-resize {
             display: block;
         }
 
+        .draggable-stamp.is-active .stamp-delete {
+            display: flex;
+        }
+
+        .draggable-stamp .stamp-resize {
+            touch-action: none;
+        }
+
+        @media (hover: none) {
+            .draggable-stamp .stamp-delete {
+                display: flex;
+                width: 30px;
+                height: 30px;
+                top: -14px;
+                right: -14px;
+            }
+
+            .draggable-stamp .stamp-resize {
+                display: block;
+                width: 26px;
+                height: 26px;
+                bottom: -12px;
+                right: -12px;
+            }
+        }
+
+        .stamp-toast {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            z-index: 100000;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            max-width: 90vw;
+            text-align: center;
+        }
+
         @media print {
-            .stamp-panel {
+            .stamp-panel,
+            .stamp-toast {
                 display: none !important;
+            }
+
+            .draggable-stamp,
+            .draggable-stamp.is-active {
+                outline: none !important;
+                box-shadow: none !important;
             }
 
             .draggable-stamp .stamp-delete,
@@ -2065,6 +2218,7 @@
                 width: 100%;
                 min-height: auto;
                 margin-bottom: 12px;
+                --page-pad-x: 4mm;
                 padding: 5mm 4mm 12mm;
                 overflow-wrap: anywhere;
             }
@@ -2168,16 +2322,15 @@
             }
         }
 
-        /* Responsive */
+        /* Responsive — the page never reflows; it stays true A4 and only scales down to fit */
         @media screen and (max-width: 900px) {
             .page-container {
-                width: 100%;
-                min-height: auto;
-                padding: 10mm;
-            }
-            
-            .school-name {
-                font-size: 20px;
+                width: 210mm;
+                max-width: none;
+                min-height: 297mm;
+                --page-pad-x: 15mm;
+                padding: 8mm 15mm 15mm;
+                zoom: var(--mobile-page-fit, 1);
             }
 
             .editor-toolbar {
@@ -2194,7 +2347,7 @@
          * The studio controls reflow, but the printable page only scales down,
          * so its desktop/laptop layout never changes.
          */
-        @media screen and (max-width: 700px) {
+        @media screen and (max-width: 900px) {
             html.embedded .editor-scroll-area {
                 overflow-x: auto;
             }
@@ -2203,6 +2356,7 @@
                 width: 210mm;
                 max-width: none;
                 min-height: 297mm;
+                --page-pad-x: 15mm;
                 padding: 8mm 15mm 15mm;
                 zoom: var(--mobile-page-fit, 1);
                 overflow-wrap: normal;
@@ -2275,6 +2429,22 @@
                 font-size: 12px;
             }
         }
+
+        /* PDF export: force the desktop A4 layout regardless of device width */
+        html.lh-exporting .page-container,
+        html.lh-exporting.embedded .page-container {
+            width: 210mm !important;
+            max-width: none !important;
+            min-height: 297mm !important;
+            --page-pad-x: 15mm;
+            padding: 8mm 15mm 15mm !important;
+            zoom: 1 !important;
+            overflow-wrap: normal !important;
+        }
+        html.lh-exporting .pages-wrapper {
+            max-width: 210mm !important;
+            width: 210mm !important;
+        }
     </style>
     <!-- Tesseract.js OCR Library -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -2289,7 +2459,7 @@
 
         function updateMobilePageFit() {
             const root = document.documentElement;
-            if (!root.classList.contains("embedded") || window.innerWidth > 700) {
+            if (window.innerWidth > 900) {
                 root.style.removeProperty("--mobile-page-fit");
                 return;
             }
@@ -2574,12 +2744,7 @@
                                         <span class="underline-field" contenteditable="true" id="serialNo">&nbsp;</span>
                                     </td>
                                     <td class="date-cell">
-                                        <span>તારીખ :</span>
-                                        <span class="underline-field" style="min-width: 30px;" contenteditable="true" id="dateDay">&nbsp;</span>
-                                        <span>/</span>
-                                        <span class="underline-field" style="min-width: 30px;" contenteditable="true" id="dateMonth">&nbsp;</span>
-                                        <span>/૨૦૨</span>
-                                        <span class="underline-field" style="min-width: 20px;" contenteditable="true" id="dateYear">&nbsp;</span>
+                                        <span>તારીખ :</span> <span class="date-inline"><span class="underline-field date-dd" contenteditable="true" id="dateDay">&nbsp;</span><span class="date-sep">/</span><span class="underline-field date-mm" contenteditable="true" id="dateMonth">&nbsp;</span><span class="date-sep">/</span><span class="underline-field date-yyyy" contenteditable="true" id="dateYear">&nbsp;</span></span>
                                     </td>
                                 </tr>
                             </table>
@@ -2638,9 +2803,20 @@
                 <p>Stamp 2</p>
             </div>
         </div>
+        <div class="stamp-school-section">
+            <div class="stamp-school-head">
+                <span>🏫 School stamps <small>(school code પ્રમાણે કાયમી સેવ)</small></span>
+                <button type="button" class="stamp-upload-btn" id="stampUploadBtn" onclick="triggerStampUpload()">⬆ Upload stamp</button>
+                <input type="file" id="stampUploadInput" accept="image/png,image/jpeg,image/webp" hidden onchange="uploadSchoolStamp(event)">
+            </div>
+            <div class="stamp-options" id="schoolStampOptions">
+                <p class="stamp-school-empty">Loading…</p>
+            </div>
+        </div>
         <div class="stamp-instructions">
-            💡 <strong>Tip:</strong> Click a stamp to select, then click on the letter where you want to place it.<br>
-            Or drag the stamp directly onto the letter page. You can move it after placing!
+            💡 <strong>Tip:</strong> Stamp par click / tap karo — wo letter par (neeche right side) lag jayega.<br>
+            Phir stamp ko pakad kar kahin bhi khiskao, blue dot se chhota-bada karo, ✕ se hatao.<br>
+            Transparent PNG stamp best — white background will blend automatically.
         </div>
     </div>
 
@@ -3073,12 +3249,16 @@
                 btn.disabled = true;
             }
 
+            if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+            const root = document.documentElement;
+            root.classList.add('lh-exporting');
             try {
                 await html2pdf().set({
-                    margin: [8, 12, 10, 12],
+                    margin: [8, 0, 10, 0],
                     filename: 'Letterhead_' + new Date().toLocaleDateString('en-IN').replace(/\//g, '-') + '.pdf',
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                    // windowWidth → media queries evaluate as desktop, so phones get the same A4 layout
+                    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 1280 },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: ['css', 'legacy'], before: '.page-container + .page-container' }
                 }).from(wrapper).save();
@@ -3086,6 +3266,7 @@
                 console.error('PDF error:', error);
                 alert('PDF could not be created. Use Print → Save as PDF instead.');
             } finally {
+                root.classList.remove('lh-exporting');
                 if (btn) {
                     btn.textContent = originalText || '📕 Download PDF';
                     btn.disabled = false;
@@ -3327,15 +3508,193 @@
             templatePanel?.classList.remove('active');
             panel.classList.toggle('active');
             syncPanelBackdrop();
+            if (panel.classList.contains('active')) void loadSchoolStamps();
+        }
+
+        // ---- School stamp library (stored on server per school) ----
+        let schoolStamps = [];
+        let schoolStampsLoaded = false;
+
+        function escapeHtmlText(s) {
+            return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function renderSchoolStamps(message) {
+            const box = document.getElementById('schoolStampOptions');
+            if (!box) return;
+            if (message) {
+                box.innerHTML = `<p class="stamp-school-empty">${escapeHtmlText(message)}</p>`;
+                return;
+            }
+            if (!schoolStamps.length) {
+                box.innerHTML = '<p class="stamp-school-empty">No school stamp yet — click “⬆ Upload stamp” to add one.</p>';
+                return;
+            }
+            box.innerHTML = schoolStamps.map((s) => `
+                <div class="stamp-option" draggable="true" data-stamp-id="${escapeHtmlText(s.id)}" data-stamp-src="${escapeHtmlText(s.url)}">
+                    <button type="button" class="stamp-option-remove" title="Delete this stamp" data-remove-stamp="${escapeHtmlText(s.id)}">✕</button>
+                    <img src="${escapeHtmlText(s.url)}" alt="${escapeHtmlText(s.label)}">
+                    <p>${escapeHtmlText(s.label)}</p>
+                </div>`).join('');
+            box.querySelectorAll('.stamp-option').forEach((el) => {
+                const src = el.dataset.stampSrc;
+                el.addEventListener('click', (e) => {
+                    if (e.target.closest('[data-remove-stamp]')) return;
+                    selectStamp(src, el);
+                });
+                el.addEventListener('dragstart', (e) => dragStamp(e, src));
+            });
+            box.querySelectorAll('[data-remove-stamp]').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    void removeSchoolStamp(btn.dataset.removeStamp);
+                });
+            });
+        }
+
+        async function loadSchoolStamps(force) {
+            if (!isEmbeddedLetterhead()) {
+                const btn = document.getElementById('stampUploadBtn');
+                if (btn) btn.style.display = 'none';
+                renderSchoolStamps('School stamp upload — login karke website ના Letterhead page પરથી કરો.');
+                return;
+            }
+            if (schoolStampsLoaded && !force) {
+                renderSchoolStamps();
+                return;
+            }
+            try {
+                const res = await fetch('/api/school/letterhead/stamps', { credentials: 'same-origin', cache: 'no-store' });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.error || 'Could not load stamps');
+                schoolStamps = Array.isArray(json.stamps) ? json.stamps : [];
+                schoolStampsLoaded = true;
+                renderSchoolStamps();
+            } catch (err) {
+                console.error(err);
+                renderSchoolStamps(err instanceof Error ? err.message : 'Could not load stamps');
+            }
+        }
+
+        function triggerStampUpload() {
+            document.getElementById('stampUploadInput')?.click();
+        }
+
+        async function uploadSchoolStamp(event) {
+            const input = event.target;
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+            if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+                alert('Please choose a PNG, JPG or WEBP image.');
+                return;
+            }
+            const label = (prompt('Stamp name (e.g. આચાર્ય સહી સિક્કો):', file.name.replace(/\.[^.]+$/, '')) || '').trim();
+            const btn = document.getElementById('stampUploadBtn');
+            const original = btn ? btn.textContent : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
+            try {
+                const form = new FormData();
+                form.append('file', file);
+                form.append('label', label);
+                const res = await fetch('/api/school/letterhead/stamps', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    body: form,
+                });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.error || 'Upload failed');
+                schoolStamps = Array.isArray(json.stamps) ? json.stamps : schoolStamps;
+                schoolStampsLoaded = true;
+                renderSchoolStamps();
+            } catch (err) {
+                console.error(err);
+                alert(err instanceof Error ? err.message : 'Stamp upload failed');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = original || '⬆ Upload stamp'; }
+            }
+        }
+
+        async function removeSchoolStamp(id) {
+            const stamp = schoolStamps.find((s) => s.id === id);
+            if (!stamp) return;
+            if (!confirm(`Delete stamp "${stamp.label}" permanently?`)) return;
+            try {
+                const res = await fetch('/api/school/letterhead/stamps?id=' + encodeURIComponent(id), {
+                    method: 'DELETE',
+                    credentials: 'same-origin',
+                });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.error || 'Delete failed');
+                schoolStamps = Array.isArray(json.stamps) ? json.stamps : schoolStamps.filter((s) => s.id !== id);
+                renderSchoolStamps();
+            } catch (err) {
+                console.error(err);
+                alert(err instanceof Error ? err.message : 'Could not delete stamp');
+            }
         }
 
         // Select a stamp
+        let lastStampTargetPage = null;
+        document.addEventListener('focusin', (e) => {
+            const page = e.target && e.target.closest ? e.target.closest('.page-container') : null;
+            if (page) lastStampTargetPage = page;
+        });
+
+        function getStampTargetPage() {
+            if (lastStampTargetPage && document.body.contains(lastStampTargetPage)) return lastStampTargetPage;
+            const pages = Array.from(document.querySelectorAll('.page-container'));
+            let best = pages[0] || null;
+            let bestVisible = -1;
+            pages.forEach((page) => {
+                const r = page.getBoundingClientRect();
+                const visible = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+                if (visible > bestVisible) {
+                    bestVisible = visible;
+                    best = page;
+                }
+            });
+            return best;
+        }
+
+        // Screen position of the page's (0,0) and px scale, works with CSS zoom and transform
+        function getPageScreenMetrics(page) {
+            const probe = document.createElement('div');
+            probe.style.cssText = 'position:absolute;left:0;top:0;width:1px;height:1px;visibility:hidden;pointer-events:none;';
+            page.appendChild(probe);
+            const a = probe.getBoundingClientRect();
+            probe.style.left = '100px';
+            const b = probe.getBoundingClientRect();
+            probe.remove();
+            const scale = (b.left - a.left) / 100;
+            return { originX: a.left, originY: a.top, scale: scale > 0.05 ? scale : 1 };
+        }
+
+        function showStampToast(message) {
+            document.querySelectorAll('.stamp-toast').forEach((t) => t.remove());
+            const toast = document.createElement('div');
+            toast.className = 'stamp-toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+        }
+
         function selectStamp(stampSrc, element) {
-            // Remove selection from all
             document.querySelectorAll('.stamp-option').forEach(opt => opt.classList.remove('selected'));
-            // Add selection to clicked
-            element.classList.add('selected');
-            selectedStamp = stampSrc;
+            selectedStamp = null;
+            const page = getStampTargetPage();
+            if (!page) return;
+            const size = 120;
+            const x = Math.max(10, page.offsetWidth - size - 60);
+            const y = Math.max(10, page.offsetHeight - size - 170);
+            const stampDiv = addStampToPage(page, stampSrc, x, y);
+            closeFloatingPanels();
+            if (stampDiv) {
+                stampDiv.classList.add('is-active');
+                setTimeout(() => stampDiv.classList.remove('is-active'), 2500);
+                stampDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            showStampToast('Stamp lag gaya ✓ — use pakad kar sahi jagah khiskao');
         }
 
         // Drag stamp from panel
@@ -3362,19 +3721,20 @@
                 e.preventDefault();
                 const stampSrc = e.dataTransfer.getData('stamp');
                 if (stampSrc) {
-                    const rect = page.getBoundingClientRect();
-                    const x = e.clientX - rect.left - 60; // Center the stamp
-                    const y = e.clientY - rect.top - 60;
+                    const m = getPageScreenMetrics(page);
+                    const x = (e.clientX - m.originX) / m.scale - 60;
+                    const y = (e.clientY - m.originY) / m.scale - 60;
                     addStampToPage(page, stampSrc, x, y);
+                    closeFloatingPanels();
+                    selectedStamp = null;
                 }
             });
 
-            // Click to place stamp
             page.addEventListener('click', function(e) {
-                if (selectedStamp && !e.target.closest('.draggable-stamp') && !e.target.closest('[contenteditable]')) {
-                    const rect = page.getBoundingClientRect();
-                    const x = e.clientX - rect.left - 60;
-                    const y = e.clientY - rect.top - 60;
+                if (selectedStamp && !e.target.closest('.draggable-stamp')) {
+                    const m = getPageScreenMetrics(page);
+                    const x = (e.clientX - m.originX) / m.scale - 60;
+                    const y = (e.clientY - m.originY) / m.scale - 60;
                     addStampToPage(page, selectedStamp, x, y);
                     // Deselect after placing
                     document.querySelectorAll('.stamp-option').forEach(opt => opt.classList.remove('selected'));
@@ -3399,15 +3759,12 @@
             stampDiv.innerHTML = `
                 <img src="${stampSrc}" alt="Stamp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22><rect fill=%22%23f0f0f0%22 width=%22120%22 height=%22120%22 rx=%2210%22/><text x=%2260%22 y=%2265%22 text-anchor=%22middle%22 fill=%22%23999%22>Stamp</text></svg>'">
                 <button class="stamp-delete" onclick="deleteStamp('${stampId}')" title="Remove Stamp">✕</button>
-                <div class="stamp-resize" onmousedown="startResize(event, '${stampId}')"></div>
+                <div class="stamp-resize" onpointerdown="startResize(event, '${stampId}')"></div>
             `;
             
             page.appendChild(stampDiv);
-            
-            // Make it draggable
             makeDraggable(stampDiv);
             
-            // Save stamp info
             stamps.push({
                 id: stampId,
                 src: stampSrc,
@@ -3418,54 +3775,50 @@
             });
             
             saveToLocalStorage();
+            return stampDiv;
         }
 
-        // Make stamp draggable
         function makeDraggable(element) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            
-            element.onmousedown = dragMouseDown;
-            
-            function dragMouseDown(e) {
-                if (e.target.classList.contains('stamp-delete') || e.target.classList.contains('stamp-resize')) {
-                    return;
-                }
+            element.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('.stamp-delete') || e.target.closest('.stamp-resize')) return;
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
                 e.preventDefault();
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                document.onmouseup = closeDragElement;
-                document.onmousemove = elementDrag;
+                const page = element.parentElement;
+                const scale = page ? getPageScreenMetrics(page).scale : 1;
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const startLeft = element.offsetLeft;
+                const startTop = element.offsetTop;
+                const maxLeft = page ? Math.max(0, page.offsetWidth - element.offsetWidth) : Infinity;
+                const maxTop = page ? Math.max(0, page.offsetHeight - element.offsetHeight) : Infinity;
+                try { element.setPointerCapture(e.pointerId); } catch (_) {}
+                element.classList.add('is-active');
                 element.style.cursor = 'grabbing';
-            }
-            
-            function elementDrag(e) {
-                e.preventDefault();
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                
-                const newTop = element.offsetTop - pos2;
-                const newLeft = element.offsetLeft - pos1;
-                
-                element.style.top = Math.max(0, newTop) + 'px';
-                element.style.left = Math.max(0, newLeft) + 'px';
-            }
-            
-            function closeDragElement() {
-                document.onmouseup = null;
-                document.onmousemove = null;
-                element.style.cursor = 'move';
-                
-                // Update stamp position in array
-                const stampId = element.id;
-                const stamp = stamps.find(s => s.id === stampId);
-                if (stamp) {
-                    stamp.x = parseInt(element.style.left);
-                    stamp.y = parseInt(element.style.top);
-                }
-                saveToLocalStorage();
-            }
+
+                const onMove = (ev) => {
+                    ev.preventDefault();
+                    const left = startLeft + (ev.clientX - startX) / scale;
+                    const top = startTop + (ev.clientY - startY) / scale;
+                    element.style.left = Math.min(maxLeft, Math.max(0, left)) + 'px';
+                    element.style.top = Math.min(maxTop, Math.max(0, top)) + 'px';
+                };
+                const onUp = () => {
+                    element.removeEventListener('pointermove', onMove);
+                    element.removeEventListener('pointerup', onUp);
+                    element.removeEventListener('pointercancel', onUp);
+                    element.style.cursor = 'move';
+                    setTimeout(() => element.classList.remove('is-active'), 1500);
+                    const stamp = stamps.find(s => s.id === element.id);
+                    if (stamp) {
+                        stamp.x = parseInt(element.style.left, 10) || 0;
+                        stamp.y = parseInt(element.style.top, 10) || 0;
+                    }
+                    saveToLocalStorage();
+                };
+                element.addEventListener('pointermove', onMove);
+                element.addEventListener('pointerup', onUp);
+                element.addEventListener('pointercancel', onUp);
+            });
         }
 
         // Delete stamp
@@ -3481,37 +3834,48 @@
         // Resize stamp
         let isResizing = false;
         let currentResizeStamp = null;
+        let resizeStart = null;
 
         function startResize(e, stampId) {
             e.preventDefault();
             e.stopPropagation();
+            const stampEl = document.getElementById(stampId);
+            if (!stampEl) return;
+            const img = stampEl.querySelector('img');
             isResizing = true;
-            currentResizeStamp = document.getElementById(stampId);
-            document.addEventListener('mousemove', doResize);
-            document.addEventListener('mouseup', stopResize);
+            currentResizeStamp = stampEl;
+            resizeStart = {
+                x: e.clientX,
+                width: img ? img.offsetWidth : 120,
+                scale: stampEl.parentElement ? getPageScreenMetrics(stampEl.parentElement).scale : 1
+            };
+            stampEl.classList.add('is-active');
+            document.addEventListener('pointermove', doResize);
+            document.addEventListener('pointerup', stopResize);
+            document.addEventListener('pointercancel', stopResize);
         }
 
         function doResize(e) {
-            if (!isResizing || !currentResizeStamp) return;
-            
-            const rect = currentResizeStamp.getBoundingClientRect();
-            const newWidth = Math.max(50, e.clientX - rect.left);
-            
+            if (!isResizing || !currentResizeStamp || !resizeStart) return;
+            e.preventDefault();
+            const newWidth = Math.round(Math.min(400, Math.max(50, resizeStart.width + (e.clientX - resizeStart.x) / resizeStart.scale)));
             const img = currentResizeStamp.querySelector('img');
-            img.style.width = newWidth + 'px';
-            
-            // Update in stamps array
+            if (img) img.style.width = newWidth + 'px';
             const stamp = stamps.find(s => s.id === currentResizeStamp.id);
-            if (stamp) {
-                stamp.width = newWidth;
-            }
+            if (stamp) stamp.width = newWidth;
         }
 
         function stopResize() {
+            if (currentResizeStamp) {
+                const el = currentResizeStamp;
+                setTimeout(() => el.classList.remove('is-active'), 1500);
+            }
             isResizing = false;
             currentResizeStamp = null;
-            document.removeEventListener('mousemove', doResize);
-            document.removeEventListener('mouseup', stopResize);
+            resizeStart = null;
+            document.removeEventListener('pointermove', doResize);
+            document.removeEventListener('pointerup', stopResize);
+            document.removeEventListener('pointercancel', stopResize);
             saveToLocalStorage();
         }
 
@@ -3531,7 +3895,7 @@
                     stampDiv.innerHTML = `
                         <img src="${stamp.src}" alt="Stamp" style="width: ${stamp.width || 120}px;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22><rect fill=%22%23f0f0f0%22 width=%22120%22 height=%22120%22 rx=%2210%22/><text x=%2260%22 y=%2265%22 text-anchor=%22middle%22 fill=%22%23999%22>Stamp</text></svg>'">
                         <button class="stamp-delete" onclick="deleteStamp('${stamp.id}')" title="Remove Stamp">✕</button>
-                        <div class="stamp-resize" onmousedown="startResize(event, '${stamp.id}')"></div>
+                        <div class="stamp-resize" onpointerdown="startResize(event, '${stamp.id}')"></div>
                     `;
                     
                     page.appendChild(stampDiv);
@@ -3575,7 +3939,57 @@
             }
         }
 
+        function isMobileDevice() {
+            return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 900;
+        }
+
+        /**
+         * Phone browsers print the whole top page (not the iframe) at phone width, which scrambles
+         * the letter. Open a standalone copy at desktop width in a new tab and print from there.
+         */
+        function printInNewWindow() {
+            const wrapper = document.getElementById('pagesWrapper');
+            if (!wrapper) return;
+            if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+
+            const clone = wrapper.cloneNode(true);
+            clone.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'));
+            clone.querySelectorAll('.add-page-btn, .remove-page-btn').forEach((el) => el.remove());
+
+            const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+                .map((el) => el.outerHTML)
+                .join('\n');
+            const scriptClose = '<' + '/script>';
+            const html =
+                '<!DOCTYPE html><html lang="gu" class="lh-print-view"><head><meta charset="utf-8">' +
+                '<base href="' + location.href.replace(/"/g, '&quot;') + '">' +
+                '<meta name="viewport" content="width=1000">' +
+                '<title>Letterhead</title>' + styles +
+                '<style>' +
+                '@media screen{html.lh-print-view body{margin:0;padding:16px 0;background:#e6ebf2;}' +
+                'html.lh-print-view .page-container{width:210mm!important;max-width:none!important;min-height:297mm!important;' +
+                '--page-pad-x:15mm;padding:8mm 15mm 15mm!important;zoom:1!important;}}' +
+                '</style></head><body>' + clone.outerHTML +
+                '<script>window.addEventListener("load",function(){' +
+                'var ready=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();' +
+                'ready.then(function(){setTimeout(function(){window.print();},300);});});' +
+                scriptClose + '</body></html>';
+
+            const w = window.open('', '_blank');
+            if (!w) {
+                alert('Popup blocked — please allow popups for this site to print.');
+                return;
+            }
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
+        }
+
         function printDocument() {
+            if (isMobileDevice()) {
+                printInNewWindow();
+                return;
+            }
             document.body.classList.add('is-printing');
             const restore = () => {
                 document.body.classList.remove('is-printing');
@@ -3585,11 +3999,27 @@
             setTimeout(() => window.print(), 50);
         }
 
+        function toLatinDigitsText(s) {
+            return String(s || '').replace(/[૦-૯]/g, (c) => String(c.charCodeAt(0) - 0x0AE6));
+        }
+
+        /** Date parts: Latin digits; year as 4 digits (legacy saves stored only the last digit after "/૨૦૨"). */
+        function normalizeDatePart(html, kind) {
+            const raw = toLatinDigitsText(String(html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;|\u00a0/g, ' ')).trim();
+            if (!raw) return '&nbsp;';
+            if (kind === 'year') {
+                if (/^\d$/.test(raw)) return '202' + raw;
+                if (/^\d{2}$/.test(raw)) return '20' + raw;
+                return raw;
+            }
+            return /^\d$/.test(raw) ? '0' + raw : raw;
+        }
+
         function fillTodayDate() {
             const today = new Date();
             const day = String(today.getDate()).padStart(2, '0');
             const month = String(today.getMonth() + 1).padStart(2, '0');
-            const year = String(today.getFullYear()).slice(-1);
+            const year = String(today.getFullYear());
 
             const dayEl = document.getElementById('dateDay');
             const monthEl = document.getElementById('dateMonth');
@@ -3853,12 +4283,7 @@
                                             <span class="underline-field" contenteditable="true">${serialNo}</span>
                                         </td>
                                         <td class="date-cell">
-                                            <span>તારીખ :</span>
-                                            <span class="underline-field" style="min-width: 30px;" contenteditable="true">${dateDay}</span>
-                                            <span>/</span>
-                                            <span class="underline-field" style="min-width: 30px;" contenteditable="true">${dateMonth}</span>
-                                            <span>/૨૦૨</span>
-                                            <span class="underline-field" style="min-width: 20px;" contenteditable="true">${dateYear}</span>
+                                            <span>તારીખ :</span> <span class="date-inline"><span class="underline-field date-dd" contenteditable="true">${dateDay}</span><span class="date-sep">/</span><span class="underline-field date-mm" contenteditable="true">${dateMonth}</span><span class="date-sep">/</span><span class="underline-field date-yyyy" contenteditable="true">${dateYear}</span></span>
                                         </td>
                                     </tr>
                                 </table>
@@ -4109,7 +4534,7 @@
                 પત્ર. નં. <span class="underline">${serialNo || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span>
             </td>
             <td style="text-align:right;">
-                તારીખ : <span class="underline">${dateDay || '&nbsp;&nbsp;'}</span> / <span class="underline">${dateMonth || '&nbsp;&nbsp;'}</span> /૨૦૨<span class="underline">${dateYear || '&nbsp;'}</span>
+                તારીખ : <span class="underline">${dateDay || '&nbsp;&nbsp;'}</span>/<span class="underline">${dateMonth || '&nbsp;&nbsp;'}</span>/<span class="underline">${dateYear || '&nbsp;&nbsp;&nbsp;&nbsp;'}</span>
             </td>
         </tr>
     </table>
@@ -4236,9 +4661,9 @@
             if (data.footerCenter) document.getElementById('footerCenter').innerHTML = data.footerCenter;
             if (data.footerRight) document.getElementById('footerRight').innerHTML = data.footerRight;
             if (data.serialNo) document.getElementById('serialNo').innerHTML = data.serialNo;
-            if (data.dateDay) document.getElementById('dateDay').innerHTML = data.dateDay;
-            if (data.dateMonth) document.getElementById('dateMonth').innerHTML = data.dateMonth;
-            if (data.dateYear) document.getElementById('dateYear').innerHTML = data.dateYear;
+            if (data.dateDay) document.getElementById('dateDay').innerHTML = normalizeDatePart(data.dateDay, 'day');
+            if (data.dateMonth) document.getElementById('dateMonth').innerHTML = normalizeDatePart(data.dateMonth, 'month');
+            if (data.dateYear) document.getElementById('dateYear').innerHTML = normalizeDatePart(data.dateYear, 'year');
 
             if (data.pageContents && data.pageContents[0]) {
                 document.getElementById('contentArea').innerHTML = data.pageContents[0];

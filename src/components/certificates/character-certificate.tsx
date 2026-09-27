@@ -2,6 +2,7 @@
 
 import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
 import { studentFullName } from "@/lib/certificates/date-to-words";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 /** Matches official Character/Trial/Bonafide scan — dark navy ink */
 const INK = "#1a1a55";
@@ -76,7 +77,7 @@ function CharacterHalf({
 }) {
   const school = useCertificateBrand();
   const name = studentFullName(student);
-  const [y1 = "2025", y2 = "26"] = (academicYear || "2025-26").split("-");
+  const [y1 = "2025", y2 = "26"] = (academicYear || DEFAULT_ACADEMIC_YEAR).split("-");
   const y1Short = y1.length === 4 ? y1 : `20${y1.slice(-2)}`;
   const y2Full = y2.length === 4 ? y2 : `${y1Short.slice(0, 2)}${y2.padStart(2, "0").slice(-2)}`;
   const date = parseIssueDate(issueDate);

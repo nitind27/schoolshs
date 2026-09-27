@@ -12,6 +12,7 @@ import {
   totalTermMaxFromMeta,
   type ExamTermDef,
 } from "@/lib/results/exam-terms";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 /**
  * MariaDB driver-adapter upsert can open an interactive transaction and fail
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk", "teacher"]);
     const academicYear =
-      request.nextUrl.searchParams.get("academicYear") || "2025-26";
+      request.nextUrl.searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
 
     const [classes, settings] = await Promise.all([
       prisma.schoolClass.findMany({

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { Select } from "@/components/ui/select";
 import { ArrowLeft, Save, Send, Printer, Trophy } from "lucide-react";
-import { SCHOOL_STANDARDS, FINANCIAL_YEARS } from "@/lib/constants";
+import { SCHOOL_STANDARDS, FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { ANNUAL_RESULT_SUBJECTS } from "@/lib/results/config";
 import { useT } from "@/i18n/locale-provider";
 
@@ -29,7 +29,7 @@ function ResultsEntryInner() {
   const [meta, setMeta] = useState<Record<string, { passNumber?: string; attendancePresent?: number; attendanceTotal?: number }>>({});
   const [reportCards, setReportCards] = useState<Record<string, unknown>[]>([]);
   const [form, setForm] = useState({
-    academicYear: "2025-26",
+    academicYear: DEFAULT_ACADEMIC_YEAR,
     standard: "10",
     section: "",
     reopeningDate: "",

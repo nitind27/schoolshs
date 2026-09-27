@@ -15,7 +15,7 @@ import {
   Printer,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
-import { FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import type { ExamTermKey } from "@/lib/results/exam-terms";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +81,7 @@ export default function TermMarksPage() {
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => {
-    fetch("/api/classes?academicYear=2025-26")
+    fetch(`/api/classes?academicYear=${DEFAULT_ACADEMIC_YEAR}`)
       .then((r) => r.json())
       .then((d) => {
         const list = (d.classes || []).filter(

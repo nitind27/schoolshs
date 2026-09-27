@@ -14,6 +14,7 @@ import {
   assertStudentsInSchool,
   SchoolScopeError,
 } from "@/lib/school-assertions";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   try {
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
       const existing = await prisma.exam.findFirst({
         where: {
           schoolId: session.schoolId,
-          academicYear: academicYear || "2025-26",
+          academicYear: academicYear || DEFAULT_ACADEMIC_YEAR,
           standard,
           section: section || null,
           examType: "Annual",
@@ -115,9 +116,9 @@ export async function POST(request: NextRequest) {
       const exam = await prisma.exam.create({
         data: {
           schoolId: session.schoolId,
-          name: resultSessionName(standard, academicYear || "2025-26"),
+          name: resultSessionName(standard, academicYear || DEFAULT_ACADEMIC_YEAR),
           examType: "Annual",
-          academicYear: academicYear || "2025-26",
+          academicYear: academicYear || DEFAULT_ACADEMIC_YEAR,
           standard,
           section: section || null,
           term: "Annual",

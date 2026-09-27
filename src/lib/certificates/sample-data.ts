@@ -6,6 +6,7 @@ import type {
   AdmissionReportRow,
   LeaverReportRow,
 } from "@/lib/certificates/types";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export const SAMPLE_STUDENT = {
   firstName: "RIYA",
@@ -65,7 +66,7 @@ export const SAMPLE_LC: LCData = {
 export const SAMPLE_CHARACTER = {
   student: SAMPLE_STUDENT,
   grNumber: "1245",
-  academicYear: "2025-26",
+  academicYear: DEFAULT_ACADEMIC_YEAR,
   examName: "GSEB S.S.C. March 2026",
   examResult: "First Trial",
   issueDate: "06/07/2026",
@@ -136,7 +137,16 @@ const SAMPLE_NAMES = [
 
 export const SAMPLE_CLASS_REGISTER: ClassRegisterRow[] = SAMPLE_NAMES.map((name, i) => ({
   grNumber: String(1200 + i),
-  caste: ["Patel", "Shah", "Desai", "Vankar", "Chauhan", "Tadvi", "Gamit", "Solanki"][i],
+  caste: [
+    "હિન્દુ પટેલ",
+    "હિન્દુ શાહ",
+    "હિન્દુ દેસાઈ",
+    "હિન્દુ વણકર",
+    "હિન્દુ ચૌહાણ",
+    "હિન્દુ તડવી",
+    "હિન્દુ ગામીત",
+    "હિન્દુ સોલંકી",
+  ][i],
   category: ["General", "General", "OBC", "SC", "OBC", "ST", "ST", "OBC"][i],
   dob: `${String(10 + i).padStart(2, "0")}/0${(i % 6) + 3}/2010`,
   schoolFee: "200", termFee: "100", admissionFee: "", otherFee: "", totalFee: "300",

@@ -16,6 +16,7 @@ import {
 } from "@/components/results/class-marks-sheet";
 import type { MarksSheetConfig } from "@/lib/results/marks-sheet-config";
 import { useT } from "@/i18n/locale-provider";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 type LoadedData = {
   class: {
@@ -46,7 +47,7 @@ function MarksSheetContent() {
     classId: searchParams.get("classId") || "",
     standard: "",
     section: "",
-    academicYear: "2025-26",
+    academicYear: DEFAULT_ACADEMIC_YEAR,
     studentId: "",
     month: "1",
     year: String(new Date().getFullYear()),

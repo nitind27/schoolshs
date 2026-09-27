@@ -22,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import type { SchoolClass, Student } from "@/generated/prisma/client";
-import { FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { useT } from "@/i18n/locale-provider";
 import "./gr-picker.css";
 
@@ -264,7 +264,7 @@ export function GrSetupPanel({
       const cls = classId ? classes.find((c) => c.id === classId) : undefined;
       const params = new URLSearchParams({
         grNumber: gr,
-        academicYear: cls?.academicYear || academicYear || "2025-26",
+        academicYear: cls?.academicYear || academicYear || DEFAULT_ACADEMIC_YEAR,
       });
       if (classId) params.set("classId", classId);
 
@@ -293,7 +293,7 @@ export function GrSetupPanel({
         const draftBody: Record<string, unknown> = {
           draft: true,
           grNumber: gr,
-          financialYear: cls?.academicYear || academicYear || "2025-26",
+          financialYear: cls?.academicYear || academicYear || DEFAULT_ACADEMIC_YEAR,
           ...lookup.suggested,
         };
         if (classId) draftBody.classId = classId;
@@ -450,7 +450,7 @@ export function GrSetupPanel({
       try {
         const params = new URLSearchParams({
           grNumber: next,
-          academicYear: academicYear || "2025-26",
+          academicYear: academicYear || DEFAULT_ACADEMIC_YEAR,
         });
         if (studentId) params.set("excludeStudentId", studentId);
         const res = await fetch(`/api/students/lookup-gr?${params}`);

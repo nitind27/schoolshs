@@ -144,7 +144,39 @@ export async function GET(request: NextRequest) {
 
     const settings = await prisma.schoolSettings.findUnique({ where: { schoolId } });
 
-    const cards = students.map((student) => {
+    // Many students have Child UID only on their General Register entry — use it as fallback
+    const missingUid = students.filter((s) => !String(s.childUid || "").trim());
+    const grUidByStudent = new Map<string, string>();
+    const grUidByGr = new Map<string, string>();
+    if (missingUid.length) {
+      const grEntries = await prisma.generalRegisterEntry.findMany({
+        where: {
+          schoolId,
+          NOT: { childUidDigits: "" },
+          OR: [
+            { studentId: { in: missingUid.map((s) => s.id) } },
+            { grNumber: { in: missingUid.map((s) => s.grNumber || "").filter(Boolean) } },
+          ],
+        },
+        select: { studentId: true, grNumber: true, childUidDigits: true },
+        orderBy: { updatedAt: "desc" },
+      });
+      for (const e of grEntries) {
+        if (e.studentId && !grUidByStudent.has(e.studentId)) grUidByStudent.set(e.studentId, e.childUidDigits);
+        if (e.grNumber && !grUidByGr.has(e.grNumber)) grUidByGr.set(e.grNumber, e.childUidDigits);
+      }
+    }
+
+    const cards = students.map((rawStudent) => {
+      const student = String(rawStudent.childUid || "").trim()
+        ? rawStudent
+        : {
+            ...rawStudent,
+            childUid:
+              grUidByStudent.get(rawStudent.id) ||
+              (rawStudent.grNumber ? grUidByGr.get(rawStudent.grNumber) : undefined) ||
+              rawStudent.childUid,
+          };
       const studentResults = results.filter((r) => r.studentId === student.id);
       const rc = reportCards.find((r) => r.studentId === student.id);
       const subjectRows = exam.subjects.map((sub) => {

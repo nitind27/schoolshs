@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { AuthError, hashPassword, requireSchoolAuth } from "@/lib/auth";
 import { buildShareUrl, generateShareSlug } from "@/lib/id-card-share";
 import { getRequestPublicOrigin } from "@/lib/env-auth";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
     const classId = body.classId ? String(body.classId) : null;
     const standard = body.standard ? String(body.standard) : null;
     const section = body.section ? String(body.section) : null;
-    const academicYear = String(body.academicYear || "2025-26");
+    const academicYear = String(body.academicYear || DEFAULT_ACADEMIC_YEAR);
     const expiresAt = body.expiresAt ? new Date(body.expiresAt) : null;
 
     if (!username || username.length < 3) {

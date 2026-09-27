@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
 import { studentListName } from "@/lib/student-names";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 function BonafideContent() {
   const t = useT();
@@ -47,7 +48,7 @@ function BonafideContent() {
     classId: "",
     standard: "",
     section: "",
-    academicYear: searchParams.get("academicYear") || "2025-26",
+    academicYear: searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR,
     studentId: lockedStudentId,
     month: "1",
     year: String(new Date().getFullYear()),
@@ -123,19 +124,19 @@ function BonafideContent() {
 
   return (
     <CertificatePrintShell
-      landscape
+      landscape={!isPrimarySongadh}
       title={t("certificates.bonafideTitle")}
       isPreview={isPreview}
       onPreview={showPreview}
       onExitPreview={() => setSource(liveStudent ? "live" : "none")}
       canPrint={!!student}
       packId={packId}
-      printMargin={isPrimarySongadh ? "5mm" : undefined}
+      printMargin={isPrimarySongadh ? "0" : undefined}
     >
       <p className="no-print mb-3 text-xs text-slate-500">
         Format pack: <span className="font-mono">{packId}</span>
         {isPrimarySongadh
-          ? " · Songadh Primary · full A4 · student photo"
+          ? " · Songadh Primary · half A4 · student photo"
           : null}
       </p>
       <CertificateFilters
@@ -170,18 +171,18 @@ function BonafideContent() {
               value={printCopies}
               onChange={(e) => setPrintCopies(Number(e.target.value) as 1 | 2)}
             >
-              <option value={1}>1 copy — 1 A4 page</option>
-              <option value={2}>2 copies — 2 A4 pages (cut &amp; keep)</option>
+              <option value={1}>1 copy — top half of A4</option>
+              <option value={2}>2 copies — both halves of 1 A4 (cut &amp; keep)</option>
             </select>
           </div>
           <p className="text-xs text-slate-500 pb-1">
-            A4 Landscape · 1 full bonafide per page · Scale 100% · Fit to page OFF
+            A4 Portrait · half page per bonafide · dashed cut line · Scale 100% · Fit to page OFF
           </p>
         </div>
       ) : null}
       {student ? (
         <BonafideCertificateView
-          key={`bonafide-${packId}-${student.grNumber || "x"}-${printCopies}`}
+          key={`bonafide-${packId}-${student.grNumber || "x"}${isPrimarySongadh ? "" : `-${printCopies}`}`}
           student={student}
           serialNo={serialNo}
           issueDate={issueDate}

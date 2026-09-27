@@ -8,13 +8,14 @@ import { ClassRegisterView } from "@/components/certificates/class-register";
 import { SAMPLE_CLASS_REGISTER, SAMPLE_CLASS_REGISTER_META } from "@/lib/certificates/sample-data";
 import type { ClassRegisterRow } from "@/lib/certificates/types";
 import { useT } from "@/i18n/locale-provider";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 function filtersFromParams(searchParams: URLSearchParams) {
   return {
     classId: searchParams.get("classId") || "",
     standard: searchParams.get("standard") || "",
     section: searchParams.get("section") || "",
-    academicYear: "2025-26",
+    academicYear: DEFAULT_ACADEMIC_YEAR,
     studentId: "",
     month: searchParams.get("month") || String(new Date().getMonth() + 1),
     year: searchParams.get("year") || String(new Date().getFullYear()),
@@ -64,12 +65,13 @@ function ClassRegisterContent() {
 
   return (
     <CertificatePrintShell
-      landscape
       title={t("certificates.classRegisterTitle")}
       isPreview={source === "preview"}
       onPreview={showPreview}
       onExitPreview={() => setSource(rows.length > 0 ? "live" : "none")}
       canPrint={displayRows.length > 0}
+      pageSize="legal"
+      printMargin="3mm"
     >
       <CertificateFilters value={filters} onChange={setFilters} onLoad={load} showMonth />
       {displayRows.length > 0 ? (

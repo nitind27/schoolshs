@@ -12,6 +12,7 @@ import {
   type PragatiSubjectInput,
   type PragatiSubjectRow,
 } from "@/lib/results/pragati-patrak";
+import { toLatinDigits } from "@/lib/digits";
 import "./songadh-pragati-patrak.css";
 
 export type PragatiPatrakCardData = ResultCardData & {
@@ -33,9 +34,7 @@ export type PragatiPatrakCardData = ResultCardData & {
 };
 
 function toGuDigits(n: number | string | null | undefined): string {
-  if (n == null || n === "") return "";
-  const gu = ["૦", "૧", "૨", "૩", "૪", "૫", "૬", "૭", "૮", "૯"];
-  return String(n).replace(/\d/g, (d) => gu[parseInt(d, 10)]);
+  return toLatinDigits(n);
 }
 
 function dashOr(val: number | string | null | undefined, applicable: boolean) {
@@ -501,7 +500,7 @@ export function SongadhPragatiPatrakCard({ data }: { data: PragatiPatrakCardData
             થી રાબેતા મુજબ શરૂ થશે.
           </li>
           <li>
-            જે વિદ્યાર્થી નવા સત્રથી શાળા છોડવા માંગતા હોય તેમણે તા.૩૧ મે સુધીમાં
+            જે વિદ્યાર્થી નવા સત્રથી શાળા છોડવા માંગતા હોય તેમણે તા.31 મે સુધીમાં
             લેખીત અરજી આપવાની રહેશે. નહિ તો જૂન તથા પ્રથમ સત્રની ફી ભરવાની રહેશે.
           </li>
           <li>

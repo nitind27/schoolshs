@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { useT } from "@/i18n/locale-provider";
 import { studentListName } from "@/lib/student-names";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 function CharacterContent() {
   const t = useT();
@@ -20,7 +21,7 @@ function CharacterContent() {
     classId: "",
     standard: "",
     section: "",
-    academicYear: searchParams.get("academicYear") || "2025-26",
+    academicYear: searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR,
     studentId: lockedStudentId,
     month: "1",
     year: String(new Date().getFullYear()),

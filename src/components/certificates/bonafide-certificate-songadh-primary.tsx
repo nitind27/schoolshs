@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
 import { dateToWords, studentFullName } from "@/lib/certificates/date-to-words";
 import { uploadApiUrl } from "@/lib/student-documents";
@@ -8,17 +9,24 @@ import { uploadApiUrl } from "@/lib/student-documents";
 export const BONAFIDE_PAPER = "#ebf0e4";
 export const BONAFIDE_INK = "#1a1a1a";
 
-const FRAME_ASPECT = "800 / 600";
-const CONTENT_PAD_X = "11.5%";
-const CONTENT_PAD_Y = "13.5%";
-const CONTENT_PAD_EXTRA = "10px 18px";
-const FRAME_INSET_PCT = 2.25;
+/** SVG viewBox 800×600 draws its outer border at 10px inset — bleed it past the sheet edge */
+const FRAME_BLEED = {
+  left: `${(-10 / 780) * 100}%`,
+  top: `${(-10 / 580) * 100}%`,
+  width: `${(800 / 780) * 100}%`,
+  height: `${(600 / 580) * 100}%`,
+} as const;
 const FONT = 'Arial, "Helvetica Neue", Helvetica, "Liberation Sans", sans-serif';
 
-/** Full bonafide on A4 landscape (5mm @page margin → 287×200mm printable) */
-const A4_SHEET = {
-  w: "266mm",
-  h: "200mm",
+/** A4 portrait edge-to-edge (@page margin 0); two half-page slots + cut line centred at 148.5mm */
+const A4 = {
+  printW: "210mm",
+  printH: "297mm",
+  cutH: "3mm",
+  slotH: "147mm",
+  certW: "210mm",
+  certH: "147mm",
+  pad: "14mm 16mm 12mm",
 } as const;
 
 export interface CertStudent {
@@ -31,10 +39,29 @@ export interface CertStudent {
   section?: string | null;
   gender: string;
   caste?: string | null;
+  religion?: string | null;
   category?: string | null;
   photoPath?: string | null;
   idPhotoProcessedPath?: string | null;
 }
+
+type BonafideFields = {
+  school: string;
+  sectionLine: string;
+  address: string;
+  title: string;
+  grNumber: string;
+  serialNo: string;
+  name1: string;
+  name2: string;
+  dob: string;
+  dobWords: string;
+  subCast: string;
+  standard: string;
+  division: string;
+  issueDate: string;
+  sign: string;
+};
 
 function studentPhotoSrc(student: CertStudent): string | null {
   const path = student.idPhotoProcessedPath || student.photoPath;
@@ -52,29 +79,115 @@ function splitNameLines(name: string, firstLineMax = 38): [string, string] {
   return [trimmed.slice(0, firstLineMax).trim(), trimmed.slice(firstLineMax).trim()];
 }
 
+function titleCase(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/(^|[\s\-/(])([a-z])/g, (_, p: string, c: string) => p + c.toUpperCase());
+}
+
+/** Register-style જ્ઞાતિ in English: "Hindu - Chaudhari" */
+function religionCasteEn(s: CertStudent): string {
+  const rel = titleCase(String(s.religion || ""));
+  const caste = titleCase(String(s.caste || s.category || ""));
+  if (!rel) return caste;
+  if (!caste) return rel;
+  if (caste.toLowerCase().startsWith(rel.toLowerCase())) return caste;
+  return `${rel} - ${caste}`;
+}
+
+function initialFields(
+  student: CertStudent,
+  serialNo: string,
+  issueDate: string | undefined,
+  phone: string,
+): BonafideFields {
+  const [name1, name2] = splitNameLines(studentFullName(student));
+  return {
+    school: "SHRI SARVAJANIK HIGH SCHOOL",
+    sectionLine: "( GRANTED / NON GRANTED) PRIMARI SECTION",
+    address: `Navagam, Fort-Songadh, Dist. Tapi. Pin-394670 Ph.No. ${phone}`,
+    title: "BONAFIDE CERTIFICATE",
+    grNumber: student.grNumber || "",
+    serialNo,
+    name1,
+    name2,
+    dob: student.dateOfBirth || "",
+    dobWords: student.dateOfBirth ? dateToWords(student.dateOfBirth, "en") : "",
+    subCast: religionCasteEn(student),
+    standard: student.standard || "",
+    division: student.section || "",
+    issueDate: issueDate || "",
+    sign: "Principal / Head Master",
+  };
+}
+
+/** Inline-editable text; commits on blur so both printed copies stay in sync. */
+function Editable({
+  value,
+  onChange,
+  className,
+  style,
+  as: Tag = "span",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+  style?: React.CSSProperties;
+  as?: "span" | "h1" | "h2" | "p";
+}) {
+  const ref = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (el && document.activeElement !== el && el.textContent !== value) {
+      el.textContent = value;
+    }
+  }, [value]);
+
+  return (
+    <Tag
+      ref={ref as React.Ref<never>}
+      className={`spb-edit${className ? ` ${className}` : ""}`}
+      style={style}
+      contentEditable
+      suppressContentEditableWarning
+      spellCheck={false}
+      onBlur={(e: React.FocusEvent<HTMLElement>) =>
+        onChange((e.currentTarget.textContent || "").replace(/\s+/g, " ").trim())
+      }
+      onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
+      onPaste={(e: React.ClipboardEvent<HTMLElement>) => {
+        e.preventDefault();
+        document.execCommand("insertText", false, e.clipboardData.getData("text/plain"));
+      }}
+    />
+  );
+}
+
 function DotLine({
   value,
+  onChange,
   minWidth = 60,
   flex,
 }: {
-  value?: string;
+  value: string;
+  onChange: (v: string) => void;
   minWidth?: number;
-  flex?: number;
+  flex?: boolean;
 }) {
-  const hasValue = Boolean(value?.trim());
   return (
-    <span
+    <Editable
+      value={value}
+      onChange={onChange}
       className="spb-dot"
-      style={{
-        minWidth,
-        flex: flex ?? undefined,
-        flexGrow: flex ? 1 : undefined,
-        fontWeight: hasValue ? 700 : 400,
-        color: hasValue ? BONAFIDE_INK : "transparent",
-      }}
-    >
-      {hasValue ? value : "\u00a0"}
-    </span>
+      style={{ minWidth, flexGrow: flex ? 1 : undefined, fontWeight: 700 }}
+    />
   );
 }
 
@@ -87,23 +200,14 @@ function BodyLine({ children }: { children: React.ReactNode }) {
 }
 
 function BonafideSheet({
-  student,
-  serialNo,
-  issueDate,
+  fields,
+  set,
   photoSrc,
 }: {
-  student: CertStudent;
-  serialNo: string;
-  issueDate?: string;
+  fields: BonafideFields;
+  set: (key: keyof BonafideFields) => (v: string) => void;
   photoSrc: string | null;
 }) {
-  const school = useCertificateBrand();
-  const name = studentFullName(student);
-  const [nameLine1, nameLine2] = splitNameLines(name);
-  const dobWords = dateToWords(student.dateOfBirth, "en");
-  const subCast = (student.caste || student.category || "").trim();
-  const phone = (school.phone || "222186").trim() || "222186";
-
   return (
     <div className="bonafide-cert-sheet spb-primary-sheet spb-sheet">
       <img
@@ -113,60 +217,61 @@ function BonafideSheet({
         className="bonafide-cert-frame-img spb-primary-frame"
       />
 
-      <div className="spb-photo" aria-label="Student photo">
-        {photoSrc ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photoSrc} alt="" className="spb-photo-img" />
-        ) : null}
-      </div>
-
       <div className="spb-inner">
         <div className="spb-content">
           <div>
-            <h1 className="spb-school">SHRI SARVAJANIK HIGH SCHOOL</h1>
-            <p className="spb-section">( GRANTED / NON GRANTED) PRIMARI SECTION</p>
-            <p className="spb-address">
-              Navagam, Fort-Songadh, Dist. Tapi. Pin-394670 Ph.No. {phone}
-            </p>
-            <h2 className="spb-title">BONAFIDE CERTIFICATE</h2>
+            <div className="spb-top">
+              <span aria-hidden />
+              <div className="spb-head">
+                <Editable as="h1" className="spb-school" value={fields.school} onChange={set("school")} />
+                <Editable as="p" className="spb-section" value={fields.sectionLine} onChange={set("sectionLine")} />
+                <Editable as="p" className="spb-address" value={fields.address} onChange={set("address")} />
+                <Editable as="h2" className="spb-title" value={fields.title} onChange={set("title")} />
+              </div>
+              <div className="spb-photo" aria-label="Student photo">
+                {photoSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photoSrc} alt="" className="spb-photo-img" />
+                ) : null}
+              </div>
+            </div>
 
             <div className="spb-meta-row">
               <span className="spb-meta-left">
                 <Label>G. R. Number</Label>
-                <DotLine value={student.grNumber || ""} minWidth={140} flex={1} />
+                <DotLine value={fields.grNumber} onChange={set("grNumber")} minWidth={140} flex />
               </span>
               <span className="spb-meta-right">
                 <Label>Sr. Number</Label>
-                <DotLine value={serialNo} minWidth={56} />
+                <DotLine value={fields.serialNo} onChange={set("serialNo")} minWidth={56} />
               </span>
             </div>
 
             <div className="spb-fields">
               <BodyLine>
                 <Label>This is to Certify that</Label>
-                <DotLine value={nameLine1} minWidth={100} flex={1} />
+                <DotLine value={fields.name1} onChange={set("name1")} minWidth={100} flex />
               </BodyLine>
               <BodyLine>
-                <DotLine value={nameLine2} minWidth={140} flex={1} />
-                <Label> Is/Was a Bonafide Student of this School.</Label>
+                <DotLine value={fields.name2} onChange={set("name2")} minWidth={140} flex />
+                <Label>Is/Was a Bonafide Student of this School.</Label>
               </BodyLine>
               <BodyLine>
                 <Label>
                   His / Her birth date as recorded in the General Register of the
                   School is
                 </Label>
-                <DotLine value={student.dateOfBirth} minWidth={68} />
+                <DotLine value={fields.dob} onChange={set("dob")} minWidth={68} />
               </BodyLine>
               <BodyLine>
-                <DotLine value="" minWidth={32} />
                 <Label>(in words)</Label>
-                <DotLine value={dobWords} minWidth={120} flex={1} />
+                <DotLine value={fields.dobWords} onChange={set("dobWords")} minWidth={120} flex />
               </BodyLine>
               <BodyLine>
                 <Label>He / She bears good moral character.</Label>
                 <span className="spb-spacer" />
                 <Label>Sub-Cast</Label>
-                <DotLine value={subCast} minWidth={80} />
+                <DotLine value={fields.subCast} onChange={set("subCast")} minWidth={80} />
               </BodyLine>
             </div>
           </div>
@@ -174,16 +279,16 @@ function BonafideSheet({
           <div className="spb-footer">
             <div className="spb-std-row">
               <Label>Std</Label>
-              <DotLine value={student.standard || ""} minWidth={56} />
+              <DotLine value={fields.standard} onChange={set("standard")} minWidth={56} />
               <Label>Divi</Label>
-              <DotLine value={student.section || ""} minWidth={56} />
+              <DotLine value={fields.division} onChange={set("division")} minWidth={56} />
             </div>
             <div className="spb-sign-row">
               <span className="spb-date">
                 <Label>Date :</Label>
-                <DotLine value={issueDate || ""} minWidth={90} />
+                <DotLine value={fields.issueDate} onChange={set("issueDate")} minWidth={90} />
               </span>
-              <span className="spb-sign">Principal / Head Master</span>
+              <Editable className="spb-sign" value={fields.sign} onChange={set("sign")} />
             </div>
           </div>
         </div>
@@ -194,7 +299,8 @@ function BonafideSheet({
 
 /**
  * Songadh Primary bonafide (24261004403 / 24261004404).
- * One full A4 landscape certificate per page; optional 2 pages for duplicate copy.
+ * A4 portrait: each certificate fills one half page, dashed cut line in the middle.
+ * Every text on the certificate is click-to-edit; printed output uses the edited text.
  */
 export function BonafideCertificateView({
   student,
@@ -205,23 +311,49 @@ export function BonafideCertificateView({
   student: CertStudent;
   serialNo: string;
   issueDate?: string;
-  /** 1 = single page; 2 = two full A4 pages (duplicate for cut & keep) */
+  /** 1 = top half only; 2 = both halves (cut & keep duplicate) */
   copies?: 1 | 2;
 }) {
+  const brand = useCertificateBrand();
+  const phone = (brand.phone || "222186").trim() || "222186";
   const photoSrc = studentPhotoSrc(student);
-  const sheetProps = { student, serialNo, issueDate, photoSrc };
-  const pageCount = copies === 2 ? 2 : 1;
+
+  const [fields, setFields] = useState<BonafideFields>(() =>
+    initialFields(student, serialNo, issueDate, phone),
+  );
+  useEffect(() => {
+    setFields((f) => (f.serialNo === serialNo ? f : { ...f, serialNo }));
+  }, [serialNo]);
+  useEffect(() => {
+    setFields((f) => (f.issueDate === (issueDate || "") ? f : { ...f, issueDate: issueDate || "" }));
+  }, [issueDate]);
+
+  const set = (key: keyof BonafideFields) => (v: string) =>
+    setFields((f) => (f[key] === v ? f : { ...f, [key]: v }));
+  const reset = () => setFields(initialFields(student, serialNo, issueDate, phone));
+
+  const sheetProps = { fields, set, photoSrc };
 
   return (
     <div className="spb-root spb-print">
-      {Array.from({ length: pageCount }, (_, i) => (
-        <div
-          key={i}
-          className={`spb-a4-page${i < pageCount - 1 ? " spb-a4-page--break" : ""}`}
-        >
+      <div className="spb-edit-hint no-print">
+        <span>✎ Certificate par kisi bhi text par click karke edit karo — print me wahi aayega.</span>
+        <button type="button" onClick={reset}>
+          Reset
+        </button>
+      </div>
+      <div className="spb-a4-page">
+        <div className="spb-slot">
           <BonafideSheet {...sheetProps} />
         </div>
-      ))}
+        <div className="spb-cut" aria-hidden>
+          <span className="spb-cut-icon">✂</span>
+          <span className="spb-cut-line" />
+        </div>
+        <div className="spb-slot">
+          {copies === 2 ? <BonafideSheet {...sheetProps} /> : null}
+        </div>
+      </div>
 
       <style jsx global>{`
         .spb-root {
@@ -229,45 +361,137 @@ export function BonafideCertificateView({
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
-        .spb-a4-page {
-          width: ${A4_SHEET.w};
-          max-width: 100%;
-          margin: 0 auto 16px;
-          box-sizing: border-box;
+        .spb-edit-hint {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          max-width: 210mm;
+          margin: 0 auto 10px;
+          padding: 8px 12px;
+          font-size: 13px;
+          color: #1e3a8a;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          border-radius: 10px;
         }
-        .spb-a4-page:last-child {
-          margin-bottom: 0;
+        .spb-edit-hint button {
+          flex: 0 0 auto;
+          padding: 4px 12px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #1e3a8a;
+          background: #fff;
+          border: 1px solid #93c5fd;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+        .spb-edit {
+          outline: none;
+          cursor: text;
+          border-radius: 2px;
+        }
+        @media screen {
+          .spb-edit:hover {
+            background: rgba(59, 130, 246, 0.08);
+          }
+          .spb-edit:focus {
+            background: rgba(59, 130, 246, 0.12);
+            box-shadow: 0 0 0 1px #3b82f6;
+          }
+        }
+        .spb-a4-page {
+          width: 210mm;
+          height: 297mm;
+          padding: 0;
+          margin: 0 auto;
+          box-sizing: border-box;
+          background: #fff;
+          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+          display: flex;
+          flex-direction: column;
+        }
+        .spb-slot {
+          height: ${A4.slotH};
+          width: 100%;
+          display: flex;
+          flex: 0 0 auto;
+        }
+        .spb-cut {
+          height: ${A4.cutH};
+          flex: 0 0 auto;
+          display: flex;
+          align-items: center;
+          gap: 1.5mm;
+          padding: 0 4mm;
+          box-sizing: border-box;
+          color: #555;
+        }
+        .spb-cut-icon {
+          font-size: 11pt;
+          line-height: 1;
+          font-family: "Segoe UI Symbol", "DejaVu Sans", sans-serif;
+        }
+        .spb-cut-line {
+          flex: 1;
+          border-top: 1.2px dashed #555;
         }
         .bonafide-cert-sheet.spb-sheet {
-          width: 100%;
-          height: ${A4_SHEET.h};
+          width: ${A4.certW};
+          height: ${A4.certH};
           position: relative;
-          aspect-ratio: ${FRAME_ASPECT};
           background: ${BONAFIDE_PAPER};
           box-sizing: border-box;
           font-family: ${FONT};
-          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+          overflow: hidden;
         }
         .spb-sheet .bonafide-cert-frame-img {
           position: absolute;
-          top: ${FRAME_INSET_PCT}%;
-          left: ${FRAME_INSET_PCT}%;
-          width: ${100 - FRAME_INSET_PCT * 2}%;
-          height: ${100 - FRAME_INSET_PCT * 2}%;
+          top: ${FRAME_BLEED.top};
+          left: ${FRAME_BLEED.left};
+          width: ${FRAME_BLEED.width};
+          height: ${FRAME_BLEED.height};
+          max-width: none;
           pointer-events: none;
           object-fit: fill;
           print-color-adjust: exact;
           -webkit-print-color-adjust: exact;
         }
+        .spb-inner {
+          position: relative;
+          z-index: 1;
+          box-sizing: border-box;
+          width: 100%;
+          height: 100%;
+          padding: ${A4.pad};
+          color: ${BONAFIDE_INK};
+          display: flex;
+          flex-direction: column;
+        }
+        .spb-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          box-sizing: border-box;
+          min-height: 0;
+        }
+        .spb-top {
+          display: grid;
+          grid-template-columns: 22mm 1fr 22mm;
+          align-items: start;
+          gap: 2mm;
+          margin-bottom: 1.5mm;
+        }
+        .spb-head {
+          text-align: center;
+          padding-top: 1mm;
+        }
         .spb-photo {
-          position: absolute;
-          top: 14%;
-          right: 13%;
-          width: 11%;
-          height: 22%;
-          border: 1.4px solid ${BONAFIDE_INK};
+          width: 22mm;
+          height: 26mm;
+          border: 1.2px solid ${BONAFIDE_INK};
           background: ${BONAFIDE_PAPER};
-          z-index: 2;
           box-sizing: border-box;
           overflow: hidden;
         }
@@ -278,96 +502,68 @@ export function BonafideCertificateView({
           object-position: center top;
           display: block;
         }
-        .spb-inner {
-          position: relative;
-          z-index: 1;
-          box-sizing: border-box;
-          width: 100%;
-          height: 100%;
-          padding: ${CONTENT_PAD_Y} ${CONTENT_PAD_X};
-          color: ${BONAFIDE_INK};
-          display: flex;
-          flex-direction: column;
-        }
-        .spb-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          padding: ${CONTENT_PAD_EXTRA};
-          box-sizing: border-box;
-          min-height: 0;
-        }
         .spb-school {
-          text-align: center;
-          font-size: 16pt;
+          font-size: 15pt;
           font-weight: 700;
           letter-spacing: 0.04em;
           text-transform: uppercase;
           color: ${BONAFIDE_INK};
-          margin: 0 0 2px;
+          margin: 0 0 1px;
           line-height: 1.15;
-          padding-right: 12%;
+          white-space: nowrap;
         }
         .spb-section {
-          text-align: center;
-          font-size: 9pt;
+          font-size: 8pt;
           color: ${BONAFIDE_INK};
-          margin: 0 0 2px;
+          margin: 0 0 1px;
           letter-spacing: 0.02em;
-          line-height: 1.35;
-          padding-right: 12%;
+          line-height: 1.3;
         }
         .spb-address {
-          text-align: center;
-          font-size: 8.5pt;
+          font-size: 7.5pt;
           color: ${BONAFIDE_INK};
-          margin: 0 0 12px;
-          letter-spacing: 0.01em;
-          line-height: 1.35;
-          padding-right: 12%;
+          margin: 0 0 2.5mm;
+          line-height: 1.3;
+          white-space: nowrap;
         }
         .spb-title {
-          text-align: center;
-          font-size: 11pt;
+          font-size: 10pt;
           font-weight: 700;
           text-decoration: underline;
           text-decoration-thickness: 1.5px;
           text-underline-offset: 3px;
           color: ${BONAFIDE_INK};
-          margin: 0 0 14px;
+          margin: 0;
           letter-spacing: 0.08em;
-          padding-right: 12%;
         }
         .spb-meta-row {
           display: flex;
           justify-content: space-between;
           align-items: baseline;
-          gap: 16px;
-          margin-bottom: 2px;
-          font-size: 10pt;
+          gap: 8mm;
+          font-size: 9pt;
         }
         .spb-meta-left,
         .spb-meta-right {
           display: inline-flex;
           align-items: baseline;
-          gap: 4px;
+          gap: 2mm;
         }
         .spb-meta-left {
           flex: 1;
           min-width: 0;
         }
         .spb-fields {
-          margin-top: 2px;
+          margin-top: 1px;
         }
         .spb-body-line {
           display: flex;
           flex-wrap: wrap;
           align-items: baseline;
-          font-size: 10pt;
-          line-height: 2.35;
+          font-size: 9pt;
+          line-height: 2.2;
           letter-spacing: 0.015em;
-          gap: 2px;
+          gap: 0 2mm;
         }
         .spb-label {
           color: ${BONAFIDE_INK};
@@ -376,36 +572,34 @@ export function BonafideCertificateView({
         }
         .spb-dot {
           display: inline-block;
-          border-bottom: 1.5px dotted ${BONAFIDE_INK};
+          border-bottom: 1.3px dotted ${BONAFIDE_INK};
           min-height: 1.15em;
           line-height: 1.2;
-          padding: 0 3px 2px;
+          padding: 0 1.5mm 2px;
           vertical-align: baseline;
         }
         .spb-spacer {
           flex: 1;
           min-width: 16px;
         }
-        .spb-footer {
-          margin-top: 6px;
-        }
         .spb-std-row {
           display: flex;
           align-items: baseline;
-          gap: 6px;
-          font-size: 10pt;
+          gap: 2mm;
+          font-size: 9pt;
         }
+        .spb-std-row .spb-dot { margin-right: 6mm; }
         .spb-sign-row {
           display: flex;
           justify-content: space-between;
           align-items: flex-end;
-          font-size: 10pt;
-          margin-top: 10px;
+          font-size: 9pt;
+          margin-top: 3mm;
         }
         .spb-date {
           display: inline-flex;
           align-items: baseline;
-          gap: 6px;
+          gap: 2mm;
         }
         .spb-sign {
           color: ${BONAFIDE_INK};
@@ -415,8 +609,8 @@ export function BonafideCertificateView({
 
         @media print {
           @page {
-            size: A4 landscape;
-            margin: 5mm;
+            size: A4 portrait;
+            margin: 0;
           }
           html,
           body {
@@ -427,22 +621,22 @@ export function BonafideCertificateView({
             padding: 0 !important;
           }
           .spb-a4-page {
-            width: ${A4_SHEET.w} !important;
-            max-width: none !important;
-            margin: 0 auto !important;
+            width: ${A4.printW} !important;
+            height: ${A4.printH} !important;
             padding: 0 !important;
-          }
-          .spb-a4-page--break {
-            page-break-after: always;
-            break-after: page;
-          }
-          .bonafide-cert-sheet.spb-sheet {
-            width: ${A4_SHEET.w} !important;
-            height: ${A4_SHEET.h} !important;
-            background: ${BONAFIDE_PAPER} !important;
+            margin: 0 !important;
             box-shadow: none !important;
+            overflow: hidden !important;
             page-break-inside: avoid;
             break-inside: avoid;
+            page-break-after: avoid;
+            break-after: avoid;
+          }
+          .bonafide-cert-sheet.spb-sheet {
+            width: ${A4.certW} !important;
+            height: ${A4.certH} !important;
+            background: ${BONAFIDE_PAPER} !important;
+            box-shadow: none !important;
           }
           .spb-primary-sheet,
           .spb-primary-sheet * {

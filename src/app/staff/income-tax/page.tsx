@@ -275,9 +275,9 @@ export default function IncomeTaxPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* ૧ પગારની આવક */}
+                  {/* 1 પગારની આવક */}
                   <tr>
-                    <td className="it-no">૧</td>
+                    <td className="it-no">1</td>
                     <td>પગારની આવક</td>
                     <td className="it-amt"></td>
                     <td className="it-amt">{numInput("salaryIncome")}</td>
@@ -295,7 +295,7 @@ export default function IncomeTaxPage() {
                     <td className="it-amt"></td>
                   </tr>
                   <tr>
-                    <td className="it-no">૨</td>
+                    <td className="it-no">2</td>
                     <td className="pl-6">બાદ: (A) વાહનભથ્થું u/s 10 (14)</td>
                     <td className="it-amt">{numInput("vehicleAllowance")}</td>
                     <td className="it-amt"></td>
@@ -313,23 +313,23 @@ export default function IncomeTaxPage() {
                     <td className="it-amt">{fmt(c.incomeAfterSalaryDeductions)}</td>
                   </tr>
 
-                  {/* ૩ મકાન લોન વ્યાજ */}
+                  {/* 3 મકાન લોન વ્યાજ */}
                   <tr>
-                    <td className="it-no">૩</td>
+                    <td className="it-no">3</td>
                     <td>મકાન લોન વ્યાજ u/s 24 (i) (vi) Rs.2,00,000/ સુધી</td>
                     <td className="it-amt">{numInput("housingLoanInterest")}</td>
                     <td className="it-amt"></td>
                   </tr>
                   <tr className="it-sum">
-                    <td className="it-no">૪</td>
+                    <td className="it-no">4</td>
                     <td className="text-right pr-3">કુલ (2+3)</td>
                     <td className="it-amt"></td>
                     <td className="it-amt">{fmt(c.incomeAfterHousing)}</td>
                   </tr>
 
-                  {/* ૫ અન્ય આવક */}
+                  {/* 5 અન્ય આવક */}
                   <tr>
-                    <td className="it-no">૫</td>
+                    <td className="it-no">5</td>
                     <td>(A) NSC વ્યાજ</td>
                     <td className="it-amt">{numInput("otherIncomeNsc")}</td>
                     <td className="it-amt"></td>
@@ -359,15 +359,15 @@ export default function IncomeTaxPage() {
                     <td className="it-amt">{fmt(c.otherIncomeTotal)}</td>
                   </tr>
                   <tr className="it-grand">
-                    <td className="it-no">૬</td>
+                    <td className="it-no">6</td>
                     <td className="text-right pr-3">ગ્રોસ ટોટલ આવક (4+5)</td>
                     <td className="it-amt"></td>
                     <td className="it-amt">{fmt(c.grossTotalIncome)}</td>
                   </tr>
 
-                  {/* ૭ ડિડકશન ચેપ્ટર VI-A */}
+                  {/* 7 ડિડકશન ચેપ્ટર VI-A */}
                   <tr className="it-sub">
-                    <td className="it-no">૭</td>
+                    <td className="it-no">7</td>
                     <td colSpan={3}>ડિડકશન ચેપ્ટર VI-A (80 CCC &amp; CCD Rs.1,50,000/- સુધી)</td>
                   </tr>
                   {IT_80C_FIELDS.map((f, i) => (
@@ -380,7 +380,7 @@ export default function IncomeTaxPage() {
                   ))}
                   <tr className="it-sum it-cap">
                     <td className="it-no"></td>
-                    <td className="text-right pr-3">કુલ (૧ થી ૧૪) મહત્તમ 150000 ની મર્યાદામાં</td>
+                    <td className="text-right pr-3">કુલ (1 થી 14) મહત્તમ 150000 ની મર્યાદામાં</td>
                     <td className="it-amt">{fmt(c.ded80CTotal)}</td>
                     <td className="it-amt">{fmt(c.ded80CTotal)}</td>
                   </tr>
@@ -399,24 +399,24 @@ export default function IncomeTaxPage() {
                     <td className="it-amt">{fmt(c.deductionVIATotal)}</td>
                   </tr>
 
-                  {/* ૮-૯ કરપાત્ર આવક */}
+                  {/* 8-9 કરપાત્ર આવક */}
                   <tr className="it-grand">
-                    <td className="it-no">૮</td>
-                    <td className="text-right pr-3">ચોખ્ખી કરપાત્ર આવક (૬-૭)</td>
+                    <td className="it-no">8</td>
+                    <td className="text-right pr-3">ચોખ્ખી કરપાત્ર આવક (6-7)</td>
                     <td className="it-amt"></td>
                     <td className="it-amt">{fmt(c.netTaxableIncome)}</td>
                   </tr>
                   <tr className="it-sum">
-                    <td className="it-no">૯</td>
+                    <td className="it-no">9</td>
                     <td className="text-right pr-3">કુલ કરપાત્ર આવક પુરા દશ રૂપિયામાં</td>
                     <td className="it-amt"></td>
                     <td className="it-amt">{fmt(c.roundedTaxable)}</td>
                   </tr>
 
-                  {/* ૧૦ સ્લેબ */}
+                  {/* 10 સ્લેબ */}
                   {c.slabTaxes.map((s, i) => (
                     <tr key={i}>
-                      <td className="it-no">{i === 0 ? "૧૦" : ""}</td>
+                      <td className="it-no">{i === 0 ? "10" : ""}</td>
                       <td>{slabLabels[i][0]}</td>
                       <td className="it-amt it-rate">{slabLabels[i][1]}</td>
                       <td className="it-amt">{fmt(s.amount)}</td>
@@ -429,35 +429,35 @@ export default function IncomeTaxPage() {
                     <td className="it-amt">{fmt(c.rebate87A)}</td>
                   </tr>
 
-                  {/* ૧૧-૧૫ */}
+                  {/* 11-15 */}
                   <tr className="it-sum">
-                    <td className="it-no">૧૧</td>
+                    <td className="it-no">11</td>
                     <td className="text-right pr-3">ભરવાપાત્ર ઇન્કમટેક્ષ</td>
                     <td className="it-amt"></td>
                     <td className="it-amt">{fmt(c.taxBeforeRebate - c.rebate87A)}</td>
                   </tr>
                   <tr>
-                    <td className="it-no">૧૨</td>
-                    <td className="text-right pr-3">એજ્યુકેશન સેસ ૪%</td>
+                    <td className="it-no">12</td>
+                    <td className="text-right pr-3">એજ્યુકેશન સેસ 4%</td>
                     <td className="it-amt"></td>
                     <td className="it-amt">{fmt(c.cess)}</td>
                   </tr>
                   <tr className="it-grand">
-                    <td className="it-no">૧૩</td>
-                    <td className="text-right pr-3">કુલ ભરવાપાત્ર ટેક્ષ (૧૧+૧૨)</td>
+                    <td className="it-no">13</td>
+                    <td className="text-right pr-3">કુલ ભરવાપાત્ર ટેક્ષ (11+12)</td>
                     <td className="it-amt"></td>
                     <td className="it-amt">{fmt(c.totalTaxPayable)}</td>
                   </tr>
                   <tr>
-                    <td className="it-no">૧૪</td>
+                    <td className="it-no">14</td>
                     <td className="text-right pr-3">વર્ષ દરમ્યાન થયેલ કપાત (TDS)</td>
                     <td className="it-amt"></td>
                     <td className="it-amt">{numInput("tdsPaid")}</td>
                   </tr>
                   <tr className={c.refundOrPayable >= 0 ? "it-refund" : "it-due"}>
-                    <td className="it-no">૧૫</td>
+                    <td className="it-no">15</td>
                     <td className="text-right pr-3">
-                      {c.refundOrPayable >= 0 ? "રિફંડ પાત્ર રકમ (૧૪-૧૩)" : "બાકી ભરવાપાત્ર રકમ (૧૩-૧૪)"}
+                      {c.refundOrPayable >= 0 ? "રિફંડ પાત્ર રકમ (14-13)" : "બાકી ભરવાપાત્ર રકમ (13-14)"}
                       {c.refundOrPayable > 0 && <span className="ml-2 text-[11px] font-semibold">Paid Extra TDS</span>}
                     </td>
                     <td className="it-amt"></td>

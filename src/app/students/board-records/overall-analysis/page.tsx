@@ -7,7 +7,7 @@ import { OverallResultAnalysisForm } from "@/components/board-records/overall-re
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/ui/date-field";
 import { Select } from "@/components/ui/select";
-import { FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import type { OverallResultAnalysisPayload } from "@/lib/board-records/overall-result-analysis";
 import { useT } from "@/i18n/locale-provider";
 import { ArrowLeft, RefreshCw } from "lucide-react";
@@ -22,7 +22,7 @@ export default function OverallResultAnalysisPage() {
   const boardBackHref = pathname.startsWith("/teacher")
     ? "/teacher/board-records"
     : "/students/board-records";
-  const [academicYear, setAcademicYear] = useState("2025-26");
+  const [academicYear, setAcademicYear] = useState(DEFAULT_ACADEMIC_YEAR);
   const [classId, setClassId] = useState("");
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [boardResultDate, setBoardResultDate] = useState("");

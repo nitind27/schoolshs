@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  GUJARAT_DISTRICTS,
+import { GUJARAT_DISTRICTS,
   CATEGORIES,
   GENDERS,
   RELIGIONS,
@@ -19,6 +18,7 @@ import {
   BLOOD_GROUPS,
   standardToCourseName,
   standardToCurrentYear,
+  DEFAULT_ACADEMIC_YEAR,
 } from "@/lib/constants";
 import { PRE_MATRIC_SCHEMES, POST_MATRIC_SCHEMES } from "@/lib/dg-portal";
 import { ChevronLeft, ChevronRight, Save, CheckCircle, Sparkles, Cloud, CloudOff, Search, School } from "lucide-react";
@@ -169,7 +169,7 @@ export function StudentForm({
     isHosteler: false,
     isOrphan: false,
     admissionType: "Regular",
-    financialYear: "2025-26",
+    financialYear: DEFAULT_ACADEMIC_YEAR,
     classId: isEditMode
       ? initialData.classId || initialClassId || undefined
       : undefined,
@@ -620,7 +620,7 @@ export function StudentForm({
         isHosteler: false,
         isOrphan: false,
         admissionType: "Regular",
-        financialYear: prev.financialYear || mapped.financialYear || "2025-26",
+        financialYear: prev.financialYear || mapped.financialYear || DEFAULT_ACADEMIC_YEAR,
         familySize: 0,
         ...formFields,
         apaarId: apaar,
@@ -779,7 +779,7 @@ export function StudentForm({
     <div className="sf-wrap">
       <GrSetupPanel
         classes={classes}
-        academicYear={form.financialYear || "2025-26"}
+        academicYear={form.financialYear || DEFAULT_ACADEMIC_YEAR}
         classId={form.classId || ""}
         grNumber={form.grNumber || ""}
         locked={grLocked}
@@ -815,7 +815,7 @@ export function StudentForm({
             isHosteler: false,
             isOrphan: false,
             admissionType: "Regular",
-            financialYear: prev.financialYear || "2025-26",
+            financialYear: prev.financialYear || DEFAULT_ACADEMIC_YEAR,
             classId: undefined,
             grNumber: "",
             familySize: 0,
@@ -1502,7 +1502,7 @@ export function StudentForm({
                       </span>
                     </div>
                   )}
-                  <Select label={t("fields.financialYear")} required options={FINANCIAL_YEARS} value={form.financialYear || "2025-26"} onChange={(e) => update("financialYear", e.target.value)} />
+                  <Select label={t("fields.financialYear")} required options={FINANCIAL_YEARS} value={form.financialYear || DEFAULT_ACADEMIC_YEAR} onChange={(e) => update("financialYear", e.target.value)} />
                   <Select
                     label={t("fields.courseType")}
                     required
@@ -1659,7 +1659,7 @@ export function StudentForm({
                       label={t("fields.financialYear")}
                       required
                       options={FINANCIAL_YEARS}
-                      value={form.financialYear || "2025-26"}
+                      value={form.financialYear || DEFAULT_ACADEMIC_YEAR}
                       onChange={(e) => {
                         const year = e.target.value;
                         setForm((prev) => ({

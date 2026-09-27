@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { setClassRelease, getClassRelease } from "@/lib/timetable-server";
 import { prisma } from "@/lib/db";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
     const body = await request.json();
     const classId = String(body.classId || "").trim();
-    const academicYear = String(body.academicYear || "2025-26").trim();
+    const academicYear = String(body.academicYear || DEFAULT_ACADEMIC_YEAR).trim();
     const release = body.release !== false;
 
     if (!classId) {
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth();
     const classId = request.nextUrl.searchParams.get("classId") || "";
-    const academicYear = request.nextUrl.searchParams.get("academicYear") || "2025-26";
+    const academicYear = request.nextUrl.searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
 
     if (!classId) {
       return NextResponse.json({ error: "classId required" }, { status: 400 });

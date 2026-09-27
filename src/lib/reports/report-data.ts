@@ -9,7 +9,7 @@ import {
 import { buildStaffAttendanceRows } from "@/lib/staff-hr";
 import { enabledDays } from "@/lib/timetable";
 import { getOrCreateTimetableConfig } from "@/lib/timetable-server";
-import { CSV_HEADERS, CSV_HEADER_LABELS } from "@/lib/constants";
+import { CSV_HEADERS, CSV_HEADER_LABELS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import type { ReportPayload, ReportQuery } from "./types";
 
 function filterSummary(q: ReportQuery): string {
@@ -334,7 +334,7 @@ async function fetchTimetable(
   q: ReportQuery,
   base: Omit<ReportPayload, "title" | "sheets">,
 ): Promise<ReportPayload> {
-  const academicYear = q.academicYear || "2025-26";
+  const academicYear = q.academicYear || DEFAULT_ACADEMIC_YEAR;
   const dayConfig = await getOrCreateTimetableConfig(schoolId, academicYear);
 
   const classes = await prisma.schoolClass.findMany({

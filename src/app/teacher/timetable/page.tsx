@@ -8,7 +8,7 @@ import { teacherTheme as tp } from "@/components/teacher/teacher-theme";
 import { Button } from "@/components/ui/button";
 import { TimetableGrid } from "@/components/timetable/timetable-grid";
 import { TimetablePrintTable } from "@/components/timetable/timetable-print-table";
-import { FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { Select } from "@/components/ui/select";
 import type { DayScheduleConfig, TimetableCell } from "@/lib/timetable";
 import { periodForDay } from "@/lib/timetable";
@@ -17,7 +17,7 @@ import "@/components/timetable/timetable.css";
 
 export default function TeacherTimetablePage() {
   const t = useT();
-  const [academicYear, setAcademicYear] = useState("2025-26");
+  const [academicYear, setAcademicYear] = useState(DEFAULT_ACADEMIC_YEAR);
   const [loading, setLoading] = useState(true);
   const [schedule, setSchedule] = useState<DayScheduleConfig[]>([]);
   const [entries, setEntries] = useState<TimetableCell[]>([]);

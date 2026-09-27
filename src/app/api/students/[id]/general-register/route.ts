@@ -5,6 +5,7 @@ import {
   mapEntryToGrRow,
   mapStudentToGrRow,
 } from "@/lib/certificates/general-register";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export async function GET(
   _request: NextRequest,
@@ -21,7 +22,7 @@ export async function GET(
       return NextResponse.json({ error: "Student not found" }, { status: 404 });
     }
 
-    let academicYear = student.financialYear || "2025-26";
+    let academicYear = student.financialYear || DEFAULT_ACADEMIC_YEAR;
     let classLabel = "";
     let classId = student.classId || "";
 

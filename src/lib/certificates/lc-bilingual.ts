@@ -33,6 +33,7 @@ const CASTE_GU: Record<string, string> = {
   gosavi: "ગોસાવી",
   suryavanshi: "સુર્યવંશી",
   kokani: "કોંકણી",
+  konkani: "કોંકણી",
   nayka: "નાયકા",
   naika: "નાયકા",
   mishra: "મિશ્રા",
@@ -62,6 +63,14 @@ const CASTE_GU: Record<string, string> = {
   desai: "દેસાઈ",
   mehta: "મહેતા",
   vala: "વાળા",
+  mallah: "મલ્લાહ",
+  malla: "મલ્લાહ",
+  umar: "ઉમર",
+  vankar: "વણકર",
+  wankar: "વણકર",
+  sonwane: "સોનવાણે",
+  sonavane: "સોનવાણે",
+  sonwani: "સોનવાણે",
 };
 
 const PLACE_GU: Record<string, string> = {
@@ -172,14 +181,48 @@ export function lcMotherGu(s: StudentNameLike): string {
   return lcGuText(s.motherName, s.motherNameGu);
 }
 
-export function lcReligionCasteEn(s: { religion?: string | null; caste?: string | null }): string {
-  return [s.religion, s.caste].filter(Boolean).join(" / ");
+function titleCaseEn(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/(^|[\s\-/(])([a-z])/g, (_, p: string, c: string) => p + c.toUpperCase());
 }
 
+/** "Hindu Chaudhari" — no slash; skips religion when caste already starts with it. */
+export function lcReligionCasteEn(s: { religion?: string | null; caste?: string | null }): string {
+  const rel = titleCaseEn(String(s.religion || ""));
+  const caste = titleCaseEn(String(s.caste || ""));
+  if (!rel) return caste;
+  if (!caste) return rel;
+  if (caste.toLowerCase().startsWith(rel.toLowerCase())) return caste;
+  return `${rel} ${caste}`;
+}
+
+/** "હિન્દુ ચૌધરી" — same format as register જ્ઞાતિ column. */
 export function lcReligionCasteGu(s: { religion?: string | null; caste?: string | null }): string {
+  return formatReligionCasteGu(s);
+}
+
+/** Register / patrak જ્ઞાતિ column: e.g. "હિન્દુ પાટીલ" (space, Gujarati). */
+export function formatReligionCasteGu(s: {
+  religion?: string | null;
+  caste?: string | null;
+}): string {
   const rel = lcGuText(s.religion);
   const caste = lcGuText(s.caste);
-  return [rel, caste].filter(Boolean).join(" / ");
+  if (!rel && !caste) return "";
+  if (!rel) return caste;
+  if (!caste) return rel;
+  // Avoid "હિન્દુ હિન્દુ પાટીલ" when caste already includes religion
+  if (caste.startsWith(rel) || caste.includes(` ${rel}`) || caste.includes(`${rel}-`)) {
+    return caste;
+  }
+  const casteEn = String(s.caste || "").trim().toLowerCase();
+  const relEn = String(s.religion || "").trim().toLowerCase();
+  if (relEn && casteEn.startsWith(relEn)) {
+    return caste;
+  }
+  return `${rel} ${caste}`;
 }
 
 export function lcBirthPlaceEn(s: {

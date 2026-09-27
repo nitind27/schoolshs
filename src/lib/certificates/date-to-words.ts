@@ -13,7 +13,30 @@ function twoDigits(n: number, lang: "en" | "gu"): string {
   return oWord ? `${tWord} ${oWord}` : tWord;
 }
 
-/** DD/MM/YYYY → words */
+const ordinalOnesEn = ["", "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth", "Eleventh", "Twelfth", "Thirteenth", "Fourteenth", "Fifteenth", "Sixteenth", "Seventeenth", "Eighteenth", "Nineteenth"];
+const ordinalTensEn = ["", "", "Twentieth", "Thirtieth"];
+
+function dayOrdinalEn(n: number): string {
+  if (n < 20) return ordinalOnesEn[n] ?? String(n);
+  const t = Math.floor(n / 10);
+  const o = n % 10;
+  if (o === 0) return ordinalTensEn[t] ?? String(n);
+  return `${tensEn[t]} ${ordinalOnesEn[o]}`;
+}
+
+function yearWordsEn(y: number): string {
+  if (y <= 0 || y > 9999) return String(y);
+  const thousands = Math.floor(y / 1000);
+  const hundreds = Math.floor((y % 1000) / 100);
+  const rest = y % 100;
+  const parts: string[] = [];
+  if (thousands) parts.push(`${onesEn[thousands]} Thousand`);
+  if (hundreds) parts.push(`${onesEn[hundreds]} Hundred`);
+  if (rest) parts.push(twoDigits(rest, "en"));
+  return parts.join(" ");
+}
+
+/** DD/MM/YYYY → words (en: "Fourth January Two Thousand Fourteen") */
 export function dateToWords(dateStr: string, lang: "en" | "gu" = "en"): string {
   const parts = dateStr.split(/[\/\-\.]/);
   if (parts.length < 3) return dateStr;
@@ -23,14 +46,10 @@ export function dateToWords(dateStr: string, lang: "en" | "gu" = "en"): string {
   const monthsEn = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const monthsGu = ["જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન", "જુલાઈ", "ઑગસ્ટ", "સપ્ટેમ્બર", "ઑક્ટોબર", "નવેમ્બર", "ડિસેમ્બર"];
 
-  const day = twoDigits(d, lang);
-  const month = lang === "en" ? monthsEn[m - 1] : monthsGu[m - 1];
-  const year = lang === "en" ? `${y}` : `${y}`;
-
   if (lang === "gu") {
-    return `${day} ${month} ${year}`;
+    return `${twoDigits(d, "gu")} ${monthsGu[m - 1]} ${y}`;
   }
-  return `${day} ${month} ${year}`;
+  return `${dayOrdinalEn(d)} ${monthsEn[m - 1]} ${yearWordsEn(y)}`;
 }
 
 export function studentFullName(s: {

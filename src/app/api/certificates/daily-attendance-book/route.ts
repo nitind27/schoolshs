@@ -15,6 +15,7 @@ import {
   type DailyAttendanceBookPayload,
   type DailyAttendanceBookRow,
 } from "@/lib/certificates/daily-attendance-book";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 function todayIso() {
   const d = new Date();
@@ -129,7 +130,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const dateParam = searchParams.get("date") || todayIso();
     const dateIso = dateParam.includes("-") ? dateParam.slice(0, 10) : displayToIso(dateParam) || todayIso();
-    const academicYear = searchParams.get("academicYear") || "2025-26";
+    const academicYear = searchParams.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
 
     const payload = await buildBookPayload(session.schoolId, dateIso, academicYear);
     return NextResponse.json(payload);
@@ -145,7 +146,7 @@ export async function PUT(request: NextRequest) {
     const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
     const body = await request.json();
     const dateIso = String(body.dateIso || body.date || todayIso()).slice(0, 10);
-    const academicYear = String(body.academicYear || "2025-26");
+    const academicYear = String(body.academicYear || DEFAULT_ACADEMIC_YEAR);
     const rows = (body.rows || []) as DailyAttendanceBookRow[];
     const workingDay = body.workingDay != null ? parseInt(String(body.workingDay), 10) : null;
     const shift = String(body.shift || "");

@@ -3222,10 +3222,10 @@ const en = {
     newVoucher: "New Voucher",
     fyNotConfigured:
       'Financial year not configured. Select FY and click "Set Active FY" to begin.',
-    flowEyebrow: "Simple 5-step flow",
+    flowEyebrow: "Simple 6-step flow",
     flowTitle: "How school accounting works",
     flowIntro:
-      "Each financial year has its own ledgers and vouchers. Switching FY does not delete data — it only shows that year’s books.",
+      "Complete books → print CA pack (PDF) → give / submit to CA. Switching FY does not delete data — it only shows that year’s books.",
     flow1Title: "1. Select FY",
     flow1Desc: "Activate the year you want to work in (Apr–Mar).",
     flow2Title: "2. Ledgers",
@@ -3234,9 +3234,42 @@ const en = {
     flow3Desc: "Post Receipt / Payment / Journal / Contra entries.",
     flow4Title: "4. Check reports",
     flow4Desc: "Day book, Trial Balance, P&L — verify totals.",
-    flow5Title: "5. Submit to CA",
-    flow5Desc: "Lock books and send to Chartered Accountant for audit.",
+    flow5Title: "5. Print CA pack",
+    flow5Desc: "Download / print full PDF for Chartered Accountant.",
+    flow6Title: "6. Submit to CA",
+    flow6Desc: "Lock books and send to CA Portal for online audit.",
     activeFyBadge: "Working in {{year}}",
+    caPackTitle: "CA Accounting Pack",
+    caPackSubtitle: "FY {{year}} — print or Save as PDF for your Chartered Accountant",
+    caPackPrint: "Print pack",
+    caPackPdf: "Save as PDF",
+    caPackThenSubmit: "Back → Submit to CA",
+    caPackHint:
+      "Use Print → choose “Save as PDF” / “Microsoft Print to PDF”. Give this file to your CA. CA Portal stays the same for online verification.",
+    caPackNoFy: "Set an active financial year first.",
+    caPackCoverEyebrow: "School accounts — audit pack",
+    caPackForCa: "Prepared for Chartered Accountant",
+    caPackFy: "Financial Year {{year}}",
+    caPackGenerated: "Generated on {{when}}",
+    caPackCounts: "{{accounts}} ledgers · {{vouchers}} vouchers",
+    caPackTocCover: "Cover & school details",
+    caPackTocTb: "Trial Balance",
+    caPackTocPl: "Income & Expenditure (P&L)",
+    caPackTocBs: "Balance Sheet",
+    caPackTocVouchers: "Voucher register + line details",
+    caPackUnbalanced: "unbalanced",
+    caPackBsOk: "Balance sheet balanced (Assets = Liabilities & Fund).",
+    caPackBsWarn: "Balance sheet difference found — review ledgers before handing to CA.",
+    caPackVoucherDetail: "Voucher line details",
+    caPackSignNote: "Signatures (optional for hard copy)",
+    caPackSignClerk: "Clerk / Accountant",
+    caPackSignPrincipal: "Principal / Head Master",
+    caPackSignCa: "Chartered Accountant",
+    caPackCardTitle: "5. Print / PDF for CA",
+    caPackCardDesc:
+      "Full pack: cover, Trial Balance, P&L, Balance Sheet, all vouchers — print or download PDF to give your CA.",
+    caPackOpen: "Open CA pack",
+    caPackNeedVouchers: "Add vouchers first, then print the pack.",
     fyPickerTitle: "Choose financial year",
     fyPickerDesc:
       "Vouchers stay inside their FY. If you open an empty year, standard ledgers are created automatically.",
@@ -3252,7 +3285,7 @@ const en = {
     emptyFyHint:
       "No vouchers in this FY yet. Create Receipt (fees in) or Payment (expenses out).",
     submitToCaEasy:
-      "When entries are complete → Submit here → books lock → CA reviews in CA Portal.",
+      "Flow: finish entries → Print CA pack (PDF) → give to CA and/or Submit here → books lock → CA reviews in CA Portal.",
     submitNeedVouchers: "Add at least 1 voucher before submitting to CA.",
     submitNeedFixFlags: "Fix {{count}} flagged/query voucher(s) first.",
     submitCheckAdmin: "Logged in as School Admin",
@@ -4604,7 +4637,7 @@ const en = {
       "daily-attendance-book":
         "Official daily register — all classes, boys/girls present/absent, A4 portrait",
       "class-register":
-        "Class register with fees and 31-day attendance grid (43 rows)",
+        "Class register — left (fees/name) and right (31-day attendance) on separate Legal portrait pages; join to align rows (43)",
       "general-register":
         "Official General Register (વય પત્રક) — 15 columns bilingual format",
       "monthly-reports":

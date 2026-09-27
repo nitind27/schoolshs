@@ -5,6 +5,7 @@ import {
   findStudentsByGrNumber,
   grEntryToStudentPartial,
 } from "@/lib/gr-student-sync";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     const params = request.nextUrl.searchParams;
     const grNumber = String(params.get("grNumber") || "").trim();
     const classId = params.get("classId") || "";
-    const academicYear = params.get("academicYear") || "2025-26";
+    const academicYear = params.get("academicYear") || DEFAULT_ACADEMIC_YEAR;
     const excludeStudentId = String(params.get("excludeStudentId") || "").trim();
 
     if (!grNumber) {

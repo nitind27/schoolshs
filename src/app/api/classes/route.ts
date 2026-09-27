@@ -6,6 +6,7 @@ import { enrolledStudentStatusFilter } from "@/lib/student-list-filters";
 import { seedClassSubjects } from "@/lib/class-subjects";
 import { assertStaffInSchool, assertClassTeacherAvailable } from "@/lib/school-assertions";
 import { getTeacherScope } from "@/lib/teacher-scope";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 function normalizeStream(standard: string, stream: unknown): string {
   const s = String(stream || "").trim();
@@ -18,7 +19,7 @@ export function normalizeClass(body: Record<string, unknown>) {
   const section = String(body.section || "A").trim().toUpperCase();
   const stream = normalizeStream(standard, body.stream);
   // Academic year is not user-facing — keep a stable default for DB uniqueness.
-  const academicYear = "2025-26";
+  const academicYear = DEFAULT_ACADEMIC_YEAR;
   const name =
     String(body.name || "").trim() ||
     buildClassName(standard, section, stream || undefined);

@@ -3,6 +3,7 @@ import "server-only";
 import type { GeneralRegisterEntry, Student } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { entryPayloadFromStudent } from "@/lib/certificates/general-register";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 export { stableDraftAadhaarFromGr, grEntryToStudentPartial } from "@/lib/gr-student-utils";
 
@@ -79,7 +80,7 @@ export async function syncGrEntryForStudent(
     select: { udiseCode: true },
   });
 
-  let academicYear = student.financialYear || "2025-26";
+  let academicYear = student.financialYear || DEFAULT_ACADEMIC_YEAR;
   if (student.classId) {
     const cls = await prisma.schoolClass.findFirst({
       where: { id: student.classId, schoolId },

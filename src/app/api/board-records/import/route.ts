@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { AuthError } from "@/lib/auth";
 import { requireBoardRecordsAuth } from "@/lib/board-records-auth";
 import { parseSeatInput } from "@/lib/gseb/fetch-ssc-result";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 interface ImportRow {
   section: string;
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     const session = await requireBoardRecordsAuth(["school_admin", "clerk"]);
     const body = await request.json();
     const csv = String(body.csv || "");
-    const academicYear = String(body.academicYear || "2025-26");
+    const academicYear = String(body.academicYear || DEFAULT_ACADEMIC_YEAR);
 
     const rows = parseCsv(csv);
     if (!rows.length) {

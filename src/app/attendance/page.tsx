@@ -21,6 +21,7 @@ import {
   type AttendanceViewFilters,
 } from "@/lib/attendance-view-filters";
 import { ClipboardList, Printer, Save, CheckCircle2 } from "lucide-react";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 function AttendanceContent() {
   const t = useT();
@@ -29,7 +30,7 @@ function AttendanceContent() {
     classId: searchParams.get("classId") || "",
     standard: "",
     section: "",
-    academicYear: "2025-26",
+    academicYear: DEFAULT_ACADEMIC_YEAR,
     studentId: "",
     month: String(new Date().getMonth() + 1),
     year: String(new Date().getFullYear()),

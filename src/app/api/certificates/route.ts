@@ -117,6 +117,7 @@ function buildClassRegisterFromAttendance(
     id: string;
     grNumber?: string | null;
     caste?: string | null;
+    religion?: string | null;
     category?: string | null;
     dateOfBirth: string;
     firstName: string;

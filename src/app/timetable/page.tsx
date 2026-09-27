@@ -10,7 +10,7 @@ import { MetricCard } from "@/components/ui/card";
 import { TimetableGrid } from "@/components/timetable/timetable-grid";
 import { TimetableScheduleEditor } from "@/components/timetable/timetable-schedule-editor";
 import { TimetablePrintTable } from "@/components/timetable/timetable-print-table";
-import { FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { formatTime12h, type DayScheduleConfig, type TimetableCell } from "@/lib/timetable";
 import { useT } from "@/i18n/locale-provider";
 import "@/components/timetable/timetable.css";
@@ -34,7 +34,7 @@ export default function TimetablePage() {
   const [schedule, setSchedule] = useState<DayScheduleConfig[]>([]);
   const [allDays, setAllDays] = useState<DayScheduleConfig[]>([]);
   const [classId, setClassId] = useState("");
-  const [academicYear, setAcademicYear] = useState("2025-26");
+  const [academicYear, setAcademicYear] = useState(DEFAULT_ACADEMIC_YEAR);
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState<ClassOption | null>(null);
   const [isReleased, setIsReleased] = useState(false);

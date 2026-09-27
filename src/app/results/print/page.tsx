@@ -190,7 +190,10 @@ function PrintInner() {
     schoolCode: effectiveSchoolCode,
     brand: {
       nameGu: packBrand.nameGu,
-      sectionGu: "પ્રાથમિક વિભાગ - સોનગઢ",
+      sectionGu:
+        effectiveSchoolCode === "24261004404"
+          ? "પ્રાથમિક અને ઉચ્ચ પ્રાથમિક વિભાગ - સોનગઢ"
+          : "પ્રાથમિક વિભાગ - સોનગઢ",
       diseCode: packBrand.diseCode || effectiveSchoolCode,
       logoPath: "/shs/logo.png",
     },

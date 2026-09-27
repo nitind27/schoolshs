@@ -20,7 +20,7 @@ import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/loader";
 import { InfoModal } from "@/components/ui/info-modal";
 import { useT } from "@/i18n/locale-provider";
-import { FINANCIAL_YEARS } from "@/lib/constants";
+import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import { makeTermKey, type ExamTermRole } from "@/lib/results/exam-terms";
@@ -71,7 +71,7 @@ function defaultTemplate(): TemplateItem[] {
 export default function ExamsHubPage() {
   const t = useT();
   const [tab, setTab] = useState<TabId>("template");
-  const [year, setYear] = useState("2025-26");
+  const [year, setYear] = useState(DEFAULT_ACADEMIC_YEAR);
   const [classes, setClasses] = useState<ClassExamRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

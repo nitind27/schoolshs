@@ -323,7 +323,7 @@ model SchoolSettings {
   schoolAddress        String?
   schoolPhone          String?
   schoolEmail          String?
-  academicYear         String  @default("2025-26")
+  academicYear         String  @default("2026-27")
   logoPath             String?
   /**
    * Principal signature image for ID cards / certificates
@@ -380,7 +380,7 @@ model IdCardShareLink {
   classId      String?
   standard     String?
   section      String?
-  academicYear String    @default("2025-26")
+  academicYear String    @default("2026-27")
   expiresAt    DateTime?
   isActive     Boolean   @default(true)
   lastAccessAt DateTime?
@@ -688,7 +688,7 @@ model SchoolClass {
    * Arts / Commerce for 11–12; empty for 9–10
    */
   stream              String                  @default("")
-  academicYear        String                  @default("2025-26")
+  academicYear        String                  @default("2026-27")
   institutionName     String?
   institutionDistrict String?
   classTeacherId      String?
@@ -986,7 +986,7 @@ model TimetableEntry {
   school       School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   classId      String
   class        SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
-  academicYear String      @default("2025-26")
+  academicYear String      @default("2026-27")
   dayOfWeek    Int
   periodIndex  Int
   subject      String
@@ -1005,7 +1005,7 @@ model SchoolTimetableConfig {
   updatedAt    DateTime @updatedAt
   schoolId     String
   school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  academicYear String   @default("2025-26")
+  academicYear String   @default("2026-27")
   daysJson     String   @db.Text
 
   @@unique([schoolId, academicYear])
@@ -1020,7 +1020,7 @@ model ClassTimetableRelease {
   school       School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   classId      String
   class        SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
-  academicYear String      @default("2025-26")
+  academicYear String      @default("2026-27")
   isReleased   Boolean     @default(false)
   releasedAt   DateTime?
   releasedBy   String?
@@ -1628,7 +1628,7 @@ model Holiday {
   nameGu       String?
   /// public | school | optional
   type         String   @default("public")
-  academicYear String   @default("2025-26")
+  academicYear String   @default("2026-27")
   description  String?  @db.Text
 
   @@unique([schoolId, date])
@@ -1649,7 +1649,7 @@ model Activity {
   type         String    @default("party")
   /// ISO date YYYY-MM-DD
   date         String
-  academicYear String    @default("2025-26")
+  academicYear String    @default("2026-27")
   venue        String?
   description  String?   @db.Text
   createdById  String?
