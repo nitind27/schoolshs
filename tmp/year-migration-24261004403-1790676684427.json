@@ -1,0 +1,48 @@
+{
+  "schoolId": "cmsrcr9gm002ge5l6mpx7ewai",
+  "code": "24261004403",
+  "from": "2025-26",
+  "to": "2026-27",
+  "previousSettingsYear": "2026-27",
+  "ids": {
+    "schoolClass": [
+      "cmsrcvz2k002pe5l6d4pqqbzj",
+      "cmtqopdvl00000off7k4iunrj"
+    ],
+    "student": [
+      "cmtqopej8000b0offla78qf9h",
+      "cmtqopexp000c0offa7sdn2fp",
+      "cmtqopff4000d0offndk86558",
+      "cmtqopg3s000e0off7sy3h6yh",
+      "cmtqopgn5000f0off2z0tdtim",
+      "cmtqoph0f000g0offm1fol8oj",
+      "cmtqophfw000h0off4ydf7mnz",
+      "cmtqophsr000i0offfpp3udvt",
+      "cmtqopi5u000j0offpsigax0t",
+      "cmtqopiki000k0off02bm8p0z",
+      "cmtqopj42000l0offfdvd3f0d",
+      "cmtqopji8000m0offh0yokcam",
+      "cmtqoz55800005kffey2hdiu1",
+      "cmtqoz5na00015kffllt1kfd5",
+      "cmtqoz61o00025kffykbqmvh8",
+      "cmtqoz6j100035kff7x5r2ue6",
+      "cmtqoz74800045kffzjkwwi6w",
+      "cmtqoz7qi00055kffw5ltdc9w",
+      "cmtqoz83l00065kffupu9ivc7",
+      "cmtqoz8oi00075kffqh6qvl0b",
+      "cmtqoz93800085kffbm4oiw0n"
+    ],
+    "generalRegisterEntry": [],
+    "exam": [
+      "cmtqvyx3w00a7ivl60hvrqbak"
+    ],
+    "reportCard": [],
+    "timetableEntry": [],
+    "schoolTimetableConfig": [],
+    "classTimetableRelease": [],
+    "dailyAttendanceBook": [],
+    "holiday": [],
+    "activity": [],
+    "idCardShareLink": []
+  }
+}

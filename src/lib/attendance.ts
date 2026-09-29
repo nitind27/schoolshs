@@ -1,6 +1,6 @@
 import type { ClassRegisterRow } from "@/lib/certificates/types";
 import { studentFullName } from "@/lib/certificates/date-to-words";
-import { formatReligionCasteGu } from "@/lib/certificates/lc-bilingual";
+import { formatCategoryCode, formatReligionCasteGu } from "@/lib/certificates/lc-bilingual";
 import { studentFullNameGu, type StudentNameLike } from "@/lib/student-names";
 
 export type AttendanceMark = "P" | "A" | "H" | "";
@@ -199,7 +199,7 @@ export function buildAttendanceRows(
       rollNumber: s.rollNumber || "",
       grNumber: s.grNumber || "",
       caste: formatReligionCasteGu({ religion: s.religion, caste: s.caste }),
-      category: s.category || "",
+      category: formatCategoryCode(s.category),
       dob: s.dateOfBirth,
       schoolFee,
       termFee,

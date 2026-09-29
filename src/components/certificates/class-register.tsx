@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import type { ClassRegisterRow } from "@/lib/certificates/types";
 import { GUJARATI_MONTHS } from "@/lib/certificates/types";
 
@@ -24,11 +25,16 @@ const HDR1_H = "8mm";
 const HDR2_H = "6mm";
 const FOOT_H = "5.5mm";
 
-function padRows(rows: ClassRegisterRow[]): ClassRegisterRow[] {
-  const out = [...rows];
-  while (out.length < ROWS) {
-    const n = out.length + 1;
-    out.push({
+/** Split into pages of ROWS students; the last page is padded with blank numbered rows. */
+function paginateRows(rows: ClassRegisterRow[]): ClassRegisterRow[][] {
+  const pages: ClassRegisterRow[][] = [];
+  for (let i = 0; i < rows.length; i += ROWS) pages.push(rows.slice(i, i + ROWS));
+  if (!pages.length) pages.push([]);
+  const last = pages[pages.length - 1]!;
+  const start = (pages.length - 1) * ROWS;
+  while (last.length < ROWS) {
+    const n = start + last.length + 1;
+    last.push({
       grNumber: "",
       caste: "",
       category: "",
@@ -47,7 +53,7 @@ function padRows(rows: ClassRegisterRow[]): ClassRegisterRow[] {
       note: "",
     });
   }
-  return out.slice(0, ROWS);
+  return pages;
 }
 
 /**
@@ -66,23 +72,26 @@ export function ClassRegisterView({
   standard: string;
   section: string;
 }) {
-  const data = padRows(rows);
+  const pages = paginateRows(rows);
   const monthName = GUJARATI_MONTHS[parseInt(month, 10) - 1] || month;
 
   return (
     <div className="cr-root">
+      {pages.map((data, pageIdx) => (
+      <Fragment key={pageIdx}>
       <div className="cr-screen-label no-print">
-        પાનું 1–2 — જોડેલું (ડાબું | જમણું) · Print: Legal 8.5×14 in · Portrait · જોડો ત્યારે હરોળ મેળ ખાય
+        પાનું {pageIdx * 2 + 1}–{pageIdx * 2 + 2} — જોડેલું (ડાબું | જમણું) · Print: Legal 8.5×14 in · Portrait · જોડો ત્યારે હરોળ મેળ ખાય
       </div>
 
       <div className="cr-spread-join">
         {/* ── LEFT page ── */}
         <div className="cr-sheet cr-left-sheet">
-          <div className="cr-page-marker no-print">1 · ડાબું</div>
+          <div className="cr-page-marker no-print">{pageIdx * 2 + 1} · ડાબું</div>
           <table className="cr-tbl cr-left-tbl">
             <colgroup>
               <col className="cr-col-gr" />
               <col className="cr-col-caste" />
+              <col className="cr-col-cat" />
               <col className="cr-col-dob" />
               <col className="cr-col-fee" />
               <col className="cr-col-fee" />
@@ -99,6 +108,9 @@ export function ClassRegisterView({
                 </th>
                 <th rowSpan={2} className="cr-w-caste">
                   જ્ઞાતિ
+                </th>
+                <th rowSpan={2} className="cr-w-cat">
+                  કેટેગરી
                 </th>
                 <th rowSpan={2} className="cr-w-dob">
                   જન્મ તારીખ
@@ -125,7 +137,10 @@ export function ClassRegisterView({
               {data.map((r) => (
                 <tr key={`L-${r.serial}`}>
                   <td>{r.grNumber}</td>
-                  <td className="cr-c">{r.caste}</td>
+                  <td className="cr-c cr-caste-cell" title={r.caste}>
+                    <span className="cr-caste-txt">{r.caste}</span>
+                  </td>
+                  <td className="cr-c cr-cat-cell">{r.category}</td>
                   <td>{r.dob}</td>
                   <td className="cr-c cr-fee-cell">{r.schoolFee}</td>
                   <td className="cr-c cr-fee-cell">{r.termFee}</td>
@@ -139,7 +154,7 @@ export function ClassRegisterView({
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={10} className="cr-foot-lbl">
+                <td colSpan={11} className="cr-foot-lbl">
                   કુલ સરવાળો રૂ. ___________
                 </td>
               </tr>
@@ -151,7 +166,7 @@ export function ClassRegisterView({
 
         {/* ── RIGHT page ── */}
         <div className="cr-sheet cr-right-sheet">
-          <div className="cr-page-marker no-print">2 · જમણું</div>
+          <div className="cr-page-marker no-print">{pageIdx * 2 + 2} · જમણું</div>
           <table className="cr-tbl cr-right-tbl">
             <thead>
               <tr className="cr-h1">
@@ -204,6 +219,8 @@ export function ClassRegisterView({
           </table>
         </div>
       </div>
+      </Fragment>
+      ))}
 
       <style jsx global>{`
         .cr-root {
@@ -299,8 +316,9 @@ export function ClassRegisterView({
 
         /* Legal left sheet: GR / caste / DOB readable; fees tight; name largest */
         .cr-left-tbl .cr-col-gr { width: 14mm; }
-        .cr-left-tbl .cr-col-caste { width: 24mm; }
-        .cr-left-tbl .cr-col-dob { width: 20mm; }
+        .cr-left-tbl .cr-col-caste { width: 26mm; }
+        .cr-left-tbl .cr-col-cat { width: 15mm; }
+        .cr-left-tbl .cr-col-dob { width: 18mm; }
         .cr-left-tbl .cr-col-fee { width: 8mm; }
         .cr-left-tbl .cr-col-ser { width: 8mm; }
         .cr-left-tbl .cr-col-name { width: auto; }
@@ -340,11 +358,31 @@ export function ClassRegisterView({
           font-size: 7.5pt;
         }
         .cr-w-caste {
-          width: 24mm;
+          width: 26mm;
           font-size: 7pt;
         }
+        .cr-w-cat {
+          width: 15mm;
+          font-size: 7pt;
+        }
+        .cr-cat-cell {
+          font-size: 6.5pt;
+        }
+        .cr-tbl td.cr-caste-cell {
+          white-space: normal;
+          font-size: 7pt;
+          line-height: 1.05;
+        }
+        .cr-caste-txt {
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          line-clamp: 2;
+          overflow: hidden;
+          overflow-wrap: anywhere;
+        }
         .cr-w-dob {
-          width: 20mm;
+          width: 18mm;
           font-size: 7pt;
         }
         .cr-fee,
@@ -410,7 +448,7 @@ export function ClassRegisterView({
             justify-content: center;
             width: max-content;
             max-width: none;
-            margin: 0 auto;
+            margin: 0 auto 24px;
             overflow-x: auto;
           }
 
@@ -521,6 +559,9 @@ export function ClassRegisterView({
 
           .cr-right-sheet {
             padding: ${LEGAL.padY} ${LEGAL.padX} ${LEGAL.padY} 1.5mm !important;
+          }
+
+          .cr-spread-join:last-of-type .cr-right-sheet {
             page-break-after: auto !important;
             break-after: auto !important;
           }

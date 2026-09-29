@@ -356,7 +356,7 @@ function useAttendanceDayBlanks(rows: ClassRegisterRow[], month: string, year: s
 
 const RIGHT_BODY_COLS = 31 + 1 + 3 + 1; // days | ser | 3 totals | note
 const LEFT_SHEET2_COLS = 10; // gr caste dob 4fees cat ser name
-const LEFT_SHEET3_COLS = 11; // gr caste dob 5fees sign ser name
+const LEFT_SHEET3_COLS = 12; // gr caste dob 5fees cat sign ser name
 
 /**
  * Legal portrait: LEFT + RIGHT as separate print pages.
@@ -438,16 +438,29 @@ function RegisterSpread({
           <PageMarker n={leftPageNo} centered />
         </div>
         <table className="patrak-tbl patrak-unified patrak-reg-left-only">
+          <colgroup>
+            <col className="patrak-lc-gr" />
+            <col className="patrak-lc-caste" />
+            <col className="patrak-lc-dob" />
+            <col className="patrak-lc-fee" />
+            <col className="patrak-lc-fee" />
+            <col className="patrak-lc-fee" />
+            <col className="patrak-lc-fee" />
+            {isSheet3 && <col className="patrak-lc-date" />}
+            <col className="patrak-lc-cat" />
+            {isSheet3 && <col className="patrak-lc-sign" />}
+            <col className="patrak-lc-ser" />
+            <col className="patrak-lc-name" />
+          </colgroup>
           <thead>
             <tr className="patrak-reg-h1">
               <th rowSpan={2} className="patrak-w-gr patrak-vhdr"><span>{"\u0A9C\u0AA8\u0AB0\u0AB2 \u0AB0\u0A9C\u0AC0\u0AB8\u0ACD\u0A9F\u0AB0 \u0AA8\u0A82\u0AAC\u0AB0"}</span></th>
               <th rowSpan={2} className="patrak-vhdr patrak-w-caste"><span>{"\u0A9C\u0ACD\u0A9E\u0ABE\u0AA4\u0ABF"}</span></th>
               <th rowSpan={2} className="patrak-w-dob patrak-vhdr"><span>{"\u0A9C\u0AA8\u0ACD\u0AAE \u0AA4\u0ABE\u0AB0\u0AC0\u0A96"}</span></th>
               <th colSpan={isSheet3 ? 5 : 4} className="patrak-fee-group">{"\u0AAE\u0AB3\u0AC7\u0AB2\u0AC0 \u0AAB\u0AC0"}</th>
-              {isSheet3 ? (
+              <th rowSpan={2} className="patrak-vhdr patrak-w-cat"><span>{"\u0A95\u0AC7\u0A9F\u0AC7\u0A97\u0AB0\u0AC0"}</span></th>
+              {isSheet3 && (
                 <th rowSpan={2} className="patrak-vhdr patrak-w-sign"><span>{"\u0AAB\u0AC0 \u0AB2\u0AC7\u0AA8\u0ABE\u0AB0\u0AA8\u0AC0 \u0AB8\u0AB9\u0AC0"}</span></th>
-              ) : (
-                <th rowSpan={2} className="patrak-vhdr patrak-w-cat"><span>{"\u0A95\u0AC7\u0A9F\u0AC7\u0A97\u0AB0\u0AC0"}</span></th>
               )}
               <th rowSpan={2} className="patrak-w-ser patrak-vhdr"><span>{"\u0A95\u0ACD\u0AB0\u0AAE\u0ABE\u0A82\u0A95"}</span></th>
               <th rowSpan={2} className="patrak-w-name patrak-name-hdr">{STUDENT_NAME_HDR}</th>
@@ -466,20 +479,17 @@ function RegisterSpread({
             {rows.map((r) => (
               <tr key={`L-${r.serial}`}>
                 <td>{r.grNumber ? g(r.grNumber) : ""}</td>
-                <td className="patrak-c">{r.caste}</td>
+                <td className="patrak-c patrak-caste-cell" title={r.caste}>
+                  <span className="patrak-caste-txt">{r.caste}</span>
+                </td>
                 <td>{r.dob ? g(r.dob) : ""}</td>
                 <td>{r.termFee ? g(r.termFee) : ""}</td>
                 <td>{r.admissionFee ? g(r.admissionFee) : ""}</td>
                 <td>{r.otherFee ? g(r.otherFee) : ""}</td>
                 <td>{r.totalFee ? g(r.totalFee) : ""}</td>
-                {isSheet3 ? (
-                  <>
-                    <td />
-                    <td />
-                  </>
-                ) : (
-                  <td className="patrak-c">{r.category}</td>
-                )}
+                {isSheet3 && <td />}
+                <td className="patrak-c patrak-cat-cell">{r.category}</td>
+                {isSheet3 && <td />}
                 <td className="patrak-c patrak-ser-cell">{g(r.serial)}</td>
                 <td className="patrak-name-cell font-gujarati">{r.name}</td>
               </tr>
@@ -1465,10 +1475,33 @@ export function MonthlyAttendancePatrakView({
           text-align: center;
           font-size: 6.5pt;
         }
-        .patrak-root .patrak-reg-left-only .patrak-w-gr { width: 14mm; }
-        .patrak-root .patrak-reg-left-only .patrak-w-dob { width: 18mm; }
-        .patrak-root .patrak-reg-left-only .patrak-w-caste { width: 22mm; }
-        .patrak-root .patrak-reg-left-only .patrak-w-cat { width: 14mm; }
+        /* Left register page: fixed mm columns (same for sheet 2 and 3, and class-register); name takes the rest */
+        .patrak-root .patrak-reg-left-only col.patrak-lc-gr { width: 14mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-caste { width: 26mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-dob { width: 18mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-fee { width: 10mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-date { width: 10mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-cat { width: 15mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-sign { width: 12mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-ser { width: 10mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-name { width: auto; }
+        .patrak-root .patrak-reg-left-only th.patrak-w-name { width: auto !important; min-width: 0 !important; }
+        .patrak-root .patrak-unified td.patrak-caste-cell {
+          white-space: normal;
+          font-size: 7pt;
+          line-height: 1.05;
+          text-align: center;
+          vertical-align: middle;
+        }
+        .patrak-root .patrak-caste-txt {
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          line-clamp: 2;
+          overflow: hidden;
+          overflow-wrap: anywhere;
+        }
+        .patrak-root .patrak-unified td.patrak-cat-cell { font-size: 6.5pt; }
         .patrak-root .patrak-reg-left-only .patrak-w-ser { width: 10mm !important; min-width: 10mm; }
         .patrak-root .patrak-reg-left-only .patrak-w-name { width: auto; min-width: 55mm; }
         .patrak-root .patrak-reg-left-only .patrak-fee-sub { width: 10mm; }
