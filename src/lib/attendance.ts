@@ -217,6 +217,16 @@ export function buildAttendanceRows(
   });
 }
 
+/** Printed registers leave the total columns blank until the month has at least one attendance mark. */
 export function toClassRegisterRows(rows: AttendanceRow[]): ClassRegisterRow[] {
-  return rows.map(({ studentId: _id, rollNumber: _r, ...rest }) => rest);
+  return rows.map(({ studentId: _id, rollNumber: _r, ...rest }) => {
+    const hasEntry = countMarkedDays(rest.attendance) > 0;
+    const nonZero = (v: string) => (parseInt(v || "0", 10) > 0 ? v : "");
+    return {
+      ...rest,
+      monthTotal: hasEntry ? rest.monthTotal : "",
+      prevTotal: nonZero(rest.prevTotal),
+      cumulative: hasEntry ? rest.cumulative : "",
+    };
+  });
 }
