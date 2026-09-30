@@ -18,15 +18,38 @@ import { emptyPatrakClassification, emptyPatrakMovementRow, PATRAK_TYPE_ROWS } f
 
 function countByGender(students: { gender: string }[]) {
   const boys = students.filter((s) => s.gender === "Male").length;
-  const girls = students.filter((s) => s.gender === "Female").length;
+  const girls = students.length - boys;
   return { boys, girls };
 }
 
-function categoryToPatrakRow(category: string): PatrakRowKey {
-  const c = category.toUpperCase();
+const MINORITY_RELIGIONS = new Set(["MUSLIM", "CHRISTIAN", "SIKH", "PUNJABI", "JAIN", "PARSI", "BUDDHIST"]);
+
+function normCategory(category: string | null | undefined): string {
+  return String(category || "").toUpperCase().replace(/[\s._\-/]/g, "");
+}
+
+function categoryToPatrakRow(category: string, religion: string): PatrakRowKey {
+  const c = normCategory(category);
   if (c === "SC") return "govtSc";
   if (c === "ST") return "govtSt";
-  return "fullFee";
+  if (c === "DNT" || c === "VJ") return "denotifiedTribe";
+  if (c === "NTDNT" || c === "NT" || c === "NOMADIC") return "nomadicTribe";
+  if (c === "OBC" || c === "SEBC" || c === "BC") return "baxiSocial";
+  if (c === "EWS") return "baxiEconomic";
+  if (c === "MINORITY") return "minorityReligious";
+  if (c === "OPEN" || c === "GENERAL" || c === "GEN" || !c) {
+    return MINORITY_RELIGIONS.has(religion.toUpperCase()) ? "minorityReligious" : "fullFee";
+  }
+  return "other";
+}
+
+type PatrakCasteGroup = "ujaniyat" | "madhyam" | "pachhat";
+
+function categoryToCasteGroup(category: string): PatrakCasteGroup {
+  const c = normCategory(category);
+  if (c === "SC" || c === "ST") return "pachhat";
+  if (["OBC", "SEBC", "BC", "NTDNT", "NT", "DNT", "VJ", "NOMADIC", "MINORITY"].includes(c)) return "madhyam";
+  return "ujaniyat";
 }
 
 function buildPatrak(
@@ -39,7 +62,7 @@ function buildPatrak(
   ) as MonthlyPatrakData["movement"];
 
   for (const s of students) {
-    const key = categoryToPatrakRow(s.category);
+    const key = categoryToPatrakRow(s.category, s.religion || "");
     if (s.gender === "Male") {
       movement[key].opening.boys++;
       movement[key].closing.boys++;
@@ -52,22 +75,19 @@ function buildPatrak(
   movement.total.closing = { ...total };
 
   const cls = emptyPatrakClassification();
+  // "બીજા" columns take the listed non-Hindu religions; everyone else is grouped by category.
   for (const s of students) {
-    const c = s.category.toUpperCase();
-    if (c.includes("UJAN") || c === "NT" || c === "NOMADIC") cls.ujaniyat++;
-    else if (c.includes("MADHYAM")) cls.madhyam++;
-    else if (c === "OBC" || c === "SEBC" || c.includes("PACHHAT") || c.includes("BC")) cls.pachhat++;
-
-    const rel = s.religion;
-    if (rel === "Muslim") cls.other.muslim++;
-    else if (rel === "Sikh") cls.other.sikh++;
-    else if (rel === "Parsi") cls.other.parsi++;
-    else if (rel === "Christian") cls.other.christian++;
-    else if (rel === "Jain") cls.other.jain++;
+    const rel = String(s.religion || "").toUpperCase();
+    if (rel === "MUSLIM") cls.other.muslim++;
+    else if (rel === "SIKH" || rel === "PUNJABI") cls.other.sikh++;
+    else if (rel === "PARSI") cls.other.parsi++;
+    else if (rel === "CHRISTIAN") cls.other.christian++;
+    else if (rel === "JAIN") cls.other.jain++;
+    else cls[categoryToCasteGroup(s.category)]++;
   }
   cls.groupTotal = cls.ujaniyat + cls.madhyam + cls.pachhat;
   cls.other.total = cls.other.jain + cls.other.parsi + cls.other.muslim + cls.other.sikh + cls.other.christian;
-  cls.grandTotal = students.length;
+  cls.grandTotal = cls.groupTotal + cls.other.total;
 
   return { ...meta, movement, classification: cls };
 }
