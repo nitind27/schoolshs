@@ -480,9 +480,7 @@ function RegisterSpread({
               <tr key={`L-${r.serial}`}>
                 <td>{r.grNumber ? g(r.grNumber) : ""}</td>
                 <td className="patrak-c patrak-caste-cell" title={r.caste}>
-                  <span className={`patrak-caste-txt${Array.from(r.caste || "").length > 14 ? " patrak-caste-long" : ""}`}>
-                    {r.caste}
-                  </span>
+                  <span className="patrak-caste-txt">{r.caste}</span>
                 </td>
                 <td className="patrak-dob-cell">{r.dob ? g(r.dob) : ""}</td>
                 <td>{r.termFee ? g(r.termFee) : ""}</td>
@@ -1480,12 +1478,12 @@ export function MonthlyAttendancePatrakView({
         }
         .patrak-root .patrak-unified th.patrak-day-h { font-weight: 700; }
         /* Left register page: fixed mm columns (same for sheet 2 and 3, and class-register); name takes the rest */
-        .patrak-root .patrak-reg-left-only col.patrak-lc-gr { width: 14mm; }
-        .patrak-root .patrak-reg-left-only col.patrak-lc-caste { width: 26mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-gr { width: 12mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-caste { width: 33mm; }
         .patrak-root .patrak-reg-left-only col.patrak-lc-dob { width: 21mm; }
         .patrak-root .patrak-reg-left-only col.patrak-lc-fee { width: 10mm; }
         .patrak-root .patrak-reg-left-only col.patrak-lc-date { width: 10mm; }
-        .patrak-root .patrak-reg-left-only col.patrak-lc-cat { width: 15mm; }
+        .patrak-root .patrak-reg-left-only col.patrak-lc-cat { width: 14mm; }
         .patrak-root .patrak-reg-left-only col.patrak-lc-sign { width: 12mm; }
         .patrak-root .patrak-reg-left-only col.patrak-lc-ser { width: 10mm; }
         .patrak-root .patrak-reg-left-only col.patrak-lc-name { width: auto; }
@@ -1497,17 +1495,11 @@ export function MonthlyAttendancePatrakView({
           line-height: 1.4;
           text-align: center;
           vertical-align: middle;
-          padding: 0 1mm !important;
+          padding: 0 0.5mm !important;
         }
         .patrak-root .patrak-caste-txt {
           display: block;
           overflow: visible;
-        }
-        .patrak-root .patrak-caste-txt.patrak-caste-long {
-          white-space: normal;
-          font-size: 6.5pt;
-          line-height: 1.25;
-          overflow-wrap: anywhere;
         }
         .patrak-root .patrak-unified td.patrak-cat-cell { font-size: 8pt; font-weight: 600; }
         .patrak-root .patrak-unified td.patrak-dob-cell { font-size: 9pt; }
