@@ -247,16 +247,16 @@ export function BonafideCertificateView({
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
+            justifyContent: "flex-start",
             alignItems: "baseline",
-            gap: "20px",
+            gap: "14px",
             marginBottom: "4px",
             fontSize: "13px",
           }}
         >
-          <span style={{ display: "inline-flex", alignItems: "baseline", gap: "4px", flex: 1 }}>
+          <span style={{ display: "inline-flex", alignItems: "baseline", gap: "4px" }}>
             <Pink>G. R. Number</Pink>
-            <DotLine value={student.grNumber || ""} minWidth={180} flex={1} />
+            <DotLine value={student.grNumber || ""} minWidth={64} />
           </span>
           <span style={{ display: "inline-flex", alignItems: "baseline", gap: "4px" }}>
             <Pink>Sr. Number</Pink>

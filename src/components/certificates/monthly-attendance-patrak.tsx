@@ -542,6 +542,16 @@ function RegisterSpread({
           <PageMarker n={rightPageNo} centered />
         </div>
         <table className="patrak-tbl patrak-unified patrak-reg-right-only">
+          <colgroup>
+            {DAYS.map((d) => (
+              <col key={d} className="patrak-col-day" />
+            ))}
+            <col className="patrak-col-ser" />
+            <col className="patrak-col-sum" />
+            <col className="patrak-col-sum" />
+            <col className="patrak-col-sum" />
+            <col className="patrak-col-note" />
+          </colgroup>
           <thead>
             <tr className="patrak-reg-h1">
               <th colSpan={RIGHT_BODY_COLS} className="patrak-reg-hdr-cell">
@@ -1470,12 +1480,17 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-unified .patrak-day-h,
         .patrak-root .patrak-unified .patrak-day-c,
         .patrak-root .patrak-unified .patrak-day-f {
-          width: 4.55mm !important;
-          max-width: 4.55mm !important;
+          width: 4.05mm !important;
+          max-width: 4.05mm !important;
+          min-width: 3.8mm !important;
           padding: 0 !important;
           text-align: center;
-          font-size: 8pt;
+          font-size: 7.5pt;
         }
+        .patrak-root .patrak-reg-right-only col.patrak-col-day { width: 4.05mm; }
+        .patrak-root .patrak-reg-right-only col.patrak-col-ser { width: 7mm; }
+        .patrak-root .patrak-reg-right-only col.patrak-col-sum { width: 16.5mm; }
+        .patrak-root .patrak-reg-right-only col.patrak-col-note { width: 15mm; }
         .patrak-root .patrak-unified th.patrak-day-h { font-weight: 700; }
         /* Left register page: fixed mm columns (same for sheet 2 and 3, and class-register); name takes the rest */
         .patrak-root .patrak-reg-left-only col.patrak-lc-gr { width: 12mm; }
@@ -1516,13 +1531,14 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-unified .patrak-w-ser { width: 7mm !important; min-width: 7mm; }
         .patrak-root .patrak-unified .patrak-w-name { width: 50mm; min-width: 40mm; }
         .patrak-root .patrak-unified .patrak-w-sum {
-          width: 11mm !important;
-          min-width: 10mm !important;
-          max-width: 12mm !important;
+          width: 16.5mm !important;
+          min-width: 15.5mm !important;
+          max-width: 17.5mm !important;
         }
         .patrak-root .patrak-unified .patrak-w-note {
-          width: 8mm !important;
-          min-width: 7mm !important;
+          width: 15mm !important;
+          min-width: 14mm !important;
+          max-width: 16mm !important;
         }
         .patrak-root .patrak-unified .patrak-w-date { width: 6mm; }
         .patrak-root .patrak-unified .patrak-w-sign { width: 6mm; }

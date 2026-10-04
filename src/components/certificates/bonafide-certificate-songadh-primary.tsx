@@ -239,7 +239,7 @@ function BonafideSheet({
             <div className="spb-meta-row">
               <span className="spb-meta-left">
                 <Label>G. R. Number</Label>
-                <DotLine value={fields.grNumber} onChange={set("grNumber")} minWidth={140} flex />
+                <DotLine value={fields.grNumber} onChange={set("grNumber")} minWidth={64} />
               </span>
               <span className="spb-meta-right">
                 <Label>Sr. Number</Label>
@@ -538,9 +538,9 @@ export function BonafideCertificateView({
         }
         .spb-meta-row {
           display: flex;
-          justify-content: space-between;
+          justify-content: flex-start;
           align-items: baseline;
-          gap: 8mm;
+          gap: 5mm;
           font-size: 9pt;
         }
         .spb-meta-left,
@@ -548,10 +548,7 @@ export function BonafideCertificateView({
           display: inline-flex;
           align-items: baseline;
           gap: 2mm;
-        }
-        .spb-meta-left {
-          flex: 1;
-          min-width: 0;
+          flex: 0 0 auto;
         }
         .spb-fields {
           margin-top: 1px;
