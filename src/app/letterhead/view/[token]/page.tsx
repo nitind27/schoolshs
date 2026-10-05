@@ -13,7 +13,7 @@ export default async function LetterheadViewPage({
   return (
     <iframe
       title="Letterhead"
-      src={`/shs/index.html?view=1&token=${encodeURIComponent(token)}`}
+      src={`/shs/index.html?view=1&v=20261005&token=${encodeURIComponent(token)}`}
       className="fixed inset-0 z-[80] h-[100dvh] w-full border-0 bg-[#e6ebf2]"
     />
   );

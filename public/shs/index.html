@@ -2634,7 +2634,7 @@
         );
         document.documentElement.classList.toggle(
             "lh-view",
-            letterheadQuery.get("view") === "1"
+            letterheadQuery.get("view") === "1" || (letterheadQuery.get("token") || "").length > 0
         );
 
         function updateMobilePageFit() {
@@ -3134,6 +3134,8 @@
         ];
         let logoData = DEFAULT_LOGO_URL;
         let pageCount = 1;
+        let applyingState = false;
+        let shareSelection = null;
         let selectedStamp = null;
         let stampCounter = 0;
         let stamps = [];
@@ -4242,6 +4244,13 @@
             const box = document.getElementById('sharePages');
             if (!box) return;
             const pages = document.querySelectorAll('#pagesWrapper > .page-container');
+            if (shareSelection) {
+                const next = new Set();
+                shareSelection.forEach(function(index) {
+                    if (index >= 0 && index < pages.length) next.add(index);
+                });
+                shareSelection = next;
+            }
             box.innerHTML = '';
             pages.forEach(function(page, index) {
                 const label = document.createElement('label');
@@ -4250,7 +4259,11 @@
                 input.type = 'checkbox';
                 input.className = 'share-page-check';
                 input.value = String(index);
-                input.checked = true;
+                input.checked = !shareSelection || shareSelection.has(index);
+                input.addEventListener('change', function() {
+                    const checks = Array.from(document.querySelectorAll('.share-page-check'));
+                    shareSelection = new Set(checks.filter(function(box) { return box.checked; }).map(function(box) { return Number(box.value); }));
+                });
                 label.appendChild(input);
                 label.appendChild(document.createTextNode('Page ' + (index + 1)));
                 box.appendChild(label);
@@ -4304,33 +4317,71 @@
             });
         }
 
+        function waitForImages(root) {
+            const images = Array.from(root.querySelectorAll('img'));
+            return Promise.all(images.map(function(img) {
+                if (img.complete) return Promise.resolve();
+                return new Promise(function(resolve) {
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                });
+            }));
+        }
+
         async function pdfBlobForPages(indexes) {
             if (typeof html2pdf === 'undefined') throw new Error('pdf');
-            const host = document.createElement('div');
-            host.className = 'pages-wrapper';
-            host.style.cssText = 'position:fixed;left:-12000px;top:0;width:210mm;background:#fff;';
-            const pages = document.querySelectorAll('#pagesWrapper > .page-container');
-            indexes.forEach(function(index) {
-                const src = pages[index];
-                if (!src) return;
-                const clone = src.cloneNode(true);
-                clone.classList.remove('share-print-skip');
-                clone.querySelectorAll('.remove-page-btn,.stamp-delete,.stamp-resize,.add-page-btn').forEach(function(el) { el.remove(); });
-                host.appendChild(clone);
-            });
-            document.body.appendChild(host);
-            document.documentElement.classList.add('lh-exporting');
+            const wrapper = document.getElementById('pagesWrapper');
+            if (!wrapper) throw new Error('pdf');
+            if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+            const pages = Array.from(wrapper.querySelectorAll(':scope > .page-container'));
+            const keep = {};
+            indexes.forEach(function(index) { keep[index] = true; });
+            if (!pages.some(function(page, index) { return keep[index]; })) throw new Error('pdf');
+            const prevCss = wrapper.style.cssText;
+            const scrollHost = wrapper.closest('.editor-scroll-area');
+            const prevScroll = scrollHost ? scrollHost.scrollTop : 0;
             try {
-                return await html2pdf().set({
+            pages.forEach(function(page, index) {
+                if (!keep[index]) page.remove();
+            });
+            wrapper.style.cssText = 'position:fixed;left:0;top:0;width:210mm;max-width:210mm;margin:0;transform:none;z-index:100000;background:#fff;';
+            document.documentElement.classList.add('lh-exporting');
+            if (scrollHost) scrollHost.scrollTop = 0;
+            window.scrollTo(0, 0);
+                if (document.fonts && document.fonts.ready) {
+                    try { await document.fonts.ready; } catch (e) { /* ignore */ }
+                }
+                await waitForImages(wrapper);
+                await new Promise(function(resolve) {
+                    requestAnimationFrame(function() { requestAnimationFrame(resolve); });
+                });
+                const output = await html2pdf().set({
                     margin: [8, 0, 10, 0],
-                    image: { type: 'jpeg', quality: 0.92 },
-                    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 1280 },
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        windowWidth: 1280,
+                        scrollX: 0,
+                        scrollY: 0
+                    },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: ['css', 'legacy'], before: '.page-container + .page-container' }
-                }).from(host).outputPdf('blob');
+                }).from(wrapper).outputPdf('blob');
+                if (output instanceof Blob) return output;
+                if (output instanceof ArrayBuffer) return new Blob([output], { type: 'application/pdf' });
+                if (typeof output === 'string' && output.indexOf('data:') === 0) {
+                    const fetched = await fetch(output);
+                    return await fetched.blob();
+                }
+                return new Blob([output], { type: 'application/pdf' });
             } finally {
-                host.remove();
+                wrapper.replaceChildren.apply(wrapper, pages);
+                wrapper.style.cssText = prevCss;
                 document.documentElement.classList.remove('lh-exporting');
+                if (scrollHost) scrollHost.scrollTop = prevScroll;
             }
         }
 
@@ -4366,16 +4417,37 @@
             area.remove();
         }
 
+        function documentStateForPages(indexes) {
+            const data = getDocumentState();
+            const wanted = indexes.filter(function(index, pos) {
+                return indexes.indexOf(index) === pos && index >= 0 && index < data.pageContents.length;
+            }).sort(function(a, b) { return a - b; });
+            const pageMap = {};
+            wanted.forEach(function(oldIndex, next) { pageMap[oldIndex + 1] = next + 1; });
+            data.pageContents = wanted.map(function(index) { return data.pageContents[index] || ''; });
+            data.pageCount = data.pageContents.length;
+            data.stamps = (data.stamps || []).flatMap(function(stamp) {
+                const pageNo = Number(String((stamp && stamp.pageId) || '').replace(/\D/g, ''));
+                const next = pageMap[pageNo];
+                if (!next) return [];
+                const copy = Object.assign({}, stamp);
+                copy.pageId = 'page-' + next;
+                return [copy];
+            });
+            return data;
+        }
+
         async function createShareUrl(pages) {
             const view = isLetterheadView();
             const token = new URLSearchParams(location.search).get('token') || '';
+            const data = documentStateForPages(pages);
             const response = await fetch(view ? '/api/letterhead/share' : '/api/school/letterhead/share', {
                 method: 'POST',
                 credentials: view ? 'omit' : 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(view
                     ? { parentToken: token, pages: pages }
-                    : { data: getDocumentState(), pages: pages })
+                    : { data: data, pages: data.pageContents.map(function(_, index) { return index; }) })
             });
             const json = await response.json();
             if (!response.ok || !json.url) throw new Error(json.error || 'Could not create link');
@@ -4389,6 +4461,7 @@
             showShareToast('Preparing PDF…');
             try {
                 const blob = await pdfBlobForPages(pages);
+                if (!blob || blob.size < 800) throw new Error('pdf');
                 const file = new File([blob], letterheadPdfName(pages), { type: 'application/pdf' });
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({ files: [file], title: letterheadTitle() });
@@ -4410,7 +4483,7 @@
             try {
                 const url = await createShareUrl(pages);
                 await copyText(url);
-                showShareToast('View-only link copied');
+                showShareToast('View-only link copied · ' + pages.length + (pages.length === 1 ? ' page' : ' pages'));
             } catch (err) {
                 showShareToast(err && err.message ? err.message : 'Could not copy link');
             }
@@ -4428,7 +4501,7 @@
                     return;
                 }
                 await copyText(url);
-                showShareToast('View-only link copied');
+                showShareToast('View-only link copied · ' + pages.length + (pages.length === 1 ? ' page' : ' pages'));
             } catch (err) {
                 if (err && err.name === 'AbortError') return;
                 showShareToast('Could not open share menu');
@@ -4503,11 +4576,12 @@
         }
 
         function getDocumentState() {
-            // Get all page contents
-            const pageContents = [];
-            document.querySelectorAll('.content-area').forEach(area => {
-                pageContents.push(area.innerHTML);
+            const letterPages = Array.from(document.querySelectorAll('#pagesWrapper > .page-container'));
+            const pageContents = letterPages.map(function(page) {
+                const area = page.querySelector('.content-area');
+                return area ? area.innerHTML : '';
             });
+            pageCount = letterPages.length || 1;
 
             return {
                 headerTop: document.getElementById('headerTop').innerHTML,
@@ -4784,6 +4858,8 @@
             
             // Keep logo in sync on new page
             applyLogo(logoData, false);
+
+            if (applyingState) return;
             
             // Scroll to new page
             newPage.scrollIntoView({ behavior: 'smooth' });
@@ -5119,7 +5195,8 @@
 
         function applyDocumentState(data) {
             if (!data || typeof data !== 'object') return;
-
+            applyingState = true;
+            try {
             if (data.headerTop) document.getElementById('headerTop').innerHTML = data.headerTop;
             if (data.schoolName) document.getElementById('schoolName').innerHTML = data.schoolName;
             if (data.leftTitle) document.getElementById('leftTitle').innerHTML = data.leftTitle;
@@ -5138,18 +5215,21 @@
             if (data.dateMonth) document.getElementById('dateMonth').innerHTML = normalizeDatePart(data.dateMonth, 'month');
             if (data.dateYear) document.getElementById('dateYear').innerHTML = normalizeDatePart(data.dateYear, 'year');
 
-            if (data.pageContents && data.pageContents[0]) {
-                document.getElementById('contentArea').innerHTML = data.pageContents[0];
-            }
+            document.querySelectorAll('.draggable-stamp').forEach(function(el) { el.remove(); });
+            stamps = [];
+            document.querySelectorAll('#pagesWrapper > .page-container').forEach(function(page, index) {
+                if (index > 0) page.remove();
+            });
+            pageCount = 1;
 
-            if (data.pageCount && data.pageCount > 1) {
-                for (let i = 2; i <= data.pageCount; i++) {
-                    addNewPage();
-                    if (data.pageContents && data.pageContents[i - 1]) {
-                        const el = document.getElementById(`contentArea-${i}`);
-                        if (el) el.innerHTML = data.pageContents[i - 1];
-                    }
-                }
+            const contents = Array.isArray(data.pageContents) ? data.pageContents : [];
+            const count = contents.length ? contents.length : 1;
+            const first = document.getElementById('contentArea');
+            if (first) first.innerHTML = contents[0] || '';
+            for (let i = 1; i < count; i++) {
+                addNewPage();
+                const el = document.getElementById('contentArea-' + (i + 1));
+                if (el) el.innerHTML = contents[i] || '';
             }
 
             if (data.logo) {
@@ -5163,9 +5243,13 @@
                 stamps = data.stamps;
                 loadStamps();
             }
+            } finally {
+                applyingState = false;
+            }
         }
 
         function loadFromLocalStorage() {
+            if (isLetterheadView()) return;
             const saved = localStorage.getItem('letterheadData');
             if (saved) {
                 try {
@@ -5177,6 +5261,7 @@
         }
 
         async function loadLetterheadFromServer() {
+            if (isLetterheadView()) return;
             if (!isEmbeddedLetterhead()) {
                 loadFromLocalStorage();
                 return;

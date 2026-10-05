@@ -56,7 +56,7 @@ export function sliceSharedLetterhead(
   pages: number[],
 ): { snapshot: LetterheadDocumentState; title: string } | null {
   const contents = Array.isArray(data.pageContents) ? data.pageContents : [];
-  const total = Math.max(contents.length, Number(data.pageCount) || 0, 1);
+  const total = Math.max(contents.length, 1);
   const indexes = [...new Set(pages.map((n) => Math.floor(Number(n))))]
     .filter((n) => Number.isFinite(n) && n >= 0 && n < total)
     .sort((a, b) => a - b)

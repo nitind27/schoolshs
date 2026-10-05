@@ -7,6 +7,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  Printer,
   Save,
   Search,
   Sparkles,
@@ -19,6 +20,8 @@ import { PageLoader, Spinner } from "@/components/ui/loader";
 import { Select } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
 import { SeatNumbersGuide } from "@/components/students/seat-numbers-guide";
+import "@/components/students/exam-seat-print.css";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 import { useLocale, useT } from "@/i18n/locale-provider";
 import { assignSectionSeatNumbers, formatExamSeat, type ExamSeatSeries } from "@/lib/exam-seat-series";
 import { studentListName } from "@/lib/student-names";
@@ -40,6 +43,13 @@ type ExamTerm = {
   examDate?: string | null;
   published: boolean;
 };
+
+function formatSheetDate(value: string | null | undefined) {
+  const raw = (value || "").trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+  return raw;
+}
 
 type StudentRow = {
   id: string;
@@ -63,6 +73,7 @@ export function ExamSeatNumberManager({
 }) {
   const t = useT();
   const { locale } = useLocale();
+  const { letterhead } = useSchoolFeatures();
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [classId, setClassId] = useState("");
   const [terms, setTerms] = useState<ExamTerm[]>([]);
@@ -77,6 +88,18 @@ export function ExamSeatNumberManager({
   const [publishing, setPublishing] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [assignedCount, setAssignedCount] = useState(0);
+
+  useEffect(() => {
+    const onBeforePrint = () => document.body.classList.add("printing-exam-seats");
+    const onAfterPrint = () => document.body.classList.remove("printing-exam-seats");
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", onAfterPrint);
+    return () => {
+      document.body.classList.remove("printing-exam-seats");
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
+    };
+  }, []);
 
   useEffect(() => {
     fetch("/api/exam-seat-numbers")
@@ -314,6 +337,30 @@ export function ExamSeatNumberManager({
   if (loading) return <PageLoader />;
 
   const selectedClass = classes.find((item) => item.id === classId);
+  const selectedTerm = terms.find((item) => item.key === termKey);
+  const examLabel = selectedTerm
+    ? locale === "gu"
+      ? selectedTerm.labelGu || selectedTerm.labelEn
+      : selectedTerm.labelEn || selectedTerm.labelGu
+    : "";
+  const schoolName = (letterhead?.name || "").trim();
+  const schoolLine = [
+    letterhead?.address,
+    letterhead?.city,
+    letterhead?.taluka,
+    letterhead?.district,
+    letterhead?.pincode,
+  ]
+    .map((part) => (part || "").trim())
+    .filter(Boolean)
+    .join(", ");
+  const schoolMeta = [
+    letterhead?.phone ? `Mo. ${letterhead.phone}` : "",
+    letterhead?.udiseCode || letterhead?.code || "",
+  ]
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join("   ·   ");
   const isBoardClass =
     selectedClass?.standard === "10" || selectedClass?.standard === "12";
   const boardEntryHref = teacher
@@ -342,8 +389,21 @@ export function ExamSeatNumberManager({
             type="button"
             variant="outline"
             disabled={!students.length}
+            onClick={() => {
+              document.body.classList.add("printing-exam-seats");
+              window.print();
+            }}
+            className="w-full lg:w-auto"
+          >
+            <Printer className="h-4 w-4" />
+            {t("examSeats.print")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!students.length}
             onClick={exportCsv}
-            className="w-full min-[380px]:col-span-2 lg:w-auto lg:col-span-1"
+            className="w-full lg:w-auto"
           >
             <Download className="h-4 w-4" />
             {t("examSeats.export")}
@@ -632,6 +692,73 @@ export function ExamSeatNumberManager({
           </section>
         )}
       </div>
+
+      {students.length ? (
+        <div className="exam-seat-print" aria-hidden>
+          <div className="exam-seat-sheet">
+            <table className="exam-seat-table">
+              <thead>
+                <tr>
+                  <th className="exam-seat-banner" colSpan={5}>
+                    {schoolName ? <p className="exam-seat-school">{schoolName}</p> : null}
+                    {schoolLine ? <p className="exam-seat-school-line">{schoolLine}</p> : null}
+                    {schoolMeta ? <p className="exam-seat-school-meta">{schoolMeta}</p> : null}
+                    <hr className="exam-seat-rule" />
+                    <p className="exam-seat-doc-title">{t("examSeats.printTitle")}</p>
+                    <div className="exam-seat-meta">
+                      <span>
+                        {t("examSeats.printClass")}: {selectedClass?.name || "—"}
+                      </span>
+                      <span>
+                        {t("examSeats.printExam")}: {examLabel || "—"}
+                      </span>
+                      <span>
+                        {t("examSeats.printYear")}: {selectedClass?.academicYear || "—"}
+                      </span>
+                      {formatSheetDate(selectedTerm?.examDate) ? (
+                        <span>
+                          {t("examSeats.printDate")}: {formatSheetDate(selectedTerm?.examDate)}
+                        </span>
+                      ) : null}
+                      <span>
+                        {t("examSeats.printTotal")}: {students.length}
+                      </span>
+                    </div>
+                  </th>
+                </tr>
+                <tr>
+                  <th className="exam-seat-col exam-seat-col-sr">{t("examSeats.printSr")}</th>
+                  <th className="exam-seat-col exam-seat-col-roll">{t("fields.roll")}</th>
+                  <th className="exam-seat-col exam-seat-col-gr">{t("fields.grNumber")}</th>
+                  <th className="exam-seat-col">{t("common.name")}</th>
+                  <th className="exam-seat-col exam-seat-col-seat">{t("examSeats.seatNumber")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((student, index) => (
+                  <tr key={student.id}>
+                    <td className="exam-seat-sr">{index + 1}</td>
+                    <td className="exam-seat-roll">{student.rollNumber || "—"}</td>
+                    <td className="exam-seat-gr">{student.grNumber || "—"}</td>
+                    <td className="exam-seat-name">{studentListName(student)}</td>
+                    <td className="exam-seat-seat">{(drafts[student.id] || "").trim() || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="exam-seat-signs">
+              <div className="exam-seat-sign">
+                <div className="exam-seat-sign-line" />
+                <p>{t("examSeats.printTeacher")}</p>
+              </div>
+              <div className="exam-seat-sign">
+                <div className="exam-seat-sign-line" />
+                <p>{t("examSeats.printPrincipal")}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </PageShell>
   );
 }
