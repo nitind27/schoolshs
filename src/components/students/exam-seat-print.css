@@ -24,7 +24,7 @@
 .exam-seat-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .exam-seat-table thead {
@@ -41,22 +41,24 @@
 
 .exam-seat-school {
   margin: 0;
-  font-size: 16pt;
+  font-size: 18pt;
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 1.2;
+  color: #9f1239;
 }
 
 .exam-seat-school-line,
 .exam-seat-school-meta {
   margin: 1mm 0 0;
-  font-size: 9pt;
+  font-size: 10pt;
   line-height: 1.35;
+  font-weight: 600;
 }
 
 .exam-seat-rule {
   margin: 2mm 0 1.5mm;
   border: none;
-  border-top: 2px solid #0f172a;
+  border-top: 2.5px solid #9f1239;
 }
 
 .exam-seat-doc-title {
@@ -100,28 +102,31 @@
   page-break-inside: avoid;
 }
 
-/* 1% + nowrap = column is only as wide as its own text. Name takes the rest. */
-.exam-seat-col-sr,
-.exam-seat-col-roll,
-.exam-seat-col-gr,
-.exam-seat-col-seat {
-  width: 1%;
-}
-
-.exam-seat-col-name {
-  width: auto;
-}
+/* Name stays narrower. The blank order column takes the writing space. */
+.exam-seat-col-sr { width: 8%; }
+.exam-seat-col-roll { width: 9%; }
+.exam-seat-col-gr { width: 14%; }
+.exam-seat-col-name { width: 26%; }
+.exam-seat-col-seat { width: 13%; }
+.exam-seat-col-order { width: 30%; }
 
 .exam-seat-sr,
 .exam-seat-roll,
 .exam-seat-gr,
 .exam-seat-seat,
+.exam-seat-order,
 th.exam-seat-col-sr,
 th.exam-seat-col-roll,
 th.exam-seat-col-gr,
-th.exam-seat-col-seat {
+th.exam-seat-col-seat,
+th.exam-seat-col-order {
   text-align: center;
   white-space: nowrap;
+}
+
+th.exam-seat-col-order {
+  white-space: normal;
+  line-height: 1.2;
 }
 
 th.exam-seat-col-sr,
@@ -139,6 +144,10 @@ th.exam-seat-col-name {
 .exam-seat-name {
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+.exam-seat-order {
+  min-height: 7mm;
 }
 
 .exam-seat-seat {

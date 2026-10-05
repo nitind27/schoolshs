@@ -361,8 +361,10 @@ export function ExamSeatNumberManager({
     .filter(Boolean)
     .join(", ");
   const schoolMeta = [
-    letterhead?.phone ? `Mo. ${letterhead.phone}` : "",
-    letterhead?.udiseCode || letterhead?.code || "",
+    letterhead?.phone ? `ફોન: ${letterhead.phone}` : "",
+    letterhead?.udiseCode || letterhead?.code
+      ? `ડાયસ: ${letterhead.udiseCode || letterhead.code}`
+      : "",
   ]
     .map((part) => part.trim())
     .filter(Boolean)
@@ -710,10 +712,11 @@ export function ExamSeatNumberManager({
                     <col className="exam-seat-col-gr" />
                     <col className="exam-seat-col-name" />
                     <col className="exam-seat-col-seat" />
+                    <col className="exam-seat-col-order" />
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className="exam-seat-banner" colSpan={5}>
+                      <th className="exam-seat-banner" colSpan={6}>
                         {schoolName ? <p className="exam-seat-school">{schoolName}</p> : null}
                         {schoolLine ? <p className="exam-seat-school-line">{schoolLine}</p> : null}
                         {schoolMeta ? <p className="exam-seat-school-meta">{schoolMeta}</p> : null}
@@ -746,6 +749,7 @@ export function ExamSeatNumberManager({
                       <th className="exam-seat-col exam-seat-col-gr">{t("examSeats.printGr")}</th>
                       <th className="exam-seat-col exam-seat-col-name">{t("examSeats.printName")}</th>
                       <th className="exam-seat-col exam-seat-col-seat">{t("examSeats.printSeat")}</th>
+                      <th className="exam-seat-col exam-seat-col-order">{t("examSeats.printOrder")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -756,6 +760,7 @@ export function ExamSeatNumberManager({
                         <td className="exam-seat-gr">{student.grNumber || "—"}</td>
                         <td className="exam-seat-name">{studentListName(student)}</td>
                         <td className="exam-seat-seat">{(drafts[student.id] || "").trim() || "—"}</td>
+                        <td className="exam-seat-order">&nbsp;</td>
                       </tr>
                     ))}
                   </tbody>

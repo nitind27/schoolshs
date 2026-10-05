@@ -4243,6 +4243,7 @@ const en = {
     printGr: "GR",
     printName: "Name",
     printSeat: "Seat",
+    printOrder: "Exam order no.",
     printTeacher: "Class Teacher",
     printPrincipal: "Principal",
     assigned: "assigned",

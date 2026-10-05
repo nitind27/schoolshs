@@ -2637,15 +2637,19 @@
 
         .lh-pdf-host .page-container {
             width: 210mm !important;
-            max-width: none !important;
-            min-height: 297mm !important;
+            max-width: 210mm !important;
+            min-height: 296mm !important;
             margin: 0 !important;
             box-shadow: none !important;
             transform: none !important;
             zoom: 1 !important;
             background: #ffffff !important;
-            color: #111111 !important;
             overflow: visible !important;
+        }
+
+        .lh-pdf-host .school-name,
+        .lh-pdf-host .header-top {
+            letter-spacing: 0 !important;
         }
     </style>
     <!-- Tesseract.js OCR Library -->
@@ -4402,15 +4406,27 @@
                 const clone = src.cloneNode(true);
                 clone.querySelectorAll('[contenteditable]').forEach(function(el) { el.removeAttribute('contenteditable'); });
                 clone.querySelectorAll('.remove-page-btn, .stamp-delete, .stamp-resize').forEach(function(el) { el.remove(); });
+                clone.querySelectorAll('.school-name, .header-top').forEach(function(el) {
+                    el.style.letterSpacing = '0px';
+                });
+                clone.style.zoom = '1';
+                clone.style.transform = 'none';
+                clone.style.width = '210mm';
+                clone.style.maxWidth = '210mm';
+                clone.style.minHeight = '296mm';
                 clone.style.pageBreakAfter = pos < picked.length - 1 ? 'always' : 'auto';
                 clone.style.pageBreakBefore = 'auto';
                 host.appendChild(clone);
             });
 
             const root = document.documentElement;
+            const viewport = document.querySelector('meta[name="viewport"]');
+            const prevViewport = viewport ? viewport.getAttribute('content') : null;
             const prevFit = root.style.getPropertyValue('--mobile-page-fit');
             const prevHtmlOverflow = root.style.overflow;
             const prevBodyOverflow = document.body.style.overflow;
+            if (viewport) viewport.setAttribute('content', 'width=794');
+            if (typeof updateMobilePageFit === 'function') updateMobilePageFit();
             root.style.setProperty('--mobile-page-fit', '1');
             root.style.overflow = 'visible';
             document.body.style.overflow = 'visible';
@@ -4426,6 +4442,7 @@
                     requestAnimationFrame(function() { requestAnimationFrame(resolve); });
                 });
                 window.scrollTo(0, 0);
+                root.style.setProperty('--mobile-page-fit', '1');
                 const output = await html2pdf().set({
                     margin: 0,
                     image: { type: 'jpeg', quality: 0.98 },
@@ -4434,11 +4451,11 @@
                         useCORS: true,
                         logging: false,
                         backgroundColor: '#ffffff',
-                        windowWidth: 1280,
+                        windowWidth: 794,
                         scrollX: 0,
                         scrollY: 0
                     },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', hotfixes: ['px_scaling'] },
                     pagebreak: picked.length > 1
                         ? { mode: ['css', 'legacy'], before: '.page-container + .page-container' }
                         : { mode: 'avoid-all' }
@@ -4451,8 +4468,13 @@
                 host.remove();
                 window.scrollTo(0, savedScroll);
                 root.classList.remove('lh-exporting');
+                if (viewport) {
+                    if (prevViewport == null) viewport.removeAttribute('content');
+                    else viewport.setAttribute('content', prevViewport);
+                }
                 if (prevFit) root.style.setProperty('--mobile-page-fit', prevFit);
                 else root.style.removeProperty('--mobile-page-fit');
+                if (typeof updateMobilePageFit === 'function') updateMobilePageFit();
                 root.style.overflow = prevHtmlOverflow;
                 document.body.style.overflow = prevBodyOverflow;
             }

@@ -65,7 +65,7 @@ export default function LetterheadPage() {
       </div>
       <iframe
         title="Letterhead Editor"
-        src="/shs/index.html?embed=1&v=20261005b"
+        src="/shs/index.html?embed=1&v=20261005c"
         className="block min-h-0 w-full flex-1 border-0 bg-[#e6ebf2]"
       />
     </div>
