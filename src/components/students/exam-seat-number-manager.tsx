@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   Armchair,
@@ -88,6 +89,11 @@ export function ExamSeatNumberManager({
   const [publishing, setPublishing] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [assignedCount, setAssignedCount] = useState(0);
+  const [printRoot, setPrintRoot] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPrintRoot(document.body);
+  }, []);
 
   useEffect(() => {
     const onBeforePrint = () => document.body.classList.add("printing-exam-seats");
@@ -693,72 +699,82 @@ export function ExamSeatNumberManager({
         )}
       </div>
 
-      {students.length ? (
-        <div className="exam-seat-print" aria-hidden>
-          <div className="exam-seat-sheet">
-            <table className="exam-seat-table">
-              <thead>
-                <tr>
-                  <th className="exam-seat-banner" colSpan={5}>
-                    {schoolName ? <p className="exam-seat-school">{schoolName}</p> : null}
-                    {schoolLine ? <p className="exam-seat-school-line">{schoolLine}</p> : null}
-                    {schoolMeta ? <p className="exam-seat-school-meta">{schoolMeta}</p> : null}
-                    <hr className="exam-seat-rule" />
-                    <p className="exam-seat-doc-title">{t("examSeats.printTitle")}</p>
-                    <div className="exam-seat-meta">
-                      <span>
-                        {t("examSeats.printClass")}: {selectedClass?.name || "—"}
-                      </span>
-                      <span>
-                        {t("examSeats.printExam")}: {examLabel || "—"}
-                      </span>
-                      <span>
-                        {t("examSeats.printYear")}: {selectedClass?.academicYear || "—"}
-                      </span>
-                      {formatSheetDate(selectedTerm?.examDate) ? (
-                        <span>
-                          {t("examSeats.printDate")}: {formatSheetDate(selectedTerm?.examDate)}
-                        </span>
-                      ) : null}
-                      <span>
-                        {t("examSeats.printTotal")}: {students.length}
-                      </span>
-                    </div>
-                  </th>
-                </tr>
-                <tr>
-                  <th className="exam-seat-col exam-seat-col-sr">{t("examSeats.printSr")}</th>
-                  <th className="exam-seat-col exam-seat-col-roll">{t("fields.roll")}</th>
-                  <th className="exam-seat-col exam-seat-col-gr">{t("fields.grNumber")}</th>
-                  <th className="exam-seat-col">{t("common.name")}</th>
-                  <th className="exam-seat-col exam-seat-col-seat">{t("examSeats.seatNumber")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((student, index) => (
-                  <tr key={student.id}>
-                    <td className="exam-seat-sr">{index + 1}</td>
-                    <td className="exam-seat-roll">{student.rollNumber || "—"}</td>
-                    <td className="exam-seat-gr">{student.grNumber || "—"}</td>
-                    <td className="exam-seat-name">{studentListName(student)}</td>
-                    <td className="exam-seat-seat">{(drafts[student.id] || "").trim() || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="exam-seat-signs">
-              <div className="exam-seat-sign">
-                <div className="exam-seat-sign-line" />
-                <p>{t("examSeats.printTeacher")}</p>
+      {printRoot && students.length
+        ? createPortal(
+            <div className="exam-seat-print" aria-hidden>
+              <div className="exam-seat-sheet">
+                <table className="exam-seat-table">
+                  <colgroup>
+                    <col className="exam-seat-col-sr" />
+                    <col className="exam-seat-col-roll" />
+                    <col className="exam-seat-col-gr" />
+                    <col className="exam-seat-col-name" />
+                    <col className="exam-seat-col-seat" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className="exam-seat-banner" colSpan={5}>
+                        {schoolName ? <p className="exam-seat-school">{schoolName}</p> : null}
+                        {schoolLine ? <p className="exam-seat-school-line">{schoolLine}</p> : null}
+                        {schoolMeta ? <p className="exam-seat-school-meta">{schoolMeta}</p> : null}
+                        <hr className="exam-seat-rule" />
+                        <p className="exam-seat-doc-title">{t("examSeats.printTitle")}</p>
+                        <div className="exam-seat-meta">
+                          <span>
+                            {t("examSeats.printClass")}: {selectedClass?.name || "—"}
+                          </span>
+                          <span>
+                            {t("examSeats.printExam")}: {examLabel || "—"}
+                          </span>
+                          <span>
+                            {t("examSeats.printYear")}: {selectedClass?.academicYear || "—"}
+                          </span>
+                          {formatSheetDate(selectedTerm?.examDate) ? (
+                            <span>
+                              {t("examSeats.printDate")}: {formatSheetDate(selectedTerm?.examDate)}
+                            </span>
+                          ) : null}
+                          <span>
+                            {t("examSeats.printTotal")}: {students.length}
+                          </span>
+                        </div>
+                      </th>
+                    </tr>
+                    <tr>
+                      <th className="exam-seat-col exam-seat-col-sr">{t("examSeats.printSr")}</th>
+                      <th className="exam-seat-col exam-seat-col-roll">{t("examSeats.printRoll")}</th>
+                      <th className="exam-seat-col exam-seat-col-gr">{t("examSeats.printGr")}</th>
+                      <th className="exam-seat-col exam-seat-col-name">{t("examSeats.printName")}</th>
+                      <th className="exam-seat-col exam-seat-col-seat">{t("examSeats.printSeat")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map((student, index) => (
+                      <tr key={student.id}>
+                        <td className="exam-seat-sr">{index + 1}</td>
+                        <td className="exam-seat-roll">{student.rollNumber || "—"}</td>
+                        <td className="exam-seat-gr">{student.grNumber || "—"}</td>
+                        <td className="exam-seat-name">{studentListName(student)}</td>
+                        <td className="exam-seat-seat">{(drafts[student.id] || "").trim() || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="exam-seat-signs">
+                  <div className="exam-seat-sign">
+                    <div className="exam-seat-sign-line" />
+                    <p>{t("examSeats.printTeacher")}</p>
+                  </div>
+                  <div className="exam-seat-sign">
+                    <div className="exam-seat-sign-line" />
+                    <p>{t("examSeats.printPrincipal")}</p>
+                  </div>
+                </div>
               </div>
-              <div className="exam-seat-sign">
-                <div className="exam-seat-sign-line" />
-                <p>{t("examSeats.printPrincipal")}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            printRoot,
+          )
+        : null}
     </PageShell>
   );
 }

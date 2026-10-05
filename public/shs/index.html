@@ -2620,6 +2620,33 @@
             max-width: 210mm !important;
             width: 210mm !important;
         }
+
+        .lh-pdf-host {
+            position: relative;
+            left: 0;
+            top: 0;
+            width: 210mm;
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            z-index: 2147483000;
+            zoom: 1 !important;
+            transform: none !important;
+            overflow: visible !important;
+        }
+
+        .lh-pdf-host .page-container {
+            width: 210mm !important;
+            max-width: none !important;
+            min-height: 297mm !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            transform: none !important;
+            zoom: 1 !important;
+            background: #ffffff !important;
+            color: #111111 !important;
+            overflow: visible !important;
+        }
     </style>
     <!-- Tesseract.js OCR Library -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -2866,6 +2893,7 @@
 
     <div class="share-menu" id="shareMenu" role="menu" hidden>
         <div class="share-pages" id="sharePages"></div>
+        <p class="share-hint" id="sharePickLabel">Tick the pages to share</p>
         <p class="share-hint">WhatsApp sends the PDF of the ticked pages. Copy link opens those pages only — no editing.</p>
         <button type="button" role="menuitem" onclick="shareViaWhatsApp()">
             <span class="share-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#128C7E" d="M12.04 2C6.58 2 2.15 6.4 2.15 11.83c0 1.74.46 3.44 1.34 4.94L2 22l5.39-1.4a10.1 10.1 0 0 0 4.65 1.18h.01c5.46 0 9.89-4.4 9.89-9.83C21.94 6.4 17.5 2 12.04 2zm5.76 13.95c-.24.68-1.4 1.3-1.94 1.38-.5.07-1.12.1-1.81-.11-.42-.13-.95-.3-1.64-.59-2.88-1.24-4.76-4.14-4.9-4.33-.14-.19-1.16-1.54-1.16-2.94s.73-2.08 1-2.37c.24-.26.64-.38.85-.38h.61c.2 0 .46-.07.72.55.27.64.91 2.22.99 2.38.08.16.13.35.03.56-.1.22-.16.35-.31.54-.16.19-.33.42-.47.56-.16.16-.32.33-.14.64.19.32.83 1.37 1.78 2.22 1.23 1.09 2.26 1.43 2.58 1.59.32.16.5.13.69-.08.19-.22.8-.93 1.01-1.25.22-.32.43-.26.72-.16.29.1 1.84.87 2.16 1.03.32.16.53.24.61.37.08.13.08.76-.16 1.44z"/></svg></span>
@@ -4240,17 +4268,36 @@
             });
         }
 
+        function sharePageLabel(indexes) {
+            const nums = indexes.map(function(n) { return n + 1; });
+            if (!nums.length) return 'Tick the pages to share';
+            if (nums.length === 1) return 'Page ' + nums[0];
+            return 'Pages ' + nums.join(', ');
+        }
+
+        function readShareChecks() {
+            return Array.from(document.querySelectorAll('#sharePages input.share-page-check'));
+        }
+
+        function syncShareSelectionFromDom() {
+            const checks = readShareChecks();
+            if (!checks.length) return null;
+            const picked = checks.filter(function(box) { return box.checked; }).map(function(box) {
+                return Number(box.value);
+            }).filter(function(index, pos, all) {
+                return Number.isInteger(index) && index >= 0 && all.indexOf(index) === pos;
+            });
+            shareSelection = new Set(picked);
+            const label = document.getElementById('sharePickLabel');
+            if (label) label.textContent = picked.length ? ('Share: ' + sharePageLabel(picked)) : 'Tick the pages to share';
+            return picked.length ? picked : null;
+        }
+
         function renderSharePages() {
             const box = document.getElementById('sharePages');
             if (!box) return;
             const pages = document.querySelectorAll('#pagesWrapper > .page-container');
-            if (shareSelection) {
-                const next = new Set();
-                shareSelection.forEach(function(index) {
-                    if (index >= 0 && index < pages.length) next.add(index);
-                });
-                shareSelection = next;
-            }
+            const previous = shareSelection ? new Set(shareSelection) : null;
             box.innerHTML = '';
             pages.forEach(function(page, index) {
                 const label = document.createElement('label');
@@ -4259,22 +4306,20 @@
                 input.type = 'checkbox';
                 input.className = 'share-page-check';
                 input.value = String(index);
-                input.checked = !shareSelection || shareSelection.has(index);
-                input.addEventListener('change', function() {
-                    const checks = Array.from(document.querySelectorAll('.share-page-check'));
-                    shareSelection = new Set(checks.filter(function(box) { return box.checked; }).map(function(box) { return Number(box.value); }));
-                });
+                input.checked = previous ? previous.has(index) : true;
+                input.addEventListener('change', syncShareSelectionFromDom);
+                input.addEventListener('click', function(event) { event.stopPropagation(); });
                 label.appendChild(input);
                 label.appendChild(document.createTextNode('Page ' + (index + 1)));
                 box.appendChild(label);
             });
+            syncShareSelectionFromDom();
         }
 
         function selectedSharePages() {
-            const checks = Array.from(document.querySelectorAll('.share-page-check'));
-            if (!checks.length) return [0];
-            const picked = checks.filter(function(box) { return box.checked; }).map(function(box) { return Number(box.value); });
-            return picked.length ? picked : null;
+            const live = syncShareSelectionFromDom();
+            if (live) return live;
+            return null;
         }
 
         function positionShareMenu() {
@@ -4297,7 +4342,13 @@
             const btn = shareAnchor();
             if (!menu || !btn) return;
             const willOpen = menu.hidden;
-            if (willOpen) renderSharePages();
+            if (willOpen) {
+                const box = document.getElementById('sharePages');
+                const pageTotal = document.querySelectorAll('#pagesWrapper > .page-container').length;
+                const existing = box ? box.querySelectorAll('input.share-page-check').length : 0;
+                if (existing !== pageTotal) renderSharePages();
+                else syncShareSelectionFromDom();
+            }
             menu.hidden = !willOpen;
             btn.classList.toggle('open', willOpen);
             btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
@@ -4328,35 +4379,55 @@
             }));
         }
 
+        async function asPdfBlob(output) {
+            if (output instanceof Blob) return output;
+            if (output instanceof ArrayBuffer) return new Blob([output], { type: 'application/pdf' });
+            if (typeof output === 'string' && output.indexOf('data:') === 0) {
+                const fetched = await fetch(output);
+                return await fetched.blob();
+            }
+            return new Blob([output], { type: 'application/pdf' });
+        }
+
         async function pdfBlobForPages(indexes) {
             if (typeof html2pdf === 'undefined') throw new Error('pdf');
-            const wrapper = document.getElementById('pagesWrapper');
-            if (!wrapper) throw new Error('pdf');
+            const sources = Array.from(document.querySelectorAll('#pagesWrapper > .page-container'));
+            const picked = indexes.map(function(index) { return sources[index]; }).filter(Boolean);
+            if (!picked.length) throw new Error('pdf');
             if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-            const pages = Array.from(wrapper.querySelectorAll(':scope > .page-container'));
-            const keep = {};
-            indexes.forEach(function(index) { keep[index] = true; });
-            if (!pages.some(function(page, index) { return keep[index]; })) throw new Error('pdf');
-            const prevCss = wrapper.style.cssText;
-            const scrollHost = wrapper.closest('.editor-scroll-area');
-            const prevScroll = scrollHost ? scrollHost.scrollTop : 0;
-            try {
-            pages.forEach(function(page, index) {
-                if (!keep[index]) page.remove();
+
+            const host = document.createElement('div');
+            host.className = 'lh-pdf-host';
+            picked.forEach(function(src, pos) {
+                const clone = src.cloneNode(true);
+                clone.querySelectorAll('[contenteditable]').forEach(function(el) { el.removeAttribute('contenteditable'); });
+                clone.querySelectorAll('.remove-page-btn, .stamp-delete, .stamp-resize').forEach(function(el) { el.remove(); });
+                clone.style.pageBreakAfter = pos < picked.length - 1 ? 'always' : 'auto';
+                clone.style.pageBreakBefore = 'auto';
+                host.appendChild(clone);
             });
-            wrapper.style.cssText = 'position:fixed;left:0;top:0;width:210mm;max-width:210mm;margin:0;transform:none;z-index:100000;background:#fff;';
-            document.documentElement.classList.add('lh-exporting');
-            if (scrollHost) scrollHost.scrollTop = 0;
-            window.scrollTo(0, 0);
+
+            const root = document.documentElement;
+            const prevFit = root.style.getPropertyValue('--mobile-page-fit');
+            const prevHtmlOverflow = root.style.overflow;
+            const prevBodyOverflow = document.body.style.overflow;
+            root.style.setProperty('--mobile-page-fit', '1');
+            root.style.overflow = 'visible';
+            document.body.style.overflow = 'visible';
+            document.body.insertBefore(host, document.body.firstChild);
+            root.classList.add('lh-exporting');
+            const savedScroll = window.scrollY || document.documentElement.scrollTop || 0;
+            try {
                 if (document.fonts && document.fonts.ready) {
                     try { await document.fonts.ready; } catch (e) { /* ignore */ }
                 }
-                await waitForImages(wrapper);
+                await waitForImages(host);
                 await new Promise(function(resolve) {
                     requestAnimationFrame(function() { requestAnimationFrame(resolve); });
                 });
+                window.scrollTo(0, 0);
                 const output = await html2pdf().set({
-                    margin: [8, 0, 10, 0],
+                    margin: 0,
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: {
                         scale: 2,
@@ -4368,20 +4439,22 @@
                         scrollY: 0
                     },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'legacy'], before: '.page-container + .page-container' }
-                }).from(wrapper).outputPdf('blob');
-                if (output instanceof Blob) return output;
-                if (output instanceof ArrayBuffer) return new Blob([output], { type: 'application/pdf' });
-                if (typeof output === 'string' && output.indexOf('data:') === 0) {
-                    const fetched = await fetch(output);
-                    return await fetched.blob();
-                }
-                return new Blob([output], { type: 'application/pdf' });
+                    pagebreak: picked.length > 1
+                        ? { mode: ['css', 'legacy'], before: '.page-container + .page-container' }
+                        : { mode: 'avoid-all' }
+                }).from(host).outputPdf('blob');
+                const blob = await asPdfBlob(output);
+                const head = await blob.slice(0, 5).text();
+                if (!blob || blob.size < 800 || head !== '%PDF-') throw new Error('pdf');
+                return blob;
             } finally {
-                wrapper.replaceChildren.apply(wrapper, pages);
-                wrapper.style.cssText = prevCss;
-                document.documentElement.classList.remove('lh-exporting');
-                if (scrollHost) scrollHost.scrollTop = prevScroll;
+                host.remove();
+                window.scrollTo(0, savedScroll);
+                root.classList.remove('lh-exporting');
+                if (prevFit) root.style.setProperty('--mobile-page-fit', prevFit);
+                else root.style.removeProperty('--mobile-page-fit');
+                root.style.overflow = prevHtmlOverflow;
+                document.body.style.overflow = prevBodyOverflow;
             }
         }
 
@@ -4440,17 +4513,23 @@
         async function createShareUrl(pages) {
             const view = isLetterheadView();
             const token = new URLSearchParams(location.search).get('token') || '';
-            const data = documentStateForPages(pages);
+            const unique = pages.filter(function(index, pos) {
+                return pages.indexOf(index) === pos && Number.isInteger(index) && index >= 0;
+            });
+            if (!unique.length) throw new Error('Select at least one page');
             const response = await fetch(view ? '/api/letterhead/share' : '/api/school/letterhead/share', {
                 method: 'POST',
                 credentials: view ? 'omit' : 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(view
-                    ? { parentToken: token, pages: pages }
-                    : { data: data, pages: data.pageContents.map(function(_, index) { return index; }) })
+                    ? { parentToken: token, pages: unique }
+                    : { data: getDocumentState(), pages: unique })
             });
             const json = await response.json();
             if (!response.ok || !json.url) throw new Error(json.error || 'Could not create link');
+            if (Number(json.pageCount) !== unique.length) {
+                throw new Error('Link me ' + json.pageCount + ' page chale gaye. ' + sharePageLabel(unique) + ' select tha.');
+            }
             return json.url;
         }
 
@@ -4458,7 +4537,7 @@
             const pages = selectedSharePages();
             if (!pages) { showShareToast('Select at least one page'); return; }
             closeShareMenu();
-            showShareToast('Preparing PDF…');
+            showShareToast('PDF ban raha hai · ' + sharePageLabel(pages));
             try {
                 const blob = await pdfBlobForPages(pages);
                 if (!blob || blob.size < 800) throw new Error('pdf');
@@ -4468,7 +4547,7 @@
                     return;
                 }
                 downloadBlob(blob, file.name);
-                showShareToast('PDF downloaded — attach that file in WhatsApp');
+                showShareToast('PDF downloaded · ' + sharePageLabel(pages) + ' — WhatsApp me ye file attach karo');
             } catch (err) {
                 if (err && err.name === 'AbortError') return;
                 showShareToast('Could not create the PDF');
@@ -4483,7 +4562,7 @@
             try {
                 const url = await createShareUrl(pages);
                 await copyText(url);
-                showShareToast('View-only link copied · ' + pages.length + (pages.length === 1 ? ' page' : ' pages'));
+                showShareToast('Link copy ho gaya · ' + sharePageLabel(pages));
             } catch (err) {
                 showShareToast(err && err.message ? err.message : 'Could not copy link');
             }
@@ -4501,7 +4580,7 @@
                     return;
                 }
                 await copyText(url);
-                showShareToast('View-only link copied · ' + pages.length + (pages.length === 1 ? ' page' : ' pages'));
+                showShareToast('Link copy ho gaya · ' + sharePageLabel(pages));
             } catch (err) {
                 if (err && err.name === 'AbortError') return;
                 showShareToast('Could not open share menu');
@@ -4526,7 +4605,9 @@
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') closeShareMenu();
         });
-        window.addEventListener('resize', closeShareMenu);
+        document.getElementById('shareMenu').addEventListener('click', function() {
+            syncShareSelectionFromDom();
+        }, true);
 
         function printDocument() {
             if (isMobileDevice()) {
