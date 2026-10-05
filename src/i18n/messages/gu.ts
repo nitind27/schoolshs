@@ -4191,7 +4191,7 @@ const gu: Messages = {
     printGr: "GR",
     printName: "નામ",
     printSeat: "Seat Number",
-    printOrder: "પરીક્ષા હુકમ નંબર",
+    printOrder: "Pariksha Order Number",
     printRemarks: "નોંધ",
     printTeacher: "વર્ગ શિક્ષક",
     printPrincipal: "આચાર્ય",

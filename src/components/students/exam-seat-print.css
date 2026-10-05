@@ -24,7 +24,7 @@
 .exam-seat-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .exam-seat-table thead {
@@ -102,14 +102,27 @@
   page-break-inside: avoid;
 }
 
-/* Seven columns on one A4 sheet. Name stays modest; order and remarks stay blank for writing. */
-.exam-seat-col-sr { width: 6%; }
-.exam-seat-col-roll { width: 8%; }
-.exam-seat-col-gr { width: 12%; }
-.exam-seat-col-name { width: 20%; }
-.exam-seat-col-seat { width: 16%; }
-.exam-seat-col-order { width: 20%; }
-.exam-seat-col-remarks { width: 18%; }
+/* Name stays one line and only as wide as the text. Order column is a bit narrower. */
+.exam-seat-col-sr { width: 1%; }
+.exam-seat-col-roll { width: 1%; }
+.exam-seat-col-gr { width: 1%; }
+.exam-seat-col-name { width: 1%; }
+.exam-seat-col-seat { width: 1%; }
+.exam-seat-col-order { width: 32mm; }
+.exam-seat-col-remarks { width: 36mm; }
+
+.exam-seat-sr,
+.exam-seat-roll,
+.exam-seat-gr,
+.exam-seat-name,
+.exam-seat-seat,
+th.exam-seat-col-sr,
+th.exam-seat-col-roll,
+th.exam-seat-col-gr,
+th.exam-seat-col-name,
+th.exam-seat-col-seat {
+  white-space: nowrap;
+}
 
 .exam-seat-sr,
 .exam-seat-roll,
@@ -124,7 +137,6 @@ th.exam-seat-col-seat,
 th.exam-seat-col-order,
 th.exam-seat-col-remarks {
   text-align: center;
-  white-space: nowrap;
 }
 
 th.exam-seat-col-seat,
@@ -143,12 +155,12 @@ th.exam-seat-col-sr,
 .exam-seat-name,
 th.exam-seat-col-name {
   text-align: left;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 .exam-seat-name {
   font-weight: 600;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 .exam-seat-order,

@@ -4243,7 +4243,7 @@ const en = {
     printGr: "GR",
     printName: "Name",
     printSeat: "Seat Number",
-    printOrder: "Exam order no.",
+    printOrder: "Pariksha Order Number",
     printRemarks: "નોંધ",
     printTeacher: "Class Teacher",
     printPrincipal: "Principal",
