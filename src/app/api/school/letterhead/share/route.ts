@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { getRequestPublicOrigin } from "@/lib/env-auth";
 import { isLetterheadDocumentState } from "@/lib/letterhead/defaults";
 import { saveLetterheadShare, sharePageUrl } from "@/lib/letterhead/share";
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       token: saved.token,
       title: saved.title,
       pageCount: saved.pageCount,
-      url: sharePageUrl(request.nextUrl.origin, saved.token),
+      url: sharePageUrl(getRequestPublicOrigin(request), saved.token),
     });
   } catch (error) {
     if (error instanceof Error && error.message === "too_large") {

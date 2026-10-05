@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getRequestPublicOrigin } from "@/lib/env-auth";
 import { saveChildLetterheadShare, sharePageUrl } from "@/lib/letterhead/share";
 
 /** Create a view-only link for a subset of an existing public letter. */
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
       token: saved.token,
       title: saved.title,
       pageCount: saved.pageCount,
-      url: sharePageUrl(request.nextUrl.origin, saved.token),
+      url: sharePageUrl(getRequestPublicOrigin(request), saved.token),
     });
   } catch (error) {
     if (error instanceof Error && error.message === "too_large") {
