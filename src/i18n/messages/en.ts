@@ -4223,7 +4223,10 @@ const en = {
     students: "students",
     generatorTitle: "Automatic seat number generator",
     generatorDesc:
-      "The class prefix is added automatically: 10A-1, 10A-2, 10A-3… You can edit any number before saving.",
+      "Seats follow roll number across divisions of the same standard. Class 6-A rolls 1–40 become 1-A to 40-A. Class 6-B roll 1 then gets 41-B. Edit any seat before saving.",
+    seriesFirst: "First division. Roll 1 gets 1-{{section}}, roll 2 gets 2-{{section}}, and so on.",
+    seriesContinue:
+      "{{prior}} students are in earlier divisions. Roll 1 of this class gets {{seat}}.",
     prefix: "Prefix",
     startAt: "Start at",
     generate: "Generate",
@@ -4231,7 +4234,7 @@ const en = {
     assigned: "assigned",
     search: "Search student, GR, roll or seat…",
     seatNumber: "Exam Seat Number",
-    seatPlaceholder: "e.g. 10A-1",
+    seatPlaceholder: "e.g. 1-A",
     duplicateError:
       "Duplicate seat numbers found. Every student needs a unique seat number for this exam.",
     noStudents: "No students found in this class",

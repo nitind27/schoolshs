@@ -2,11 +2,44 @@ import { NextRequest, NextResponse } from "next/server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { ensureClassExam } from "@/lib/class-subjects";
 import { prisma } from "@/lib/db";
+import { compareRollNumbers } from "@/lib/attendance";
+import { isEarlierDivision, sectionCode, type ExamSeatSeries } from "@/lib/exam-seat-series";
 import { parseExamTermMeta } from "@/lib/results/exam-terms";
 import { assertTeacherHomeroomAccess } from "@/lib/teacher-attendance";
 
 const ROLES = ["school_admin", "clerk", "teacher"] as const;
 const SEAT_PATTERN = /^[A-Z0-9][A-Z0-9/_-]{0,39}$/;
+
+async function seatSeriesForClass(
+  schoolId: string,
+  schoolClass: {
+    id: string;
+    standard: string;
+    section: string;
+    stream: string;
+    name: string;
+    academicYear: string;
+  },
+): Promise<ExamSeatSeries> {
+  const section = sectionCode(schoolClass.section, schoolClass.name);
+  const siblings = await prisma.schoolClass.findMany({
+    where: { schoolId, academicYear: schoolClass.academicYear },
+    select: { id: true, standard: true, section: true, stream: true, name: true },
+  });
+  const earlierIds = siblings
+    .filter((item) => item.id !== schoolClass.id && isEarlierDivision(schoolClass, item))
+    .map((item) => item.id);
+  const priorStudents = earlierIds.length
+    ? await prisma.student.count({
+        where: {
+          schoolId,
+          classId: { in: earlierIds },
+          status: { not: "archived" },
+        },
+      })
+    : 0;
+  return { section, offset: priorStudents, priorStudents };
+}
 
 async function getClassForSession(
   session: Awaited<ReturnType<typeof requireSchoolAuth>>,
@@ -60,6 +93,7 @@ export async function GET(request: NextRequest) {
     }
 
     const schoolClass = await getClassForSession(session, classId);
+    const seatSeries = await seatSeriesForClass(session.schoolId, schoolClass);
     const { exam } = await ensureClassExam(session.schoolId, schoolClass);
     const terms = parseExamTermMeta(exam.termMeta).terms.map((term) => ({
       key: term.key,
@@ -70,7 +104,13 @@ export async function GET(request: NextRequest) {
     }));
 
     if (!termKey) {
-      return NextResponse.json({ classes, examId: exam.id, terms, students: [] });
+      return NextResponse.json({
+        classes,
+        examId: exam.id,
+        terms,
+        students: [],
+        seatSeries,
+      });
     }
     if (!terms.some((term) => term.key === termKey)) {
       return NextResponse.json(
@@ -115,18 +155,27 @@ export async function GET(request: NextRequest) {
       assignments.map((item) => [item.studentId, item.seatNumber]),
     );
     const publishedCount = assignments.filter((item) => item.isPublished).length;
+    const rows = students
+      .map((student) => ({
+        ...student,
+        seatNumber: seatByStudent.get(student.id) || "",
+      }))
+      .sort(
+        (a, b) =>
+          compareRollNumbers(a.rollNumber, b.rollNumber) ||
+          a.surname.localeCompare(b.surname, undefined, { sensitivity: "base" }) ||
+          a.firstName.localeCompare(b.firstName, undefined, { sensitivity: "base" }),
+      );
 
     return NextResponse.json({
       classes,
       examId: exam.id,
       terms,
+      seatSeries,
       isPublished: assignments.length > 0 && publishedCount === assignments.length,
       publishedCount,
       assignedCount: assignments.length,
-      students: students.map((student) => ({
-        ...student,
-        seatNumber: seatByStudent.get(student.id) || "",
-      })),
+      students: rows,
     });
   } catch (error) {
     if (error instanceof AuthError) {

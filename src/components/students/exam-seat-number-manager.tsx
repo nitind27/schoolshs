@@ -15,12 +15,12 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { PageLoader, Spinner } from "@/components/ui/loader";
 import { Select } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
 import { SeatNumbersGuide } from "@/components/students/seat-numbers-guide";
 import { useLocale, useT } from "@/i18n/locale-provider";
+import { assignSectionSeatNumbers, formatExamSeat, type ExamSeatSeries } from "@/lib/exam-seat-series";
 import { studentListName } from "@/lib/student-names";
 
 type ClassOption = {
@@ -69,8 +69,7 @@ export function ExamSeatNumberManager({
   const [termKey, setTermKey] = useState("");
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [prefix, setPrefix] = useState("");
-  const [startAt, setStartAt] = useState("1");
+  const [seatSeries, setSeatSeries] = useState<ExamSeatSeries | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [rowsLoading, setRowsLoading] = useState(false);
@@ -107,6 +106,7 @@ export function ExamSeatNumberManager({
     setTermKey("");
     setStudents([]);
     setDrafts({});
+    setSeatSeries(null);
     if (!classId) return;
     setRowsLoading(true);
     try {
@@ -120,12 +120,7 @@ export function ExamSeatNumberManager({
       const nextTerms = (payload.terms || []) as ExamTerm[];
       setTerms(nextTerms);
       if (nextTerms.length === 1) setTermKey(nextTerms[0].key);
-      const selectedClass = classes.find((item) => item.id === classId);
-      if (selectedClass) {
-        setPrefix(
-          `${selectedClass.standard}${selectedClass.section || ""}-`,
-        );
-      }
+      if (payload.seatSeries) setSeatSeries(payload.seatSeries as ExamSeatSeries);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : t("examSeats.loadFailed"),
@@ -133,7 +128,7 @@ export function ExamSeatNumberManager({
     } finally {
       setRowsLoading(false);
     }
-  }, [classId, classes, t]);
+  }, [classId, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadClass(), 0);
@@ -156,20 +151,19 @@ export function ExamSeatNumberManager({
       if (!response.ok)
         throw new Error(payload.error || t("examSeats.loadFailed"));
       const rows = (payload.students || []) as StudentRow[];
+      const series = (payload.seatSeries || null) as ExamSeatSeries | null;
+      const allEmpty = rows.every((student) => !String(student.seatNumber || "").trim());
       setStudents(rows);
+      setSeatSeries(series);
       setIsPublished(Boolean(payload.isPublished));
       setAssignedCount(Number(payload.assignedCount) || 0);
       setDrafts(
-        Object.fromEntries(
-          rows.map((student) => [student.id, student.seatNumber || ""]),
-        ),
+        allEmpty && series
+          ? assignSectionSeatNumbers(rows, series)
+          : Object.fromEntries(
+              rows.map((student) => [student.id, student.seatNumber || ""]),
+            ),
       );
-      const selectedClass = classes.find((item) => item.id === classId);
-      if (selectedClass) {
-        setPrefix(
-          `${selectedClass.standard}${selectedClass.section || ""}-`,
-        );
-      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : t("examSeats.loadFailed"),
@@ -177,7 +171,7 @@ export function ExamSeatNumberManager({
     } finally {
       setRowsLoading(false);
     }
-  }, [classId, classes, termKey, t]);
+  }, [classId, termKey, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadStudents(), 0);
@@ -214,20 +208,13 @@ export function ExamSeatNumberManager({
   }, [drafts, search, students]);
 
   const autoGenerate = () => {
-    const cleanPrefix = prefix
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9/_-]/g, "")
-      .slice(0, 30);
-    const first = Math.max(0, Number.parseInt(startAt, 10) || 1);
-    setDrafts(
-      Object.fromEntries(
-        students.map((student, index) => [
-          student.id,
-          `${cleanPrefix}${first + index}`.slice(0, 40),
-        ]),
-      ),
-    );
+    const selected = classes.find((item) => item.id === classId);
+    const series = seatSeries ?? {
+      section: (selected?.section || "").trim().toUpperCase(),
+      offset: 0,
+      priorStudents: 0,
+    };
+    setDrafts(assignSectionSeatNumbers(students, series));
   };
 
   const save = async () => {
@@ -464,32 +451,22 @@ export function ExamSeatNumberManager({
                 <p className="mt-0.5 break-words text-xs leading-snug text-slate-600">
                   {t("examSeats.generatorDesc")}
                 </p>
+                <p className="mt-1 break-words text-xs font-semibold leading-snug text-indigo-800">
+                  {seatSeries && seatSeries.priorStudents > 0
+                    ? t("examSeats.seriesContinue", {
+                        prior: seatSeries.priorStudents,
+                        seat: formatExamSeat(seatSeries.offset + 1, seatSeries.section),
+                      })
+                    : t("examSeats.seriesFirst", {
+                        section: seatSeries?.section || "A",
+                      })}
+                </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-[minmax(0,1fr)_7.5rem] sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-end">
-              <Input
-                label={t("examSeats.prefix")}
-                value={prefix}
-                maxLength={30}
-                onChange={(event) => setPrefix(event.target.value)}
-              />
-              <Input
-                label={t("examSeats.startAt")}
-                type="number"
-                min="0"
-                value={startAt}
-                onChange={(event) => setStartAt(event.target.value)}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={autoGenerate}
-                className="w-full min-[420px]:col-span-2 sm:col-span-1 sm:w-auto"
-              >
-                <Sparkles className="h-4 w-4" />
-                {t("examSeats.generate")}
-              </Button>
-            </div>
+            <Button type="button" variant="outline" onClick={autoGenerate}>
+              <Sparkles className="h-4 w-4" />
+              {t("examSeats.generate")}
+            </Button>
           </section>
         ) : null}
 
