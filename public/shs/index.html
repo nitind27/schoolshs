@@ -329,6 +329,177 @@
             box-shadow: inset 0 0 0 1px rgb(15 118 110 / .15);
         }
 
+        .share-wrap {
+            position: relative;
+            display: inline-flex;
+        }
+
+        .app-btn-share {
+            background: #128c7e;
+            border-color: #0f766e;
+            color: #fff;
+            box-shadow: 0 1px 2px rgb(15 118 110 / .25);
+        }
+
+        .app-btn-share:hover,
+        .app-btn-share.open {
+            background: #0f766e;
+            border-color: #0f766e;
+            color: #fff;
+        }
+
+        .share-menu {
+            position: fixed;
+            z-index: 4000;
+            min-width: 196px;
+            padding: 6px;
+            background: #fff;
+            border: 1px solid var(--app-border);
+            border-radius: 12px;
+            box-shadow: 0 14px 36px rgb(15 39 68 / .18);
+        }
+
+        .share-menu[hidden] {
+            display: none !important;
+        }
+
+        .share-menu button {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-family: var(--ui-font);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--app-text);
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .share-menu button:hover {
+            background: #f4f7fb;
+        }
+
+        .share-ico {
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .share-ico svg {
+            width: 16px;
+            height: 16px;
+            display: block;
+        }
+
+        .share-toast {
+            position: fixed;
+            left: 50%;
+            bottom: 18px;
+            transform: translateX(-50%);
+            z-index: 5000;
+            background: var(--lh-ink);
+            color: #fff;
+            font-family: var(--ui-font);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 999px;
+            box-shadow: 0 8px 24px rgb(15 39 68 / .28);
+        }
+
+        .share-pages {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            max-height: 168px;
+            overflow: auto;
+            padding: 2px 2px 6px;
+            margin-bottom: 4px;
+            border-bottom: 1px solid var(--app-border);
+        }
+
+        .share-page {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 8px;
+            border-radius: 7px;
+            font-family: var(--ui-font);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--app-text);
+            cursor: pointer;
+        }
+
+        .share-page:hover { background: #f4f7fb; }
+
+        .share-hint {
+            margin: 0;
+            padding: 4px 8px 8px;
+            font-family: var(--ui-font);
+            font-size: 10px;
+            line-height: 1.35;
+            color: #64748b;
+        }
+
+        .lh-view-bar { display: none; }
+
+        html.lh-view .lh-view-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            padding: 10px 14px;
+            background: #fff;
+            border-bottom: 1px solid var(--app-border);
+            box-shadow: 0 1px 4px rgb(15 39 68 / .06);
+        }
+
+        html.lh-view .lh-view-title {
+            font-family: var(--ui-font);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--lh-ink);
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        html.lh-view .editor-sticky-bar,
+        html.lh-view .edit-indicator,
+        html.lh-view .add-page-btn,
+        html.lh-view .remove-page-btn,
+        html.lh-view .stamp-delete,
+        html.lh-view .stamp-resize,
+        html.lh-view .voice-status-bar {
+            display: none !important;
+        }
+
+        html.lh-view .draggable-stamp,
+        html.lh-view .logo-placeholder {
+            pointer-events: none;
+        }
+
+        html.lh-view,
+        html.lh-view body {
+            height: auto;
+            min-height: 100%;
+            overflow: auto;
+            background: #e6ebf2;
+        }
+
         .app-toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -1220,7 +1391,11 @@
             .ocr-panel,
             .template-panel,
             .panel-backdrop,
-            .status-bar {
+            .status-bar,
+            .share-menu,
+            .share-toast,
+            .lh-view-bar,
+            .page-container.share-print-skip {
                 display: none !important;
             }
 
@@ -2452,9 +2627,14 @@
 </head>
 <body>
     <script>
+        const letterheadQuery = new URLSearchParams(window.location.search);
         document.documentElement.classList.toggle(
             "embedded",
-            new URLSearchParams(window.location.search).get("embed") === "1"
+            letterheadQuery.get("embed") === "1"
+        );
+        document.documentElement.classList.toggle(
+            "lh-view",
+            letterheadQuery.get("view") === "1"
         );
 
         function updateMobilePageFit() {
@@ -2498,6 +2678,12 @@
                 </div>
                 <div class="app-divider"></div>
                 <div class="app-action-cluster">
+                    <div class="share-wrap" id="shareWrap">
+                        <button type="button" class="app-btn app-btn-share" id="shareBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="shareMenu" onclick="toggleShareMenu(event)" title="Share selected pages">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7a2.5 2.5 0 0 0 0-1.39l7.05-4.11A2.5 2.5 0 1 0 14.5 5c0 .17.02.33.05.49L8.04 9.6a2.5 2.5 0 1 0 0 3.8l6.51 4.11c-.03.15-.05.31-.05.49a2.5 2.5 0 1 0 2.5-2.5z"/></svg>
+                            Share
+                        </button>
+                    </div>
                     <button type="button" class="app-btn app-btn-print" onclick="printDocument()">Print</button>
                     <button type="button" class="app-btn app-btn-pdf btn-pdf" onclick="downloadAsPDF()">PDF</button>
                     <button type="button" class="app-btn app-btn-word" onclick="downloadAsDoc()">Word</button>
@@ -2671,6 +2857,32 @@
         <div class="voice-text" id="voiceText">Listening...</div>
         <button class="voice-stop-btn" onclick="stopVoiceTyping()">⏹ Stop</button>
     </div>
+    </div>
+
+    <div class="lh-view-bar" id="lhViewBar">
+        <div class="lh-view-title" id="lhViewTitle">Letterhead</div>
+        <button type="button" class="app-btn app-btn-share" id="viewShareBtn" aria-haspopup="menu" aria-controls="shareMenu" onclick="toggleShareMenu(event)">Share</button>
+    </div>
+
+    <div class="share-menu" id="shareMenu" role="menu" hidden>
+        <div class="share-pages" id="sharePages"></div>
+        <p class="share-hint">WhatsApp sends the PDF of the ticked pages. Copy link opens those pages only — no editing.</p>
+        <button type="button" role="menuitem" onclick="shareViaWhatsApp()">
+            <span class="share-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#128C7E" d="M12.04 2C6.58 2 2.15 6.4 2.15 11.83c0 1.74.46 3.44 1.34 4.94L2 22l5.39-1.4a10.1 10.1 0 0 0 4.65 1.18h.01c5.46 0 9.89-4.4 9.89-9.83C21.94 6.4 17.5 2 12.04 2zm5.76 13.95c-.24.68-1.4 1.3-1.94 1.38-.5.07-1.12.1-1.81-.11-.42-.13-.95-.3-1.64-.59-2.88-1.24-4.76-4.14-4.9-4.33-.14-.19-1.16-1.54-1.16-2.94s.73-2.08 1-2.37c.24-.26.64-.38.85-.38h.61c.2 0 .46-.07.72.55.27.64.91 2.22.99 2.38.08.16.13.35.03.56-.1.22-.16.35-.31.54-.16.19-.33.42-.47.56-.16.16-.32.33-.14.64.19.32.83 1.37 1.78 2.22 1.23 1.09 2.26 1.43 2.58 1.59.32.16.5.13.69-.08.19-.22.8-.93 1.01-1.25.22-.32.43-.26.72-.16.29.1 1.84.87 2.16 1.03.32.16.53.24.61.37.08.13.08.76-.16 1.44z"/></svg></span>
+            WhatsApp PDF
+        </button>
+        <button type="button" role="menuitem" onclick="copyShareLink()">
+            <span class="share-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#1a5f7a" d="M8 7a3 3 0 0 1 3-3h7a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h2V7zm2 2v2H6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-2h-3a3 3 0 0 1-3-3V9zm2-3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-7z"/></svg></span>
+            Copy link
+        </button>
+        <button type="button" role="menuitem" onclick="shareWithSystemMenu()">
+            <span class="share-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#1a5f7a" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7a2.5 2.5 0 0 0 0-1.39l7.05-4.11A2.5 2.5 0 1 0 14.5 5c0 .17.02.33.05.49L8.04 9.6a2.5 2.5 0 1 0 0 3.8l6.51 4.11c-.03.15-.05.31-.05.49a2.5 2.5 0 1 0 2.5-2.5z"/></svg></span>
+            Share link
+        </button>
+        <button type="button" role="menuitem" onclick="shareAndPrint()">
+            <span class="share-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#1a5f7a" d="M7 3h10v4H7V3zm11 6H6a3 3 0 0 0-3 3v5h4v4h10v-4h4v-5a3 3 0 0 0-3-3zm-2 10H8v-4h8v4zm2-6.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg></span>
+            Print
+        </button>
     </div>
 
     <div class="editor-scroll-area">
@@ -3953,6 +4165,7 @@
             if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 
             const clone = wrapper.cloneNode(true);
+            clone.querySelectorAll('.share-print-skip').forEach((el) => el.remove());
             clone.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'));
             clone.querySelectorAll('.add-page-btn, .remove-page-btn').forEach((el) => el.remove());
 
@@ -3985,14 +4198,273 @@
             w.document.close();
         }
 
+        function isLetterheadView() {
+            return document.documentElement.classList.contains('lh-view');
+        }
+
+        function letterheadTitle() {
+            const school = (document.getElementById('schoolName')?.textContent || '').replace(/\s+/g, ' ').trim();
+            return school || 'Letterhead';
+        }
+
+        function showShareToast(message) {
+            let el = document.getElementById('shareToast');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'shareToast';
+                el.className = 'share-toast';
+                el.setAttribute('role', 'status');
+                document.body.appendChild(el);
+            }
+            el.textContent = message;
+            el.hidden = false;
+            clearTimeout(window.__shareToastTimer);
+            window.__shareToastTimer = setTimeout(function() { el.hidden = true; }, 2600);
+        }
+
+        function shareAnchor() {
+            if (isLetterheadView()) return document.getElementById('viewShareBtn');
+            return document.getElementById('shareBtn');
+        }
+
+        function closeShareMenu() {
+            const menu = document.getElementById('shareMenu');
+            if (menu) menu.hidden = true;
+            ['shareBtn', 'viewShareBtn'].forEach(function(id) {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.classList.remove('open');
+                btn.setAttribute('aria-expanded', 'false');
+            });
+        }
+
+        function renderSharePages() {
+            const box = document.getElementById('sharePages');
+            if (!box) return;
+            const pages = document.querySelectorAll('#pagesWrapper > .page-container');
+            box.innerHTML = '';
+            pages.forEach(function(page, index) {
+                const label = document.createElement('label');
+                label.className = 'share-page';
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.className = 'share-page-check';
+                input.value = String(index);
+                input.checked = true;
+                label.appendChild(input);
+                label.appendChild(document.createTextNode('Page ' + (index + 1)));
+                box.appendChild(label);
+            });
+        }
+
+        function selectedSharePages() {
+            const checks = Array.from(document.querySelectorAll('.share-page-check'));
+            if (!checks.length) return [0];
+            const picked = checks.filter(function(box) { return box.checked; }).map(function(box) { return Number(box.value); });
+            return picked.length ? picked : null;
+        }
+
+        function positionShareMenu() {
+            const menu = document.getElementById('shareMenu');
+            const btn = shareAnchor();
+            if (!menu || !btn || menu.hidden) return;
+            const rect = btn.getBoundingClientRect();
+            const width = menu.offsetWidth || 260;
+            const height = menu.offsetHeight || 280;
+            const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+            let top = rect.bottom + 6;
+            if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 6);
+            menu.style.left = left + 'px';
+            menu.style.top = top + 'px';
+        }
+
+        function toggleShareMenu(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('shareMenu');
+            const btn = shareAnchor();
+            if (!menu || !btn) return;
+            const willOpen = menu.hidden;
+            if (willOpen) renderSharePages();
+            menu.hidden = !willOpen;
+            btn.classList.toggle('open', willOpen);
+            btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            if (willOpen) positionShareMenu();
+        }
+
+        function markPagesForPrint(indexes) {
+            const pages = Array.from(document.querySelectorAll('#pagesWrapper > .page-container'));
+            pages.forEach(function(page, index) {
+                page.classList.toggle('share-print-skip', !indexes.includes(index));
+            });
+        }
+
+        function clearPrintPageMarks() {
+            document.querySelectorAll('.share-print-skip').forEach(function(el) {
+                el.classList.remove('share-print-skip');
+            });
+        }
+
+        async function pdfBlobForPages(indexes) {
+            if (typeof html2pdf === 'undefined') throw new Error('pdf');
+            const host = document.createElement('div');
+            host.className = 'pages-wrapper';
+            host.style.cssText = 'position:fixed;left:-12000px;top:0;width:210mm;background:#fff;';
+            const pages = document.querySelectorAll('#pagesWrapper > .page-container');
+            indexes.forEach(function(index) {
+                const src = pages[index];
+                if (!src) return;
+                const clone = src.cloneNode(true);
+                clone.classList.remove('share-print-skip');
+                clone.querySelectorAll('.remove-page-btn,.stamp-delete,.stamp-resize,.add-page-btn').forEach(function(el) { el.remove(); });
+                host.appendChild(clone);
+            });
+            document.body.appendChild(host);
+            document.documentElement.classList.add('lh-exporting');
+            try {
+                return await html2pdf().set({
+                    margin: [8, 0, 10, 0],
+                    image: { type: 'jpeg', quality: 0.92 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 1280 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'], before: '.page-container + .page-container' }
+                }).from(host).outputPdf('blob');
+            } finally {
+                host.remove();
+                document.documentElement.classList.remove('lh-exporting');
+            }
+        }
+
+        function downloadBlob(blob, name) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = name;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(function() { URL.revokeObjectURL(link.href); }, 2000);
+        }
+
+        function letterheadPdfName(indexes) {
+            const stamp = new Date().toLocaleDateString('en-IN').replace(/\//g, '-');
+            const pages = indexes.map(function(n) { return n + 1; }).join('-');
+            return 'Letterhead_p' + pages + '_' + stamp + '.pdf';
+        }
+
+        async function copyText(value) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(value);
+                return;
+            }
+            const area = document.createElement('textarea');
+            area.value = value;
+            area.setAttribute('readonly', '');
+            area.style.position = 'fixed';
+            area.style.left = '-9999px';
+            document.body.appendChild(area);
+            area.select();
+            document.execCommand('copy');
+            area.remove();
+        }
+
+        async function createShareUrl(pages) {
+            const view = isLetterheadView();
+            const token = new URLSearchParams(location.search).get('token') || '';
+            const response = await fetch(view ? '/api/letterhead/share' : '/api/school/letterhead/share', {
+                method: 'POST',
+                credentials: view ? 'omit' : 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(view
+                    ? { parentToken: token, pages: pages }
+                    : { data: getDocumentState(), pages: pages })
+            });
+            const json = await response.json();
+            if (!response.ok || !json.url) throw new Error(json.error || 'Could not create link');
+            return json.url;
+        }
+
+        async function shareViaWhatsApp() {
+            const pages = selectedSharePages();
+            if (!pages) { showShareToast('Select at least one page'); return; }
+            closeShareMenu();
+            showShareToast('Preparing PDF…');
+            try {
+                const blob = await pdfBlobForPages(pages);
+                const file = new File([blob], letterheadPdfName(pages), { type: 'application/pdf' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: letterheadTitle() });
+                    return;
+                }
+                downloadBlob(blob, file.name);
+                showShareToast('PDF downloaded — attach that file in WhatsApp');
+            } catch (err) {
+                if (err && err.name === 'AbortError') return;
+                showShareToast('Could not create the PDF');
+            }
+        }
+
+        async function copyShareLink() {
+            const pages = selectedSharePages();
+            if (!pages) { showShareToast('Select at least one page'); return; }
+            closeShareMenu();
+            showShareToast('Creating link…');
+            try {
+                const url = await createShareUrl(pages);
+                await copyText(url);
+                showShareToast('View-only link copied');
+            } catch (err) {
+                showShareToast(err && err.message ? err.message : 'Could not copy link');
+            }
+        }
+
+        async function shareWithSystemMenu() {
+            const pages = selectedSharePages();
+            if (!pages) { showShareToast('Select at least one page'); return; }
+            closeShareMenu();
+            try {
+                const url = await createShareUrl(pages);
+                const title = letterheadTitle();
+                if (navigator.share) {
+                    await navigator.share({ title: title, text: title, url: url });
+                    return;
+                }
+                await copyText(url);
+                showShareToast('View-only link copied');
+            } catch (err) {
+                if (err && err.name === 'AbortError') return;
+                showShareToast('Could not open share menu');
+            }
+        }
+
+        function shareAndPrint() {
+            const pages = selectedSharePages();
+            if (!pages) { showShareToast('Select at least one page'); return; }
+            closeShareMenu();
+            markPagesForPrint(pages);
+            printDocument();
+        }
+
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('shareMenu');
+            const anchor = shareAnchor();
+            if (menu && !menu.hidden && menu.contains(event.target)) return;
+            if (anchor && anchor.contains(event.target)) return;
+            closeShareMenu();
+        });
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') closeShareMenu();
+        });
+        window.addEventListener('resize', closeShareMenu);
+
         function printDocument() {
             if (isMobileDevice()) {
                 printInNewWindow();
+                clearPrintPageMarks();
                 return;
             }
             document.body.classList.add('is-printing');
             const restore = () => {
                 document.body.classList.remove('is-printing');
+                clearPrintPageMarks();
                 window.removeEventListener('afterprint', restore);
             };
             window.addEventListener('afterprint', restore);
@@ -4560,6 +5032,7 @@
         }
 
         function saveToLocalStorage() {
+            if (isLetterheadView()) return;
             const data = getDocumentState();
             try {
                 localStorage.setItem('letterheadData', JSON.stringify(data));
@@ -4742,6 +5215,7 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
+            if (isLetterheadView()) return;
             if (e.ctrlKey) {
                 switch(e.key.toLowerCase()) {
                     case 'b':
@@ -4777,8 +5251,39 @@
             }
         });
 
+        function freezeLetterhead() {
+            document.querySelectorAll('[contenteditable]').forEach(function(el) {
+                el.setAttribute('contenteditable', 'false');
+            });
+        }
+
+        async function loadSharedLetterhead() {
+            const token = new URLSearchParams(location.search).get('token') || '';
+            const title = document.getElementById('lhViewTitle');
+            try {
+                const response = await fetch('/api/letterhead/share/' + encodeURIComponent(token), { cache: 'no-store' });
+                const json = await response.json();
+                if (!response.ok) throw new Error(json.error || 'Not found');
+                applyDocumentState(json.data);
+                freezeLetterhead();
+                if (title) title.textContent = json.title || 'Letterhead';
+                document.title = json.title || 'Letterhead';
+                updateWordCount();
+            } catch (err) {
+                if (title) title.textContent = 'This link is not available';
+                const pages = document.getElementById('pagesWrapper');
+                if (pages) {
+                    pages.innerHTML = '<p style="padding:28px;font-family:sans-serif;color:#334155">This letter link is not available.</p>';
+                }
+            }
+        }
+
         // Load saved data on page load (DB when embedded in portal)
         window.onload = function() {
+            if (isLetterheadView()) {
+                void loadSharedLetterhead();
+                return;
+            }
             void loadLetterheadFromServer().then(function() {
                 applyLogo(logoData || DEFAULT_LOGO_URL, false);
                 updateWordCount();

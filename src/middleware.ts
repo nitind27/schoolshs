@@ -29,6 +29,8 @@ const PUBLIC_PATHS = [
   "/api/id-cards/share",
   "/api/id-cards/public",
   "/api/exam-id-cards/public",
+  "/letterhead/view",
+  "/api/letterhead/share",
 ];
 
 const ROLE_ROUTES: Record<string, UserRole[]> = {

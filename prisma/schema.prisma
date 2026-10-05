@@ -45,6 +45,7 @@ model School {
   auditSessions          CaAuditSession[]
   caAssignments          CaSchoolAssignment[]
   idCardShareLinks       IdCardShareLink[]
+  letterheadShares       LetterheadShare[]
   attendanceMonths       StudentAttendanceMonth[]
   staffAttendanceMonths  StaffAttendanceMonth[]
   staffPayrolls          StaffPayroll[]
@@ -389,6 +390,21 @@ model IdCardShareLink {
 
   @@index([schoolId])
   @@map("idcardsharelink")
+}
+
+model LetterheadShare {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  token       String   @unique @db.VarChar(64)
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  title       String   @db.VarChar(160)
+  snapshot    Json
+  pageCount   Int
+  createdById String?
+
+  @@index([schoolId])
+  @@map("letterheadshare")
 }
 
 model StudentAttendanceMonth {
