@@ -129,7 +129,7 @@ export async function saveChildLetterheadShare(parentToken: string, pages: numbe
   if (!parent || !isLetterheadDocumentState(parent.snapshot)) return null;
   return saveLetterheadShare({
     schoolId: parent.schoolId,
-    data: parent.snapshot,
+    data: parent.snapshot as LetterheadDocumentState,
     pages,
   });
 }
