@@ -102,31 +102,36 @@
   page-break-inside: avoid;
 }
 
-/* Name stays narrower. The blank order column takes the writing space. */
-.exam-seat-col-sr { width: 8%; }
-.exam-seat-col-roll { width: 9%; }
-.exam-seat-col-gr { width: 14%; }
-.exam-seat-col-name { width: 26%; }
-.exam-seat-col-seat { width: 13%; }
-.exam-seat-col-order { width: 30%; }
+/* Seven columns on one A4 sheet. Name stays modest; order and remarks stay blank for writing. */
+.exam-seat-col-sr { width: 6%; }
+.exam-seat-col-roll { width: 8%; }
+.exam-seat-col-gr { width: 12%; }
+.exam-seat-col-name { width: 20%; }
+.exam-seat-col-seat { width: 16%; }
+.exam-seat-col-order { width: 20%; }
+.exam-seat-col-remarks { width: 18%; }
 
 .exam-seat-sr,
 .exam-seat-roll,
 .exam-seat-gr,
 .exam-seat-seat,
 .exam-seat-order,
+.exam-seat-remarks,
 th.exam-seat-col-sr,
 th.exam-seat-col-roll,
 th.exam-seat-col-gr,
 th.exam-seat-col-seat,
-th.exam-seat-col-order {
+th.exam-seat-col-order,
+th.exam-seat-col-remarks {
   text-align: center;
   white-space: nowrap;
 }
 
-th.exam-seat-col-order {
+th.exam-seat-col-seat,
+th.exam-seat-col-order,
+th.exam-seat-col-remarks {
   white-space: normal;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 th.exam-seat-col-sr,
@@ -146,14 +151,15 @@ th.exam-seat-col-name {
   overflow-wrap: anywhere;
 }
 
-.exam-seat-order {
+.exam-seat-order,
+.exam-seat-remarks {
   min-height: 7mm;
 }
 
 .exam-seat-seat {
-  font-size: 12pt;
+  font-size: 11pt;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   font-family: ui-monospace, "Courier New", monospace;
 }
 
