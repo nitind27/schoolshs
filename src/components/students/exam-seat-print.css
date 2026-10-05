@@ -24,7 +24,7 @@
 .exam-seat-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .exam-seat-table thead {
@@ -102,24 +102,34 @@
   page-break-inside: avoid;
 }
 
-/* Name stays one line and only as wide as the text. Order column is a bit narrower. */
-.exam-seat-col-sr { width: 1%; }
-.exam-seat-col-roll { width: 1%; }
-.exam-seat-col-gr { width: 1%; }
-.exam-seat-col-name { width: 1%; }
-.exam-seat-col-seat { width: 1%; }
+/* Fixed widths: Name is wider, Pariksha Order Number stays narrow. */
+.exam-seat-col-sr { width: 5%; }
+.exam-seat-col-roll { width: 7%; }
+.exam-seat-col-gr { width: 11%; }
+.exam-seat-col-name { width: 36%; }
+.exam-seat-col-seat { width: 14%; }
 .exam-seat-col-order,
 th.exam-seat-col-order,
 td.exam-seat-order {
-  width: 22mm;
-  max-width: 22mm;
+  width: 11%;
+  max-width: 11%;
+  padding-left: 1mm;
+  padding-right: 1mm;
+}
+
+.exam-seat-order-label {
+  display: block;
+  width: 100%;
+  white-space: normal;
+  line-height: 1.15;
+  text-align: center;
 }
 
 .exam-seat-col-remarks,
 th.exam-seat-col-remarks,
 td.exam-seat-remarks {
-  width: 16mm;
-  max-width: 16mm;
+  width: 16%;
+  max-width: 16%;
 }
 
 .exam-seat-sr,
