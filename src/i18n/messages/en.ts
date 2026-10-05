@@ -4244,7 +4244,7 @@ const en = {
     printName: "Name",
     printSeat: "Seat Number",
     printOrder: "Pariksha Order Number",
-    printRemarks: "નોંધ",
+    printRemarks: "Remarks",
     printTeacher: "Class Teacher",
     printPrincipal: "Principal",
     assigned: "assigned",

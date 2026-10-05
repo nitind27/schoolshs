@@ -108,8 +108,19 @@
 .exam-seat-col-gr { width: 1%; }
 .exam-seat-col-name { width: 1%; }
 .exam-seat-col-seat { width: 1%; }
-.exam-seat-col-order { width: 32mm; }
-.exam-seat-col-remarks { width: 36mm; }
+.exam-seat-col-order,
+th.exam-seat-col-order,
+td.exam-seat-order {
+  width: 22mm;
+  max-width: 22mm;
+}
+
+.exam-seat-col-remarks,
+th.exam-seat-col-remarks,
+td.exam-seat-remarks {
+  width: 16mm;
+  max-width: 16mm;
+}
 
 .exam-seat-sr,
 .exam-seat-roll,
