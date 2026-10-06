@@ -3,7 +3,7 @@ import { compareRollNumbers } from "@/lib/attendance";
 export type ExamSeatSeries = {
   /** Division letter, e.g. "A". */
   section: string;
-  /** Students already counted in earlier divisions of this standard. */
+  /** Students already counted in earlier classes of this school year. */
   offset: number;
   priorStudents: number;
 };
@@ -26,20 +26,38 @@ type DivisionClass = {
   name?: string | null;
 };
 
-/** True when `other` is an earlier division of the same standard, year-group and stream. */
+function standardRank(standard: string): number | null {
+  const value = normStandard(standard);
+  if (!/^\d+$/.test(value)) return null;
+  return Number.parseInt(value, 10);
+}
+
+/** Earlier class in the same school year: lower standard first, then A before B. */
 export function isEarlierDivision(current: DivisionClass, other: DivisionClass): boolean {
-  if (normStandard(current.standard) !== normStandard(other.standard)) return false;
-  const streamA = String(current.stream || "").trim().toLowerCase();
-  const streamB = String(other.stream || "").trim().toLowerCase();
-  if (streamA !== streamB) return false;
+  const currentStd = standardRank(current.standard);
+  const otherStd = standardRank(other.standard);
+  if (currentStd != null && otherStd != null && currentStd !== otherStd) {
+    return otherStd < currentStd;
+  }
+  if (currentStd != null && otherStd == null) return false;
+  if (currentStd == null && otherStd != null) return true;
+  const stdCmp = normStandard(other.standard).localeCompare(normStandard(current.standard), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+  if (stdCmp !== 0) return stdCmp < 0;
+
   const currentSection = sectionCode(current.section, current.name);
   const otherSection = sectionCode(other.section, other.name);
-  return (
-    otherSection.localeCompare(currentSection, undefined, {
-      numeric: true,
-      sensitivity: "base",
-    }) < 0
-  );
+  const sectionCmp = otherSection.localeCompare(currentSection, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+  if (sectionCmp !== 0) return sectionCmp < 0;
+
+  const streamA = String(current.stream || "").trim().toLowerCase();
+  const streamB = String(other.stream || "").trim().toLowerCase();
+  return streamB.localeCompare(streamA, undefined, { numeric: true, sensitivity: "base" }) < 0;
 }
 
 /** "A" from the class section, or the trailing division in a name like "Class 6-A". */
@@ -68,9 +86,9 @@ export function positiveRoll(roll: string | null | undefined): number | null {
 }
 
 /**
- * Seat numbers run across divisions of one standard, in section order, by roll.
- * 6-A with rolls 1–40 → 1-A … 40-A.
- * 6-B roll 1 → 41-B when 40 students sit in earlier divisions.
+ * Seat numbers run through the whole school, class by class, by roll.
+ * 6-A rolls 1–40 → 1-A … 40-A. 6-B roll 1 → 41-B.
+ * 7-A does not restart at 1; it continues after 6-B, then 7-B, 8-A, 8-B.
  * A missing or duplicate roll takes the next free number so every student still gets a seat.
  */
 export function assignSectionSeatNumbers(

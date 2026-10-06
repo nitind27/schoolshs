@@ -4223,10 +4223,10 @@ const en = {
     students: "students",
     generatorTitle: "Automatic seat number generator",
     generatorDesc:
-      "Seats follow roll number across divisions of the same standard. Class 6-A rolls 1–40 become 1-A to 40-A. Class 6-B roll 1 then gets 41-B. Edit any seat before saving.",
-    seriesFirst: "First division. Roll 1 gets 1-{{section}}, roll 2 gets 2-{{section}}, and so on.",
+      "Seat numbers run through the whole school: 6-A, then 6-B, then 7-A, 7-B, 8-A. A new standard does not restart at 1. If 6-A has 40 students, 6-B roll 1 gets 41-B, and 7-A continues from there.",
+    seriesFirst: "First class in the school. Roll 1 gets 1-{{section}}, roll 2 gets 2-{{section}}, and so on.",
     seriesContinue:
-      "{{prior}} students are in earlier divisions. Roll 1 of this class gets {{seat}}.",
+      "{{prior}} students are in earlier classes. Roll 1 of this class gets {{seat}}.",
     prefix: "Prefix",
     startAt: "Start at",
     generate: "Generate",
