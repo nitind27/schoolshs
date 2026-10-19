@@ -31,6 +31,7 @@ import {
   CalendarClock,
   FolderOpen,
   Hash,
+  Tags,
   Armchair,
   PartyPopper,
   Trophy,
@@ -105,6 +106,11 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
           href: "/students/roll-numbers",
           label: t("rollNumbers.title"),
           icon: Hash,
+        },
+        {
+          href: "/students/caste",
+          label: t("nav.classCaste"),
+          icon: Tags,
         },
         {
           href: "/admissions",
