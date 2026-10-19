@@ -3,7 +3,16 @@ import { prisma } from "@/lib/db";
 import { requireSchoolAuth, requireStudentAuth, AuthError } from "@/lib/auth";
 import { ANNUAL_RESULT_SUBJECTS } from "@/lib/results/config";
 import { computeStudentTotals, subjectFinalMarks } from "@/lib/results/calculations";
-import { parseTermRemarks } from "@/lib/results/marks-sheet-config";
+import { parseTermRemarks, type MarksSheetTermData } from "@/lib/results/marks-sheet-config";
+import { combineTheoryInternal } from "@/lib/results/pragati-patrak";
+import {
+  componentTerms,
+  finalTerm,
+  parseExamTermMeta,
+  readTermInternalScore,
+  readTermScore,
+  type ExamTermDef,
+} from "@/lib/results/exam-terms";
 import type { Student } from "@/generated/prisma/client";
 
 async function loadStudentsForExam(
@@ -95,6 +104,33 @@ async function loadStudentsForExam(
   });
 }
 
+function splitSemesterMarks(
+  meta: ReturnType<typeof parseExamTermMeta>,
+  term: MarksSheetTermData,
+  annualMarks: number | null,
+) {
+  const comps = componentTerms(meta);
+  const secondComponent = comps[1];
+  const second: ExamTermDef =
+    secondComponent &&
+    ((secondComponent.maxMarks || 0) > 0 || (secondComponent.internalMax || 0) > 0)
+      ? secondComponent
+      : finalTerm(meta);
+  const firstExam = comps[0] || null;
+  const theory1 = firstExam ? readTermScore(firstExam, term, annualMarks) : null;
+  const internal1 = firstExam ? readTermInternalScore(firstExam, term) : null;
+  const theory2 = readTermScore(second, term, annualMarks);
+  const internal2 = readTermInternalScore(second, term);
+  return {
+    theory1,
+    internal1,
+    theory2,
+    internal2,
+    first: combineTheoryInternal(theory1, internal1),
+    second: combineTheoryInternal(theory2, internal2),
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -116,11 +152,20 @@ export async function GET(request: NextRequest) {
       filterStudentId = session.studentId;
     }
 
+    const schoolRow = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { code: true, udiseCode: true, name: true },
+    });
+    const schoolCode = String(schoolRow?.code || schoolRow?.udiseCode || "").trim();
+    const splitResult = schoolCode === "24261004404";
+
     const exam = await prisma.exam.findFirst({
       where: { id: examId, schoolId },
       include: { subjects: { orderBy: { sortOrder: "asc" } } },
     });
     if (!exam) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const termMeta = splitResult ? parseExamTermMeta(exam.termMeta) : null;
 
     const results = await prisma.examResult.findMany({
       where: { examId, ...(filterStudentId ? { studentId: filterStudentId } : {}) },
@@ -196,6 +241,7 @@ export async function GET(request: NextRequest) {
         const second =
           term.second ??
           pickScore("second", "sem2", "term2", "દ્વિતીય", "mid2");
+        const split = termMeta ? splitSemesterMarks(termMeta, term, r?.marksObtained ?? null) : null;
         const formative = pickScore(
           "formative",
           "omr",
@@ -223,8 +269,12 @@ export async function GET(request: NextRequest) {
             : null,
           grade: r?.grade ?? null,
           letterGrade: term.letterGrade ?? r?.grade ?? null,
-          first,
-          second,
+          first: split?.first ?? first,
+          second: split?.second ?? second,
+          theory1: split?.theory1 ?? null,
+          internal1: split?.internal1 ?? null,
+          theory2: split?.theory2 ?? null,
+          internal2: split?.internal2 ?? null,
           formative,
           internal,
           isAbsent: r?.isAbsent ?? false,
@@ -260,20 +310,15 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const school = await prisma.school.findUnique({
-      where: { id: schoolId },
-      select: { code: true, udiseCode: true, name: true },
-    });
-
     return NextResponse.json({
       exam,
       cards,
       settings,
       template: ANNUAL_RESULT_SUBJECTS,
       school: {
-        code: school?.code || null,
-        udiseCode: school?.udiseCode || school?.code || null,
-        name: school?.name || null,
+        code: schoolRow?.code || null,
+        udiseCode: schoolRow?.udiseCode || schoolRow?.code || null,
+        name: schoolRow?.name || null,
       },
     });
   } catch (e) {

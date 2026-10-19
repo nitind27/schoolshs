@@ -650,7 +650,7 @@ const gu: Messages = {
     deviceLogoutOthers: "બીજી ડિવાઇસથી લૉગ આઉટ કરો",
     deviceCancel: "રદ કરો",
     deviceModalHint:
-      "ટિપ: બીજા કમ્પ્યુટર અથવા શેર્ડ PC પર સેશન ખુલ્લું હોય તો “બીજી ડિવાઇસથી લૉગ આઉટ” પસંદ કરો.",
+      "ટિપ: બીજા કોમ્પ્યુટર અથવા શેર્ડ PC પર સેશન ખુલ્લું હોય તો “બીજી ડિવાઇસથી લૉગ આઉટ” પસંદ કરો.",
     deviceLastActive: "છેલ્લે સક્રિય",
     deviceJustNow: "હમણાં જ",
     deviceMinsAgo: "{{n}} મિનિટ પહેલાં",
@@ -2335,6 +2335,10 @@ const gu: Messages = {
     saveAndDocuments: "સાચવો અને દસ્તાવેજ અપલોડ",
     finish: "પૂર્ણ",
     categorySuggest: "અટક/જાતિ થી સૂચવેલ:",
+    casteHint: "શાળાની કોઈ પણ જાતિ પસંદ કરો અથવા નવી લખો. મુસ્લિમ અને મુસલમાન અલગ રહે. સાચવેલ જાતિ LC, બોનાફાઇડ અને રજિસ્ટરમાં વપરાશે.",
+    pickCaste: "શાળાની જાતિઓ",
+    renameCaste: "\"{{from}}\" વાળા બધા વિદ્યાર્થીને \"{{to}}\" કરો",
+    renameCasteDone: "{{count}} વિદ્યાર્થીની જાતિ બદલાઈ",
     applyCategory: "{{category}} લાગુ કરો",
     verifyCaste: "જાતિ પ્રમાણપત્રથી ચકાસો",
     schoolEnrollment: "શાળા / વર્ગ નોંધણી",
@@ -2662,7 +2666,7 @@ const gu: Messages = {
     scannerNoHardware:
       "સ્કેનર મળ્યો નહીં. USB કનેક્ટ કરો અથવા Wi‑Fi સ્કેનર Windows ડ્રાઇવર સાથે સેટ કરો.",
     scannerNoHardwareHelpTitle: "સ્કેનર અહીં કેવી રીતે દેખાશે",
-    scannerNoHardwareHelpUsb: "USB: કેબલ આ જ કમ્પ્યુટરમાં લગાવો, પાવર ચાલુ, Windows ડ્રાઇવરની રાહ જુઓ",
+    scannerNoHardwareHelpUsb: "USB: કેબલ આ જ કોમ્પ્યુટરમાં લગાવો, પાવર ચાલુ, Windows ડ્રાઇવરની રાહ જુઓ",
     scannerNoHardwareHelpWifi:
       "Wi‑Fi: આ PC જેવા જ નેટવર્ક + Epson / Canon / HP / Brother સ્કેન ડ્રાઇવર",
     scannerNoHardwareHelpDriver:
@@ -2672,10 +2676,10 @@ const gu: Messages = {
     scannerConnUnknown: "સ્કેનર",
     scannerBridgeOnline: "આ PC પર સ્કેનર હેલ્પર કનેક્ટ",
     scannerBridgeOffline:
-      "આ કમ્પ્યુટર પર સ્કેનર હેલ્પર નથી. જ્યાં સ્કેનર લગાવેલું છે તે PC પર એક વાર ઇન્સ્ટોલ કરો.",
+      "આ કોમ્પ્યુટર પર સ્કેનર હેલ્પર નથી. જ્યાં સ્કેનર લગાવેલું છે તે PC પર એક વાર ઇન્સ્ટોલ કરો.",
     scannerBridgeErrorGeneric:
-      "સ્કેનર ભૂલ. આ કમ્પ્યુટર પર USB / Wi‑Fi સ્કેનર ચકાસો.",
-    scannerBridgeSetupTitle: "આ કમ્પ્યુટર પર હેલ્પર ઇન્સ્ટોલ કરો",
+      "સ્કેનર ભૂલ. આ કોમ્પ્યુટર પર USB / Wi‑Fi સ્કેનર ચકાસો.",
+    scannerBridgeSetupTitle: "આ કોમ્પ્યુટર પર હેલ્પર ઇન્સ્ટોલ કરો",
     scannerBridgeStep1: "સ્કેનર આ જ PC સાથે જોડાયેલું હોવું જોઈએ (કોઈ પણ બ્રાન્ડ: HP, Epson, Brother, Canon…)",
     scannerBridgeStep1Wifi:
       "Wi‑Fi સ્કેનર: આ PC જેવા જ Wi‑Fi + કંપનીનો Windows સ્કેન ડ્રાઇવર",
@@ -2738,7 +2742,7 @@ const gu: Messages = {
     sjedUsernamePlaceholder: "SJED યુઝરનેમ",
     password: "પાસવર્ડ",
     dgPasswordPlaceholder: "Digital Gujarat પાસવર્ડ",
-    passwordLocalNote: "પાસવર્ડ ફક્ત તમારા કમ્પ્યુટર પર સ્ટોર થાય છે.",
+    passwordLocalNote: "પાસવર્ડ ફક્ત તમારા કોમ્પ્યુટર પર સ્ટોર થાય છે.",
     documentsTitle: "દસ્તાવેજો — પસંદ કરો અને પ્રીવ્યૂ",
     documentsDesc: "ફાઈલ પસંદ કરો, તરત પ્રીવ્યૂ. Digital Gujarat પર ઓટો અપલોડ.",
     startAutomation: "ઓટોમેશન શરૂ",

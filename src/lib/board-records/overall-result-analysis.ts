@@ -33,7 +33,7 @@ export const ANALYSIS_SUBJECTS: {
   { key: "MATH_BASIC", label: "ગણિત(18) (બેઝિક)", altKeys: ["MATHB", "BASIC"] },
   { key: "ENG", label: "અંગ્રેજી(16)" },
   { key: "SAN", label: "સંસ્કૃત/હિન્દી (  )", altKeys: ["HIN"] },
-  { key: "EL1", label: "કમ્પ્યુટર/શા.શિ. (  )", altKeys: ["PE", "COMP", "EL2"] },
+  { key: "EL1", label: "કોમ્પ્યુટર/શા.શિ. (  )", altKeys: ["PE", "COMP", "EL2"] },
 ];
 
 export type BgCounts = { boys: number; girls: number; total: number };

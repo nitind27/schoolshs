@@ -277,6 +277,7 @@ export async function POST(request: NextRequest) {
         classId,
         schoolClass.standard,
         schoolClass.stream,
+        session.schoolId,
       );
       let saved = 0;
 

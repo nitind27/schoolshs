@@ -98,65 +98,14 @@ function GradeLegend() {
   );
 }
 
-/** Official-style circular seal (torch) matching Songadh primary card */
+/** Official school crest given for the result card */
 function SongadhSeal() {
   return (
-    <svg
+    <img
       className="pp-seal"
-      viewBox="0 0 200 220"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <defs>
-        <path id="ppSealArc" d="M 28,108 A 72,72 0 1,1 172,108" fill="none" />
-      </defs>
-      <circle cx="100" cy="100" r="92" fill="#f7e7a0" stroke="#8b1a1a" strokeWidth="4" />
-      <circle cx="100" cy="100" r="78" fill="none" stroke="#8b1a1a" strokeWidth="1.5" />
-      <text
-        fill="#8b1a1a"
-        fontSize="11.5"
-        fontWeight="700"
-        letterSpacing="1.2"
-        fontFamily="Noto Sans Gujarati, Shruti, sans-serif"
-      >
-        <textPath href="#ppSealArc" xlinkHref="#ppSealArc" startOffset="50%" textAnchor="middle">
-          સાર્વજનિક હાઈસ્કૂલ ફોર્ટ-સોનગઢ
-        </textPath>
-      </text>
-      {/* torch */}
-      <g transform="translate(100,118)" fill="#8b1a1a">
-        <path d="M-7,-8 h14 v38 h-14 z" />
-        <path d="M-11,-8 h22 l-4,-10 h-14 z" />
-        <path d="M-2,30 h4 v18 h-4 z" />
-        <path d="M-14,48 h28 v4 h-28 z" />
-        <path
-          d="M0,-18 c6,-10 14,-16 10,-28 c-8,4 -10,12 -10,20 c0,-8 -2,-16 -10,-20 c-4,12 4,18 10,28 z"
-          fill="#8b1a1a"
-        />
-      </g>
-      <text
-        x="100"
-        y="178"
-        textAnchor="middle"
-        fill="#8b1a1a"
-        fontSize="11"
-        fontWeight="700"
-        fontFamily="Noto Sans Gujarati, Shruti, sans-serif"
-      >
-        જિ. તાપી
-      </text>
-      {/* ribbon */}
-      <path
-        d="M40,196 L58,188 L100,196 L142,188 L160,196 L142,204 L100,198 L58,204 Z"
-        fill="#8b1a1a"
-      />
-      <path
-        d="M58,188 L58,204 M142,188 L142,204"
-        stroke="#f7e7a0"
-        strokeWidth="1"
-        fill="none"
-      />
-    </svg>
+      src="/logo/result/result.png"
+      alt=""
+    />
   );
 }
 
@@ -242,7 +191,13 @@ function RemarksBlock({
   );
 }
 
-function MarksTable({ rows }: { rows: PragatiSubjectRow[] }) {
+function MarksTable({
+  rows,
+  splitScheme,
+}: {
+  rows: PragatiSubjectRow[];
+  splitScheme?: boolean;
+}) {
   const t1 = sumPragatiColumn(rows, "sem1");
   const t2 = sumPragatiColumn(rows, "sem2");
   const ty = sumPragatiColumn(rows, "annual");
@@ -263,14 +218,22 @@ function MarksTable({ rows }: { rows: PragatiSubjectRow[] }) {
       </colgroup>
       <thead>
         <tr>
-          <th rowSpan={2} className="pp-col-detail">
-            વિગત
+          <th className="pp-col-detail">વિગત</th>
+          <th colSpan={3}>
+            પ્રથમ સત્ર
+            {splitScheme ? <span className="pp-scheme">આંતરિક 20 + લેખિત 80 = 100</span> : null}
           </th>
-          <th colSpan={3}>પ્રથમ સત્ર</th>
-          <th colSpan={3}>દ્વિતીય સત્ર</th>
-          <th colSpan={3}>વર્ષાન્તે</th>
+          <th colSpan={3}>
+            દ્વિતીય સત્ર
+            {splitScheme ? <span className="pp-scheme">લેખિત 80 + આંતરિક 20 = 100</span> : null}
+          </th>
+          <th colSpan={3}>
+            વર્ષાન્તે
+            {splitScheme ? <span className="pp-scheme">લેખિત 160 + આંતરિક 40 = 200</span> : null}
+          </th>
         </tr>
         <tr>
+          <th className="pp-col-detail">વિષય</th>
           <th className="pp-th-max">
             કુલ
             <br />
@@ -368,16 +331,35 @@ export function SongadhPragatiPatrakCard({ data }: { data: PragatiPatrakCardData
     logoPath: data.brand?.logoPath ?? PRAGATI_SCHOOL_BRAND.logoPath,
   };
 
-  const inputs: PragatiSubjectInput[] = data.subjects.map((s) => ({
-    name: s.name,
-    maxMarks: s.maxMarks,
-    first: (s as { first?: number | null }).first ?? null,
-    second: (s as { second?: number | null }).second ?? null,
-    obtained: s.finalMarks ?? s.marksObtained,
-    letterGrade: (s as { letterGrade?: string | null }).letterGrade ?? null,
-  }));
+  const schoolCode = String(data.schoolCode || brand.diseCode || "").trim();
+  const splitScheme = schoolCode === "24261004404";
+  const inputs: PragatiSubjectInput[] = data.subjects.map((s) => {
+    const extra = s as {
+      first?: number | null;
+      second?: number | null;
+      letterGrade?: string | null;
+      theory1?: number | null;
+      theory2?: number | null;
+      internal1?: number | null;
+      internal2?: number | null;
+    };
+    return {
+      name: s.name,
+      maxMarks: s.maxMarks,
+      first: extra.first ?? null,
+      second: extra.second ?? null,
+      theory1: splitScheme ? (extra.theory1 ?? null) : null,
+      theory2: splitScheme ? (extra.theory2 ?? null) : null,
+      internal1: splitScheme ? (extra.internal1 ?? null) : null,
+      internal2: splitScheme ? (extra.internal2 ?? null) : null,
+      obtained: s.finalMarks ?? s.marksObtained,
+      letterGrade: extra.letterGrade ?? null,
+    };
+  });
 
-  const rows = buildPragatiSubjectRows(inputs);
+  const rows = buildPragatiSubjectRows(inputs, {
+    schoolCode,
+  });
   const t1 = sumPragatiColumn(rows, "sem1");
   const t2 = sumPragatiColumn(rows, "sem2");
   const ty = sumPragatiColumn(rows, "annual");
@@ -401,12 +383,13 @@ export function SongadhPragatiPatrakCard({ data }: { data: PragatiPatrakCardData
             <div className="pp-trust">{brand.trustGu}</div>
             <div className="pp-school">{brand.nameGu}</div>
             <div className="pp-section">{brand.sectionGu}</div>
-            <div className="pp-year">
-              વર્ષ :- <ValueOrBlank value={toGuDigits(year)} w={90} />
-            </div>
           </div>
 
           <GradeLegend />
+        </div>
+
+        <div className="pp-year">
+          વર્ષ :- <ValueOrBlank value={toGuDigits(year)} w={72} />
         </div>
 
         <div className="pp-header-bar">
@@ -449,7 +432,7 @@ export function SongadhPragatiPatrakCard({ data }: { data: PragatiPatrakCardData
 
       <div className="pp-body">
         <div className="pp-marks-wrap">
-          <MarksTable rows={rows} />
+          <MarksTable rows={rows} splitScheme={splitScheme} />
         </div>
         <div className="pp-remarks" aria-label="શેરો">
           <div className="pp-remarks-title">શેરો</div>

@@ -17,6 +17,7 @@ import { toLatinDigits } from "@/lib/digits";
 import "./songadh-exam-report.css";
 
 export type ExamReportCardData = Omit<ResultCardData, "subjects"> & {
+  schoolCode?: string;
   student: ResultCardData["student"] & {
     fatherName?: string | null;
     fatherNameGu?: string | null;
@@ -322,6 +323,7 @@ function cardToReport(data: ExamReportCardData, index: number): ExamReportData {
   const st = data.student;
   return buildSongadhExamReport({
     srNo: data.index ?? index + 1,
+    schoolCode: data.schoolCode,
     standard: st.standard,
     section: st.section,
     academicYear: data.exam?.academicYear,

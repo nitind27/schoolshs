@@ -120,7 +120,10 @@ export function inferCategoryFromFields(input: {
   if (matchAny(surname, ST_PATTERNS)) return { category: "ST", confidence: "medium", source: "surname", matched: surname };
   if (matchAny(surname, NTDNT_PATTERNS)) return { category: "NTDNT", confidence: "medium", source: "surname", matched: surname };
   if (matchAny(surname, MINORITY_PATTERNS)) return { category: "Minority", confidence: "medium", source: "surname", matched: surname };
-  if (/muslim|christian|sikh|buddhist|jain|parsi/i.test(religion)) {
+  if (/^(muslim|musalman|musalmaan|mosalman|muslman)$/i.test(norm(caste).replace(/\s+/g, ""))) {
+    return { category: "Minority", confidence: "medium", source: "caste", matched: caste };
+  }
+  if (/muslim|musalman|muslman|christian|sikh|buddhist|jain|parsi/i.test(religion)) {
     return { category: "Minority", confidence: "medium", source: "religion", matched: religion };
   }
   if (matchAny(surname, OBC_PATTERNS)) return { category: "OBC", confidence: "medium", source: "surname", matched: surname };
@@ -147,6 +150,21 @@ export function normalizeCategory(raw: string): DgCategory | null {
 
 export function getCategoryMeta(id: string): CategoryMeta {
   return DG_CATEGORIES.find((c) => c.id === id) || DG_CATEGORIES.find((c) => c.id === "Open")!;
+}
+
+/** Category the caste itself implies. Unknown castes return null so a saved category is left as-is. */
+export function categoryFromCaste(input: {
+  caste?: string | null;
+  surname?: string | null;
+  religion?: string | null;
+}): DgCategory | null {
+  if (!String(input.caste || "").trim()) return null;
+  const hint = inferCategoryFromFields({
+    caste: input.caste,
+    surname: input.surname,
+    religion: input.religion,
+  });
+  return hint.source === "caste" ? hint.category : null;
 }
 
 export function effectiveCategory(student: {

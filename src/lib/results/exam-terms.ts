@@ -130,6 +130,84 @@ export function createFinalTerm(opts?: {
   });
 }
 
+/**
+ * School 24261004404 result scheme.
+ * First exam: internal 20 + theory 80 = 100.
+ * Second exam: theory 80 + internal 20 = 100.
+ * Year total is the sum: theory 160 + internal 40 = 200.
+ */
+export function upperPrimaryResultTermMeta(): ExamTermMeta {
+  return {
+    version: 2,
+    terms: [
+      createComponentTerm({
+        key: "mid1",
+        labelEn: "First Exam",
+        labelGu: "પ્રથમ પરીક્ષા",
+        maxMarks: 80,
+        internalMax: 20,
+        totalMax: 100,
+      }),
+      createFinalTerm({
+        labelEn: "Second Exam",
+        labelGu: "દ્વિતીય પરીક્ષા",
+        maxMarks: 80,
+        internalMax: 20,
+        totalMax: 100,
+      }),
+    ],
+    midExamCount: 1,
+  };
+}
+
+function sameSplit(term: ExamTermDef, maxMarks: number, internalMax: number) {
+  return (
+    term.maxMarks === maxMarks &&
+    (term.internalMax ?? 0) === internalMax &&
+    (term.totalMax ?? maxMarks + internalMax) === maxMarks + internalMax
+  );
+}
+
+/**
+ * Stock defaults that should become the 80+20 / 80+20 scheme
+ * when this class has no saved marks yet.
+ */
+export function isReplaceableUpperPrimaryMeta(meta: ExamTermMeta): boolean {
+  const stock = defaultExamTermMeta(2);
+  if (
+    meta.terms.length === stock.terms.length &&
+    meta.terms.every((term, index) => {
+      const base = stock.terms[index];
+      return (
+        !!base &&
+        term.key === base.key &&
+        term.role === base.role &&
+        term.maxMarks === base.maxMarks &&
+        (term.internalMax ?? 0) === (base.internalMax ?? 0)
+      );
+    })
+  ) {
+    return true;
+  }
+
+  if (meta.terms.length !== 3) return false;
+  const [first, second, final] = meta.terms;
+  return (
+    !!first &&
+    !!second &&
+    !!final &&
+    first.key === "mid1" &&
+    first.role === "component" &&
+    sameSplit(first, 80, 20) &&
+    second.key === "mid2" &&
+    second.role === "component" &&
+    sameSplit(second, 80, 20) &&
+    final.key === "final" &&
+    final.role === "final" &&
+    sameSplit(final, 80, 20)
+  );
+}
+
 /** Default: Mid1 + Mid2 + Final (most common) */
 export function defaultExamTermMeta(
   midExamCount: MidExamCount = 2,

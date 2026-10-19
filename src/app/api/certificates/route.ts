@@ -15,6 +15,7 @@ import type {
   LeaverReportRow,
 } from "@/lib/certificates/types";
 import { emptyPatrakClassification, emptyPatrakMovementRow, PATRAK_TYPE_ROWS } from "@/lib/certificates/types";
+import { communityCasteKind } from "@/lib/certificates/lc-bilingual";
 
 function countByGender(students: { gender: string }[]) {
   const boys = students.filter((s) => s.gender === "Male").length;
@@ -52,8 +53,12 @@ function categoryToCasteGroup(category: string): PatrakCasteGroup {
   return "ujaniyat";
 }
 
+function isMuslimStudent(student: { religion?: string | null; caste?: string | null }) {
+  return communityCasteKind(student.caste) != null || String(student.religion || "").toUpperCase() === "MUSLIM";
+}
+
 function buildPatrak(
-  students: { gender: string; category: string; religion: string }[],
+  students: { gender: string; category: string; religion: string; caste?: string | null }[],
   meta: { month: string; year: string; standard: string; section: string; classTeacher: string },
 ): MonthlyPatrakData {
   const total = countByGender(students);
@@ -78,7 +83,7 @@ function buildPatrak(
   // "બીજા" columns take the listed non-Hindu religions; everyone else is grouped by category.
   for (const s of students) {
     const rel = String(s.religion || "").toUpperCase();
-    if (rel === "MUSLIM") cls.other.muslim++;
+    if (isMuslimStudent(s)) cls.other.muslim++;
     else if (rel === "SIKH" || rel === "PUNJABI") cls.other.sikh++;
     else if (rel === "PARSI") cls.other.parsi++;
     else if (rel === "CHRISTIAN") cls.other.christian++;

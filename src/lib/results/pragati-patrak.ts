@@ -111,7 +111,7 @@ export const PRAGATI_PATRAK_SUBJECTS: PragatiSubjectDef[] = [
   {
     key: "comp",
     name: "કોમ્પ્યુટર",
-    aliases: ["computer", "કોમ્પ્યુટર", "comp", "ict"],
+    aliases: ["computer", "કોમ્પ્યુટર", "કોમ્પ્યુટર", "comp", "ict"],
     sem1Max: 100,
     sem2Max: 100,
   },
@@ -122,6 +122,7 @@ export const PRAGATI_PATRAK_SUBJECTS: PragatiSubjectDef[] = [
       "physical",
       "pe",
       "શારીરિક",
+      "શારીરિક શિક્ષણ",
       "શા. શિક્ષણ",
       "સ્વા.અને શા.શિક્ષણ",
       "health",
@@ -132,7 +133,7 @@ export const PRAGATI_PATRAK_SUBJECTS: PragatiSubjectDef[] = [
   {
     key: "gk",
     name: "સામાન્ય જ્ઞાન",
-    aliases: ["gk", "general knowledge", "સામાન્ય જ્ઞાન"],
+    aliases: ["gk", "general knowledge", "સામાન્ય જ્ઞાન", "samanya"],
     sem1Max: null,
     sem2Max: null,
   },
@@ -154,10 +155,28 @@ export type PragatiSubjectInput = {
   maxMarks?: number | null;
   first?: number | null;
   second?: number | null;
+  /** Theory / લેખિત out of 80, when stored apart from internal */
+  theory1?: number | null;
+  theory2?: number | null;
+  /** Internal / આંતરિક out of 20 */
+  internal1?: number | null;
+  internal2?: number | null;
   /** Fallback when term marks missing */
   obtained?: number | null;
   letterGrade?: string | null;
 };
+
+/** 24261004404: theory + internal for one exam. Empty stored 0 stays blank. */
+export function combineTheoryInternal(
+  theory: number | null | undefined,
+  internal: number | null | undefined,
+): number | null {
+  const paper = cleanMark(theory);
+  const teacher = cleanMark(internal);
+  if (paper == null && teacher == null) return null;
+  if ((paper == null || paper === 0) && teacher == null) return null;
+  return (paper || 0) + (teacher || 0);
+}
 
 export type PragatiSubjectRow = {
   key: string;
@@ -230,8 +249,22 @@ function cleanMark(v: number | null | undefined): number | null {
  * Build display rows from official Songadh template order only.
  * Extra exam subjects are ignored so the printed card stays 11 fixed rows.
  */
+/** Standards 6–8 result (school 24261004404): computer, PE, and GK take marks in both terms. */
+export function withUpperPrimaryResultMarks(
+  def: PragatiSubjectDef,
+  schoolCode?: string | null,
+): PragatiSubjectDef {
+  const code = String(schoolCode || "").trim();
+  if (code !== "24261004404") return def;
+  if (def.key === "comp" || def.key === "pe" || def.key === "gk") {
+    return { ...def, sem1Max: 100, sem2Max: 100 };
+  }
+  return def;
+}
+
 export function buildPragatiSubjectRows(
   inputs: PragatiSubjectInput[],
+  options?: { schoolCode?: string | null },
 ): PragatiSubjectRow[] {
   const used = new Set<number>();
   const rows: PragatiSubjectRow[] = [];
@@ -248,7 +281,8 @@ export function buildPragatiSubjectRows(
     return null;
   };
 
-  for (const def of PRAGATI_PATRAK_SUBJECTS) {
+  for (const base of PRAGATI_PATRAK_SUBJECTS) {
+    const def = withUpperPrimaryResultMarks(base, options?.schoolCode);
     const input = pickInput(def);
     rows.push(computeSubjectRow(def, input));
   }
@@ -267,8 +301,10 @@ function computeSubjectRow(
       ? null
       : (sem1Max || 0) + (sem2Max || 0);
 
-  let sem1 = cleanMark(input?.first);
-  let sem2 = cleanMark(input?.second);
+  const split1 = combineTheoryInternal(input?.theory1, input?.internal1);
+  const split2 = combineTheoryInternal(input?.theory2, input?.internal2);
+  let sem1 = split1 ?? cleanMark(input?.first);
+  let sem2 = split2 ?? cleanMark(input?.second);
   const fallback = cleanMark(input?.obtained);
 
   // If only annual/total stored, put it in year-end; leave terms empty

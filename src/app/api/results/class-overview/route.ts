@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
-import { ensureClassExam, getClassMarksSheetConfig } from "@/lib/class-subjects";
+import { ensureClassExam, getClassMarksSheetConfig, syncExamSubjects } from "@/lib/class-subjects";
 import { computeStudentTotals, subjectFinalMarks } from "@/lib/results/calculations";
 import { getTeacherScope, assertTeacherMarksAccess } from "@/lib/teacher-scope";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
@@ -114,7 +114,15 @@ export async function GET(request: NextRequest) {
       schoolClass.id,
       schoolClass.standard,
       schoolClass.stream,
+      session.schoolId,
     );
+    if (exam) {
+      await syncExamSubjects(exam.id, sheetConfig.subjects);
+      exam = await prisma.exam.findFirst({
+        where: { id: exam.id },
+        include: { subjects: { orderBy: { sortOrder: "asc" } } },
+      });
+    }
     const subjectCount = exam?.subjects.length || sheetConfig.subjects.length;
 
     const students = schoolClass.students.map((st) => {

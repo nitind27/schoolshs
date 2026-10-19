@@ -200,6 +200,7 @@ export async function POST(request: NextRequest) {
       classId,
       schoolClass.standard,
       schoolClass.stream,
+      session.schoolId,
     );
     const examSubjects = await syncExamSubjects(exam.id, sheetConfig.subjects);
 

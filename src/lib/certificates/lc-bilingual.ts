@@ -55,7 +55,10 @@ const CASTE_GU: Record<string, string> = {
   bhrahman: "બ્રાહ્મણ",
   brabman: "બ્રાહ્મણ",
   muslim: "મુસ્લિમ",
+  muslman: "મુસલમાન",
   musalman: "મુસલમાન",
+  musalmaan: "મુસલમાન",
+  mosalman: "મુસલમાન",
   islam: "ઇસ્લામ",
   sunni: "સુન્ની",
   hindu: "હિન્દુ",
@@ -424,8 +427,30 @@ function titleCaseEn(s: string): string {
     .replace(/(^|[\s\-/(])([a-z])/g, (_, p: string, c: string) => p + c.toUpperCase());
 }
 
+/** Muslim and Musalman stay separate. Exact match only — custom caste text is left as typed. */
+export function communityCasteKind(caste?: string | null): "muslim" | "musalman" | null {
+  const key = String(caste || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s._-]+/g, "");
+  if (key === "muslim" || key === "મુસ્લિમ") return "muslim";
+  if (
+    key === "musalman" ||
+    key === "musalmaan" ||
+    key === "mosalman" ||
+    key === "muslman" ||
+    key === "મુસલમાન"
+  ) {
+    return "musalman";
+  }
+  return null;
+}
+
 /** "Hindu Chaudhari" — no slash; skips religion when caste already starts with it. */
 export function lcReligionCasteEn(s: { religion?: string | null; caste?: string | null }): string {
+  const kind = communityCasteKind(s.caste);
+  if (kind === "muslim") return "Muslim";
+  if (kind === "musalman") return "Musalman";
   const rel = titleCaseEn(String(s.religion || ""));
   const caste = titleCaseEn(String(s.caste || ""));
   if (!rel) return caste;
@@ -444,6 +469,9 @@ export function formatReligionCasteGu(s: {
   religion?: string | null;
   caste?: string | null;
 }): string {
+  const kind = communityCasteKind(s.caste);
+  if (kind === "muslim") return "મુસ્લિમ";
+  if (kind === "musalman") return "મુસલમાન";
   const rel = lcGuText(s.religion);
   const caste = lcGuText(s.caste);
   if (!rel && !caste) return "";

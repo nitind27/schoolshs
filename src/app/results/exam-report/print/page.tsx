@@ -130,6 +130,7 @@ function PrintInner() {
   const examReportCards: ExamReportCardData[] = printCards.map((c, i) => ({
     ...c,
     index: i + 1,
+    schoolCode: effectiveSchoolCode,
   }));
 
   if (!examId && !classId) {

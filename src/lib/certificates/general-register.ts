@@ -2,6 +2,7 @@ import {
   dobDisplayFromDate,
   dateToWordsGuRegister,
 } from "@/lib/certificates/gujarati-date";
+import { formatReligionCasteGu } from "@/lib/certificates/lc-bilingual";
 import {
   studentDisplayFirstName,
   studentDisplayMiddleName,
@@ -140,8 +141,10 @@ function formatBirthPlaceLines(city?: string | null, district?: string | null): 
 }
 
 function formatReligionCaste(religion: string, caste?: string | null, category?: string): string {
-  const c = caste?.trim() || category?.trim();
-  if (c && c !== "Open" && c !== "General") return `${religion}-${c}`;
+  const c = caste?.trim();
+  if (c) return formatReligionCasteGu({ religion, caste: c });
+  const cat = category?.trim();
+  if (cat && cat !== "Open" && cat !== "General") return `${religion}-${cat}`;
   return religion;
 }
 

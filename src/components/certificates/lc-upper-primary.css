@@ -30,6 +30,20 @@
 }
 
 /* ── Header ── */
+.lc-up-name-gu,
+.lc-up-name-en,
+.lc-up-section,
+.lc-up-title-gu,
+.lc-up-title-en,
+.lc-up-dob-title,
+.lc-up-dob-hint,
+.lc-up-cert-en,
+.lc-up-cert-gu,
+.lc-up-sign-label,
+.lc-up-warning {
+  display: block;
+}
+
 .lc-up-name-gu {
   text-align: center;
   font-weight: 700;
@@ -165,6 +179,48 @@
   letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.lc-up-edit {
+  outline: none;
+  cursor: text;
+  border-radius: 2px;
+}
+.lc-up-edit-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 210mm;
+  margin: 0 auto 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #1e3a8a;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+}
+.lc-up-edit-hint button {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e3a8a;
+  background: #fff;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  cursor: pointer;
+}
+@media screen {
+  .lc-up-edit:hover {
+    background: rgba(59, 130, 246, 0.08);
+  }
+  .lc-up-edit:focus {
+    background: rgba(59, 130, 246, 0.14);
+    box-shadow: 0 0 0 1px #3b82f6;
+    overflow: visible;
+    white-space: normal;
+  }
 }
 
 /* ── DOB ── */
@@ -318,6 +374,7 @@
   margin: 0 12px;
 }
 .lc-up-warning {
+  white-space: pre-line;
   margin-top: 5px;
   border-top: 1px solid #111;
   padding-top: 4px;

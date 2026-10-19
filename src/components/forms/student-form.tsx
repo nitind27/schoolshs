@@ -26,7 +26,7 @@ import type { Student, SchoolClass } from "@/generated/prisma/client";
 import { getDgPortalConfig } from "@/lib/dg-portal";
 import { SsgujaratFetch } from "@/components/forms/ssgujarat-fetch";
 import { BilingualNameField } from "@/components/forms/bilingual-name-field";
-import { inferCategoryFromFields } from "@/lib/category-inference";
+import { categoryFromCaste, inferCategoryFromFields } from "@/lib/category-inference";
 import { bilingualNamePair } from "@/lib/gujarati/transliterate-browser";
 import { studentFullNameGu, studentDisplayAadhaarName, studentDisplayFatherName, studentDisplayMotherName } from "@/lib/student-names";
 import { CategoryBadge } from "@/components/ui/badge";
@@ -681,6 +681,72 @@ export function StudentForm({
   };
 
   const [categoryHint, setCategoryHint] = useState<ReturnType<typeof inferCategoryFromFields> | null>(null);
+  const [schoolCastes, setSchoolCastes] = useState<string[]>([]);
+  const [baseCaste, setBaseCaste] = useState(() => String(initialData.caste || "").trim());
+  const [casteNote, setCasteNote] = useState("");
+  const [renamingCaste, setRenamingCaste] = useState(false);
+
+  const applyCategoryFromCaste = (caste: string) => {
+    const next = categoryFromCaste({
+      caste,
+      surname: form.surname,
+      religion: form.religion,
+    });
+    if (next) update("category", next);
+  };
+
+  useEffect(() => {
+    setBaseCaste(String(initialData.caste || "").trim());
+  }, [initialData.caste, studentIdProp]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/students/castes")
+      .then((response) => response.json())
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.castes)) setSchoolCastes(data.castes);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const casteOptions = useMemo(() => {
+    const names = new Set(schoolCastes);
+    const current = String(form.caste || "").trim();
+    if (current) names.add(current);
+    return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [schoolCastes, form.caste]);
+
+  const renameSchoolCaste = async () => {
+    const from = baseCaste;
+    const to = String(form.caste || "").trim();
+    if (!from || !to || from === to) return;
+    setRenamingCaste(true);
+    setCasteNote("");
+    try {
+      const response = await fetch("/api/students/castes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from, to }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed");
+      setBaseCaste(to);
+      setSchoolCastes((prev) =>
+        [...new Set(prev.filter((name) => name !== from).concat(to))].sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" }),
+        ),
+      );
+      setCasteNote(t("studentForm.renameCasteDone", { count: data.updated || 0 }));
+      applyCategoryFromCaste(to);
+    } catch (error) {
+      setCasteNote(error instanceof Error ? error.message : "Failed");
+    } finally {
+      setRenamingCaste(false);
+    }
+  };
 
   useEffect(() => {
     if (!form.surname && !form.caste) {
@@ -1190,7 +1256,50 @@ export function StudentForm({
               <Input label={t("fields.mobileNumber")} required placeholder="9876543210" maxLength={10} value={form.mobileNumber || ""} onChange={(e) => update("mobileNumber", e.target.value)} />
               <Input label={t("fields.email")} type="email" value={form.email || ""} onChange={(e) => update("email", e.target.value)} />
               <Select label={t("fields.category")} required options={CATEGORIES} value={form.category || ""} onChange={(e) => update("category", e.target.value)} />
-              <Input label={t("fields.caste")} value={form.caste || ""} onChange={(e) => update("caste", e.target.value)} />
+              <div>
+                <Input
+                  label={t("fields.caste")}
+                  value={form.caste || ""}
+                  onChange={(e) => {
+                    update("caste", e.target.value);
+                    applyCategoryFromCaste(e.target.value);
+                  }}
+                />
+                <select
+                  className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-800"
+                  value={casteOptions.includes(String(form.caste || "").trim()) ? String(form.caste || "").trim() : ""}
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    update("caste", e.target.value);
+                    applyCategoryFromCaste(e.target.value);
+                  }}
+                  aria-label={t("studentForm.pickCaste")}
+                >
+                  <option value="">{t("studentForm.pickCaste")}</option>
+                  {casteOptions.map((caste) => (
+                    <option key={caste} value={caste}>
+                      {caste}
+                    </option>
+                  ))}
+                </select>
+                <p className="sf-hint">{t("studentForm.casteHint")}</p>
+                {baseCaste && String(form.caste || "").trim() && String(form.caste || "").trim() !== baseCaste ? (
+                  <button
+                    type="button"
+                    disabled={renamingCaste}
+                    onClick={() => void renameSchoolCaste()}
+                    className="mt-1 text-left text-xs font-semibold text-violet-700 underline disabled:opacity-60"
+                  >
+                    {renamingCaste
+                      ? t("common.loading")
+                      : t("studentForm.renameCaste", {
+                          from: baseCaste,
+                          to: String(form.caste || "").trim(),
+                        })}
+                  </button>
+                ) : null}
+                {casteNote ? <p className="sf-hint">{casteNote}</p> : null}
+              </div>
               <Select label={t("fields.religion")} required options={RELIGIONS} value={form.religion || ""} onChange={(e) => update("religion", e.target.value)} />
               <Select label={t("fields.maritalStatus")} options={maritalOptions} value={form.maritalStatus || "Unmarried"} onChange={(e) => update("maritalStatus", e.target.value)} />
                 </div>

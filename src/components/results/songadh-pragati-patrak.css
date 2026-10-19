@@ -3,14 +3,14 @@
 .pp-sheet {
   --pp-ink: #8b1a1a;
   --pp-ink-deep: #6b0f0f;
-  --pp-paper: #f6e59a;
+  --pp-paper: #fce316;
   width: 210mm;
   max-width: 210mm;
   height: 297mm;
   min-height: 297mm;
   max-height: 297mm;
   margin: 0 auto 8mm;
-  padding: 3.8mm 4mm 3mm;
+  padding: var(--pp-sheet-pad-top, 3.8mm) var(--pp-sheet-pad-x, 4mm) var(--pp-sheet-pad-bottom, 3mm);
   box-sizing: border-box;
   background: var(--pp-paper);
   color: var(--pp-ink);
@@ -28,51 +28,62 @@
 .pp-header {
   position: relative;
   border: 1.25pt solid var(--pp-ink-deep);
-  background: #f4e18c;
-  padding: 4.2mm 2mm 1mm;
-  margin-bottom: 1.3mm;
+  background: #fce316;
+  padding: var(--pp-header-pad-top, 4.4mm) var(--pp-header-pad-x, 1.8mm) var(--pp-header-pad-bottom, 1.1mm);
+  margin-bottom: var(--pp-header-margin, 1.1mm);
   flex: 0 0 auto;
+}
+
+.pp-scheme {
+  display: block;
+  margin-top: 0.4mm;
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0;
 }
 
 .pp-header-badge {
   position: absolute;
-  top: -2.9mm;
+  top: -2.8mm;
   left: 50%;
   transform: translateX(-50%);
   background: var(--pp-ink-deep);
   color: #fff;
   font-size: 13px;
   font-weight: 900;
-  letter-spacing: 0.1em;
-  padding: 0.85mm 7mm 1mm;
+  letter-spacing: 0.06em;
+  padding: 0.7mm 6mm 0.85mm;
   border-radius: 999px;
   border: 1pt solid var(--pp-ink-deep);
   line-height: 1.1;
   white-space: nowrap;
   z-index: 2;
-  box-shadow: 0 0 0 0.7pt #f4e18c;
+  box-shadow: 0 0 0 0.7pt #fce316;
 }
 
 .pp-header-grid {
   display: grid;
-  grid-template-columns: 25mm 1fr 43mm;
-  gap: 1.4mm;
+  grid-template-columns: var(--pp-logo-w, 24mm) minmax(0, 1fr) var(--pp-legend-w, 44mm);
+  gap: 2mm;
   align-items: center;
-  padding-top: 0.3mm;
+  padding-top: 0.6mm;
 }
 
 .pp-logo-wrap {
-  width: 23mm;
-  height: 25mm;
+  width: var(--pp-logo-w, 24mm);
+  height: var(--pp-logo-h, 28mm);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .pp-seal {
-  width: 23mm;
-  height: 25mm;
+  width: var(--pp-logo-w, 24mm);
+  height: var(--pp-logo-h, 28mm);
   display: block;
+  object-fit: contain;
+  object-position: center;
 }
 
 .pp-logo {
@@ -81,35 +92,60 @@
 
 .pp-head-main {
   text-align: center;
-  padding: 0 0.5mm;
+  padding: 0.4mm 0.4mm 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
 }
 
 .pp-trust {
-  font-size: 12px;
+  font-size: var(--pp-font-trust, 12px);
   font-weight: 700;
   color: var(--pp-ink-deep);
   line-height: 1.15;
+  white-space: nowrap;
 }
 
 .pp-school {
-  font-size: 16.5px;
+  font-size: var(--pp-font-school, 16.5px);
   font-weight: 900;
   margin-top: 0.35mm;
   color: var(--pp-ink-deep);
   line-height: 1.12;
+  white-space: nowrap;
 }
 
 .pp-section {
-  font-size: 13px;
+  font-size: var(--pp-font-section, 13px);
   font-weight: 800;
   margin-top: 0.25mm;
   color: var(--pp-ink-deep);
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .pp-year {
-  margin-top: 0.55mm;
-  font-size: 12px;
+  margin: 0.9mm 0 0;
+  text-align: center;
+  font-size: var(--pp-font-year, 12.5px);
   font-weight: 750;
+  line-height: 1.2;
+  color: var(--pp-ink-deep);
+}
+
+.pp-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 3mm;
+  margin-top: 0.9mm;
+  padding: 0.7mm 0.4mm 0.15mm;
+  border-top: 0.9pt solid var(--pp-ink);
+  font-size: var(--pp-font-bar, 12px);
+  font-weight: 750;
+  color: var(--pp-ink-deep);
+  white-space: nowrap;
 }
 
 .pp-title {
@@ -118,7 +154,7 @@
 
 .pp-legend {
   border: 1pt solid var(--pp-ink-deep);
-  background: #f8ebb0;
+  background: #fce316;
   padding: 0;
   overflow: hidden;
 }
@@ -127,24 +163,26 @@
   text-align: center;
   font-weight: 900;
   margin: 0;
-  padding: 0.9mm 0.5mm;
-  font-size: 10.5px;
+  padding: 0.7mm 0.6mm;
+  font-size: var(--pp-font-legend-title, 11px);
   color: #fff;
   background: var(--pp-ink-deep);
+  line-height: 1.15;
 }
 
 .pp-legend table {
-  width: 100%;
+  width: calc(100% - 1.4mm);
   border-collapse: collapse;
-  margin: 0.45mm 0.8mm 0.55mm;
+  margin: 0.45mm 0.7mm 0.5mm;
 }
 
 .pp-legend td {
-  padding: 0.22mm 0.25mm;
+  padding: 0.15mm 0.3mm;
   color: var(--pp-ink-deep);
-  font-weight: 650;
-  font-size: 9.5px;
-  line-height: 1.12;
+  font-weight: 700;
+  font-size: var(--pp-font-legend, 10px);
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .pp-legend-g {
@@ -161,19 +199,6 @@
   text-align: left;
 }
 
-.pp-header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 2mm;
-  margin-top: 0.85mm;
-  padding: 0.6mm 0.3mm 0;
-  border-top: 0.8pt solid var(--pp-ink);
-  font-size: 12px;
-  font-weight: 750;
-  color: var(--pp-ink-deep);
-}
-
 .pp-header-bar strong {
   font-weight: 900;
 }
@@ -185,20 +210,21 @@
 /* ── Student ── */
 .pp-student {
   border: 1pt solid var(--pp-ink);
-  padding: 0.95mm 1.5mm;
-  margin-bottom: 1.3mm;
+  padding: var(--pp-student-pad-y, 0.7mm) var(--pp-student-pad-x, 1.4mm);
+  margin-bottom: 1.1mm;
   background: rgba(255, 255, 255, 0.2);
-  font-size: 12px;
+  font-size: var(--pp-font-student, 12px);
   flex: 0 0 auto;
 }
 
 .pp-stu-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.55mm 3mm;
-  margin-bottom: 0.55mm;
-  font-weight: 650;
+  flex-wrap: nowrap;
+  gap: 0.4mm 2.4mm;
+  margin-bottom: 0.35mm;
+  font-weight: 700;
   align-items: baseline;
+  white-space: nowrap;
 }
 
 .pp-stu-row:last-child {
@@ -223,8 +249,8 @@
 /* ── Body fills leftover A4 space; table + શેરો same height ── */
 .pp-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 49mm;
-  gap: 1.4mm;
+  grid-template-columns: minmax(0, 1fr) var(--pp-remarks-w, 58mm);
+  gap: 1.2mm;
   align-items: stretch;
   flex: 1 1 auto;
   min-height: 0;
@@ -244,24 +270,24 @@
   height: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 11px;
-  background: rgba(255, 252, 230, 0.5);
+  font-size: var(--pp-font-table, 11px);
+  background: #fce316;
 }
 
 .pp-table col.pp-col-subject {
-  width: 25%;
+  width: var(--pp-col-subject, 26%);
 }
 
 .pp-table col.pp-col-max {
-  width: 7.2%;
+  width: 7.5%;
 }
 
 .pp-table col.pp-col-obt {
-  width: 9%;
+  width: 10%;
 }
 
 .pp-table col.pp-col-grd {
-  width: 5.8%;
+  width: 7%;
 }
 
 .pp-table tbody tr {
@@ -270,24 +296,27 @@
 
 .pp-table th,
 .pp-table td {
-  border: 0.65pt solid var(--pp-ink);
-  padding: 0.55mm 0.35mm;
+  border: 0.7pt solid var(--pp-ink);
+  padding: 0.35mm 0.25mm;
   text-align: center;
   vertical-align: middle;
   color: var(--pp-ink-deep);
-  line-height: 1.12;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .pp-table th {
   font-weight: 800;
   background: rgba(180, 40, 40, 0.08);
-  font-size: 9.5px;
-  padding: 0.5mm 0.25mm;
+  font-size: 9px;
+  padding: 0.4mm 0.15mm;
+  white-space: normal;
 }
 
 .pp-th-max,
 .pp-th-obt {
-  font-size: 9px !important;
+  font-size: 8.5px !important;
+  line-height: 1.05;
 }
 
 .pp-col-detail {
@@ -297,20 +326,21 @@
 .pp-left {
   text-align: left !important;
   font-weight: 700;
-  padding-left: 1.1mm !important;
-  font-size: 10.5px;
+  padding-left: 0.9mm !important;
+  font-size: inherit;
+  white-space: nowrap;
 }
 
 .pp-cell-obt,
 .pp-cell-grd {
   font-weight: 800;
-  font-size: 10.5px;
+  font-size: inherit;
 }
 
 .pp-sum td {
   font-weight: 800;
   background: rgba(255, 255, 255, 0.3);
-  font-size: 10.5px;
+  font-size: inherit;
   padding: 0.6mm 0.35mm;
 }
 
@@ -319,7 +349,7 @@
   border: 1.35pt double var(--pp-ink-deep);
   display: flex;
   flex-direction: column;
-  background: #f8ebb0;
+  background: #fce316;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -364,9 +394,9 @@
   justify-content: space-between;
   border: 1pt solid var(--pp-ink);
   padding: 0.7mm 1mm 0.75mm;
-  font-size: 10px;
+  font-size: var(--pp-font-remarks, 10px);
   color: var(--pp-ink-deep);
-  background: rgba(255, 252, 230, 0.5);
+  background: #fce316;
   box-sizing: border-box;
   min-height: 0;
   overflow: hidden;
@@ -383,9 +413,9 @@
   display: flex;
   align-items: flex-end;
   gap: 0.55mm;
+  font-size: var(--pp-font-remarks, 10px);
   line-height: 1.15;
   font-weight: 700;
-  font-size: 10px;
 }
 
 .pp-rm-fixed {
@@ -446,7 +476,7 @@
 .pp-notice {
   margin-top: 1.6mm;
   padding: 0.2mm 0.3mm 0;
-  font-size: 10.5px;
+  font-size: var(--pp-font-notice, 10.5px);
   color: var(--pp-ink-deep);
   line-height: 1.25;
   flex: 0 0 auto;
@@ -503,7 +533,7 @@
 .pp-sign {
   min-width: 36mm;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--pp-font-sign, 12px);
   font-weight: 800;
   color: var(--pp-ink-deep);
   padding-top: 3.5mm;
@@ -540,7 +570,7 @@
     min-height: 297mm !important;
     max-height: 297mm !important;
     margin: 0 !important;
-    padding: 3.5mm 3.8mm 2.8mm !important;
+    padding: var(--pp-sheet-pad-top, 3.5mm) var(--pp-sheet-pad-x, 3.8mm) var(--pp-sheet-pad-bottom, 2.8mm) !important;
     box-shadow: none !important;
     page-break-after: always;
     break-after: page;
@@ -568,7 +598,7 @@
 
   .pp-sheet .pp-body {
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 49mm !important;
+    grid-template-columns: minmax(0, 1fr) var(--pp-remarks-w, 58mm) !important;
     align-items: stretch !important;
     flex: 1 1 auto !important;
     min-height: 0 !important;

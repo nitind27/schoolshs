@@ -92,6 +92,13 @@ export const SECONDARY_MARKS_SHEET_SUBJECTS: MarksSheetSubjectDef[] = [
   { name: "કોમ્પ્યુટર", shortName: "કોમ્પ", type: "grade", code: "COMP" },
 ];
 
+/** Upper primary result extras for school 24261004404 (standards 6–8). */
+export const SONGADH_UPPER_PRIMARY_SUBJECTS: MarksSheetSubjectDef[] = [
+  { name: "કોમ્પ્યુટર", shortName: "કમ્પ્યુ", type: "numeric", code: "COMP" },
+  { name: "શારીરિક શિક્ષણ", shortName: "શા.શિ", type: "numeric", code: "PE" },
+  { name: "સામાન્ય જ્ઞાન", shortName: "સા.જ્ઞા", type: "numeric", code: "GK" },
+];
+
 function buildConfig(subjects: MarksSheetSubjectDef[]): MarksSheetConfig {
   return {
     subjects,

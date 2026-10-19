@@ -28,6 +28,7 @@ import {
   shouldUsePragatiPatrakResult,
 } from "@/lib/results/pragati-patrak";
 import { CERTIFICATE_PACK_BRANDS } from "@/lib/certificates/school-brand";
+import { usePragatiLayout } from "@/components/results/pragati-layout-editor";
 
 type PrintCard = ResultCardData & {
   hasMarks?: boolean;
@@ -55,6 +56,7 @@ function PrintInner() {
 
   const featureCode = (letterhead?.code || letterhead?.udiseCode || "").trim();
   const effectiveSchoolCode = schoolCode || featureCode;
+  const pragatiLayout = usePragatiLayout(effectiveSchoolCode);
 
   useEffect(() => {
     if (!examId && !classId) return;
@@ -290,7 +292,11 @@ function PrintInner() {
               </Link>
             </p>
           ) : null}
-          <div className="result-print-bundle result-print-bundle-pragati">
+          {pragatiLayout.editor}
+          <div
+            className="result-print-bundle result-print-bundle-pragati"
+            style={pragatiLayout.style}
+          >
             {pragatiCards.length === 1 ? (
               <SongadhPragatiPatrakCard data={pragatiCards[0]} />
             ) : (

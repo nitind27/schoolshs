@@ -24,6 +24,7 @@ import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import { makeTermKey, type ExamTermRole } from "@/lib/results/exam-terms";
+import { useSchoolFeatures } from "@/components/school/use-school-features";
 import "../subjects/subjects-hub.css";
 
 type TabId = "template" | "apply";
@@ -68,8 +69,60 @@ function defaultTemplate(): TemplateItem[] {
   ];
 }
 
+/** 24261004404: two exams, year total theory 160 + internal 40 = 200. */
+function upperPrimaryTemplate(): TemplateItem[] {
+  return [
+    {
+      key: "mid1",
+      labelEn: "First Exam",
+      labelGu: "પ્રથમ પરીક્ષા",
+      totalMax: 100,
+      maxMarks: 80,
+      internalMax: 20,
+      role: "component",
+    },
+    {
+      key: "final",
+      labelEn: "Second Exam",
+      labelGu: "દ્વિતીય પરીક્ષા",
+      totalMax: 100,
+      maxMarks: 80,
+      internalMax: 20,
+      role: "final",
+    },
+  ];
+}
+
+function isLegacyUpperPrimaryTemplate(items: TemplateItem[]) {
+  const split = (item: TemplateItem, paper: number, internal: number) =>
+    item.maxMarks === paper &&
+    (item.internalMax ?? 0) === internal &&
+    item.totalMax === paper + internal;
+  if (items.length !== 3) return false;
+  const [first, second, final] = items;
+  if (!first || !second || !final || final.role !== "final") return false;
+  const stock =
+    first.key === "mid1" &&
+    split(first, 50, 0) &&
+    second.key === "mid2" &&
+    split(second, 50, 0) &&
+    split(final, 80, 20);
+  const triple =
+    first.key === "mid1" &&
+    first.role === "component" &&
+    split(first, 80, 20) &&
+    second.key === "mid2" &&
+    second.role === "component" &&
+    split(second, 80, 20) &&
+    split(final, 80, 20);
+  return stock || triple;
+}
+
 export default function ExamsHubPage() {
   const t = useT();
+  const { letterhead } = useSchoolFeatures();
+  const schoolCode = (letterhead?.code || letterhead?.udiseCode || "").trim();
+  const upperPrimarySchool = schoolCode === "24261004404";
   const [tab, setTab] = useState<TabId>("template");
   const [year, setYear] = useState(DEFAULT_ACADEMIC_YEAR);
   const [classes, setClasses] = useState<ClassExamRow[]>([]);
@@ -115,28 +168,33 @@ export default function ExamsHubPage() {
       const sample = rows.find((r) => r.examId && r.termsList?.length);
       const source = saved?.length ? saved : sample?.termsList;
       if (source?.length) {
+        const next: TemplateItem[] = source.map((item) => ({
+          key: item.key,
+          labelEn: item.labelEn,
+          labelGu: item.labelGu || item.labelEn,
+          totalMax:
+            item.totalMax ??
+            item.maxMarks +
+              (item.internalMax ?? (item.role === "final" ? 20 : 0)),
+          maxMarks: item.maxMarks,
+          role: item.role === "final" ? "final" : "component",
+          internalMax:
+            item.internalMax ?? (item.role === "final" ? 20 : 0),
+        }));
         setTemplate(
-          source.map((item) => ({
-            key: item.key,
-            labelEn: item.labelEn,
-            labelGu: item.labelGu || item.labelEn,
-            totalMax:
-              item.totalMax ??
-              item.maxMarks +
-                (item.internalMax ?? (item.role === "final" ? 20 : 0)),
-            maxMarks: item.maxMarks,
-            role: item.role === "final" ? "final" : "component",
-            internalMax:
-              item.internalMax ?? (item.role === "final" ? 20 : 0),
-          })),
+          upperPrimarySchool && isLegacyUpperPrimaryTemplate(next)
+            ? upperPrimaryTemplate()
+            : next,
         );
+      } else if (upperPrimarySchool) {
+        setTemplate(upperPrimaryTemplate());
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("examsHub.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [year, t]);
+  }, [year, t, upperPrimarySchool]);
 
   useEffect(() => {
     void load();
@@ -495,6 +553,13 @@ export default function ExamsHubPage() {
                 <p className="text-xs mt-1 text-emerald-800/80">
                   {t("examsHub.templateCount", { count: componentCount })} · {t("examsHub.autoTotalHint")}
                 </p>
+                {upperPrimarySchool &&
+                template.length === 2 &&
+                template.every((item) => item.maxMarks === 80 && (item.internalMax ?? 0) === 20) ? (
+                  <p className="text-xs mt-1 text-emerald-950">
+                    પ્રથમ: આંતરિક 20 + લેખિત 80 = 100 · દ્વિતીય: લેખિત 80 + આંતરિક 20 = 100 · વર્ષાન્તે લેખિત 160 + આંતરિક 40 = 200
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>

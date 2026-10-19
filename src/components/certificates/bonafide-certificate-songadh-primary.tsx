@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
 import { dateToWords, studentFullName } from "@/lib/certificates/date-to-words";
+import { lcReligionCasteEn } from "@/lib/certificates/lc-bilingual";
 import { uploadApiUrl } from "@/lib/student-documents";
 
 /** Printed form — light greenish paper, black ink (matches physical scan) */
@@ -88,8 +89,9 @@ function titleCase(s: string): string {
 
 /** Register-style જ્ઞાતિ in English: "Hindu - Chaudhari" */
 function religionCasteEn(s: CertStudent): string {
+  if (String(s.caste || "").trim()) return lcReligionCasteEn(s);
   const rel = titleCase(String(s.religion || ""));
-  const caste = titleCase(String(s.caste || s.category || ""));
+  const caste = titleCase(String(s.category || ""));
   if (!rel) return caste;
   if (!caste) return rel;
   if (caste.toLowerCase().startsWith(rel.toLowerCase())) return caste;

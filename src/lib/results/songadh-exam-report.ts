@@ -60,18 +60,23 @@ export const EXAM_REPORT_COLUMNS = [
   },
   {
     key: "comp",
-    header: "કમ્પ્યુટર (સત્ર દીઠ 50 ગુણ)",
-    aliases: ["computer", "કોમ્પ્યુટર", "કમ્પ્યુટર"],
+    header: "કોમ્પ્યુટર",
+    aliases: ["computer", "કોમ્પ્યુટર", "કોમ્પ્યુટર"],
   },
   {
     key: "pe",
-    header: "શારીરિક અને સ્વાસ્થ્ય શિક્ષણ (સત્ર દીઠ 100 ગુણ)",
+    header: "શારીરિક શિક્ષણ",
     aliases: ["physical", "pe", "શારીરિક", "health"],
+  },
+  {
+    key: "gk",
+    header: "સામાન્ય જ્ઞાન",
+    aliases: ["gk", "general knowledge", "સામાન્ય જ્ઞાન"],
   },
   {
     key: "music",
     header: "સંગીત શિક્ષણ (સત્ર દીઠ 50 ગુણ)",
-    aliases: ["music", "સંગીત", "gk", "સામાન્ય જ્ઞાન", "બૌદ્ધિક"],
+    aliases: ["music", "સંગીત", "બૌદ્ધિક"],
   },
   { key: "total", header: "શૈક્ષણિક વિષય ગુણ", aliases: [] },
   { key: "pct", header: "ટકા", aliases: [] },
@@ -145,7 +150,7 @@ function matchExamColumn(subjectName: string) {
   const prag = matchPragatiSubject(subjectName);
   if (prag) {
     const map: Record<string, string> = {
-      gk: "music",
+      gk: "gk",
       pe: "pe",
       art: "art",
       comp: "comp",
@@ -362,6 +367,7 @@ export function buildSongadhExamReport(params: {
   standard?: string | null;
   section?: string | null;
   academicYear?: string | null;
+  schoolCode?: string | null;
   student: {
     surname?: string | null;
     firstName?: string | null;
@@ -382,7 +388,7 @@ export function buildSongadhExamReport(params: {
   subjects: ExamReportSubjectInput[];
 }): ExamReportData {
   const { student, reportCard, subjects } = params;
-  const pragRows = buildPragatiSubjectRows(subjects);
+  const pragRows = buildPragatiSubjectRows(subjects, { schoolCode: params.schoolCode });
 
   const surname = (student.surnameGu || student.surname || "").trim();
   const studentName = [student.firstNameGu || student.firstName, student.middleNameGu || student.middleName]
