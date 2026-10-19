@@ -10,6 +10,7 @@ import { PageLoader } from "@/components/ui/loader";
 import { useT } from "@/i18n/locale-provider";
 import { CATEGORIES, RELIGIONS } from "@/lib/constants";
 import { categoryFromCaste } from "@/lib/category-inference";
+import { religionLabel } from "@/lib/school-religions";
 import { studentListName } from "@/lib/student-names";
 
 type ClassOption = {
@@ -42,6 +43,10 @@ export default function ClassCastePage() {
   const [rows, setRows] = useState<StudentRow[]>([]);
   const [saved, setSaved] = useState<Record<string, Pick<StudentRow, "religion" | "caste" | "category">>>({});
   const [castes, setCastes] = useState<string[]>([]);
+  const [religions, setReligions] = useState<string[]>([...RELIGIONS]);
+  const [customReligions, setCustomReligions] = useState<string[]>([]);
+  const [newReligion, setNewReligion] = useState("");
+  const [addingReligion, setAddingReligion] = useState(false);
   const [search, setSearch] = useState("");
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -63,6 +68,13 @@ export default function ClassCastePage() {
       .then((response) => response.json())
       .then((data) => {
         if (Array.isArray(data.castes)) setCastes(data.castes);
+      })
+      .catch(() => {});
+    fetch("/api/students/religions")
+      .then((response) => response.json())
+      .then((data) => {
+        if (Array.isArray(data.religions)) setReligions(data.religions);
+        if (Array.isArray(data.custom)) setCustomReligions(data.custom);
       })
       .catch(() => {});
   }, [t]);
@@ -130,6 +142,48 @@ export default function ClassCastePage() {
     setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
 
+  const addReligion = async () => {
+    const name = newReligion.trim();
+    if (!name) return;
+    setAddingReligion(true);
+    setError("");
+    setNote("");
+    try {
+      const response = await fetch("/api/students/religions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || t("classCaste.saveFailed"));
+      if (Array.isArray(data.religions)) setReligions(data.religions);
+      if (Array.isArray(data.custom)) setCustomReligions(data.custom);
+      setNewReligion("");
+      setNote(t("classCaste.religionAdded", { name: religionLabel(data.name || name) }));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("classCaste.saveFailed"));
+    } finally {
+      setAddingReligion(false);
+    }
+  };
+
+  const removeReligion = async (name: string) => {
+    setError("");
+    setNote("");
+    try {
+      const response = await fetch(`/api/students/religions?name=${encodeURIComponent(name)}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (response.status === 409) throw new Error(t("classCaste.religionInUse"));
+      if (!response.ok) throw new Error(data.error || t("classCaste.religionInUse"));
+      if (Array.isArray(data.religions)) setReligions(data.religions);
+      if (Array.isArray(data.custom)) setCustomReligions(data.custom);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("classCaste.religionInUse"));
+    }
+  };
+
   const saveRow = async (row: StudentRow) => {
     setSavingId(row.id);
     setError("");
@@ -187,6 +241,47 @@ export default function ClassCastePage() {
         />
       </div>
 
+      <form
+        className="mb-4 rounded-xl border border-slate-200 bg-white p-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void addReligion();
+        }}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1">
+            <Input
+              label={t("classCaste.addReligion")}
+              value={newReligion}
+              onChange={(event) => setNewReligion(event.target.value)}
+              placeholder={t("classCaste.addReligionPlaceholder")}
+            />
+          </div>
+          <Button type="submit" disabled={addingReligion || !newReligion.trim()}>
+            {addingReligion ? t("common.loading") : t("classCaste.addReligion")}
+          </Button>
+        </div>
+        {customReligions.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {customReligions.map((name) => (
+              <span
+                key={name}
+                className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+              >
+                {religionLabel(name)}
+                <button
+                  type="button"
+                  className="text-slate-500 hover:text-red-600"
+                  onClick={() => void removeReligion(name)}
+                >
+                  {t("classCaste.removeReligion")}
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </form>
+
       {note ? <p className="mb-3 text-sm font-medium text-emerald-700">{note}</p> : null}
       {error ? <p className="mb-3 text-sm font-medium text-red-600">{error}</p> : null}
 
@@ -242,9 +337,12 @@ export default function ClassCastePage() {
                         onChange={(event) => patchRow(row.id, { religion: event.target.value })}
                       >
                         <option value="" />
-                        {RELIGIONS.map((religion) => (
+                        {(religions.some((name) => name.toLowerCase() === row.religion.toLowerCase()) || !row.religion
+                          ? religions
+                          : [...religions, row.religion]
+                        ).map((religion) => (
                           <option key={religion} value={religion}>
-                            {religion}
+                            {religionLabel(religion)}
                           </option>
                         ))}
                       </select>

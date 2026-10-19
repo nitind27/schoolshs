@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { religionLabel } from "@/lib/school-religions";
 import { GUJARAT_DISTRICTS,
   CATEGORIES,
   GENDERS,
@@ -682,6 +683,7 @@ export function StudentForm({
 
   const [categoryHint, setCategoryHint] = useState<ReturnType<typeof inferCategoryFromFields> | null>(null);
   const [schoolCastes, setSchoolCastes] = useState<string[]>([]);
+  const [religionOptions, setReligionOptions] = useState<string[]>([...RELIGIONS]);
   const [baseCaste, setBaseCaste] = useState(() => String(initialData.caste || "").trim());
   const [casteNote, setCasteNote] = useState("");
   const [renamingCaste, setRenamingCaste] = useState(false);
@@ -705,6 +707,12 @@ export function StudentForm({
       .then((response) => response.json())
       .then((data) => {
         if (!cancelled && Array.isArray(data.castes)) setSchoolCastes(data.castes);
+      })
+      .catch(() => {});
+    fetch("/api/students/religions")
+      .then((response) => response.json())
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.religions)) setReligionOptions(data.religions);
       })
       .catch(() => {});
     return () => {
@@ -1300,7 +1308,16 @@ export function StudentForm({
                 ) : null}
                 {casteNote ? <p className="sf-hint">{casteNote}</p> : null}
               </div>
-              <Select label={t("fields.religion")} required options={RELIGIONS} value={form.religion || ""} onChange={(e) => update("religion", e.target.value)} />
+              <Select
+                label={t("fields.religion")}
+                required
+                options={(religionOptions.some((name) => name.toLowerCase() === String(form.religion || "").trim().toLowerCase()) || !String(form.religion || "").trim()
+                  ? religionOptions
+                  : [...religionOptions, String(form.religion)]
+                ).map((name) => ({ value: name, label: religionLabel(name) }))}
+                value={form.religion || ""}
+                onChange={(e) => update("religion", e.target.value)}
+              />
               <Select label={t("fields.maritalStatus")} options={maritalOptions} value={form.maritalStatus || "Unmarried"} onChange={(e) => update("maritalStatus", e.target.value)} />
                 </div>
               </div>

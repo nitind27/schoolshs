@@ -60,6 +60,7 @@ model School {
   timetableReleases      ClassTimetableRelease[]
   notifications          Notification[]
   schoolSubjects         SchoolSubject[]
+  schoolReligions        SchoolReligion[]
   standardSubjects       StandardSubject[]
   examSeatAssignments    ExamSeatAssignment[]
   holidays               Holiday[]
@@ -70,6 +71,18 @@ model School {
   @@index([isActive])
   @@index([district])
   @@map("school")
+}
+
+model SchoolReligion {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name      String   @db.VarChar(80)
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+  @@map("schoolreligion")
 }
 
 model SchoolSubscription {

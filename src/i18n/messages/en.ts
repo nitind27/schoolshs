@@ -4210,6 +4210,11 @@ const en = {
     loadFailed: "Could not load students.",
     saveFailed: "Could not save.",
     openProfile: "Full profile",
+    addReligion: "Add religion",
+    addReligionPlaceholder: "Type a religion, e.g. Bauddh",
+    religionAdded: "{{name}} added to the religion list",
+    removeReligion: "Remove",
+    religionInUse: "Students still use this religion, so it stays in the list.",
   },
   examSeats: {
     title: "Exam Seat Numbers (Mid / Final)",

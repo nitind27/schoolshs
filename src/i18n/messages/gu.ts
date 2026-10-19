@@ -4158,6 +4158,11 @@ const gu: Messages = {
     loadFailed: "વિદ્યાર્થી લોડ થયા નહીં.",
     saveFailed: "સાચવી શકાયું નહીં.",
     openProfile: "પૂરી પ્રોફાઇલ",
+    addReligion: "ધર્મ ઉમેરો",
+    addReligionPlaceholder: "નવો ધર્મ લખો",
+    religionAdded: "{{name}} ધર્મની યાદીમાં ઉમેરાયો",
+    removeReligion: "કાઢો",
+    religionInUse: "આ ધર્મ વિદ્યાર્થીઓ પર છે, એટલે યાદીમાં રહેશે.",
   },
   examSeats: {
     title: "પરીક્ષા બેઠક નંબર (મધ્ય / અંતિમ)",
