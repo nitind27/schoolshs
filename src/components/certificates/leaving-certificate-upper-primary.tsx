@@ -5,7 +5,8 @@
  * (packs 24261004403 / 24261004404).
  * Every line is click-to-edit, same as the bonafide certificate.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { cleanLcFonts, type LcFontMap } from "@/lib/certificates/lc-fonts";
 import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
 import { dateToWords } from "@/lib/certificates/date-to-words";
 import type { LCData } from "@/components/certificates/leaving-certificate";
@@ -66,6 +67,194 @@ function parseDobParts(dob: string): { d: string; m: string; y: string } {
   return { d: "", m: "", y: "" };
 }
 
+const FONT_MIN = 8;
+const FONT_MAX = 18;
+
+type FontScopeValue = {
+  sizeOf: (id: string) => number | undefined;
+  focus: (id: string, el: HTMLElement) => void;
+  blur: (id: string) => void;
+  fix: () => void;
+  fixing: boolean;
+  fixedNote: string;
+};
+
+const FontScope = createContext<FontScopeValue | null>(null);
+
+function readFontPx(el: HTMLElement) {
+  return Math.round(parseFloat(getComputedStyle(el).fontSize) || 12);
+}
+
+/** One toolbar for the text that is clicked. It sits over the page, not inside the certificate. */
+function FontBar({
+  active,
+  sizes,
+  bases,
+  onStep,
+}: {
+  active: { id: string; el: HTMLElement } | null;
+  sizes: Record<string, number>;
+  bases: Record<string, number>;
+  onStep: (delta: number) => void;
+}) {
+  const size = active ? sizes[active.id] ?? bases[active.id] : undefined;
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  useLayoutEffect(() => {
+    const el = active?.el;
+    if (!el) {
+      setRect(null);
+      return;
+    }
+    const update = () => setRect(el.getBoundingClientRect());
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [active, size]);
+
+  if (!active || !rect || size == null) return null;
+  const top = rect.top > 42 ? rect.top - 34 : rect.bottom + 6;
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - 132));
+
+  return (
+    <div
+      className="lc-up-fontbar no-print"
+      style={{ top, left }}
+      onMouseDown={(event) => event.preventDefault()}
+    >
+      <button type="button" aria-label="Font chhota" disabled={size <= FONT_MIN} onClick={() => onStep(-1)}>
+        A−
+      </button>
+      <span>{size}</span>
+      <button type="button" aria-label="Font bada" disabled={size >= FONT_MAX} onClick={() => onStep(1)}>
+        A+
+      </button>
+    </div>
+  );
+}
+
+function FontSizeScope({
+  resetKey,
+  children,
+}: {
+  resetKey: string;
+  children: React.ReactNode;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [sizes, setSizes] = useState<LcFontMap>({});
+  const [active, setActive] = useState<{ id: string; el: HTMLElement } | null>(null);
+  const [fixing, setFixing] = useState(false);
+  const [fixedNote, setFixedNote] = useState("");
+  const bases = useRef<Record<string, number>>({});
+  const saved = useRef<LcFontMap>({});
+  const sizesRef = useRef<LcFontMap>({});
+  sizesRef.current = sizes;
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    root.querySelectorAll<HTMLElement>("[data-lc-key]").forEach((el) => {
+      const key = el.dataset.lcKey || "";
+      if (!key || bases.current[key] || el.classList.contains("lc-up-sized")) return;
+      bases.current[key] = readFontPx(el);
+    });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/certificates/lc-fonts")
+      .then((response) => response.json())
+      .then((data) => {
+        if (cancelled) return;
+        const fonts = cleanLcFonts(data.fonts);
+        saved.current = fonts;
+        setSizes(fonts);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const seenReset = useRef(resetKey);
+  useEffect(() => {
+    if (seenReset.current === resetKey) return;
+    seenReset.current = resetKey;
+    setSizes({ ...saved.current });
+    setActive(null);
+    setFixedNote("");
+  }, [resetKey]);
+
+  const value = useMemo<FontScopeValue>(
+    () => ({
+      sizeOf: (id) => sizes[id],
+      focus: (id, el) => {
+        if (!bases.current[id]) {
+          const styled = el.classList.contains("lc-up-sized");
+          if (styled) el.classList.remove("lc-up-sized");
+          const inline = el.style.fontSize;
+          el.style.removeProperty("font-size");
+          bases.current[id] = readFontPx(el);
+          if (inline) el.style.fontSize = inline;
+          if (styled) el.classList.add("lc-up-sized");
+        }
+        setActive({ id, el });
+      },
+      blur: (id) => setActive((current) => (current?.id === id ? null : current)),
+      fixing,
+      fixedNote,
+      fix: () => {
+        setFixing(true);
+        setFixedNote("");
+        const fonts = cleanLcFonts(sizesRef.current);
+        fetch("/api/certificates/lc-fonts", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fonts }),
+        })
+          .then(async (response) => {
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Save failed");
+            const next = cleanLcFonts(data.fonts);
+            saved.current = next;
+            setSizes(next);
+            setFixedNote("Font size fix ho gaya. Print me yahi size aayega.");
+          })
+          .catch(() => setFixedNote("Font size save nahi hua."))
+          .finally(() => setFixing(false));
+      },
+    }),
+    [sizes, fixing, fixedNote],
+  );
+
+  const step = (delta: number) => {
+    if (!active) return;
+    const base = bases.current[active.id] || readFontPx(active.el);
+    setSizes((prev) => {
+      const current = prev[active.id] ?? base;
+      const next = Math.min(FONT_MAX, Math.max(FONT_MIN, current + delta));
+      if (next === base) {
+        const copy = { ...prev };
+        delete copy[active.id];
+        return copy;
+      }
+      return { ...prev, [active.id]: next };
+    });
+    setFixedNote("");
+  };
+
+  return (
+    <FontScope.Provider value={value}>
+      <div ref={rootRef}>{children}</div>
+      <FontBar active={active} sizes={sizes} bases={bases.current} onStep={step} />
+    </FontScope.Provider>
+  );
+}
+
 /** Click-to-edit text. Commits on blur so print uses the edited line. */
 function Editable({
   value,
@@ -73,14 +262,18 @@ function Editable({
   className,
   style,
   multiline,
+  sizeKey,
 }: {
   value: string;
   onChange: (v: string) => void;
   className?: string;
   style?: React.CSSProperties;
   multiline?: boolean;
+  sizeKey: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
+  const fonts = useContext(FontScope);
+  const px = fonts?.sizeOf(sizeKey);
 
   useEffect(() => {
     const el = ref.current;
@@ -89,15 +282,30 @@ function Editable({
     if (el.textContent !== shown) el.textContent = shown;
   }, [value]);
 
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (px) {
+      el.style.setProperty("--lc-fs", `${px}px`);
+      el.style.setProperty("font-size", `${px}px`, "important");
+    } else {
+      el.style.removeProperty("--lc-fs");
+      el.style.removeProperty("font-size");
+    }
+  }, [px]);
+
   return (
     <span
       ref={ref}
-      className={`lc-up-edit${className ? ` ${className}` : ""}`}
+      data-lc-key={sizeKey}
+      className={`lc-up-edit${px ? " lc-up-sized" : ""}${className ? ` ${className}` : ""}`}
       style={style}
       contentEditable
       suppressContentEditableWarning
       spellCheck={false}
+      onFocus={(event) => fonts?.focus(sizeKey, event.currentTarget)}
       onBlur={(e) => {
+        fonts?.blur(sizeKey);
         const raw = e.currentTarget.textContent || "";
         const next = multiline
           ? raw.replace(/\u00a0/g, " ").trim()
@@ -124,13 +332,16 @@ function Fill({
   value = "",
   onChange,
   style,
+  sizeKey,
 }: {
   value?: string;
   onChange: (v: string) => void;
   style?: React.CSSProperties;
+  sizeKey: string;
 }) {
   return (
     <Editable
+      sizeKey={sizeKey}
       value={value}
       onChange={onChange}
       className="lc-up-fill"
@@ -145,21 +356,26 @@ function DobUnit({
   kind,
   onValue,
   onLabel,
+  valueKey,
+  labelKey,
 }: {
   value: string;
   label: string;
   kind: "day" | "month" | "year";
   onValue: (v: string) => void;
   onLabel: (v: string) => void;
+  valueKey: string;
+  labelKey: string;
 }) {
   return (
     <span className="lc-up-dob-unit">
       <Editable
+        sizeKey={valueKey}
         value={value}
         onChange={onValue}
         className={`lc-up-dob-box lc-up-dob-box--${kind}`}
       />
-      <Editable value={label} onChange={onLabel} className="lc-up-dob-label" />
+      <Editable sizeKey={labelKey} value={label} onChange={onLabel} className="lc-up-dob-label" />
     </span>
   );
 }
@@ -177,6 +393,7 @@ function FieldRow({
   onGu,
   onValue,
   onValueGu,
+  sizePrefix,
 }: {
   n: number;
   en: string;
@@ -187,20 +404,22 @@ function FieldRow({
   onGu: (v: string) => void;
   onValue: (v: string) => void;
   onValueGu?: (v: string) => void;
+  sizePrefix: string;
 }) {
   return (
     <div className="lc-up-field">
       <div className="lc-up-field-top">
         <Editable
+          sizeKey={`${sizePrefix}EnLabel`}
           value={`${n}. ${en}`}
           onChange={(v) => onEn(v.replace(/^\d+\.\s*/, ""))}
           className="lc-up-field-en"
         />
-        <Fill value={value} onChange={onValue} />
+        <Fill sizeKey={`${sizePrefix}En`} value={value} onChange={onValue} />
       </div>
       <div className="lc-up-field-gu">
-        <Editable value={gu} onChange={onGu} />
-        {onValueGu ? <Fill value={valueGu} onChange={onValueGu} /> : null}
+        <Editable sizeKey={`${sizePrefix}GuLabel`} value={gu} onChange={onGu} />
+        {onValueGu ? <Fill sizeKey={`${sizePrefix}Gu`} value={valueGu} onChange={onValueGu} /> : null}
       </div>
     </div>
   );
@@ -436,6 +655,19 @@ function buildFields(data: LCData, school: ReturnType<typeof useCertificateBrand
   };
 }
 
+function FontFixButton() {
+  const fonts = useContext(FontScope);
+  if (!fonts) return null;
+  return (
+    <>
+      {fonts.fixedNote ? <span>{fonts.fixedNote}</span> : null}
+      <button type="button" onClick={fonts.fix} disabled={fonts.fixing}>
+        {fonts.fixing ? "Saving..." : "Fix font"}
+      </button>
+    </>
+  );
+}
+
 export function LeavingCertificateView({ data }: { data: LCData }) {
   const school = useCertificateBrand();
   const S = data.student;
@@ -443,6 +675,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
   const sourceKey = JSON.stringify(source);
   const studentKey = `${S.grNumber || ""}|${S.dateOfBirth || ""}|${data.serialNo || ""}`;
   const [fields, setFields] = useState<LCFields>(source);
+  const [fontEpoch, setFontEpoch] = useState(0);
   const dirty = useRef(new Set<keyof LCFields>());
   const prevKey = useRef(sourceKey);
   const prevStudent = useRef(studentKey);
@@ -475,54 +708,61 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
     dirty.current = new Set();
     prevKey.current = sourceKey;
     setFields(source);
+    setFontEpoch((n) => n + 1);
   };
 
   const f = fields;
 
   return (
+    <FontSizeScope resetKey={String(fontEpoch)}>
     <div className="lc-up-print-wrap">
       <div className="lc-up-edit-hint no-print">
-        <span>LC par kisi bhi text par click karke edit karo — print me wahi aayega.</span>
-        <button type="button" onClick={reset}>
-          Reset
-        </button>
+        <span>Text par click karo. A+ se font badhao. Fix font dabao — print aur agla LC wahi size use karega.</span>
+        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <FontFixButton />
+          <button type="button" onClick={reset}>
+            Reset
+          </button>
+        </span>
       </div>
       <div className="lc-up-sheet" style={{ fontFamily: FONT }}>
         <div className="lc-up-inner">
-          <Editable value={f.schoolNameGu} onChange={set("schoolNameGu")} className="lc-up-name-gu" />
-          <Editable value={f.schoolNameEn} onChange={set("schoolNameEn")} className="lc-up-name-en" />
-          <Editable value={f.sectionLabel} onChange={set("sectionLabel")} className="lc-up-section" />
+          <Editable sizeKey="schoolNameGu" value={f.schoolNameGu} onChange={set("schoolNameGu")} className="lc-up-name-gu" />
+          <Editable sizeKey="schoolNameEn" value={f.schoolNameEn} onChange={set("schoolNameEn")} className="lc-up-name-en" />
+          <Editable sizeKey="sectionLabel" value={f.sectionLabel} onChange={set("sectionLabel")} className="lc-up-section" />
           <p className="lc-up-address">
-            <Editable value={f.addressEn} onChange={set("addressEn")} />
+            <Editable sizeKey="addressEn" value={f.addressEn} onChange={set("addressEn")} />
             <br />
-            <Editable value={f.addressGu} onChange={set("addressGu")} />
+            <Editable sizeKey="addressGu" value={f.addressGu} onChange={set("addressGu")} />
           </p>
 
           <div className="lc-up-title-row">
-            <Editable value={f.titleGu} onChange={set("titleGu")} className="lc-up-title-gu" />
-            <Editable value={f.titleEn} onChange={set("titleEn")} className="lc-up-title-en" />
+            <Editable sizeKey="titleGu" value={f.titleGu} onChange={set("titleGu")} className="lc-up-title-gu" />
+            <Editable sizeKey="titleEn" value={f.titleEn} onChange={set("titleEn")} className="lc-up-title-en" />
             <div className="lc-up-lcno">
-              <Editable value={f.lcNoLabel} onChange={set("lcNoLabel")} />
-              <Editable value={f.lcNo} onChange={set("lcNo")} className="lc-up-lcno-box" />
+              <Editable sizeKey="lcNoLabel" value={f.lcNoLabel} onChange={set("lcNoLabel")} />
+              <Editable sizeKey="lcNo" value={f.lcNo} onChange={set("lcNo")} className="lc-up-lcno-box" />
             </div>
           </div>
 
           <div className="lc-up-id-row">
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flex: "1 1 0", minWidth: 0 }}>
-              <Editable value={f.grLabel} onChange={set("grLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
-              <Fill value={f.grNumber} onChange={set("grNumber")} />
+            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 6, flex: "1 1 0", minWidth: 0 }}>
+              <Editable sizeKey="grLabel" value={f.grLabel} onChange={set("grLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+              <Fill sizeKey="grNumber" value={f.grNumber} onChange={set("grNumber")} />
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flex: "1.2 1 0", minWidth: 0 }}>
-              <Editable value={f.diseLabel} onChange={set("diseLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 6, flex: "1.2 1 0", minWidth: 0 }}>
+              <Editable sizeKey="diseLabel" value={f.diseLabel} onChange={set("diseLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
               <Editable
+                sizeKey="diseCode"
                 value={f.diseCode}
                 onChange={set("diseCode")}
                 style={{ fontWeight: 800, letterSpacing: "0.02em", whiteSpace: "nowrap" }}
               />
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
-              <Editable value={f.mediumLabel} onChange={set("mediumLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 6, flexShrink: 0 }}>
+              <Editable sizeKey="mediumLabel" value={f.mediumLabel} onChange={set("mediumLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
               <Fill
+                sizeKey="medium"
                 value={f.medium}
                 onChange={set("medium")}
                 style={{ flex: "0 0 auto", minWidth: 110, textAlign: "center" }}
@@ -531,92 +771,94 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
           </div>
 
           <div className="lc-up-id-line">
-            <Editable value={f.apaarLabel} onChange={set("apaarLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
-            <Fill value={f.apaar} onChange={set("apaar")} />
+            <Editable sizeKey="apaarLabel" value={f.apaarLabel} onChange={set("apaarLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+            <Fill sizeKey="apaar" value={f.apaar} onChange={set("apaar")} />
           </div>
 
           <div className="lc-up-id-line lc-up-id-line--last">
-            <Editable value={f.uidLabel} onChange={set("uidLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
-            <Fill value={f.childUid} onChange={set("childUid")} />
+            <Editable sizeKey="uidLabel" value={f.uidLabel} onChange={set("uidLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+            <Fill sizeKey="childUid" value={f.childUid} onChange={set("childUid")} />
           </div>
 
-          <FieldRow n={1} en={f.nameEnLabel} gu={f.nameGuLabel} value={f.nameEn} valueGu={f.nameGu} onEn={set("nameEnLabel")} onGu={set("nameGuLabel")} onValue={set("nameEn")} onValueGu={set("nameGu")} />
-          <FieldRow n={2} en={f.casteEnLabel} gu={f.casteGuLabel} value={f.casteEn} valueGu={f.casteGu} onEn={set("casteEnLabel")} onGu={set("casteGuLabel")} onValue={set("casteEn")} onValueGu={set("casteGu")} />
-          <FieldRow n={3} en={f.motherEnLabel} gu={f.motherGuLabel} value={f.motherEn} valueGu={f.motherGu} onEn={set("motherEnLabel")} onGu={set("motherGuLabel")} onValue={set("motherEn")} onValueGu={set("motherGu")} />
-          <FieldRow n={4} en={f.birthEnLabel} gu={f.birthGuLabel} value={f.birthEn} valueGu={f.birthGu} onEn={set("birthEnLabel")} onGu={set("birthGuLabel")} onValue={set("birthEn")} onValueGu={set("birthGu")} />
-          <FieldRow n={5} en={f.nativeEnLabel} gu={f.nativeGuLabel} value={f.nativeEn} valueGu={f.nativeGu} onEn={set("nativeEnLabel")} onGu={set("nativeGuLabel")} onValue={set("nativeEn")} onValueGu={set("nativeGu")} />
+          <FieldRow sizePrefix="name" n={1} en={f.nameEnLabel} gu={f.nameGuLabel} value={f.nameEn} valueGu={f.nameGu} onEn={set("nameEnLabel")} onGu={set("nameGuLabel")} onValue={set("nameEn")} onValueGu={set("nameGu")} />
+          <FieldRow sizePrefix="caste" n={2} en={f.casteEnLabel} gu={f.casteGuLabel} value={f.casteEn} valueGu={f.casteGu} onEn={set("casteEnLabel")} onGu={set("casteGuLabel")} onValue={set("casteEn")} onValueGu={set("casteGu")} />
+          <FieldRow sizePrefix="mother" n={3} en={f.motherEnLabel} gu={f.motherGuLabel} value={f.motherEn} valueGu={f.motherGu} onEn={set("motherEnLabel")} onGu={set("motherGuLabel")} onValue={set("motherEn")} onValueGu={set("motherGu")} />
+          <FieldRow sizePrefix="birth" n={4} en={f.birthEnLabel} gu={f.birthGuLabel} value={f.birthEn} valueGu={f.birthGu} onEn={set("birthEnLabel")} onGu={set("birthGuLabel")} onValue={set("birthEn")} onValueGu={set("birthGu")} />
+          <FieldRow sizePrefix="native" n={5} en={f.nativeEnLabel} gu={f.nativeGuLabel} value={f.nativeEn} valueGu={f.nativeGu} onEn={set("nativeEnLabel")} onGu={set("nativeGuLabel")} onValue={set("nativeEn")} onValueGu={set("nativeGu")} />
 
           <div className="lc-up-dob">
-            <Editable value={f.dobTitle} onChange={set("dobTitle")} className="lc-up-dob-title" />
-            <Editable value={f.dobHint} onChange={set("dobHint")} className="lc-up-dob-hint" />
+            <Editable sizeKey="dobTitle" value={f.dobTitle} onChange={set("dobTitle")} className="lc-up-dob-title" />
+            <Editable sizeKey="dobHint" value={f.dobHint} onChange={set("dobHint")} className="lc-up-dob-hint" />
             <div className="lc-up-dob-row">
               <div className="lc-up-dob-words">
                 <Editable
+                  sizeKey="dobWordsLabel"
                   value={f.dobWordsLabel}
                   onChange={set("dobWordsLabel")}
                   style={{ fontWeight: 700, whiteSpace: "nowrap", lineHeight: 1.2 }}
                 />
-                <Fill value={f.dobWords} onChange={set("dobWords")} />
+                <Fill sizeKey="dobWords" value={f.dobWords} onChange={set("dobWords")} />
               </div>
               <div className="lc-up-dob-boxes">
-                <DobUnit value={f.dobDay} label={f.dobDayLabel} kind="day" onValue={set("dobDay")} onLabel={set("dobDayLabel")} />
-                <DobUnit value={f.dobMonth} label={f.dobMonthLabel} kind="month" onValue={set("dobMonth")} onLabel={set("dobMonthLabel")} />
-                <DobUnit value={f.dobYear} label={f.dobYearLabel} kind="year" onValue={set("dobYear")} onLabel={set("dobYearLabel")} />
+                <DobUnit valueKey="dobDay" labelKey="dobDayLabel" value={f.dobDay} label={f.dobDayLabel} kind="day" onValue={set("dobDay")} onLabel={set("dobDayLabel")} />
+                <DobUnit valueKey="dobMonth" labelKey="dobMonthLabel" value={f.dobMonth} label={f.dobMonthLabel} kind="month" onValue={set("dobMonth")} onLabel={set("dobMonthLabel")} />
+                <DobUnit valueKey="dobYear" labelKey="dobYearLabel" value={f.dobYear} label={f.dobYearLabel} kind="year" onValue={set("dobYear")} onLabel={set("dobYearLabel")} />
               </div>
             </div>
           </div>
 
-          <FieldRow n={7} en={f.lastEnLabel} gu={f.lastGuLabel} value={f.lastEn} valueGu={f.lastGu} onEn={set("lastEnLabel")} onGu={set("lastGuLabel")} onValue={set("lastEn")} onValueGu={set("lastGu")} />
-          <FieldRow n={8} en={f.admEnLabel} gu={f.admGuLabel} value={f.admission} onEn={set("admEnLabel")} onGu={set("admGuLabel")} onValue={set("admission")} />
-          <FieldRow n={9} en={f.leaveEnLabel} gu={f.leaveGuLabel} value={f.leaving} onEn={set("leaveEnLabel")} onGu={set("leaveGuLabel")} onValue={set("leaving")} />
-          <FieldRow n={10} en={f.studyEnLabel} gu={f.studyGuLabel} value={f.studyEn} valueGu={f.studyGu} onEn={set("studyEnLabel")} onGu={set("studyGuLabel")} onValue={set("studyEn")} onValueGu={set("studyGu")} />
-          <FieldRow n={11} en={f.reasonEnLabel} gu={f.reasonGuLabel} value={f.reasonEn} valueGu={f.reasonGu} onEn={set("reasonEnLabel")} onGu={set("reasonGuLabel")} onValue={set("reasonEn")} onValueGu={set("reasonGu")} />
+          <FieldRow sizePrefix="last" n={7} en={f.lastEnLabel} gu={f.lastGuLabel} value={f.lastEn} valueGu={f.lastGu} onEn={set("lastEnLabel")} onGu={set("lastGuLabel")} onValue={set("lastEn")} onValueGu={set("lastGu")} />
+          <FieldRow sizePrefix="adm" n={8} en={f.admEnLabel} gu={f.admGuLabel} value={f.admission} onEn={set("admEnLabel")} onGu={set("admGuLabel")} onValue={set("admission")} />
+          <FieldRow sizePrefix="leave" n={9} en={f.leaveEnLabel} gu={f.leaveGuLabel} value={f.leaving} onEn={set("leaveEnLabel")} onGu={set("leaveGuLabel")} onValue={set("leaving")} />
+          <FieldRow sizePrefix="study" n={10} en={f.studyEnLabel} gu={f.studyGuLabel} value={f.studyEn} valueGu={f.studyGu} onEn={set("studyEnLabel")} onGu={set("studyGuLabel")} onValue={set("studyEn")} onValueGu={set("studyGu")} />
+          <FieldRow sizePrefix="reason" n={11} en={f.reasonEnLabel} gu={f.reasonGuLabel} value={f.reasonEn} valueGu={f.reasonGu} onEn={set("reasonEnLabel")} onGu={set("reasonGuLabel")} onValue={set("reasonEn")} onValueGu={set("reasonGu")} />
 
           <div className="lc-up-bank">
             <div className="lc-up-bank-row">
-              <Editable value={f.bankLabel} onChange={set("bankLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
-              <Fill value={f.bankAccount} onChange={set("bankAccount")} />
+              <Editable sizeKey="bankLabel" value={f.bankLabel} onChange={set("bankLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+              <Fill sizeKey="bankAccount" value={f.bankAccount} onChange={set("bankAccount")} />
             </div>
             <div className="lc-up-bank-row">
-              <Editable value={f.bankIfscLabel} onChange={set("bankIfscLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
-              <Fill value={f.bankIfsc} onChange={set("bankIfsc")} />
+              <Editable sizeKey="bankIfscLabel" value={f.bankIfscLabel} onChange={set("bankIfscLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+              <Fill sizeKey="bankIfsc" value={f.bankIfsc} onChange={set("bankIfsc")} />
             </div>
           </div>
 
-          <FieldRow n={13} en={f.progressEnLabel} gu={f.progressGuLabel} value={f.progressEn} valueGu={f.progressGu} onEn={set("progressEnLabel")} onGu={set("progressGuLabel")} onValue={set("progressEn")} onValueGu={set("progressGu")} />
-          <FieldRow n={14} en={f.conductEnLabel} gu={f.conductGuLabel} value={f.conductEn} valueGu={f.conductGu} onEn={set("conductEnLabel")} onGu={set("conductGuLabel")} onValue={set("conductEn")} onValueGu={set("conductGu")} />
-          <FieldRow n={15} en={f.remarksEnLabel} gu={f.remarksGuLabel} value={f.remarksEn} valueGu={f.remarksGu} onEn={set("remarksEnLabel")} onGu={set("remarksGuLabel")} onValue={set("remarksEn")} onValueGu={set("remarksGu")} />
+          <FieldRow sizePrefix="progress" n={13} en={f.progressEnLabel} gu={f.progressGuLabel} value={f.progressEn} valueGu={f.progressGu} onEn={set("progressEnLabel")} onGu={set("progressGuLabel")} onValue={set("progressEn")} onValueGu={set("progressGu")} />
+          <FieldRow sizePrefix="conduct" n={14} en={f.conductEnLabel} gu={f.conductGuLabel} value={f.conductEn} valueGu={f.conductGu} onEn={set("conductEnLabel")} onGu={set("conductGuLabel")} onValue={set("conductEn")} onValueGu={set("conductGu")} />
+          <FieldRow sizePrefix="remarks" n={15} en={f.remarksEnLabel} gu={f.remarksGuLabel} value={f.remarksEn} valueGu={f.remarksGu} onEn={set("remarksEnLabel")} onGu={set("remarksGuLabel")} onValue={set("remarksEn")} onValueGu={set("remarksGu")} />
 
           <div className="lc-up-footer">
             <div className="lc-up-meta">
               <div className="lc-up-meta-row">
-                <Editable value={f.outwardLabel} onChange={set("outwardLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
-                <Fill value={f.outwardNo} onChange={set("outwardNo")} style={{ flex: "0 1 160px", maxWidth: 180 }} />
+                <Editable sizeKey="outwardLabel" value={f.outwardLabel} onChange={set("outwardLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+                <Fill sizeKey="outwardNo" value={f.outwardNo} onChange={set("outwardNo")} style={{ flex: "0 1 160px", maxWidth: 180 }} />
               </div>
               <div className="lc-up-meta-row">
-                <Editable value={f.dateLabel} onChange={set("dateLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
-                <Fill value={f.issueDate} onChange={set("issueDate")} style={{ flex: "0 1 140px", maxWidth: 160 }} />
+                <Editable sizeKey="dateLabel" value={f.dateLabel} onChange={set("dateLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+                <Fill sizeKey="issueDate" value={f.issueDate} onChange={set("issueDate")} style={{ flex: "0 1 140px", maxWidth: 160 }} />
               </div>
             </div>
 
-            <Editable value={f.certEn} onChange={set("certEn")} className="lc-up-cert-en" multiline />
-            <Editable value={f.certGu} onChange={set("certGu")} className="lc-up-cert-gu" multiline />
+            <Editable sizeKey="certEn" value={f.certEn} onChange={set("certEn")} className="lc-up-cert-en" multiline />
+            <Editable sizeKey="certGu" value={f.certGu} onChange={set("certGu")} className="lc-up-cert-gu" multiline />
 
             <div className="lc-up-signs">
               <div>
                 <div className="lc-up-sign-space" />
-                <Editable value={f.signTeacher} onChange={set("signTeacher")} className="lc-up-sign-label" />
+                <Editable sizeKey="signTeacher" value={f.signTeacher} onChange={set("signTeacher")} className="lc-up-sign-label" />
               </div>
               <div>
                 <div className="lc-up-sign-space" />
-                <Editable value={f.signPrincipal} onChange={set("signPrincipal")} className="lc-up-sign-label" />
+                <Editable sizeKey="signPrincipal" value={f.signPrincipal} onChange={set("signPrincipal")} className="lc-up-sign-label" />
               </div>
             </div>
 
-            <Editable value={f.warning} onChange={set("warning")} className="lc-up-warning" multiline />
+            <Editable sizeKey="warning" value={f.warning} onChange={set("warning")} className="lc-up-warning" multiline />
           </div>
         </div>
       </div>
     </div>
+    </FontSizeScope>
   );
 }

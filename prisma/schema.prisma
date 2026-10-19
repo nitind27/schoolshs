@@ -377,6 +377,11 @@ model SchoolSettings {
    * Official letterhead editor payload (JSON) — school-code scoped, persists edits
    */
   letterheadJson       Json?
+  /**
+   * Upper-primary LC font sizes in px, keyed by certificate line.
+   * Print uses this map after Fix.
+   */
+  lcFontJson           Json?
 
   @@map("schoolsettings")
 }
