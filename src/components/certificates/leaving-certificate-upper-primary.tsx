@@ -70,6 +70,16 @@ function parseDobParts(dob: string): { d: string; m: string; y: string } {
 const FONT_MIN = 8;
 const FONT_MAX = 18;
 
+function isLcLabelKey(key: string) {
+  return (
+    key.endsWith("Label") ||
+    key === "dobTitle" ||
+    key === "dobHint" ||
+    key === "signTeacher" ||
+    key === "signPrincipal"
+  );
+}
+
 type FontScopeValue = {
   sizeOf: (id: string) => number | undefined;
   focus: (id: string, el: HTMLElement) => void;
@@ -77,6 +87,7 @@ type FontScopeValue = {
   fix: () => void;
   fixing: boolean;
   fixedNote: string;
+  stepLabels: (delta: number) => void;
 };
 
 const FontScope = createContext<FontScopeValue | null>(null);
@@ -207,6 +218,35 @@ function FontSizeScope({
       blur: (id) => setActive((current) => (current?.id === id ? null : current)),
       fixing,
       fixedNote,
+      stepLabels: (delta: number) => {
+        const root = rootRef.current;
+        if (!root) return;
+        const nodes = [...root.querySelectorAll<HTMLElement>('[data-lc-role="label"]')];
+        setSizes((prev) => {
+          const next = { ...prev };
+          for (const el of nodes) {
+            const key = el.dataset.lcKey || "";
+            if (!key) continue;
+            if (!bases.current[key]) {
+              const styled = el.classList.contains("lc-up-sized");
+              if (styled) el.classList.remove("lc-up-sized");
+              const inline = el.style.getPropertyValue("font-size");
+              const priority = el.style.getPropertyPriority("font-size");
+              el.style.removeProperty("font-size");
+              bases.current[key] = readFontPx(el);
+              if (inline) el.style.setProperty("font-size", inline, priority);
+              if (styled) el.classList.add("lc-up-sized");
+            }
+            const base = bases.current[key];
+            const current = prev[key] ?? base;
+            const size = Math.min(FONT_MAX, Math.max(FONT_MIN, current + delta));
+            if (size === base) delete next[key];
+            else next[key] = size;
+          }
+          return next;
+        });
+        setFixedNote("");
+      },
       fix: () => {
         setFixing(true);
         setFixedNote("");
@@ -298,6 +338,7 @@ function Editable({
     <span
       ref={ref}
       data-lc-key={sizeKey}
+      data-lc-role={isLcLabelKey(sizeKey) ? "label" : undefined}
       className={`lc-up-edit${px ? " lc-up-sized" : ""}${className ? ` ${className}` : ""}`}
       style={style}
       contentEditable
@@ -661,6 +702,12 @@ function FontFixButton() {
   return (
     <>
       {fonts.fixedNote ? <span>{fonts.fixedNote}</span> : null}
+      <button type="button" onClick={() => fonts.stepLabels(-1)}>
+        Labels A−
+      </button>
+      <button type="button" onClick={() => fonts.stepLabels(1)}>
+        Labels A+
+      </button>
       <button type="button" onClick={fonts.fix} disabled={fonts.fixing}>
         {fonts.fixing ? "Saving..." : "Fix font"}
       </button>
@@ -717,7 +764,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
     <FontSizeScope resetKey={String(fontEpoch)}>
     <div className="lc-up-print-wrap">
       <div className="lc-up-edit-hint no-print">
-        <span>Text par click karo. A+ se font badhao. Fix font dabao — print aur agla LC wahi size use karega.</span>
+        <span>Labels A+ se saare labels ek saath badhte hain. Ek label alag chahiye ho to us par click karke A+ dabao. Phir Fix font.</span>
         <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <FontFixButton />
           <button type="button" onClick={reset}>
