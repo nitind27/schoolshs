@@ -1315,6 +1315,174 @@
             font-size: 14px;
         }
 
+        .lh-grid-tools .toolbar-btn {
+            width: auto;
+            min-width: 28px;
+            padding: 0 7px;
+            font-size: 11px;
+        }
+        .lh-grid-num {
+            width: 46px;
+            height: 28px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 12px;
+            background: #fff;
+        }
+        .content-area .lh-grid {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 10px 0;
+            line-height: 1.35;
+            font-size: 13px;
+            background: #fff;
+        }
+        .content-area .lh-grid td,
+        .content-area .lh-grid th {
+            border: 1px solid #111;
+            padding: 5px 6px;
+            vertical-align: top;
+            min-width: 24px;
+            word-break: break-word;
+            background: #fff;
+        }
+        .content-area .lh-grid tr.lh-grid-head td {
+            font-weight: 700;
+            text-align: center;
+            background: #f3f4f6;
+        }
+        .content-area .lh-grid.lh-grid-noborder td,
+        .content-area .lh-grid.lh-grid-noborder th {
+            border-color: transparent;
+        }
+        @media screen {
+            .page-container.is-target-page {
+                outline: 3px solid #2563eb;
+                outline-offset: 4px;
+            }
+        }
+        .lh-table-open {
+            width: auto !important;
+            min-width: 64px;
+            padding: 0 10px !important;
+            font-weight: 700;
+        }
+        .lh-table-panel {
+            position: fixed;
+            z-index: 420;
+            top: 108px;
+            right: 16px;
+            width: min(360px, calc(100vw - 24px));
+            max-height: calc(100vh - 124px);
+            overflow: auto;
+            background: #fff;
+            color: #0f172a;
+            border: 1px solid #dbe3ee;
+            border-radius: 16px;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
+            padding: 14px 14px 16px;
+        }
+        .lh-table-panel[hidden] { display: none !important; }
+        .lh-table-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .lh-table-head h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .lh-table-head p,
+        .lh-table-note,
+        .lh-table-status,
+        .lh-grid-size {
+            margin: 4px 0 0;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #475569;
+        }
+        .lh-table-note { margin: 10px 0; }
+        .lh-table-close {
+            width: 32px;
+            height: 32px;
+            border: 0;
+            border-radius: 8px;
+            background: #f1f5f9;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .lh-grid-picker {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 3px;
+        }
+        .lh-grid-picker button {
+            height: 16px;
+            padding: 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 2px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .lh-grid-picker button.on {
+            background: #dbeafe;
+            border-color: #2563eb;
+        }
+        .lh-table-counts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .lh-table-counts label,
+        .lh-table-check {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .lh-table-panel .lh-grid-num {
+            width: 72px;
+            height: 34px;
+        }
+        .lh-table-check { margin: 10px 0; font-weight: 500; }
+        .lh-table-add {
+            width: 100%;
+            height: 40px;
+            border: 0;
+            border-radius: 10px;
+            background: #1d4ed8;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .lh-table-manage {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .lh-table-manage button {
+            min-height: 34px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #f8fafc;
+            font-size: 12px;
+            font-weight: 650;
+            cursor: pointer;
+        }
+        .lh-table-manage .lh-table-danger {
+            grid-column: 1 / -1;
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #b91c1c;
+        }
+
         /* Editable styles */
         [contenteditable="true"] {
             outline: none;
@@ -1390,6 +1558,7 @@
             .stamp-panel,
             .ocr-panel,
             .template-panel,
+            .lh-table-panel,
             .panel-backdrop,
             .status-bar,
             .share-menu,
@@ -1550,6 +1719,17 @@
                 margin-top: 8px !important;
                 padding: 0 !important;
                 line-height: 1.8 !important;
+            }
+            .content-area .lh-grid,
+            .content-area .lh-grid td,
+            .content-area .lh-grid th {
+                border: 1px solid #000 !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+            .content-area .lh-grid tr.lh-grid-head td {
+                font-weight: 700 !important;
+                background: #f3f4f6 !important;
             }
 
             .page-number {
@@ -2145,6 +2325,13 @@
             font-size: 12px;
         }
 
+        html.embedded .lh-grid-tools .toolbar-btn {
+            width: auto;
+            min-width: 30px;
+            padding: 0 7px;
+            font-size: 11px;
+        }
+
         html.embedded .toolbar-select {
             height: 30px;
             font-size: 11px;
@@ -2377,6 +2564,13 @@
             html.embedded .toolbar-btn {
                 width: 30px;
                 height: 30px;
+            }
+
+            html.embedded .lh-grid-tools .toolbar-btn {
+                width: auto;
+                min-width: 30px;
+                padding: 0 7px;
+                font-size: 11px;
             }
 
             html.embedded .toolbar-select {
@@ -2871,6 +3065,10 @@
             <button class="toolbar-btn" onclick="formatDoc('redo')" title="Redo (Ctrl+Y)">↷</button>
         </div>
 
+        <div class="toolbar-group">
+            <button type="button" class="toolbar-btn lh-table-open" onclick="toggleTablePanel()" title="Add a table on the page you clicked">Table</button>
+        </div>
+
         <!-- Voice Typing -->
         <div class="toolbar-group">
             <button class="toolbar-btn mic-btn" id="micBtn" onclick="toggleVoiceTyping()" title="Voice Typing">🎤</button>
@@ -2878,6 +3076,50 @@
         </div>
     </div>
     </div>
+
+    <aside class="lh-table-panel" id="tablePanel" hidden>
+        <div class="lh-table-head">
+            <div>
+                <h3>Table</h3>
+                <p id="tablePageLabel">Page 1</p>
+            </div>
+            <button type="button" class="lh-table-close" onclick="toggleTablePanel(false)">✕</button>
+        </div>
+        <p class="lh-table-note" id="tableNote">The table is added only on the page you click.</p>
+        <div class="lh-grid-picker" id="gridPicker" aria-label="Rows and columns"></div>
+        <p class="lh-grid-size" id="gridSizeLabel">4 rows × 3 columns</p>
+        <div class="lh-table-counts">
+            <label>Rows
+                <input class="lh-grid-num" id="gridRows" type="number" min="1" max="30" value="4" oninput="paintGridPicker()">
+            </label>
+            <label>Columns
+                <input class="lh-grid-num" id="gridCols" type="number" min="1" max="10" value="3" oninput="paintGridPicker()">
+            </label>
+        </div>
+        <label class="lh-table-check">
+            <input type="checkbox" id="gridHead" checked>
+            First row as heading
+        </label>
+        <button type="button" class="lh-table-add" onclick="insertLetterGrid()">Add on this page</button>
+        <p class="lh-table-status" id="tableCellStatus">Click a cell in the table to edit it.</p>
+        <div class="lh-table-manage">
+            <button type="button" onclick="gridAddRow(-1)">Row above</button>
+            <button type="button" onclick="gridAddRow(1)">Row below</button>
+            <button type="button" onclick="gridAddCol(-1)">Column left</button>
+            <button type="button" onclick="gridAddCol(1)">Column right</button>
+            <button type="button" onclick="gridDeleteRow()">Delete row</button>
+            <button type="button" onclick="gridDeleteCol()">Delete column</button>
+            <button type="button" onclick="gridMergeRight()">Merge right</button>
+            <button type="button" onclick="gridUnmerge()">Unmerge</button>
+            <button type="button" onclick="gridToggleHead()">Heading</button>
+            <button type="button" onclick="gridAlign('left')">Left</button>
+            <button type="button" onclick="gridAlign('center')">Center</button>
+            <button type="button" onclick="gridAlign('right')">Right</button>
+            <button type="button" onclick="gridToggleBorder()">Border</button>
+            <button type="button" onclick="gridClearCell()">Clear cell</button>
+            <button type="button" class="lh-table-danger" onclick="gridDeleteTable()">Delete table</button>
+        </div>
+    </aside>
 
     <!-- Voice Typing Status Bar -->
     <div class="voice-status-bar" id="voiceStatusBar">
@@ -3440,6 +3682,357 @@
             saveToLocalStorage();
             updateWordCount();
         }
+
+        let activeLetterPage = null;
+        const GRID_PICK_ROWS = 8;
+        const GRID_PICK_COLS = 10;
+        const TABLE_COPY = {
+            en: {
+                note: 'The table is added only on the page you click.',
+                page: 'Page {{n}} selected',
+                status: 'Click a cell in the table to edit it.',
+                size: '{{rows}} rows × {{cols}} columns',
+                needCell: 'Click a cell in the table you want to change.',
+                maxRows: 'A table can have up to 40 rows.',
+                maxCols: 'A table can have up to 12 columns.',
+                noRight: 'There is no cell on the right.'
+            },
+            gu: {
+                note: 'જે પાનાં પર ક્લિક કરો, ટેબલ એ જ પાનાં પર ઉમેરાશે.',
+                page: 'પાનું {{n}} પસંદ',
+                status: 'ફેરફાર માટે ટેબલના ખાનામાં ક્લિક કરો.',
+                size: '{{rows}} પંક્તિ × {{cols}} કૉલમ',
+                needCell: 'જે ટેબલ બદલવી હોય તેના ખાનામાં ક્લિક કરો.',
+                maxRows: 'એક ટેબલમાં વધુમાં વધુ 40 પંક્તિ.',
+                maxCols: 'એક ટેબલમાં વધુમાં વધુ 12 કૉલમ.',
+                noRight: 'જમણી બાજુ ખાનું નથી.'
+            }
+        };
+
+        function tableLocale() {
+            try {
+                const explicit = localStorage.getItem('shs_locale_explicit') === '1';
+                const stored = localStorage.getItem('shs_locale_v3');
+                if (explicit && (stored === 'en' || stored === 'gu')) return stored;
+            } catch (err) { /* keep Gujarati */ }
+            return 'gu';
+        }
+
+        function tableMsg(key, params) {
+            const pack = TABLE_COPY[tableLocale()] || TABLE_COPY.gu;
+            let text = pack[key] || TABLE_COPY.en[key] || '';
+            if (params) {
+                Object.keys(params).forEach(function(name) {
+                    text = text.split('{{' + name + '}}').join(String(params[name]));
+                });
+            }
+            return text;
+        }
+
+        function applyTableCopy() {
+            const note = document.getElementById('tableNote');
+            if (note) note.textContent = tableMsg('note');
+            const status = document.getElementById('tableCellStatus');
+            if (status) status.textContent = tableMsg('status');
+            if (activeLetterPage) setActiveLetterPage(activeLetterPage);
+            paintGridPicker();
+        }
+
+        function clampGridCount(value, fallback, max) {
+            const n = parseInt(value, 10);
+            if (!Number.isFinite(n) || n < 1) return fallback;
+            return Math.min(max, n);
+        }
+
+        function letterPages() {
+            return Array.from(document.querySelectorAll('#pagesWrapper > .page-container'));
+        }
+
+        function setActiveLetterPage(page) {
+            if (!page || !document.body.contains(page)) return;
+            activeLetterPage = page;
+            document.querySelectorAll('.page-container.is-target-page').forEach(function(node) {
+                node.classList.remove('is-target-page');
+            });
+            page.classList.add('is-target-page');
+            const label = document.getElementById('tablePageLabel');
+            const index = letterPages().indexOf(page);
+            if (label) label.textContent = tableMsg('page', { n: index >= 0 ? index + 1 : 1 });
+        }
+
+        function targetLetterPage() {
+            if (activeLetterPage && document.body.contains(activeLetterPage)) return activeLetterPage;
+            const first = letterPages()[0];
+            if (first) setActiveLetterPage(first);
+            return first || null;
+        }
+
+        document.addEventListener('pointerdown', function(event) {
+            const target = event.target;
+            if (!target || !target.closest) return;
+            if (target.closest('#tablePanel, .lh-table-open')) return;
+            const page = target.closest('.page-container');
+            if (page) setActiveLetterPage(page);
+        }, true);
+
+        function buildGridPicker() {
+            const picker = document.getElementById('gridPicker');
+            if (!picker || picker.childElementCount) return;
+            for (let r = 1; r <= GRID_PICK_ROWS; r++) {
+                for (let c = 1; c <= GRID_PICK_COLS; c++) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.dataset.row = String(r);
+                    btn.dataset.col = String(c);
+                    btn.title = r + ' × ' + c;
+                    btn.addEventListener('mouseenter', function() { paintGridPicker(r, c); });
+                    btn.addEventListener('click', function() {
+                        const rowInput = document.getElementById('gridRows');
+                        const colInput = document.getElementById('gridCols');
+                        if (rowInput) rowInput.value = String(r);
+                        if (colInput) colInput.value = String(c);
+                        paintGridPicker();
+                    });
+                    picker.appendChild(btn);
+                }
+            }
+            picker.addEventListener('mouseleave', function() { paintGridPicker(); });
+            paintGridPicker();
+        }
+
+        function paintGridPicker(hoverRow, hoverCol) {
+            const rows = hoverRow || clampGridCount(document.getElementById('gridRows') && document.getElementById('gridRows').value, 4, 30);
+            const cols = hoverCol || clampGridCount(document.getElementById('gridCols') && document.getElementById('gridCols').value, 3, 10);
+            document.querySelectorAll('#gridPicker button').forEach(function(btn) {
+                const r = Number(btn.dataset.row);
+                const c = Number(btn.dataset.col);
+                btn.classList.toggle('on', r <= rows && c <= cols);
+            });
+            const label = document.getElementById('gridSizeLabel');
+            if (label) label.textContent = tableMsg('size', { rows: rows, cols: cols });
+        }
+
+        function toggleTablePanel(force) {
+            const panel = document.getElementById('tablePanel');
+            if (!panel) return;
+            const open = typeof force === 'boolean' ? force : panel.hasAttribute('hidden');
+            panel.toggleAttribute('hidden', !open);
+            if (open) {
+                buildGridPicker();
+                targetLetterPage();
+                const page = targetLetterPage();
+                if (page) page.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+
+        function activeGridCell() {
+            const sel = window.getSelection();
+            const node = sel && sel.anchorNode;
+            const el = node && (node.nodeType === 1 ? node : node.parentElement);
+            const cell = el && el.closest ? el.closest('td, th') : null;
+            const table = cell && cell.closest ? cell.closest('table.lh-grid') : null;
+            if (!cell || !table || !cell.parentElement) return null;
+            return { cell: cell, row: cell.parentElement, table: table };
+        }
+
+        function gridNeedCell() {
+            const hit = activeGridCell();
+            if (!hit) {
+                alert(tableMsg('needCell'));
+                return null;
+            }
+            const page = hit.table.closest('.page-container');
+            if (page) setActiveLetterPage(page);
+            return hit;
+        }
+
+        function rememberGridEdit() {
+            saveToLocalStorage();
+            updateWordCount();
+        }
+
+        function insertLetterGrid() {
+            const page = targetLetterPage();
+            const area = page && page.querySelector('.content-area');
+            if (!area) return;
+            const rows = clampGridCount(document.getElementById('gridRows') && document.getElementById('gridRows').value, 4, 30);
+            const cols = clampGridCount(document.getElementById('gridCols') && document.getElementById('gridCols').value, 3, 10);
+            const heading = !document.getElementById('gridHead') || document.getElementById('gridHead').checked;
+            const table = document.createElement('table');
+            table.className = 'lh-grid';
+            const body = document.createElement('tbody');
+            for (let r = 0; r < rows; r++) {
+                const tr = document.createElement('tr');
+                if (heading && r === 0) tr.className = 'lh-grid-head';
+                for (let c = 0; c < cols; c++) {
+                    const td = document.createElement('td');
+                    td.appendChild(document.createElement('br'));
+                    tr.appendChild(td);
+                }
+                body.appendChild(tr);
+            }
+            table.appendChild(body);
+            const spacer = document.createElement('p');
+            spacer.appendChild(document.createElement('br'));
+            const sel = window.getSelection();
+            const inThisPage = sel && sel.rangeCount && area.contains(sel.anchorNode);
+            if (inThisPage) {
+                const range = sel.getRangeAt(0);
+                range.deleteContents();
+                range.insertNode(spacer);
+                range.insertNode(table);
+            } else {
+                area.appendChild(table);
+                area.appendChild(spacer);
+            }
+            const first = table.querySelector('td');
+            if (first) {
+                const range = document.createRange();
+                range.selectNodeContents(first);
+                range.collapse(true);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+            rememberGridEdit();
+        }
+
+        function blankGridCell() {
+            const td = document.createElement('td');
+            td.appendChild(document.createElement('br'));
+            return td;
+        }
+
+        function gridAddRow(direction) {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            if (hit.table.querySelectorAll('tr').length >= 40) {
+                alert(tableMsg('maxRows'));
+                return;
+            }
+            let count = 0;
+            hit.table.querySelectorAll('tr').forEach(function(tr) {
+                let n = 0;
+                Array.from(tr.cells).forEach(function(td) { n += td.colSpan || 1; });
+                if (n > count) count = n;
+            });
+            const tr = document.createElement('tr');
+            for (let i = 0; i < Math.max(1, count); i++) tr.appendChild(blankGridCell());
+            if (direction < 0) hit.row.before(tr);
+            else hit.row.after(tr);
+            rememberGridEdit();
+        }
+
+        function gridAddCol(direction) {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            let widest = 0;
+            hit.table.querySelectorAll('tr').forEach(function(tr) {
+                if (tr.cells.length > widest) widest = tr.cells.length;
+            });
+            if (widest >= 12) {
+                alert(tableMsg('maxCols'));
+                return;
+            }
+            const index = hit.cell.cellIndex;
+            hit.table.querySelectorAll('tr').forEach(function(tr) {
+                const td = blankGridCell();
+                const ref = tr.cells[index];
+                if (!ref) tr.appendChild(td);
+                else if (direction < 0) ref.before(td);
+                else ref.after(td);
+            });
+            rememberGridEdit();
+        }
+
+        function gridDeleteRow() {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            if (hit.table.querySelectorAll('tr').length <= 1) hit.table.remove();
+            else hit.row.remove();
+            rememberGridEdit();
+        }
+
+        function gridDeleteCol() {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            const index = hit.cell.cellIndex;
+            const rows = hit.table.querySelectorAll('tr');
+            if (!rows[0] || rows[0].cells.length <= 1) hit.table.remove();
+            else rows.forEach(function(tr) { if (tr.cells[index]) tr.cells[index].remove(); });
+            rememberGridEdit();
+        }
+
+        function gridToggleHead() {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            const first = hit.table.querySelector('tr');
+            if (first) first.classList.toggle('lh-grid-head');
+            rememberGridEdit();
+        }
+
+        function gridMergeRight() {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            const next = hit.cell.nextElementSibling;
+            if (!next || next.tagName !== 'TD') {
+                alert(tableMsg('noRight'));
+                return;
+            }
+            hit.cell.colSpan = (hit.cell.colSpan || 1) + (next.colSpan || 1);
+            if (next.textContent && next.textContent.trim()) {
+                hit.cell.appendChild(document.createTextNode(' '));
+                while (next.firstChild) hit.cell.appendChild(next.firstChild);
+            }
+            next.remove();
+            rememberGridEdit();
+        }
+
+        function gridUnmerge() {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            const span = hit.cell.colSpan || 1;
+            if (span <= 1) return;
+            hit.cell.colSpan = 1;
+            for (let i = 1; i < span; i++) hit.cell.after(blankGridCell());
+            rememberGridEdit();
+        }
+
+        function gridAlign(align) {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            hit.cell.style.textAlign = align;
+            rememberGridEdit();
+        }
+
+        function gridToggleBorder() {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            hit.table.classList.toggle('lh-grid-noborder');
+            rememberGridEdit();
+        }
+
+        function gridClearCell() {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            hit.cell.innerHTML = '<br>';
+            rememberGridEdit();
+        }
+
+        function gridDeleteTable() {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            hit.table.remove();
+            rememberGridEdit();
+        }
+
+        if (document.querySelector('.page-container')) {
+            setActiveLetterPage(document.querySelector('.page-container'));
+        }
+        applyTableCopy();
+        window.addEventListener('storage', function(event) {
+            if (!event.key || event.key === 'shs_locale_v3' || event.key === 'shs_locale_explicit') applyTableCopy();
+        });
 
         function insertSignatureBlock() {
             const block = `<div class="signature-block">

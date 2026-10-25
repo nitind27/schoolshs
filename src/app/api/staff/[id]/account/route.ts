@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
-import { passwordRecord, recordPasswordChange } from "@/lib/user-password";
+import { decryptUserPassword, passwordRecord, recordPasswordChange } from "@/lib/user-password";
 import { resolveStaffPortalRole } from "@/lib/staff-portal";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -32,6 +32,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             isActive: true,
             lastLoginAt: true,
             createdAt: true,
+            passwordEnc: true,
           },
         },
       },
@@ -56,6 +57,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             createdAt: staff.user.createdAt.toISOString(),
           }
         : null,
+      currentPassword: staff.user ? decryptUserPassword(staff.user.passwordEnc) : null,
     });
   } catch (e) {
     if (e instanceof AuthError) {
@@ -106,30 +108,34 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
       }
 
-      const updated = await prisma.user.update({
-        where: { id: staff.user.id },
-        data: {
-          email,
-          role,
-          name: `${staff.firstName} ${staff.lastName}`.trim(),
-          isActive,
-          ...(password
-            ? {
-                ...passwordRecord(password),
-                failedLoginCount: 0,
-                lockedUntil: null,
-              }
-            : {}),
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          schoolId: true,
-          isActive: true,
-          lastLoginAt: true,
-        },
+      const updated = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.update({
+          where: { id: staff.user!.id },
+          data: {
+            email,
+            role,
+            name: `${staff.firstName} ${staff.lastName}`.trim(),
+            isActive,
+            ...(password
+              ? {
+                  ...passwordRecord(password),
+                  failedLoginCount: 0,
+                  lockedUntil: null,
+                }
+              : {}),
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            schoolId: true,
+            isActive: true,
+            lastLoginAt: true,
+          },
+        });
+        await tx.staff.update({ where: { id: staff.id }, data: { email } });
+        return user;
       });
 
       if (password) {
@@ -169,29 +175,32 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const created = await prisma.user.create({
-      data: {
-        email,
-        ...passwordRecord(password),
-        name: `${staff.firstName} ${staff.lastName}`.trim(),
-        role,
-        schoolId: session.schoolId,
-        staffId: staff.id,
-        isActive,
-        emailVerified: true,
-        emailVerifiedAt: new Date(),
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        schoolId: true,
-        isActive: true,
-        lastLoginAt: true,
-      },
+    const created = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          ...passwordRecord(password),
+          name: `${staff.firstName} ${staff.lastName}`.trim(),
+          role,
+          schoolId: session.schoolId,
+          staffId: staff.id,
+          isActive,
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          schoolId: true,
+          isActive: true,
+          lastLoginAt: true,
+        },
+      });
+      await tx.staff.update({ where: { id: staff.id }, data: { email } });
+      return user;
     });
-
     await recordPasswordChange({
       userId: created.id,
       email: created.email,

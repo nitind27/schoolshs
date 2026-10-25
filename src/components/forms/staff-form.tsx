@@ -547,9 +547,9 @@ export function StaffForm({
               outputFormat="dmy-dash"
             />
 
-            {!isEditMode ? (
-              <p className="staff-form__hint staff-form__span-full">{t("staffPage.emailLoginHint")}</p>
-            ) : null}
+            <p className="staff-form__hint staff-form__span-full">
+              {isEditMode ? t("staffPage.emailSyncHint") : t("staffPage.emailLoginHint")}
+            </p>
           </div>
 
           {roleWork.length > 0 ? (

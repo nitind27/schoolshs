@@ -1662,6 +1662,8 @@ const en = {
     fixErrors: "Please fix the highlighted fields",
     emailLoginHint:
       "Required. This email is the portal username for Teacher / Principal / Clerk. An 8-digit password is auto-generated and emailed after save.",
+    emailSyncHint:
+      "Saving a new email updates the portal login in the database. Login / Password then shows this email and the saved password.",
     staffCreatedTitle: "Staff created successfully",
     loginCredentialsTitle: "Portal login credentials",
     usernameLabel: "Username (email)",
@@ -4320,6 +4322,8 @@ const en = {
     portalLoginHint:
       "Create login or reset password for this staff. They sign in on the school portal with email + password.",
     loginEmail: "Login Email",
+    savedPassword: "Saved password",
+    savedPasswordEmpty: "No saved password on this login yet",
     portalRole: "Portal Role",
     accountActive: "Account active (can login)",
     createLogin: "Create Login",

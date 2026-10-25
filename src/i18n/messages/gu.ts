@@ -1644,6 +1644,8 @@ const gu: Messages = {
     fixErrors: "હાઇલાઇટ થયેલા ફીલ્ડ સુધારો",
     emailLoginHint:
       "જરૂરી. આ ઈમેલ Teacher / Principal / Clerk માટે પોર્ટલ યૂઝરનેમ છે. સાચવ્યા પછી 8 અંકનો પાસવર્ડ આપમેળે બને અને ઈમેલ થાય.",
+    emailSyncHint:
+      "નવી ઈમેલ સાચવતાં પોર્ટલ લોગિન ડેટાબેઝમાં અપડેટ થાય છે. લોગિન / પાસવર્ડ પર આ ઈમેલ અને સાચવેલ પાસવર્ડ દેખાશે.",
     staffCreatedTitle: "સ્ટાફ સફળતાપૂર્વક બન્યો",
     loginCredentialsTitle: "પોર્ટલ લોગિન વિગતો",
     usernameLabel: "યૂઝરનેમ (ઈમેલ)",
@@ -4268,6 +4270,8 @@ const gu: Messages = {
     portalLoginHint:
       "આ સ્ટાફ માટે લોગિન બનાવો અથવા પાસવર્ડ રીસેટ કરો. તે ઈમેલ + પાસવર્ડથી પોર્ટલમાં સાઇન ઇન કરશે.",
     loginEmail: "લોગિન ઈમેલ",
+    savedPassword: "સાચવેલ પાસવર્ડ",
+    savedPasswordEmpty: "આ લોગિન પર સાચવેલ પાસવર્ડ નથી",
     portalRole: "પોર્ટલ રોલ",
     accountActive: "એકાઉન્ટ સક્રિય (લોગિન કરી શકે)",
     createLogin: "લોગિન બનાવો",

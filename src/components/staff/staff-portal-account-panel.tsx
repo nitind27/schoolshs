@@ -32,6 +32,7 @@ type AccountInfo = {
     isActive: boolean;
     lastLoginAt: string | null;
   } | null;
+  currentPassword: string | null;
 };
 
 export function StaffPortalAccountPanel({
@@ -52,6 +53,7 @@ export function StaffPortalAccountPanel({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showSavedPassword, setShowSavedPassword] = useState(true);
   const [isActive, setIsActive] = useState(true);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
@@ -263,6 +265,43 @@ export function StaffPortalAccountPanel({
         </div>
 
         <form onSubmit={savePasswordOrCreate} className="space-y-3">
+          {hasAccount ? (
+            <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 sm:grid-cols-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  {t("accountSettings.loginEmail")}
+                </p>
+                <p className="mt-1 break-all font-mono text-sm font-semibold text-slate-900">
+                  {data?.account?.email || "—"}
+                </p>
+              </div>
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    {t("accountSettings.savedPassword")}
+                  </p>
+                  {data?.currentPassword ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowSavedPassword((v) => !v)}
+                      className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      aria-label={showSavedPassword ? "Hide" : "Show"}
+                    >
+                      {showSavedPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  ) : null}
+                </div>
+                <p className="mt-1 break-all font-mono text-sm font-semibold text-slate-900">
+                  {data?.currentPassword
+                    ? showSavedPassword
+                      ? data.currentPassword
+                      : "••••••••"
+                    : t("accountSettings.savedPasswordEmpty")}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           {!hasAccount && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">

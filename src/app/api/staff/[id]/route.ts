@@ -29,7 +29,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireSchoolAuth();
     const { id } = await params;
-    const existing = await prisma.staff.findFirst({ where: { id, schoolId: session.schoolId } });
+    const existing = await prisma.staff.findFirst({
+      where: { id, schoolId: session.schoolId },
+      include: { user: { select: { id: true, email: true } } },
+    });
     if (!existing) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
 
     const body = await request.json();
@@ -43,7 +46,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       designation,
       department: body.department ? String(body.department).trim() : null,
       mobileNumber: String(body.mobileNumber || "").replace(/\s/g, "").trim(),
-      email: body.email ? String(body.email).trim() : null,
+      email: body.email ? String(body.email).trim().toLowerCase() : null,
       gender: body.gender ? String(body.gender).trim() : null,
       panNumber: body.panNumber ? String(body.panNumber).trim().toUpperCase() : null,
       gpfCpfNo: body.gpfCpfNo ? String(body.gpfCpfNo).trim() : null,
@@ -84,7 +87,33 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const staff = await prisma.staff.update({ where: { id }, data });
+    const nextEmail = data.email;
+    if (existing.user && nextEmail && nextEmail !== existing.user.email.toLowerCase()) {
+      const emailTaken = await prisma.user.findFirst({
+        where: { email: nextEmail, NOT: { id: existing.user.id } },
+        select: { id: true },
+      });
+      if (emailTaken) {
+        return NextResponse.json(
+          { error: "This email is already used by another portal account" },
+          { status: 409 },
+        );
+      }
+    }
+
+    const staff = await prisma.$transaction(async (tx) => {
+      const updated = await tx.staff.update({ where: { id }, data });
+      if (existing.user) {
+        const userPatch: { email?: string; name: string } = {
+          name: `${data.firstName} ${data.lastName}`.trim(),
+        };
+        if (nextEmail && nextEmail !== existing.user.email.toLowerCase()) {
+          userPatch.email = nextEmail;
+        }
+        await tx.user.update({ where: { id: existing.user.id }, data: userPatch });
+      }
+      return updated;
+    });
     return NextResponse.json(staff);
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
