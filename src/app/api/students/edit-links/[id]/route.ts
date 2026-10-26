@@ -4,7 +4,7 @@ import { AuthError, requireSchoolAuth } from "@/lib/auth";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export async function PATCH(_request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireSchoolAuth(["school_admin"]);
     const { id } = await params;
@@ -22,7 +22,27 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error("[edit-links DELETE]", error);
+    console.error("[edit-links PATCH]", error);
     return NextResponse.json({ error: "Failed to close link" }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await requireSchoolAuth(["school_admin"]);
+    const { id } = await params;
+    const existing = await prisma.studentEditLink.findFirst({
+      where: { id, schoolId: session.schoolId },
+      select: { id: true },
+    });
+    if (!existing) return NextResponse.json({ error: "Link not found" }, { status: 404 });
+    await prisma.studentEditLink.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    console.error("[edit-links DELETE]", error);
+    return NextResponse.json({ error: "Failed to delete link" }, { status: 500 });
   }
 }

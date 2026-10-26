@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Copy, Link2, Lock } from "lucide-react";
+import { Check, Copy, Link2, Lock, Trash2 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -57,6 +57,8 @@ export function StudentEditLinksAdmin() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
+  const [pendingDelete, setPendingDelete] = useState("");
+  const [notice, setNotice] = useState("");
 
   const loadLinks = useCallback(async () => {
     const res = await fetch("/api/students/edit-links");
@@ -128,9 +130,26 @@ export function StudentEditLinksAdmin() {
   };
 
   const revoke = async (id: string) => {
-    await fetch(`/api/students/edit-links/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/students/edit-links/${id}`, { method: "PATCH" });
+    if (!res.ok) {
+      setError(t("editLink.loadFailed"));
+      return;
+    }
     if (created?.id === id) setCreated((prev) => (prev ? { ...prev, isActive: false } : prev));
     await loadLinks();
+  };
+
+  const removeLink = async (id: string) => {
+    setError("");
+    const res = await fetch(`/api/students/edit-links/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setError(t("editLink.deleteFailed"));
+      return;
+    }
+    setLinks((prev) => prev.filter((item) => item.id !== id));
+    if (created?.id === id) setCreated(null);
+    setPendingDelete("");
+    setNotice(t("editLink.deleted"));
   };
 
   const classOptions = useMemo(
@@ -147,6 +166,9 @@ export function StudentEditLinksAdmin() {
       <div className="mx-auto max-w-5xl space-y-4 pb-10">
         {error ? (
           <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        ) : null}
+        {notice ? (
+          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p>
         ) : null}
 
         {created ? <CredentialCard link={created} copied={copied} onCopy={copyText} shareText={shareText} /> : null}
@@ -258,13 +280,38 @@ export function StudentEditLinksAdmin() {
                         {link.class.academicYear} · {link.fields.length} fields · {link.isActive ? t("editLink.active") : t("editLink.closed")}
                       </p>
                     </div>
-                    {link.isActive ? (
-                      <Button type="button" size="sm" variant="outline" onClick={() => revoke(link.id)}>
-                        <Lock className="h-3.5 w-3.5" />
-                        {t("editLink.revoke")}
+                    <div className="flex flex-wrap gap-2">
+                      {link.isActive ? (
+                        <Button type="button" size="sm" variant="outline" onClick={() => revoke(link.id)}>
+                          <Lock className="h-3.5 w-3.5" />
+                          {t("editLink.revoke")}
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-red-200 text-red-700 hover:bg-red-50"
+                        onClick={() => setPendingDelete(pendingDelete === link.id ? "" : link.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {t("editLink.delete")}
                       </Button>
-                    ) : null}
+                    </div>
                   </div>
+                  {pendingDelete === link.id ? (
+                    <div className="mt-3 flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-red-800">{t("editLink.deleteAsk")}</p>
+                      <div className="flex gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => setPendingDelete("")}>
+                          {t("common.cancel")}
+                        </Button>
+                        <Button type="button" size="sm" className="bg-red-700 hover:bg-red-800" onClick={() => removeLink(link.id)}>
+                          {t("editLink.delete")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
                   <CredentialBits link={link} copied={copied} onCopy={copyText} shareText={shareText} />
                 </article>
               ))}
