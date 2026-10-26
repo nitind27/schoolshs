@@ -31,6 +31,8 @@ const PUBLIC_PATHS = [
   "/api/exam-id-cards/public",
   "/letterhead/view",
   "/api/letterhead/share",
+  "/student-edit",
+  "/api/student-edit-link",
 ];
 
 const ROLE_ROUTES: Record<string, UserRole[]> = {

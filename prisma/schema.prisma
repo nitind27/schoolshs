@@ -61,6 +61,7 @@ model School {
   notifications          Notification[]
   schoolSubjects         SchoolSubject[]
   schoolReligions        SchoolReligion[]
+  studentEditLinks       StudentEditLink[]
   standardSubjects       StandardSubject[]
   examSeatAssignments    ExamSeatAssignment[]
   holidays               Holiday[]
@@ -410,6 +411,27 @@ model IdCardShareLink {
   @@map("idcardsharelink")
 }
 
+model StudentEditLink {
+  id          String      @id @default(cuid())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  schoolId    String
+  school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId     String
+  schoolClass SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  /** Short id the staff types, also used in the shared URL */
+  code        String      @unique @db.VarChar(12)
+  passwordEnc String      @db.Text
+  fieldsJson  Json
+  isActive    Boolean     @default(true)
+  createdById String?
+  lastUsedAt  DateTime?
+
+  @@index([schoolId])
+  @@index([classId])
+  @@map("studenteditlink")
+}
+
 model LetterheadShare {
   id          String   @id @default(cuid())
   createdAt   DateTime @default(now())
@@ -732,6 +754,7 @@ model SchoolClass {
   timetableReleases   ClassTimetableRelease[]
   classSubjects       ClassSubject[]
   examSeatAssignments ExamSeatAssignment[]
+  studentEditLinks    StudentEditLink[]
 
   @@unique([schoolId, standard, section, stream, academicYear])
   @@index([schoolId])
