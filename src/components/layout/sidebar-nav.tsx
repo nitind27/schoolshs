@@ -49,6 +49,12 @@ function isPathActive(pathname: string, href: string) {
     const segment = pathname.split("/")[2];
     return Boolean(segment && !STAFF_RESERVED.has(segment));
   }
+  if (href === "/results") {
+    if (pathname === "/results/marks-access" || pathname.startsWith("/results/marks-access/")) {
+      return false;
+    }
+    return pathname === "/results" || pathname.startsWith("/results/");
+  }
   if (href === "/students") {
     if (pathname === "/students") return true;
     if (!pathname.startsWith("/students/")) return false;

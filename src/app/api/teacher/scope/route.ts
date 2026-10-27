@@ -7,7 +7,7 @@ import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 export const dynamic = "force-dynamic";
 
 /**
- * Flutter + web: teacher class/subject scope from class-teacher + released timetable.
+ * Flutter + web: teacher class/subject scope from class teacher, timetable, and subject marks grants.
  * GET /api/teacher/scope?academicYear=${DEFAULT_ACADEMIC_YEAR}
  * Fallback if this path 404s on an old deploy: GET /api/teacher?view=scope
  */

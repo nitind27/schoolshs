@@ -28,6 +28,7 @@ import {
   Hash,
   Tags,
   Link2,
+  PenLine,
   Armchair,
   CalendarDays,
   Trophy,
@@ -225,6 +226,13 @@ const useNavGroups = (
         href: "/results",
         label: t("navExt.results"),
         icon: Award,
+        featureKey: "results",
+      },
+      {
+        type: "link",
+        href: "/results/marks-access",
+        label: t("nav.marksAccess"),
+        icon: PenLine,
         featureKey: "results",
       },
       {

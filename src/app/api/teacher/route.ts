@@ -54,7 +54,9 @@ export async function GET(request: NextRequest) {
       return mobileJson(scopePayload(scope), undefined, origin);
     }
 
-    const classIds = scope.attendanceClassIds;
+    const classIds = [
+      ...new Set([...scope.attendanceClassIds, ...scope.marksClassIds]),
+    ];
     const classes = classIds.length
       ? await prisma.schoolClass.findMany({
           where: { schoolId: session.schoolId, id: { in: classIds } },

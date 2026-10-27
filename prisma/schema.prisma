@@ -62,6 +62,7 @@ model School {
   schoolSubjects         SchoolSubject[]
   schoolReligions        SchoolReligion[]
   studentEditLinks       StudentEditLink[]
+  staffMarksGrants       StaffMarksGrant[]
   standardSubjects       StandardSubject[]
   examSeatAssignments    ExamSeatAssignment[]
   holidays               Holiday[]
@@ -561,6 +562,7 @@ model Staff {
   bankAccount      String?
   ifscCode         String?
   classes          SchoolClass[]          @relation("ClassTeacher")
+  marksGrants      StaffMarksGrant[]
   user             User?
   attendanceMonths StaffAttendanceMonth[]
   payrolls         StaffPayroll[]
@@ -755,12 +757,32 @@ model SchoolClass {
   classSubjects       ClassSubject[]
   examSeatAssignments ExamSeatAssignment[]
   studentEditLinks    StudentEditLink[]
+  marksGrants         StaffMarksGrant[]
 
   @@unique([schoolId, standard, section, stream, academicYear])
   @@index([schoolId])
   @@index([standard])
   @@index([academicYear])
   @@map("schoolclass")
+}
+
+/** Subject marks a non-class-teacher may enter from the staff app. */
+model StaffMarksGrant {
+  id          String      @id @default(cuid())
+  createdAt   DateTime    @default(now())
+  schoolId    String
+  school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staffId     String
+  staff       Staff       @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  classId     String
+  schoolClass SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectCode String      @db.VarChar(40)
+
+  @@unique([staffId, classId, subjectCode])
+  @@index([schoolId])
+  @@index([staffId])
+  @@index([classId])
+  @@map("staffmarksgrant")
 }
 
 model ClassSubject {

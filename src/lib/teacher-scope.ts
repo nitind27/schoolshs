@@ -158,6 +158,95 @@ async function resolveAcademicYear(schoolId: string, fallback?: string | null) {
   return settings?.academicYear || fallback || DEFAULT_ACADEMIC_YEAR;
 }
 
+/** Extra class/subject marks rights set by the school admin. Does not open attendance. */
+async function applyStaffMarksGrants(
+  classes: TeacherClassScope[],
+  schoolId: string,
+  staffId: string,
+  academicYear: string,
+) {
+  const grants = await prisma.staffMarksGrant.findMany({
+    where: { schoolId, staffId },
+    include: {
+      schoolClass: {
+        select: {
+          id: true,
+          name: true,
+          standard: true,
+          section: true,
+          stream: true,
+          academicYear: true,
+        },
+      },
+    },
+  });
+  if (!grants.length) return;
+
+  const subjectRows = await prisma.classSubject.findMany({
+    where: {
+      classId: { in: [...new Set(grants.map((grant) => grant.classId))] },
+      isActive: true,
+    },
+    select: { classId: true, code: true, name: true },
+  });
+  const nameByKey = new Map(
+    subjectRows.map((row) => [`${row.classId}:${row.code.toUpperCase()}`, row.name]),
+  );
+
+  const grouped = new Map<
+    string,
+    { schoolClass: (typeof grants)[number]["schoolClass"]; codes: string[]; labels: string[] }
+  >();
+  for (const grant of grants) {
+    const code = grant.subjectCode.trim();
+    if (!code || !grant.schoolClass) continue;
+    if (grant.schoolClass.academicYear !== academicYear) continue;
+    const bucket = grouped.get(grant.classId) || {
+      schoolClass: grant.schoolClass,
+      codes: [],
+      labels: [],
+    };
+    if (!bucket.codes.some((item) => item.toUpperCase() === code.toUpperCase())) {
+      bucket.codes.push(code);
+      const label = nameByKey.get(`${grant.classId}:${code.toUpperCase()}`);
+      if (label) bucket.labels.push(label);
+    }
+    grouped.set(grant.classId, bucket);
+  }
+
+  for (const [classId, bucket] of grouped) {
+    if (!bucket.codes.length) continue;
+    const existing = classes.find((item) => item.id === classId);
+    if (existing) {
+      if (existing.isHomeroom) continue;
+      const seen = new Set(existing.subjectCodes.map((code) => code.toUpperCase()));
+      for (const code of bucket.codes) {
+        if (!seen.has(code.toUpperCase())) existing.subjectCodes.push(code);
+      }
+      for (const label of bucket.labels) {
+        if (!existing.subjects.includes(label)) existing.subjects.push(label);
+      }
+      existing.canEnterMarks = existing.subjectCodes.length > 0;
+      continue;
+    }
+    const schoolClass = bucket.schoolClass;
+    classes.push({
+      id: schoolClass.id,
+      name: schoolClass.name,
+      standard: schoolClass.standard,
+      section: schoolClass.section,
+      stream: schoolClass.stream,
+      academicYear: schoolClass.academicYear,
+      isHomeroom: false,
+      isTeaching: false,
+      canMarkAttendance: false,
+      canEnterMarks: true,
+      subjects: bucket.labels,
+      subjectCodes: bucket.codes,
+    });
+  }
+}
+
 function emptyScope(academicYear: string): TeacherScope {
   return {
     linked: false,
@@ -340,6 +429,8 @@ export async function getTeacherScope(
       };
     });
 
+  await applyStaffMarksGrants(classes, session.schoolId, staffId, academicYear);
+
   const clock = nowInIndia();
   let currentPeriod: TeacherCurrentPeriod = null;
   const todayEntries = entries.filter((e) => e.dayOfWeek === clock.dayOfWeek);
@@ -441,7 +532,7 @@ export async function assertTeacherMarksAccess(
   const cls = scope.classes.find((c) => c.id === classId);
   if (!cls || (!cls.canEnterMarks && !cls.isHomeroom && !cls.isTeaching)) {
     throw new AuthError(
-      "You can only enter marks for classes assigned on the timetable",
+      "You can only enter marks for a class assigned to you",
       403,
     );
   }

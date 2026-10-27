@@ -92,7 +92,10 @@ export async function GET(request: NextRequest) {
       teacherScope = await getTeacherScope(session, {
         academicYear: academicYear || undefined,
       });
-      const allowed = new Set(teacherScope.attendanceClassIds);
+      const allowed = new Set([
+        ...teacherScope.attendanceClassIds,
+        ...teacherScope.marksClassIds,
+      ]);
       scoped = classes.filter((c) => allowed.has(c.id));
     }
 
