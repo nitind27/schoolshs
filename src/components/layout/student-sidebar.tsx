@@ -28,7 +28,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
         roleIcon={GraduationCap}
       />
       <main className="shell-main">
-        <div className="student-portal-pages mx-auto max-w-[1100px] px-4 pb-6 pt-[4.75rem] lg:px-6">
+        <div className="student-portal-pages mx-auto max-w-[1240px] px-4 pb-10 pt-[4.75rem] sm:px-6 lg:px-8">
           {children}
         </div>
       </main>

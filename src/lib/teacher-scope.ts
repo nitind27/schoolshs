@@ -8,6 +8,7 @@ import {
 } from "@/lib/timetable-server";
 import { periodForDay, type DayScheduleConfig } from "@/lib/timetable";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
+import { getMarksSheetConfig } from "@/lib/results/marks-sheet-config";
 
 export type TeacherClassScope = {
   id: string;
@@ -203,14 +204,11 @@ export async function getTeacherScope(
     ),
   ]);
 
-  const releasedList = Array.from(releasedIds);
-  const entries = releasedList.length
-    ? await prisma.timetableEntry.findMany({
+  const entries = await prisma.timetableEntry.findMany({
         where: {
           schoolId: session.schoolId,
           academicYear,
           teacherId: staffId,
-          classId: { in: releasedList },
         },
         include: {
           class: {
@@ -225,8 +223,7 @@ export async function getTeacherScope(
           },
         },
         orderBy: [{ dayOfWeek: "asc" }, { periodIndex: "asc" }],
-      })
-    : [];
+      });
 
   const classMap = new Map<
     string,
@@ -238,6 +235,8 @@ export async function getTeacherScope(
       stream: string;
       academicYear: string;
       isHomeroom: boolean;
+      /** Timetable for this class is published. Attendance uses this; marks do not. */
+      releasedTeaching: boolean;
       subjectNames: Set<string>;
     }
   >();
@@ -246,14 +245,17 @@ export async function getTeacherScope(
     classMap.set(cls.id, {
       ...cls,
       isHomeroom: true,
+      releasedTeaching: false,
       subjectNames: new Set<string>(),
     });
   }
 
   for (const entry of entries) {
+    const released = releasedIds.has(entry.classId);
     const existing = classMap.get(entry.classId);
     if (existing) {
       if (entry.subject) existing.subjectNames.add(entry.subject);
+      if (released) existing.releasedTeaching = true;
       continue;
     }
     const cls = entry.class;
@@ -266,6 +268,7 @@ export async function getTeacherScope(
       stream: cls.stream,
       academicYear: cls.academicYear,
       isHomeroom: false,
+      releasedTeaching: released,
       subjectNames: new Set(entry.subject ? [entry.subject] : []),
     });
   }
@@ -298,7 +301,7 @@ export async function getTeacherScope(
     .map((cls) => {
       const subjects = Array.from(cls.subjectNames).filter(Boolean);
       const defs = subjectsByClass.get(cls.id) || [];
-      const subjectCodes = [
+      const matchedCodes = [
         ...new Set(
           subjects
             .filter(isMarksSubjectName)
@@ -309,6 +312,14 @@ export async function getTeacherScope(
             ),
         ),
       ];
+      const classCodes = defs.map((def) => def.code).filter(Boolean);
+      const sheetCodes = getMarksSheetConfig(cls.standard, cls.stream).subjects.map(
+        (subject) => subject.code,
+      );
+      // Class teacher enters every subject. A timetable-only teacher stays on matched subjects.
+      const subjectCodes = cls.isHomeroom
+        ? [...new Set(classCodes.length ? classCodes : sheetCodes)]
+        : matchedCodes;
       const isTeaching = subjects.length > 0;
       return {
         id: cls.id,
@@ -319,9 +330,12 @@ export async function getTeacherScope(
         academicYear: cls.academicYear,
         isHomeroom: cls.isHomeroom,
         isTeaching,
-        canMarkAttendance: cls.isHomeroom || isTeaching,
-        canEnterMarks: subjectCodes.length > 0,
-        subjects,
+        canMarkAttendance: cls.isHomeroom || cls.releasedTeaching,
+        canEnterMarks: cls.isHomeroom || subjectCodes.length > 0,
+        subjects:
+          cls.isHomeroom && !subjects.length
+            ? defs.map((def) => def.name).filter(Boolean)
+            : subjects,
         subjectCodes,
       };
     });
@@ -448,7 +462,10 @@ export async function teacherSubjectCodesForClass(
   if (session.role !== "teacher") return null;
   const scope = await getTeacherScope(session);
   const cls = scope.classes.find((c) => c.id === classId);
-  return cls?.subjectCodes ?? [];
+  if (!cls) return [];
+  // Class teacher: full marks sheet, even when the timetable has no subject match.
+  if (cls.isHomeroom) return cls.subjectCodes.length ? cls.subjectCodes : null;
+  return cls.subjectCodes;
 }
 
 export function filterByTeacherSubjects<T extends { code?: string | null; subjectCode?: string | null }>(

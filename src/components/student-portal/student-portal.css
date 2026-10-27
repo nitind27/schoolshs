@@ -1,21 +1,33 @@
-/* Student Portal — institutional school UI */
+/* ==========================================================================
+   Student Portal — Modern, Attractive, Institutional UI Design System
+   ========================================================================== */
 
 .student-portal-shell {
-  --sp-ink: #0c1e2e;
-  --sp-ink-soft: #16324a;
-  --sp-accent: #0d7377;
-  --sp-accent-soft: #14919b;
-  --sp-canvas: #eef2f6;
+  --sp-ink: #09202a;
+  --sp-ink-soft: #133a47;
+  --sp-accent: #0d9488;
+  --sp-accent-soft: #14b8a6;
+  --sp-accent-light: #ccfbf1;
+  --sp-accent-glow: rgba(13, 148, 136, 0.25);
+  --sp-canvas: #f8fafc;
   --sp-paper: #ffffff;
-  --sp-line: #d5dee8;
-  --sp-muted: #5a6b7d;
+  --sp-line: #e2e8f0;
+  --sp-line-subtle: #f1f5f9;
+  --sp-muted: #64748b;
+  --sp-shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+  --sp-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --sp-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  --sp-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+
   --sp-display: var(--font-lp-display, "Bricolage Grotesque"), ui-sans-serif, system-ui, sans-serif;
   --sp-body: var(--font-lp-body, "Figtree"), ui-sans-serif, system-ui, sans-serif;
 
   min-height: 100vh;
   background:
-    radial-gradient(ellipse 80% 50% at 100% 0%, rgb(13 115 119 / 0.08), transparent 55%),
-    linear-gradient(180deg, #e8eef4 0%, var(--sp-canvas) 40%, #e6edf3 100%);
+    radial-gradient(circle 800px at 15% 10%, rgba(20, 184, 166, 0.08), transparent 70%),
+    radial-gradient(circle 600px at 85% 20%, rgba(59, 130, 246, 0.06), transparent 70%),
+    radial-gradient(circle 500px at 50% 90%, rgba(20, 184, 166, 0.05), transparent 70%),
+    linear-gradient(180deg, #f0fdfa 0%, #f8fafc 18%, #f8fafc 85%, #f1f5f9 100%);
   color: var(--sp-ink);
   font-family: var(--sp-body);
 }
@@ -34,38 +46,45 @@ html.locale-gu .student-portal-shell h3 {
   letter-spacing: 0;
 }
 
+/* Smooth Entrance Animation */
 .student-portal-pages {
-  animation: sp-page-in 0.4s ease both;
+  animation: sp-fade-slide 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes sp-page-in {
+@keyframes sp-fade-slide {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px) scale(0.998);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
-/* Welcome band — brand-first, no photo, no floating badges */
+/* ==========================================================================
+   Hero Section — Modern Ambient Mesh Gradient with Glass Accents
+   ========================================================================== */
 .student-hero {
   position: relative;
   overflow: hidden;
-  padding: 1.5rem 1.35rem;
-  border-radius: 0;
-  border: 1px solid var(--sp-line);
-  border-left: 4px solid var(--sp-accent);
+  padding: 1.75rem 1.5rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   background:
-    linear-gradient(135deg, var(--sp-ink) 0%, #123047 55%, #0d4a4e 100%);
-  color: #f8fafc;
-  box-shadow: none;
+    radial-gradient(circle at 85% 15%, rgba(45, 212, 191, 0.22), transparent 45%),
+    radial-gradient(circle at 10% 85%, rgba(14, 165, 233, 0.18), transparent 45%),
+    linear-gradient(135deg, #071923 0%, #0a2733 40%, #0c3b44 75%, #0d5c64 100%);
+  color: #ffffff;
+  box-shadow:
+    0 16px 36px -8px rgba(7, 25, 35, 0.4),
+    0 6px 14px -3px rgba(13, 148, 136, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 @media (min-width: 640px) {
   .student-hero {
-    padding: 1.75rem 1.75rem;
+    padding: 2.25rem 2rem;
   }
 }
 
@@ -73,17 +92,32 @@ html.locale-gu .student-portal-shell h3 {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.06;
-  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 20h40M20 0v40' stroke='%23fff' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  background-image:
+    linear-gradient(to right, #ffffff 1px, transparent 1px),
+    linear-gradient(to bottom, #ffffff 1px, transparent 1px);
+  background-size: 28px 28px;
   pointer-events: none;
 }
 
 .student-hero::after {
-  content: none;
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.25) 0%, transparent 65%);
+  border-radius: 50%;
+  filter: blur(40px);
+  pointer-events: none;
 }
 
 .student-hero-kicker {
-  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -91,117 +125,172 @@ html.locale-gu .student-portal-shell h3 {
 }
 
 .student-hero-name {
-  margin-top: 0.35rem;
+  margin-top: 0.4rem;
   font-family: var(--sp-display);
-  font-size: clamp(1.55rem, 3.5vw, 2.15rem);
-  font-weight: 700;
+  font-size: clamp(1.6rem, 3.8vw, 2.35rem);
+  font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.15;
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .student-hero-meta {
-  margin-top: 0.45rem;
-  font-size: 0.9rem;
-  color: #94a3b8;
+  margin-top: 0.5rem;
+  font-size: 0.92rem;
+  color: #cbd5e1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .student-hero-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 1rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
 }
 
-/* Metrics — flat, no gradient icon blobs */
+.student-hero-avatar-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+  border: 2px solid rgba(94, 234, 212, 0.6);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .student-hero-avatar-ring {
+    width: 5.25rem;
+    height: 5.25rem;
+    font-size: 1.75rem;
+  }
+}
+
+/* ==========================================================================
+   Metrics Grid & Metric Cards
+   ========================================================================== */
 .student-metrics {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.9rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1024px) {
   .student-metrics {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 .student-metric-card {
-  padding: 1rem 1.05rem;
+  position: relative;
+  overflow: hidden;
+  padding: 1.15rem 1.25rem;
   border: 1px solid var(--sp-line);
-  border-radius: 0.65rem;
+  border-radius: 1.15rem;
   background: var(--sp-paper);
-  box-shadow: none;
-  transition: border-color 0.15s ease;
+  box-shadow: var(--sp-shadow-sm);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .student-metric-card:hover {
-  border-color: rgb(13 115 119 / 0.45);
-  box-shadow: none;
+  transform: translateY(-2px);
+  border-color: rgba(13, 148, 136, 0.4);
+  box-shadow:
+    0 12px 24px -6px rgba(13, 148, 136, 0.1),
+    0 4px 8px -2px rgba(15, 23, 42, 0.04);
 }
 
 .student-metric-card .sp-metric-label {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--sp-muted);
 }
 
 .student-metric-card .sp-metric-value {
-  margin-top: 0.4rem;
+  margin-top: 0.45rem;
   font-family: var(--sp-display);
-  font-size: 1.55rem;
-  font-weight: 700;
+  font-size: 1.65rem;
+  font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--sp-ink);
   line-height: 1.1;
 }
 
 .student-metric-card .sp-metric-sub {
-  margin-top: 0.25rem;
-  font-size: 0.75rem;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
   color: var(--sp-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .student-metric-card .sp-metric-icon {
   display: grid;
   place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.5rem;
-  background: #e6f4f4;
-  color: var(--sp-accent);
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
+  color: #0d9488;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  transition: transform 0.2s ease;
 }
 
-/* Page header */
+.student-metric-card:hover .sp-metric-icon {
+  transform: scale(1.08);
+}
+
+/* ==========================================================================
+   Page Headers
+   ========================================================================== */
 .student-portal-header {
-  padding: 0 0 0.25rem;
+  position: relative;
+  padding: 0.5rem 0 0.25rem;
   border: 0;
-  border-radius: 0;
   background: transparent;
-  box-shadow: none;
 }
 
 .student-portal-header h1 {
   font-family: var(--sp-display);
+  font-weight: 800;
   letter-spacing: -0.025em;
+  color: var(--sp-ink);
 }
 
 .student-portal-header .sp-header-icon {
   display: grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 0.65rem;
-  background: var(--sp-ink);
-  color: #fff;
-  box-shadow: none;
+  width: 2.85rem;
+  height: 2.85rem;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, #09202a, #0d5c64);
+  color: #5eead4;
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.25);
+  flex-shrink: 0;
 }
 
-/* Quick links — interactive rows */
+/* ==========================================================================
+   Quick Access Links Grid
+   ========================================================================== */
 .student-quick-grid {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.85rem;
 }
 
 @media (min-width: 640px) {
@@ -210,92 +299,121 @@ html.locale-gu .student-portal-shell h3 {
   }
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1024px) {
   .student-quick-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 .student-quick-link {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.9rem 1rem;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
   border: 1px solid var(--sp-line);
-  border-radius: 0.65rem;
+  border-radius: 1.15rem;
   background: var(--sp-paper);
   text-decoration: none;
-  box-shadow: none;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  box-shadow: var(--sp-shadow-sm);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .student-quick-link:hover {
-  border-color: var(--sp-accent);
-  background: #f2faf9;
-  box-shadow: none;
-  transform: translateY(-1px);
+  border-color: rgba(13, 148, 136, 0.45);
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+  box-shadow:
+    0 10px 22px -5px rgba(13, 148, 136, 0.12),
+    0 4px 8px -2px rgba(15, 23, 42, 0.04);
+  transform: translateY(-2px);
 }
 
 .student-quick-link .sp-ql-icon {
   display: grid;
   place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: 0.5rem;
-  background: var(--sp-ink);
-  color: #fff;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, #09202a, #0f4c54);
+  color: #5eead4;
   flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.student-quick-link:hover .sp-ql-icon {
+  transform: scale(1.06);
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  color: #ffffff;
 }
 
 .student-quick-link h3 {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--sp-ink);
+  transition: color 0.15s ease;
+}
+
+.student-quick-link:hover h3 {
+  color: #0f766e;
 }
 
 .student-quick-link p {
-  margin-top: 0.1rem;
-  font-size: 0.75rem;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
   color: var(--sp-muted);
 }
 
+/* ==========================================================================
+   Section Container & Titles
+   ========================================================================== */
 .student-section-title {
   font-family: var(--sp-display);
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.15rem;
+  font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--sp-ink);
 }
 
 .student-section {
+  position: relative;
   border: 1px solid var(--sp-line);
-  border-radius: 0.65rem;
+  border-radius: 1.25rem;
   background: var(--sp-paper);
-  padding: 1.15rem 1.2rem;
-  box-shadow: none;
+  padding: 1.35rem 1.35rem;
+  box-shadow: var(--sp-shadow-sm);
+  transition: box-shadow 0.2s ease;
 }
 
 @media (min-width: 640px) {
   .student-section {
-    padding: 1.35rem 1.4rem;
+    padding: 1.65rem 1.75rem;
   }
 }
 
+.student-section:hover {
+  box-shadow: var(--sp-shadow-md);
+}
+
+/* ==========================================================================
+   Field Components (Data Cells)
+   ========================================================================== */
 .student-field {
-  border-radius: 0.5rem;
+  border-radius: 0.85rem;
   border: 1px solid #e8eef4;
-  background: #f7f9fb;
-  padding: 0.7rem 0.9rem;
-  transition: border-color 0.15s ease;
+  background: #f8fafc;
+  padding: 0.85rem 1rem;
+  transition: all 0.15s ease;
 }
 
 .student-field:hover {
-  background: #f7f9fb;
-  border-color: var(--sp-line);
+  background: #ffffff;
+  border-color: rgba(20, 184, 166, 0.4);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
 }
 
 .student-field-label {
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -303,56 +421,38 @@ html.locale-gu .student-portal-shell h3 {
 }
 
 .student-field-value {
-  margin-top: 0.2rem;
-  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: var(--sp-ink);
   word-break: break-word;
 }
 
-.student-empty {
-  border-radius: 0.65rem;
-  border: 1px dashed var(--sp-line);
-  background: #f7f9fb;
-  padding: 3rem 1.5rem;
-  text-align: center;
-}
-
+/* ==========================================================================
+   Status Pills & Badges
+   ========================================================================== */
 .student-status-pill {
   display: inline-flex;
   align-items: center;
-  border-radius: 0.35rem;
-  border: 1px solid #cce5e5;
-  background: #eef6f6;
-  padding: 0.25rem 0.6rem;
-  font-size: 0.7rem;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  background: #f0fdfa;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--sp-accent);
+  color: #0f766e;
   max-width: 100%;
   white-space: normal;
   overflow-wrap: anywhere;
   line-height: 1.3;
 }
 
-@media (max-width: 399px) {
-  .student-metrics {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .student-metric-card {
-    padding: 0.85rem 0.9rem;
-  }
-
-  .student-doc-card {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
-
 .student-hero .student-status-pill:not(.student-status-pill--muted):not(.student-status-pill--success):not(.student-status-pill--warning) {
-  border-color: rgb(255 255 255 / 0.18);
-  background: rgb(255 255 255 / 0.1);
-  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  backdrop-filter: blur(6px);
 }
 
 .student-status-pill--muted {
@@ -373,14 +473,18 @@ html.locale-gu .student-portal-shell h3 {
   color: #b45309;
 }
 
+/* ==========================================================================
+   Results, Boards, and Document Cards
+   ========================================================================== */
 .student-doc-card,
 .student-result-card,
 .student-board-card {
   border: 1px solid var(--sp-line);
-  border-radius: 0.65rem;
+  border-radius: 1.15rem;
   background: var(--sp-paper);
-  box-shadow: none;
-  transition: border-color 0.15s ease;
+  box-shadow: var(--sp-shadow-sm);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 
 .student-doc-card {
@@ -388,28 +492,33 @@ html.locale-gu .student-portal-shell h3 {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem;
+  padding: 1.15rem 1.25rem;
 }
 
 .student-doc-card:hover,
-.student-result-card:hover {
-  border-color: var(--sp-accent);
-  box-shadow: none;
+.student-result-card:hover,
+.student-board-card:hover {
+  border-color: rgba(13, 148, 136, 0.4);
+  box-shadow:
+    0 10px 24px -4px rgba(13, 148, 136, 0.1),
+    0 4px 8px -2px rgba(15, 23, 42, 0.04);
+  transform: translateY(-2px);
 }
 
-.student-result-card {
-  overflow: hidden;
+/* Empty State */
+.student-empty {
+  border-radius: 1.25rem;
+  border: 2px dashed #cbd5e1;
+  background: #f8fafc;
+  padding: 3.5rem 1.5rem;
+  text-align: center;
 }
 
-.student-board-card {
-  overflow: hidden;
-  background: var(--sp-paper);
-}
-
+/* Table Wrapper */
 .student-table-wrap {
   overflow-x: auto;
-  border-radius: 0.5rem;
-  border: 1px solid #e8eef4;
+  border-radius: 0.85rem;
+  border: 1px solid var(--sp-line);
 }
 
 .student-table-wrap table {
@@ -419,9 +528,9 @@ html.locale-gu .student-portal-shell h3 {
 
 .student-table-wrap thead tr {
   border-bottom: 1px solid var(--sp-line);
-  background: #f7f9fb;
+  background: #f8fafc;
   text-align: left;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--sp-muted);
@@ -429,7 +538,7 @@ html.locale-gu .student-portal-shell h3 {
 
 .student-table-wrap th,
 .student-table-wrap td {
-  padding: 0.75rem;
+  padding: 0.85rem 1rem;
 }
 
 .student-table-wrap tbody tr {
@@ -438,24 +547,37 @@ html.locale-gu .student-portal-shell h3 {
 }
 
 .student-table-wrap tbody tr:hover {
-  background: #f2faf9;
+  background: #f0fdfa;
 }
 
+/* Footer Stamp */
 .student-footer-meta {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 1rem 1.15rem;
+  padding: 1.15rem 1.35rem;
   border: 1px solid var(--sp-line);
-  border-radius: 0.65rem;
+  border-radius: 1.15rem;
   background: var(--sp-paper);
+  box-shadow: var(--sp-shadow-sm);
 }
 
 @media (min-width: 640px) {
   .student-footer-meta {
     flex-direction: row;
     align-items: center;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .student-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .student-hero {
+    padding: 1.35rem 1.15rem;
   }
 }

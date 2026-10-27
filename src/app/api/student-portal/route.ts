@@ -10,6 +10,19 @@ export async function GET() {
     const student = await prisma.student.findFirst({
       where: { id: session.studentId, schoolId: session.schoolId },
       include: {
+        school: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            district: true,
+            taluka: true,
+            city: true,
+            phone: true,
+            email: true,
+            udiseCode: true,
+          },
+        },
         schoolClass: true,
         reportCards: {
           where: { isPublished: true },

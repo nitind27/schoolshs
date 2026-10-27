@@ -11,7 +11,7 @@ import {
   StudentSection,
   StudentEmptyState,
 } from "@/components/student-portal/student-portal-ui";
-import { Award, Printer, TrendingUp, Medal } from "lucide-react";
+import { Award, Printer, TrendingUp, Medal, BookOpen } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 
 export default function StudentResultsPage() {
@@ -25,68 +25,119 @@ export default function StudentResultsPage() {
   const examResults = (student.examResults as Record<string, unknown>[]) || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl pb-10">
       <StudentPageHeader
         icon={Award}
-        title={t("studentPortal.myResults")}
-        subtitle={t("studentPortal.resultsSubtitle")}
+        title={t("studentPortal.myResults") || "My Academic Results"}
+        subtitle={
+          t("studentPortal.resultsSubtitle") ||
+          "Official School Marksheets, Report Cards & Subject Scores"
+        }
+        backHref="/student"
+        backLabel="Back to Dashboard"
       />
 
+      {/* Aggregate Results Overview */}
+      {reportCards.length > 0 && (
+        <div className="relative overflow-hidden rounded-3xl border border-teal-200/80 bg-gradient-to-r from-teal-900 via-slate-900 to-slate-950 p-6 sm:p-7 text-white shadow-lg">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                <Medal className="h-6 w-6" />
+              </div>
+              <div>
+                <span className="text-teal-300 text-xs font-bold uppercase tracking-wider">
+                  Academic Record
+                </span>
+                <h2 className="text-xl sm:text-2xl font-black">
+                  {reportCards.length} Published Report {reportCards.length === 1 ? "Card" : "Cards"}
+                </h2>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Class {student.standard || "—"}-{student.section || "—"} • Roll: {student.rollNumber || "—"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur-md text-teal-200 border border-white/15">
+                Official Board & School Format
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Cards List */}
       {reportCards.length > 0 ? (
-        <div className="grid gap-4">
+        <div className="space-y-4">
           {reportCards.map((rc) => {
             const pct = (rc.percentage as number)?.toFixed?.(1) ?? rc.percentage;
             const isFail = String(rc.result).includes("નાપાસ") || rc.result === "Fail";
+            const rank = rc.rank != null && Number(rc.rank) > 0 ? Number(rc.rank) : null;
+
             return (
-              <div key={rc.id as string} className="student-result-card">
-                <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                key={rc.id as string}
+                className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-teal-300"
+              >
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--sp-ink,#0c1e2e)] text-white">
-                      <Award className="h-5 w-5" />
+                    <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700 border border-teal-200 p-3">
+                      <Award className="h-7 w-7" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg text-slate-900">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-teal-100/80 px-2.5 py-0.5 text-[11px] font-bold text-teal-800">
+                          {String(rc.academicYear || student.financialYear)}
+                        </span>
+                        <Badge status={isFail ? "rejected" : "approved"} />
+                      </div>
+
+                      <h3 className="mt-1 text-lg sm:text-xl font-bold text-slate-900">
                         {t("results.reportCardClass", {
                           standard: rc.standard as string,
                           year: rc.academicYear as string,
                         })}
                       </h3>
-                      <p className="text-sm text-slate-500 mt-1">
-                        {t("results.totalMarks", {
-                          total: rc.totalMarks as number,
-                          percent: pct,
-                          grade: rc.grade as string,
-                          rank: rc.rank as number,
-                        })}
+
+                      <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                        Total Marks:{" "}
+                        <span className="font-bold text-slate-800">{String(rc.totalMarks || "—")}</span> • Grade:{" "}
+                        <span className="font-bold text-emerald-700">{String(rc.grade || "A")}</span>
+                        {rank && (
+                          <>
+                            {" "}• Class Rank: <span className="font-bold text-amber-600">#{rank}</span>
+                          </>
+                        )}
                       </p>
-                      <div className="mt-2">
-                        <Badge status={isFail ? "rejected" : "approved"} />
-                      </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-                    {rc.rank != null && Number(rc.rank) > 0 && (
-                      <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-2">
+                  {/* Highlights & Print Action */}
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 shrink-0">
+                    {rank && (
+                      <div className="flex items-center gap-2 rounded-2xl bg-amber-50/80 border border-amber-200 px-3.5 py-2">
                         <Medal className="h-5 w-5 text-amber-600" />
                         <div>
-                          <p className="text-[10px] uppercase font-semibold text-amber-700">{t("results.rank")}</p>
-                          <p className="text-xl font-bold text-amber-700">#{rc.rank as number}</p>
+                          <p className="text-[10px] uppercase font-bold text-amber-700">Rank</p>
+                          <p className="text-base font-extrabold text-amber-800">#{rank}</p>
                         </div>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2">
-                      <TrendingUp className="h-5 w-5 text-[var(--sp-accent,#0d7377)]" />
+
+                    <div className="flex items-center gap-2 rounded-2xl border border-teal-200 bg-teal-50/60 px-4 py-2">
+                      <TrendingUp className="h-5 w-5 text-teal-600" />
                       <div>
-                        <p className="text-[10px] uppercase font-semibold text-slate-500">{t("studentPortal.percentage")}</p>
-                        <p className="text-xl font-bold text-slate-900">{pct}%</p>
+                        <p className="text-[10px] uppercase font-bold text-teal-700">Percentage</p>
+                        <p className="text-lg font-black text-slate-900">{pct}%</p>
                       </div>
                     </div>
+
                     {rc.examId != null && (
                       <Link href={`/student/results/print?examId=${rc.examId as string}`}>
-                        <Button className="bg-[var(--sp-ink,#0c1e2e)] hover:bg-[var(--sp-ink-soft,#16324a)]">
+                        <Button className="gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm text-xs font-bold py-2.5">
                           <Printer className="h-4 w-4" />
-                          {t("results.print")}
+                          <span>{t("results.print") || "Print Marksheet"}</span>
                         </Button>
                       </Link>
                     )}
@@ -99,35 +150,53 @@ export default function StudentResultsPage() {
       ) : (
         <StudentEmptyState
           icon={Award}
-          title={t("results.notPublished")}
-          description={t("studentPortal.resultsEmptyHint")}
+          title={t("results.notPublished") || "No Published Results"}
+          description={
+            t("studentPortal.resultsEmptyHint") ||
+            "Report cards will appear here once term exams are evaluated and published by your class teacher."
+          }
         />
       )}
 
+      {/* Subject-Wise Marks Breakdown Table */}
       {examResults.length > 0 && (
-        <StudentSection title={t("studentPortal.subjectWiseMarks")} description={t("studentPortal.subjectWiseDesc")}>
+        <StudentSection
+          title={t("studentPortal.subjectWiseMarks") || "Subject-Wise Marks Breakdown"}
+          description={t("studentPortal.subjectWiseDesc") || "Individual test marks across academic subjects"}
+          icon={BookOpen}
+        >
           <div className="student-table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>{t("results.exam")}</th>
-                  <th>{t("results.subject")}</th>
-                  <th className="text-right">{t("results.obtained")}</th>
-                  <th className="text-right">{t("results.achievement")}</th>
-                  <th className="text-right">{t("results.grace")}</th>
-                  <th>{t("results.grade")}</th>
+                  <th>{t("results.exam") || "Exam"}</th>
+                  <th>{t("results.subject") || "Subject"}</th>
+                  <th className="text-right">{t("results.obtained") || "Obtained"}</th>
+                  <th className="text-right">{t("results.achievement") || "Out Of / Max"}</th>
+                  <th className="text-right">{t("results.grace") || "Grace"}</th>
+                  <th>{t("results.grade") || "Grade"}</th>
                 </tr>
               </thead>
               <tbody>
                 {examResults.map((r) => (
                   <tr key={r.id as string}>
-                    <td className="font-medium">{(r.exam as { name: string })?.name}</td>
-                    <td>{(r.subject as { name: string })?.name}</td>
-                    <td className="text-right font-bold text-[var(--sp-accent,#0d7377)]">{r.marksObtained as number}</td>
-                    <td className="text-right text-slate-600">{(r.achievementMarks as number) || "—"}</td>
-                    <td className="text-right text-slate-600">{(r.graceMarks as number) || "—"}</td>
+                    <td className="font-semibold text-slate-900">
+                      {(r.exam as { name: string })?.name}
+                    </td>
+                    <td className="font-medium text-slate-700">
+                      {(r.subject as { name: string })?.name}
+                    </td>
+                    <td className="text-right font-black text-teal-700">
+                      {r.marksObtained as number}
+                    </td>
+                    <td className="text-right text-slate-600">
+                      {(r.achievementMarks as number) || "—"}
+                    </td>
+                    <td className="text-right text-slate-600">
+                      {(r.graceMarks as number) || "—"}
+                    </td>
                     <td>
-                      <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold">
+                      <span className="inline-flex rounded-full bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-bold text-teal-800">
                         {r.grade as string}
                       </span>
                     </td>
