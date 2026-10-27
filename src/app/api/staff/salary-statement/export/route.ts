@@ -13,6 +13,7 @@ import {
   type SalaryCategory,
   type SalaryFieldKey,
 } from "@/lib/salary-statement";
+import { sliceMonthRange } from "@/lib/salary-month-range";
 import { loadSchoolSalaryStatement } from "@/lib/salary-statement-server";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,10 @@ export async function GET(request: NextRequest) {
     const categories = visibleSalaryCategories(schoolType);
 
     const byKey = new Map(built.rows.map((r) => [`${r.category}:${r.month}`, r]));
-    const months = fyMonths(financialYear);
+    const months = sliceMonthRange(fyMonths(financialYear), searchParams.get("from"), searchParams.get("to"));
+    const span = months.length
+      ? `${monthLabel(months[0].month, months[0].year)} – ${monthLabel(months[months.length - 1].month, months[months.length - 1].year)}`
+      : financialYear;
     const headers = ["MONTH", ...SALARY_FIELDS.map((f) => f.label), "TOTAL"];
 
     const wb = new ExcelJS.Workbook();
@@ -71,7 +75,7 @@ export async function GET(request: NextRequest) {
 
       ws.mergeCells(1, 1, 1, headers.length);
       const title = ws.getCell(1, 1);
-      title.value = `ANNUAL STATEMENT ${financialYear} — ${label.toUpperCase()} — ${schoolName}`;
+      title.value = `ANNUAL STATEMENT ${financialYear} (${span}) — ${label.toUpperCase()} — ${schoolName}`;
       title.font = { bold: true, size: 12 };
       title.alignment = { horizontal: "center" };
 
@@ -118,7 +122,7 @@ export async function GET(request: NextRequest) {
     const ws = wb.addWorksheet("Total Summary");
     ws.mergeCells(1, 1, 1, headers.length);
     const title = ws.getCell(1, 1);
-    title.value = `ANNUAL STATEMENT ${financialYear} — TOTAL SUMMARY — ${schoolName}`;
+    title.value = `ANNUAL STATEMENT ${financialYear} (${span}) — TOTAL SUMMARY — ${schoolName}`;
     title.font = { bold: true, size: 12 };
     title.alignment = { horizontal: "center" };
 

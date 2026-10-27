@@ -1,6 +1,7 @@
 export const USER_ROLES = [
   "super_admin",
   "school_admin",
+  "supervisor",
   "teacher",
   "clerk",
   "ca",
@@ -12,6 +13,7 @@ export type UserRole = (typeof USER_ROLES)[number];
 export const ROLE_LABELS: Record<UserRole, string> = {
   super_admin: "Super Admin",
   school_admin: "School Admin",
+  supervisor: "Supervisor",
   teacher: "Class Teacher",
   clerk: "Clerk",
   ca: "Chartered Accountant",
@@ -21,6 +23,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 export const ROLE_HOME: Record<UserRole, string> = {
   super_admin: "/admin",
   school_admin: "/dashboard",
+  supervisor: "/dashboard",
   teacher: "/teacher",
   clerk: "/clerk",
   ca: "/ca",
@@ -29,13 +32,14 @@ export const ROLE_HOME: Record<UserRole, string> = {
 
 export const SCHOOL_ROLES: UserRole[] = [
   "school_admin",
+  "supervisor",
   "teacher",
   "clerk",
   "ca",
   "student",
 ];
 
-export const STAFF_ROLES: UserRole[] = ["school_admin", "teacher", "clerk"];
+export const STAFF_ROLES: UserRole[] = ["school_admin", "supervisor", "teacher", "clerk"];
 
 export const ACCOUNTING_ROLES: UserRole[] = ["school_admin", "clerk", "ca"];
 
@@ -65,7 +69,7 @@ export function canVerifyAdmission(role: string): boolean {
 }
 
 export function canManageResults(role: string): boolean {
-  return ["school_admin", "teacher", "clerk"].includes(role);
+  return ["school_admin", "supervisor", "teacher", "clerk"].includes(role);
 }
 
 export function canAudit(role: string): boolean {

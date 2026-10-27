@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
+import { CertEdit, CertFontScope, CertFontTools, useSheetState } from "@/components/certificates/inline-cert-edit";
 import { dateToWords, studentFullName } from "@/lib/certificates/date-to-words";
 
 /** Official border & ink color (matches bonafide-border-frame.svg) */
@@ -135,16 +137,23 @@ function BonafideBorderFrame({ children }: { children: React.ReactNode }) {
 
 function DotLine({
   value,
+  onChange,
+  sizeKey,
   minWidth = 60,
   flex,
 }: {
-  value?: string;
+  value: string;
+  onChange: (value: string) => void;
+  sizeKey: string;
   minWidth?: number;
   flex?: number;
 }) {
-  const hasValue = Boolean(value?.trim());
+  const hasValue = Boolean(value.trim());
   return (
-    <span
+    <CertEdit
+      sizeKey={sizeKey}
+      value={value}
+      onChange={onChange}
       style={{
         display: "inline-block",
         borderBottom: `1.5px dotted ${BONAFIDE_MAGENTA}`,
@@ -155,17 +164,31 @@ function DotLine({
         lineHeight: 1.2,
         padding: "0 3px 2px",
         fontWeight: hasValue ? 700 : 400,
-        color: hasValue ? "#111" : "transparent",
+        color: "#111",
         verticalAlign: "baseline",
       }}
-    >
-      {hasValue ? value : "\u00a0"}
-    </span>
+    />
   );
 }
 
-function Pink({ children }: { children: React.ReactNode }) {
-  return <span style={{ color: BONAFIDE_MAGENTA, fontWeight: 400 }}>{children}</span>;
+function Pink({
+  value,
+  onChange,
+  sizeKey,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  sizeKey: string;
+}) {
+  return (
+    <CertEdit
+      label
+      sizeKey={sizeKey}
+      value={value}
+      onChange={onChange}
+      style={{ color: BONAFIDE_MAGENTA, fontWeight: 400 }}
+    />
+  );
 }
 
 function BodyLine({ children }: { children: React.ReactNode }) {
@@ -198,9 +221,43 @@ export function BonafideCertificateView({
   const name = studentFullName(student);
   const [nameLine1, nameLine2] = splitNameLines(name);
   const dobWords = dateToWords(student.dateOfBirth, "en");
+  const seed = useMemo(
+    () => ({
+      schoolName: school.nameEn,
+      address: school.address,
+      title: "BONAFIDE CERTIFICATE",
+      grLabel: "G. R. Number",
+      grNumber: student.grNumber || "",
+      srLabel: "Sr. Number",
+      serialNo,
+      lineCertify: "This is to Certify that ",
+      nameLine1,
+      nameLine2,
+      lineStudent: " Is/Was a Bonafide Student of this",
+      lineRegister: "School. His / Her birth date as recorded in the General Register of the",
+      lineSchoolIs: "School is ",
+      dob: student.dateOfBirth || "",
+      dobGap: "",
+      lineIn: " (in",
+      lineWords: "words) ",
+      dobWords,
+      lineBears: " He / She bears",
+      lineCharacter: "good moral character.",
+      stdLabel: "Std",
+      standard: student.standard || "",
+      diviLabel: "Divi.",
+      section: student.section || "",
+      principal: school.principalLabel,
+    }),
+    [school, student, serialNo, nameLine1, nameLine2, dobWords],
+  );
+  const resetKey = `${student.grNumber || ""}|${student.dateOfBirth || ""}|${serialNo}`;
+  const { values: f, set, reset } = useSheetState(seed, resetKey);
 
   return (
-    <BonafideBorderFrame>
+    <CertFontScope resetKey={resetKey}>
+      <CertFontTools onReset={reset} />
+      <BonafideBorderFrame>
       <div>
         <h1
           style={{
@@ -214,7 +271,7 @@ export function BonafideCertificateView({
             lineHeight: 1.15,
           }}
         >
-          {school.nameEn}
+          <CertEdit label sizeKey="bfSchool" value={f.schoolName} onChange={set("schoolName")} />
         </h1>
         <p
           style={{
@@ -226,7 +283,7 @@ export function BonafideCertificateView({
             lineHeight: 1.35,
           }}
         >
-          {school.address}
+          <CertEdit label sizeKey="bfAddress" value={f.address} onChange={set("address")} />
         </p>
         <h2
           style={{
@@ -241,7 +298,7 @@ export function BonafideCertificateView({
             letterSpacing: "0.08em",
           }}
         >
-          BONAFIDE CERTIFICATE
+          <CertEdit label sizeKey="bfTitle" value={f.title} onChange={set("title")} />
         </h2>
 
         <div
@@ -255,40 +312,40 @@ export function BonafideCertificateView({
           }}
         >
           <span style={{ display: "inline-flex", alignItems: "baseline", gap: "4px" }}>
-            <Pink>G. R. Number</Pink>
-            <DotLine value={student.grNumber || ""} minWidth={64} />
+            <Pink sizeKey="bfGrLabel" value={f.grLabel} onChange={set("grLabel")} />
+            <DotLine sizeKey="bfGr" value={f.grNumber} onChange={set("grNumber")} minWidth={64} />
           </span>
           <span style={{ display: "inline-flex", alignItems: "baseline", gap: "4px" }}>
-            <Pink>Sr. Number</Pink>
-            <DotLine value={serialNo} minWidth={72} />
+            <Pink sizeKey="bfSrLabel" value={f.srLabel} onChange={set("srLabel")} />
+            <DotLine sizeKey="bfSerial" value={f.serialNo} onChange={set("serialNo")} minWidth={72} />
           </span>
         </div>
 
         <div style={{ marginTop: "4px" }}>
           <BodyLine>
-            <Pink>This is to Certify that</Pink>
-            <DotLine value={nameLine1} minWidth={120} flex={1} />
+            <Pink sizeKey="bfCertify" value={f.lineCertify} onChange={set("lineCertify")} />
+            <DotLine sizeKey="bfName1" value={f.nameLine1} onChange={set("nameLine1")} minWidth={120} flex={1} />
           </BodyLine>
           <BodyLine>
-            <DotLine value={nameLine2} minWidth={160} flex={1} />
-            <Pink> Is/Was a Bonafide Student of this</Pink>
+            <DotLine sizeKey="bfName2" value={f.nameLine2} onChange={set("nameLine2")} minWidth={160} flex={1} />
+            <Pink sizeKey="bfStudent" value={f.lineStudent} onChange={set("lineStudent")} />
           </BodyLine>
           <BodyLine>
-            <Pink>School. His / Her birth date as recorded in the General Register of the</Pink>
+            <Pink sizeKey="bfRegister" value={f.lineRegister} onChange={set("lineRegister")} />
           </BodyLine>
           <BodyLine>
-            <Pink>School is </Pink>
-            <DotLine value={student.dateOfBirth} minWidth={72} />
-            <DotLine value="" minWidth={72} />
-            <Pink> (in</Pink>
+            <Pink sizeKey="bfSchoolIs" value={f.lineSchoolIs} onChange={set("lineSchoolIs")} />
+            <DotLine sizeKey="bfDob" value={f.dob} onChange={set("dob")} minWidth={72} />
+            <DotLine sizeKey="bfDobGap" value={f.dobGap} onChange={set("dobGap")} minWidth={72} />
+            <Pink sizeKey="bfIn" value={f.lineIn} onChange={set("lineIn")} />
           </BodyLine>
           <BodyLine>
-            <Pink>words) </Pink>
-            <DotLine value={dobWords} minWidth={160} flex={1} />
-            <Pink> He / She bears</Pink>
+            <Pink sizeKey="bfWords" value={f.lineWords} onChange={set("lineWords")} />
+            <DotLine sizeKey="bfDobWords" value={f.dobWords} onChange={set("dobWords")} minWidth={160} flex={1} />
+            <Pink sizeKey="bfBears" value={f.lineBears} onChange={set("lineBears")} />
           </BodyLine>
           <BodyLine>
-            <Pink>good moral character.</Pink>
+            <Pink sizeKey="bfCharacter" value={f.lineCharacter} onChange={set("lineCharacter")} />
           </BodyLine>
         </div>
       </div>
@@ -303,15 +360,16 @@ export function BonafideCertificateView({
         }}
       >
         <span style={{ display: "inline-flex", alignItems: "baseline", gap: "6px" }}>
-          <Pink>Std</Pink>
-          <DotLine value={student.standard || ""} minWidth={72} />
-          <Pink>Divi.</Pink>
-          <DotLine value={student.section || ""} minWidth={72} />
+          <Pink sizeKey="bfStdLabel" value={f.stdLabel} onChange={set("stdLabel")} />
+          <DotLine sizeKey="bfStd" value={f.standard} onChange={set("standard")} minWidth={72} />
+          <Pink sizeKey="bfDiviLabel" value={f.diviLabel} onChange={set("diviLabel")} />
+          <DotLine sizeKey="bfSection" value={f.section} onChange={set("section")} minWidth={72} />
         </span>
         <span style={{ color: BONAFIDE_MAGENTA, letterSpacing: "0.02em" }}>
-          {school.principalLabel}
+          <CertEdit label sizeKey="bfPrincipal" value={f.principal} onChange={set("principal")} />
         </span>
       </div>
-    </BonafideBorderFrame>
+      </BonafideBorderFrame>
+    </CertFontScope>
   );
 }

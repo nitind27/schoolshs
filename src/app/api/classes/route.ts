@@ -6,6 +6,7 @@ import { enrolledStudentStatusFilter } from "@/lib/student-list-filters";
 import { seedClassSubjects } from "@/lib/class-subjects";
 import { assertStaffInSchool, assertClassTeacherAvailable } from "@/lib/school-assertions";
 import { getTeacherScope } from "@/lib/teacher-scope";
+import { getSupervisorClassIds, supervisorClassIdFilter } from "@/lib/supervisor-scope";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 
 function normalizeStream(standard: string, stream: unknown): string {
@@ -71,6 +72,8 @@ export async function GET(request: NextRequest) {
         { institutionName: { contains: search } },
       ];
     }
+    const supervisorFilter = supervisorClassIdFilter(await getSupervisorClassIds(session));
+    if (supervisorFilter) where.id = supervisorFilter;
 
     const enrolled = enrolledStudentStatusFilter();
     const classes = await prisma.schoolClass.findMany({
@@ -188,6 +191,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
+    if (session.role === "supervisor") {
+      return NextResponse.json({ error: "Only the school admin can create classes" }, { status: 403 });
+    }
     const body = await request.json();
     const data = normalizeClass(body);
 

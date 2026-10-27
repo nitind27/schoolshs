@@ -4,23 +4,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/locale-provider";
-import { ClipboardList, BarChart3, BookOpen } from "lucide-react";
+import { ClipboardList, BarChart3, BookOpen, AlertTriangle } from "lucide-react";
 
 export default function AttendanceLayout({ children }: { children: React.ReactNode }) {
   const t = useT();
   const pathname = usePathname();
 
   const tabs = [
-    { href: "/attendance", label: t("attendance.tabEntry"), icon: ClipboardList },
-    { href: "/attendance/reports", label: t("attendance.tabReports"), icon: BarChart3 },
-    { href: "/certificates/daily-attendance-book", label: t("attendance.tabDailyBook"), icon: BookOpen },
+    { href: "/attendance", label: t("attendance.tabEntry"), icon: ClipboardList, exact: true },
+    { href: "/attendance/reports", label: t("attendance.tabReports"), icon: BarChart3, exact: false },
+    { href: "/attendance/shortfall", label: t("attendance.tabShortfall"), icon: AlertTriangle, exact: false },
+    { href: "/certificates/daily-attendance-book", label: t("attendance.tabDailyBook"), icon: BookOpen, exact: false },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-1">
         {tabs.map((tab) => {
-          const active = pathname === tab.href || pathname.startsWith(tab.href + "/");
+          const active = tab.exact
+            ? pathname === tab.href
+            : pathname === tab.href || pathname.startsWith(tab.href + "/");
           const Icon = tab.icon;
           return (
             <Link

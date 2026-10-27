@@ -38,6 +38,7 @@ import {
   type DashboardExportOptions,
 } from "@/lib/dashboard-export-options";
 import { BirthdayCelebrationCard } from "@/components/dashboard/birthday-celebration";
+import { DeactivationFeed } from "@/components/dashboard/deactivation-feed";
 import { DashboardReportsPanel } from "@/components/dashboard/dashboard-reports-panel";
 import { prefetchJson } from "@/lib/client-fetch-cache";
 import "@/components/dashboard/dashboard.css";
@@ -505,6 +506,7 @@ export default function SchoolOpsDashboard() {
       />
 
       <BirthdayCelebrationCard autoOpen={birthdayAutoOpen} />
+      <DeactivationFeed />
 
       {error && (
         <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">

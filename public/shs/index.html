@@ -1631,7 +1631,7 @@
             }
 
             .print-table tbody > tr > td {
-                padding: 0 8mm !important;
+                padding: 0 2mm !important;
             }
 
             .letterhead {
@@ -1718,7 +1718,14 @@
                 height: auto !important;
                 margin-top: 8px !important;
                 padding: 0 !important;
-                line-height: 1.8 !important;
+                line-height: 1.45 !important;
+            }
+            .content-area .lh-grid {
+                width: 100% !important;
+                table-layout: auto !important;
+                font-size: 11pt !important;
+                line-height: 1.25 !important;
+                border-collapse: collapse !important;
             }
             .content-area .lh-grid,
             .content-area .lh-grid td,
@@ -1727,8 +1734,18 @@
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
             }
+            .content-area .lh-grid td,
+            .content-area .lh-grid th {
+                word-break: normal !important;
+                overflow-wrap: normal !important;
+                white-space: nowrap !important;
+                padding: 2px 8px !important;
+                vertical-align: middle !important;
+                line-height: 1.25 !important;
+            }
             .content-area .lh-grid tr.lh-grid-head td {
                 font-weight: 700 !important;
+                text-align: center !important;
                 background: #f3f4f6 !important;
             }
 

@@ -12,6 +12,8 @@ import { buildStaffCredentialsEmail } from "@/lib/email-templates";
 import { sendMail } from "@/lib/mail";
 import { staffSalaryFields } from "@/lib/staff-salary";
 import { staffServiceFields } from "@/lib/staff-register";
+import { searchStaffIds } from "@/lib/staff-search.server";
+import { isSupervisorDesignation } from "@/lib/staff-portal";
 
 function normalizeStaff(body: Record<string, unknown>) {
   const designation = String(body.designation || "").trim();
@@ -59,13 +61,8 @@ export async function GET(request: NextRequest) {
     if (activeOnly) where.isActive = true;
     if (designation) where.designation = designation;
     if (search) {
-      where.OR = [
-        { firstName: { contains: search } },
-        { lastName: { contains: search } },
-        { mobileNumber: { contains: search } },
-        { employeeId: { contains: search } },
-        { email: { contains: search } },
-      ];
+      const ids = await searchStaffIds(prisma, session.schoolId, search);
+      where.id = { in: ids.length ? ids : ["__no_staff_match__"] };
     }
 
     const skip = (page - 1) * limit;
@@ -95,7 +92,7 @@ export async function GET(request: NextRequest) {
             orderBy,
             skip,
             take: limit,
-            include: { _count: { select: { classes: true } } },
+            include: { _count: { select: { classes: true, supervisorClasses: true } } },
           }),
       prisma.staff.count({ where }),
     ]);
@@ -173,13 +170,37 @@ export async function POST(request: NextRequest) {
         data: { ...data, schoolId: session.schoolId },
       });
 
+      if (session.role === "school_admin" && isSupervisorDesignation(data.designation)) {
+        const requested: unknown[] = Array.isArray(body.supervisorClassIds) ? body.supervisorClassIds : [];
+        const classIds: string[] = [];
+        for (const value of requested) {
+          const id = String(value || "").trim();
+          if (id && !classIds.includes(id)) classIds.push(id);
+        }
+        if (classIds.length) {
+          const classes = await tx.schoolClass.findMany({
+            where: { schoolId: session.schoolId, id: { in: classIds } },
+            select: { id: true },
+          });
+          if (classes.length) {
+            await tx.staffSupervisorClass.createMany({
+              data: classes.map((item) => ({
+                schoolId: session.schoolId,
+                staffId: created.id,
+                classId: item.id,
+              })),
+            });
+          }
+        }
+      }
+
       if (createPortal && generatedPassword && portalRole && data.email) {
         const portalUser = await tx.user.create({
           data: {
             email: data.email,
             ...passwordRecord(generatedPassword),
             name: `${created.firstName} ${created.lastName}`.trim(),
-            role: portalRole,
+            role: session.role === "school_admin" ? portalRole : portalRole === "supervisor" ? "teacher" : portalRole,
             schoolId: session.schoolId,
             staffId: created.id,
             isActive: true,

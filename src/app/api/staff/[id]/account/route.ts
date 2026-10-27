@@ -14,6 +14,9 @@ function pickPortalRole(role: unknown, designation?: string | null) {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireSchoolAuth(["school_admin"]);
+    if (session.role === "supervisor") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
     const { id } = await params;
 
     const staff = await prisma.staff.findFirst({
@@ -72,6 +75,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireSchoolAuth(["school_admin"]);
+    if (session.role === "supervisor") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
     const { id } = await params;
 
     const staff = await prisma.staff.findFirst({

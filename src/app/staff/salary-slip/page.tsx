@@ -9,6 +9,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { Download, Printer, Save, FileText, Wand2 } from "lucide-react";
 import type { Staff } from "@/generated/prisma/client";
 import { useT } from "@/i18n/locale-provider";
+import { SalaryMonthRange } from "@/components/staff/salary-month-range";
 import {
   SLIP_ALL_FIELDS,
   SLIP_DEDUCTION_FIELDS,
@@ -25,6 +26,7 @@ import {
   totalDeduction,
   type SlipFieldKey,
 } from "@/lib/salary-slip";
+import { defaultMonthRange, rangeSearch, sliceMonthRange } from "@/lib/salary-month-range";
 import { staffServiceDates } from "@/lib/staff-register";
 import "./salary-slip.css";
 
@@ -50,8 +52,24 @@ export default function SalarySlipPage() {
   const [exporting, setExporting] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState("");
+  const [fromKey, setFromKey] = useState("");
+  const [toKey, setToKey] = useState("");
 
-  const months = useMemo(() => slipFyMonths(fy), [fy]);
+  const allMonths = useMemo(() => slipFyMonths(fy), [fy]);
+  const visibleMonths = useMemo(() => {
+    const fallback = defaultMonthRange(allMonths);
+    return sliceMonthRange(allMonths, fromKey || fallback.from, toKey || fallback.to);
+  }, [allMonths, fromKey, toKey]);
+  const rangeFrom = visibleMonths[0] ? `${visibleMonths[0].year}-${String(visibleMonths[0].month).padStart(2, "0")}` : "";
+  const rangeTo = visibleMonths.length
+    ? `${visibleMonths[visibleMonths.length - 1].year}-${String(visibleMonths[visibleMonths.length - 1].month).padStart(2, "0")}`
+    : "";
+
+  useEffect(() => {
+    const next = defaultMonthRange(slipFyMonths(fy));
+    setFromKey(next.from);
+    setToKey(next.to);
+  }, [fy]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -101,12 +119,12 @@ export default function SalarySlipPage() {
 
   const totals = useMemo(() => {
     const out = emptySlipValues();
-    for (const { month } of months) {
+    for (const { month } of visibleMonths) {
       const v = getValues(month);
       for (const f of SLIP_ALL_FIELDS) out[f.key] += v[f.key];
     }
     return out;
-  }, [months, getValues]);
+  }, [visibleMonths, getValues]);
 
   const { retireDate } = useMemo(
     () =>
@@ -123,7 +141,7 @@ export default function SalarySlipPage() {
     if (!staff) return;
     const defaults = slipValuesFromStaff(staff);
     const next: Grid = {};
-    for (const { month, year } of months) {
+    for (const { month, year } of allMonths) {
       next[month] = staffWorkedInMonth(staff, month, year) ? { ...defaults } : emptySlipValues();
     }
     setGrid(next);
@@ -134,7 +152,7 @@ export default function SalarySlipPage() {
     if (!staffId) return;
     setSaving(true);
     try {
-      const rows = months.map(({ month, year }) => ({ month, year, values: getValues(month) }));
+      const rows = allMonths.map(({ month, year }) => ({ month, year, values: getValues(month) }));
       const res = await fetch("/api/staff/salary-slip", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -151,7 +169,9 @@ export default function SalarySlipPage() {
     if (!staffId) return;
     setExporting(true);
     try {
-      const res = await fetch(`/api/staff/salary-slip/export?staffId=${staffId}&fy=${encodeURIComponent(fy)}`);
+      const res = await fetch(
+        `/api/staff/salary-slip/export?staffId=${staffId}&fy=${encodeURIComponent(fy)}&${rangeSearch(visibleMonths)}`,
+      );
       if (!res.ok) return;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -196,6 +216,16 @@ export default function SalarySlipPage() {
             onChange={(e) => setFy(e.target.value)}
             options={slipFyOptions().map((y) => ({ value: y, label: y }))}
             className="w-32"
+          />
+          <SalaryMonthRange
+            months={allMonths}
+            labelFor={(item) => slipMonthLabel(item.month, item.year)}
+            from={rangeFrom}
+            to={rangeTo}
+            onChange={(from, to) => {
+              setFromKey(from);
+              setToKey(to);
+            }}
           />
           <Button size="sm" variant="outline" onClick={downloadExcel} disabled={!staffId || loading || exporting}>
             <Download className="h-4 w-4" />
@@ -257,12 +287,15 @@ export default function SalarySlipPage() {
       ) : (
         <div className="salary-slip-area space-y-4">
           <p className="print:hidden rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm text-teal-900">
-            {t("salarySlip.autoFillHint")}
+            {t("salarySlip.autoFillHint")} {t("salaryRange.hint")} {t("salarySlip.printHint")}
           </p>
           <div className="sl-print-header">
             <h2 className="sl-school">{schoolName}</h2>
             <p className="sl-title">
               STATEMENT OF EMPLOYEE INCOME OF SALARY &amp; ANNUAL DEDUCTION &amp; PERSONAL DETAILS — FINANCIAL YEAR: {fy}
+              {visibleMonths.length > 0
+                ? ` (${slipMonthLabel(visibleMonths[0].month, visibleMonths[0].year)} – ${slipMonthLabel(visibleMonths[visibleMonths.length - 1].month, visibleMonths[visibleMonths.length - 1].year)})`
+                : ""}
             </p>
           </div>
 
@@ -289,7 +322,7 @@ export default function SalarySlipPage() {
           {/* Salary grid */}
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="sl-table-wrap overflow-x-auto">
                 <table className="sl-tbl">
                   <thead>
                     <tr className="sl-group-row">
@@ -314,7 +347,7 @@ export default function SalarySlipPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {months.map(({ month, year }) => {
+                    {visibleMonths.map(({ month, year }) => {
                       const values = getValues(month);
                       return (
                         <tr key={month}>

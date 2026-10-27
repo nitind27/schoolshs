@@ -72,7 +72,11 @@ function pathMatches(pathname: string, prefix: string): boolean {
 
 function getRouteRoles(pathname: string): UserRole[] | null {
   for (const [prefix, roles] of Object.entries(ROLE_ROUTES)) {
-    if (pathMatches(pathname, prefix)) return roles;
+    if (!pathMatches(pathname, prefix)) continue;
+    if (roles.includes("school_admin") && !roles.includes("supervisor")) {
+      return [...roles, "supervisor"];
+    }
+    return roles;
   }
   return null;
 }
@@ -199,7 +203,7 @@ export async function middleware(request: NextRequest) {
   // (e.g. /api/teacher/* is teacher-only, but /api/teacher/holidays must work for staff apps).
   if (
     isHolidayRoute(pathname) &&
-    ["school_admin", "teacher", "clerk", "student"].includes(session.role)
+    ["school_admin", "supervisor", "teacher", "clerk", "student"].includes(session.role)
   ) {
     return NextResponse.next();
   }
@@ -227,6 +231,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/admin", request.url));
   }
 
+  if (
+    pathname === "/api/school/theme" &&
+    request.method === "GET" &&
+    session.schoolId
+  ) {
+    return NextResponse.next();
+  }
+
   if (session.role === "student" && isSchoolAdminRoute(pathname)) {
     // Students may view the school holiday calendar (read-only APIs)
     if (isHolidayRoute(pathname)) {
@@ -244,7 +256,8 @@ export async function middleware(request: NextRequest) {
 
   if (
     session.role === "teacher" &&
-    (pathname === "/attendance" || pathname.startsWith("/attendance/"))
+    (pathname === "/attendance" || pathname.startsWith("/attendance/")) &&
+    pathname !== "/attendance/shortfall"
   ) {
     const url = new URL("/teacher/attendance", request.url);
     url.search = request.nextUrl.search;
@@ -255,7 +268,7 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/api/uploads/chat/") &&
     session.schoolId &&
-    ["school_admin", "teacher", "clerk", "ca"].includes(session.role)
+    ["school_admin", "supervisor", "teacher", "clerk", "ca"].includes(session.role)
   ) {
     return NextResponse.next();
   }
@@ -266,7 +279,7 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/api/uploads/staff/") ||
       pathname.startsWith("/api/uploads/gallery/")) &&
     session.schoolId &&
-    ["school_admin", "teacher", "clerk", "ca"].includes(session.role)
+    ["school_admin", "supervisor", "teacher", "clerk", "ca"].includes(session.role)
   ) {
     return NextResponse.next();
   }
@@ -302,6 +315,8 @@ export async function middleware(request: NextRequest) {
       "/api/attendance",
       "/attendance/reports",
       "/api/attendance/reports",
+      "/activity",
+      "/api/activity",
       "/staff",
       "/api/staff",
       "/staff/attendance",
@@ -361,6 +376,7 @@ export async function middleware(request: NextRequest) {
           pathname.startsWith("/api/roll-numbers") ||
           pathname.startsWith("/api/exam-seat-numbers") ||
           pathname.startsWith("/api/attendance") ||
+          pathname.startsWith("/attendance/shortfall") ||
           pathname.startsWith("/api/timetable") ||
           pathname.startsWith("/timetable") ||
           pathname.startsWith("/certificates/class-register") ||

@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PageShell } from "@/components/layout/page-shell";
 import { Download, Printer, BookOpen, PencilLine } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
+import { SalaryMonthRange } from "@/components/staff/salary-month-range";
 import {
   SALARY_FIELDS,
   currentFinancialYear,
@@ -20,6 +21,7 @@ import {
   type SalaryCategory,
   type SalaryFieldKey,
 } from "@/lib/salary-statement";
+import { defaultMonthRange, rangeSearch, sliceMonthRange } from "@/lib/salary-month-range";
 import "./salary-ledger.css";
 
 interface ApiRow {
@@ -40,9 +42,25 @@ export default function SalaryLedgerPage() {
   const [exporting, setExporting] = useState(false);
   const [schoolName, setSchoolName] = useState("");
   const [schoolType, setSchoolType] = useState<string | null>(null);
+  const [fromKey, setFromKey] = useState("");
+  const [toKey, setToKey] = useState("");
   const categories = useMemo(() => visibleSalaryCategories(schoolType), [schoolType]);
 
-  const months = useMemo(() => fyMonths(fy), [fy]);
+  const allMonths = useMemo(() => fyMonths(fy), [fy]);
+  const months = useMemo(() => {
+    const fallback = defaultMonthRange(allMonths);
+    return sliceMonthRange(allMonths, fromKey || fallback.from, toKey || fallback.to);
+  }, [allMonths, fromKey, toKey]);
+  const rangeFrom = months[0] ? `${months[0].year}-${String(months[0].month).padStart(2, "0")}` : "";
+  const rangeTo = months.length
+    ? `${months[months.length - 1].year}-${String(months[months.length - 1].month).padStart(2, "0")}`
+    : "";
+
+  useEffect(() => {
+    const next = defaultMonthRange(fyMonths(fy));
+    setFromKey(next.from);
+    setToKey(next.to);
+  }, [fy]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -98,7 +116,7 @@ export default function SalaryLedgerPage() {
     setExporting(true);
     try {
       const res = await fetch(
-        `/api/staff/salary-statement/ledger-export?fy=${encodeURIComponent(fy)}&category=${category}`,
+        `/api/staff/salary-statement/ledger-export?fy=${encodeURIComponent(fy)}&category=${category}&${rangeSearch(months)}`,
       );
       if (!res.ok) return;
       const blob = await res.blob();
@@ -129,6 +147,16 @@ export default function SalaryLedgerPage() {
             onChange={(e) => setFy(e.target.value)}
             options={fyOptions().map((y) => ({ value: y, label: y }))}
             className="w-32"
+          />
+          <SalaryMonthRange
+            months={allMonths}
+            labelFor={(item) => monthLabel(item.month, item.year)}
+            from={rangeFrom}
+            to={rangeTo}
+            onChange={(from, to) => {
+              setFromKey(from);
+              setToKey(to);
+            }}
           />
           <Select
             value={category}
@@ -173,6 +201,9 @@ export default function SalaryLedgerPage() {
             <h2 className="lg-school">{schoolName}</h2>
             <p className="lg-title">
               SALARY LEDGER — {fy}
+              {months.length > 0
+                ? ` (${monthLabel(months[0].month, months[0].year)} – ${monthLabel(months[months.length - 1].month, months[months.length - 1].year)})`
+                : ""}
               {category
                 ? ` — ${t(salaryCategoryI18nKey(category, schoolType))}`
                 : ` — ${t("salaryLedger.allCategories")}`}
@@ -215,7 +246,7 @@ export default function SalaryLedgerPage() {
               </table>
             </CardContent>
           </Card>
-          <p className="mt-2 text-xs text-slate-500 print:hidden">{t("salaryLedger.sourceNote")}</p>
+          <p className="mt-2 text-xs text-slate-500 print:hidden">{t("salaryLedger.sourceNote")} {t("salaryRange.hint")}</p>
         </div>
       )}
     </PageShell>

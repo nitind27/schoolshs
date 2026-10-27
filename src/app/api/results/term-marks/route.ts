@@ -30,6 +30,8 @@ import {
   teacherSubjectCodesForClass,
   filterByTeacherSubjects,
 } from "@/lib/teacher-scope";
+import { assertSupervisorClassAccess } from "@/lib/supervisor-scope";
+import { describeMarkChange, logMarkEdits, studentAuditLabel } from "@/lib/change-log";
 
 function termStatsForExam(
   meta: ExamTermMeta,
@@ -74,6 +76,7 @@ export async function GET(request: NextRequest) {
     }
 
     await assertTeacherMarksAccess(session, classId);
+    await assertSupervisorClassAccess(session, classId);
     const allowedCodes = await teacherSubjectCodesForClass(session, classId);
 
     const schoolClass = await prisma.schoolClass.findFirst({
@@ -262,6 +265,7 @@ export async function POST(request: NextRequest) {
       if (!schoolClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
 
       await assertTeacherMarksAccess(session, classId);
+      await assertSupervisorClassAccess(session, classId);
       const allowedCodes = await teacherSubjectCodesForClass(session, classId);
       if (allowedCodes && allowedCodes.length === 0) {
         return NextResponse.json(
@@ -280,6 +284,7 @@ export async function POST(request: NextRequest) {
         session.schoolId,
       );
       let saved = 0;
+      const markEdits: { studentId: string; studentLabel: string; line: string }[] = [];
 
       for (const st of body.students || []) {
         for (const sub of st.subjectMarks || []) {
@@ -368,8 +373,51 @@ export async function POST(request: NextRequest) {
               remarks: serializeTermRemarks(remarks),
             },
           });
+          const line = describeMarkChange(
+            examSub.name,
+            existing
+              ? {
+                  marksObtained: existing.marksObtained,
+                  isAbsent: existing.isAbsent,
+                  graceMarks: existing.graceMarks,
+                  achievementMarks: existing.achievementMarks,
+                  remarks: existing.remarks,
+                }
+              : null,
+            {
+              marksObtained,
+              isAbsent: false,
+              graceMarks: existing?.graceMarks ?? 0,
+              achievementMarks: existing?.achievementMarks ?? 0,
+              remarks: serializeTermRemarks(remarks),
+            },
+          );
+          if (line) markEdits.push({ studentId: st.studentId, studentLabel: "", line });
           saved++;
         }
+      }
+
+      if (markEdits.length) {
+        const ids = [...new Set(markEdits.map((row) => row.studentId))];
+        const people = await prisma.student.findMany({
+          where: { schoolId: session.schoolId, id: { in: ids } },
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            surname: true,
+            firstNameGu: true,
+            middleNameGu: true,
+            surnameGu: true,
+            grNumber: true,
+          },
+        });
+        const labels = new Map(people.map((person) => [person.id, studentAuditLabel(person)]));
+        await logMarkEdits(
+          session,
+          exam.name,
+          markEdits.map((row) => ({ ...row, studentLabel: labels.get(row.studentId) || "Student" })),
+        );
       }
 
       return NextResponse.json({ success: true, saved });

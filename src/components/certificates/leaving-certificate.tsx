@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { useCertificateBrand } from "@/components/certificates/certificate-brand-context";
+import { CertEdit, CertFontScope, CertFontTools, useSheetState } from "@/components/certificates/inline-cert-edit";
 import { dateToWords } from "@/lib/certificates/date-to-words";
 import {
   lcBirthPlaceEn,
@@ -71,17 +73,24 @@ const FONT = '"Times New Roman", Times, "Noto Sans Gujarati", Georgia, serif';
 
 function Fill({
   value = "",
+  onChange,
+  sizeKey,
   minWidth = 80,
   flex,
   center,
 }: {
   value?: string;
+  onChange: (value: string) => void;
+  sizeKey: string;
   minWidth?: number | string;
   flex?: number;
   center?: boolean;
 }) {
   return (
-    <span
+    <CertEdit
+      sizeKey={sizeKey}
+      value={value}
+      onChange={onChange}
       style={{
         display: "inline-block",
         borderBottom: "1px solid #111",
@@ -94,8 +103,16 @@ function Fill({
         textAlign: center ? "center" : "left",
         wordBreak: "break-word",
       }}
-    >
-      {value || "\u00a0"}
+    />
+  );
+}
+
+/** Label and colon stay on one line; the space after the colon is a real space, so the value starts on its own. */
+function Lab({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{ whiteSpace: "nowrap" }}>
+      {children}
+      {" :\u00A0"}
     </span>
   );
 }
@@ -121,19 +138,22 @@ function Field({
         alignItems: "start",
       }}
     >
-      <span style={{ fontWeight: 700, fontSize: 11, lineHeight: 1.4 }}>{n}.</span>
+      <span style={{ fontWeight: 700, fontSize: 11, lineHeight: 1.4 }}>{n === "" || n == null ? "" : `${n}.`}</span>
       <div style={{ minWidth: 0 }}>
         <div
           style={{
             display: "flex",
             flexWrap: "wrap",
             alignItems: "flex-end",
-            gap: "2px 6px",
+            gap: "2px 0",
             fontSize: 11,
             lineHeight: 1.35,
           }}
         >
-          <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{en}</span>
+          <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+            {en}
+            {" :\u00A0"}
+          </span>
           {children}
         </div>
         {gu ? (
@@ -142,7 +162,7 @@ function Field({
               display: "flex",
               flexWrap: "wrap",
               alignItems: "flex-end",
-              gap: "2px 6px",
+              gap: "2px 0",
               marginTop: 2,
               fontSize: 10,
               lineHeight: 1.4,
@@ -176,7 +196,6 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
     [S.standard ? `Std ${S.standard}` : "", S.section].filter(Boolean).join("-");
   const studyingGu = lcGuText(studying.replace(/^Std\s+/i, "Std "));
   const uid = (S.childUid || "").replace(/\D/g, "");
-  const uidBoxes = Array.from({ length: 18 }, (_, i) => uid[i] || "");
   const medium = data.medium || "ગુજરાતી / Gujarati";
   const lastSchoolEn = lcPrinted(p?.lastSchoolEn, data.lastSchool || school.nameEnAlt);
   const lastSchoolGu = lcPrinted(
@@ -191,8 +210,147 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
   const conductGu = lcPrinted(p?.conductGu, lcGuText(conductEn));
   const remarksEn = data.remarks || "";
   const remarksGu = lcPrinted(p?.remarksGu, lcGuText(remarksEn));
+  const studyGu = [studyingGu, data.studyingSince ? lcGuText(data.studyingSince) : ""].filter(Boolean).join(" · ");
+
+  const seed = useMemo(
+    () => ({
+      titleEn: "SCHOOL LEAVING CERTIFICATE",
+      titleGu: "શાળા છોડ્યાનું પ્રમાણપત્ર",
+      schoolEn: school.nameEnAlt,
+      schoolGu: school.nameGu,
+      sscLabel: "S.S.C. Index No.",
+      sscGu: "એસ.એસ.સી. ઈન્ડેક્સ નં.",
+      sscIndex: school.sscIndex,
+      hscLabel: "H.S.C. Index No.",
+      hscGu: "એચ.એસ.સી. ઈન્ડેક્સ નં.",
+      hscIndex: school.hscIndex,
+      diseLabel: "Dise Code No.",
+      diseGu: "ડાયસ કોડ નં.",
+      diseCode: school.diseCode,
+      placeEn: "Ta. Songadh, Dist. Tapi",
+      placeGu: school.addressGu,
+      sectionEn: "Madhyamik / Ucchattar Madhyamik",
+      sectionGu: "માધ્યમિક / ઉચ્ચત્તર માધ્યમિક",
+      noLabel: "No.",
+      serialNo: data.serialNo || "",
+      grLabel: "G.R. No. / જી.આર.નં.",
+      grNumber: S.grNumber || "",
+      mediumLabel: "Medium / માધ્યમ",
+      medium,
+      nameEnLabel: "1. Full Name of the Student",
+      nameGuLabel: "વિદ્યાર્થીનું પૂરેપૂરું નામ",
+      nameEn,
+      nameGu,
+      casteEnLabel: "2. Religion and Caste",
+      casteGuLabel: "ધર્મ અને જાતિ",
+      religionCasteEn,
+      religionCasteGu,
+      motherEnLabel: "3. Mother's Name",
+      motherGuLabel: "માતાનું નામ",
+      motherEn,
+      motherGu,
+      birthEnLabel: "4. Place of Birth (With Taluka / District)",
+      birthGuLabel: "જન્મ સ્થળ (તાલુકા, જિલ્લા સહિત)",
+      birthPlaceEn,
+      birthPlaceGu,
+      dobEnLabel: "5. Date of Birth",
+      dobGuLabel: "ખ્રિસ્તી વર્ષ અનુસાર જન્મ તારીખ",
+      dobHintEn: "(In Figures and words as per Christian Calendar)",
+      dobHintGu: "(આંકડામાં અને શબ્દમાં)",
+      dob,
+      dobWordsEn,
+      dobWordsGu,
+      lastEnLabel: "6. Last School Attended",
+      lastGuLabel: "જ્યાં ભણ્યો હોય તે છેલ્લી શાળા",
+      lastSchoolEn,
+      lastSchoolGu,
+      admEnLabel: "7. Date of Admission (With Class)",
+      admGuLabel: "પ્રવેશ તારીખ (ધોરણ સહિત)",
+      admissionDate: data.admissionDate || "",
+      leaveEnLabel: "8. Date of Leaving the School",
+      leaveGuLabel: "શાળા છોડ્યા તારીખ",
+      leavingDate: data.leavingDate || "",
+      studyEnLabel: "9. In which Standard he/she Studying & Since When?",
+      studyGuLabel: "કયા ધોરણમાં અભ્યાસ કરે છે? ક્યારથી?",
+      studying,
+      studyingSince: data.studyingSince || "",
+      studyGu,
+      reasonEnLabel: "10. Reason for leaving the School",
+      reasonGuLabel: "શાળા છોડ્યાનું કારણ",
+      reasonEn,
+      reasonGu,
+      progressEnLabel: "11. Progress",
+      progressGuLabel: "પ્રગતિ",
+      progressEn,
+      progressGu,
+      conductEnLabel: "12. Conduct",
+      conductGuLabel: "વર્તણૂંક",
+      conductEn,
+      conductGu,
+      remarksEnLabel: "13. Remarks",
+      remarksGuLabel: "વિશેષ નોંધ",
+      remarksEn,
+      remarksGu,
+      sscLine: "Appeared in S.S.C. Exam March /",
+      sscExam: data.sscExam || "",
+      seatLabel: "Seat No.",
+      sscSeatNo: data.sscSeatNo || "",
+      uidLabel: "14. UID No. / યુઆઈડી નં.",
+      uid,
+      dateLabel: "Date / તારીખ",
+      issueDate: data.issueDate || "",
+      certEn: "I Certify that the above information is verified by me with school register and found to be correct.",
+      certGu: "આથી પ્રમાણિત કરવામાં આવે છે કે ઉપરની માહિતીની ચકાસણી શાળાના જનરલ રજીસ્ટર સાથે કરવામાં આવેલ છે અને સાચી માલૂમ પડેલ છે.",
+      signClerk: "Clerk",
+      signClerkGu: "કલાર્ક",
+      signTeacher: "Class Teacher",
+      signTeacherGu: "વર્ગ શિક્ષક",
+      signPrincipal: "Principal",
+      signPrincipalGu: "આચાર્ય",
+      warningEn:
+        "Statutory Warning : No one can issue this certificate or make any changes in any entry except the Principal of the school or the authorized person appointed for such work in the absence or unavailability of the Principal.",
+      warningGu:
+        "શાળાના આચાર્ય અથવા તેમની ગેરહાજરીમાં સહી કરવા માટે અધિકૃત કરેલ વ્યક્તિ સિવાય અન્ય કોઈ વ્યક્તિ આ પ્રમાણપત્ર આપી શકશે નહીં કે તેની કોઈ નોંધમાં ફેરફાર કરી શકશે નહીં.",
+    }),
+    [
+      school,
+      data,
+      medium,
+      nameEn,
+      nameGu,
+      religionCasteEn,
+      religionCasteGu,
+      motherEn,
+      motherGu,
+      birthPlaceEn,
+      birthPlaceGu,
+      dob,
+      dobWordsEn,
+      dobWordsGu,
+      lastSchoolEn,
+      lastSchoolGu,
+      studying,
+      studyingGu,
+      studyGu,
+      reasonEn,
+      reasonGu,
+      progressEn,
+      progressGu,
+      conductEn,
+      conductGu,
+      remarksEn,
+      remarksGu,
+      uid,
+      S.grNumber,
+    ],
+  );
+  const resetKey = `${S.grNumber || ""}|${dob}|${data.serialNo || ""}`;
+  const { values: f, set, reset } = useSheetState(seed, resetKey);
+  const uidChars = Array.from({ length: 18 }, (_, i) => (f.uid || "")[i] || "");
 
   return (
+    <CertFontScope resetKey={resetKey}>
+    <CertFontTools onReset={reset} />
     <div className="lc-sheet" style={{ fontFamily: FONT, color: "#000", width: "100%", maxWidth: 720, margin: "0 auto" }}>
       {/* Double border like official blank */}
       <div
@@ -223,10 +381,10 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
               textTransform: "uppercase",
             }}
           >
-            SCHOOL LEAVING CERTIFICATE
+            <CertEdit label sizeKey="hsTitleEn" value={f.titleEn} onChange={set("titleEn")} />
           </p>
           <p style={{ textAlign: "center", fontWeight: 700, fontSize: 13, margin: "1px 0 6px" }}>
-            શાળા છોડ્યાનું પ્રમાણપત્ર
+            <CertEdit label sizeKey="hsTitleGu" value={f.titleGu} onChange={set("titleGu")} />
           </p>
 
           {/* School name */}
@@ -240,10 +398,10 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
               lineHeight: 1.2,
             }}
           >
-            {school.nameEnAlt}
+            <CertEdit label sizeKey="hsSchoolEn" value={f.schoolEn} onChange={set("schoolEn")} />
           </p>
           <p style={{ textAlign: "center", fontWeight: 700, fontSize: 13, margin: "2px 0 8px" }}>
-            {school.nameGu}
+            <CertEdit label sizeKey="hsSchoolGu" value={f.schoolGu} onChange={set("schoolGu")} />
           </p>
 
           {/* Meta — 3 columns like physical LC */}
@@ -262,87 +420,102 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
           >
             <div>
               <div>
-                S.S.C. Index No. : <b>{school.sscIndex}</b>
+                <Lab><CertEdit label sizeKey="hsSscLabel" value={f.sscLabel} onChange={set("sscLabel")} /></Lab>
+                <CertEdit sizeKey="hsSscIndex" value={f.sscIndex} onChange={set("sscIndex")} style={{ fontWeight: 700 }} />
               </div>
-              <div style={{ fontSize: 9 }}>એસ.એસ.સી. ઈન્ડેક્સ નં. : {school.sscIndex}</div>
+              <div style={{ fontSize: 9 }}>
+                <Lab><CertEdit label sizeKey="hsSscGu" value={f.sscGu} onChange={set("sscGu")} /></Lab>
+                <CertEdit sizeKey="hsSscIndexGu" value={f.sscIndex} onChange={set("sscIndex")} />
+              </div>
               <div style={{ marginTop: 3 }}>
-                H.S.C. Index No. : <b>{school.hscIndex}</b>
+                <Lab><CertEdit label sizeKey="hsHscLabel" value={f.hscLabel} onChange={set("hscLabel")} /></Lab>
+                <CertEdit sizeKey="hsHscIndex" value={f.hscIndex} onChange={set("hscIndex")} style={{ fontWeight: 700 }} />
               </div>
-              <div style={{ fontSize: 9 }}>એચ.એસ.સી. ઈન્ડેક્સ નં. : {school.hscIndex}</div>
+              <div style={{ fontSize: 9 }}>
+                <Lab><CertEdit label sizeKey="hsHscGu" value={f.hscGu} onChange={set("hscGu")} /></Lab>
+                <CertEdit sizeKey="hsHscIndexGu" value={f.hscIndex} onChange={set("hscIndex")} />
+              </div>
               <div style={{ marginTop: 3 }}>
-                Dise Code No. : <b>{school.diseCode}</b>
+                <Lab><CertEdit label sizeKey="hsDiseLabel" value={f.diseLabel} onChange={set("diseLabel")} /></Lab>
+                <CertEdit sizeKey="hsDiseCode" value={f.diseCode} onChange={set("diseCode")} style={{ fontWeight: 700 }} />
               </div>
-              <div style={{ fontSize: 9 }}>ડાયસ કોડ નં. : {school.diseCode}</div>
+              <div style={{ fontSize: 9 }}>
+                <Lab><CertEdit label sizeKey="hsDiseGu" value={f.diseGu} onChange={set("diseGu")} /></Lab>
+                <CertEdit sizeKey="hsDiseCodeGu" value={f.diseCode} onChange={set("diseCode")} />
+              </div>
             </div>
 
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontWeight: 700 }}>Ta. Songadh, Dist. Tapi</div>
-              <div style={{ fontSize: 9 }}>{school.addressGu}</div>
-              <div style={{ marginTop: 8, fontWeight: 700 }}>Madhyamik / Ucchattar Madhyamik</div>
-              <div style={{ fontSize: 9 }}>માધ્યમિક / ઉચ્ચત્તર માધ્યમિક</div>
+              <div style={{ fontWeight: 700 }}>
+                <CertEdit label sizeKey="hsPlaceEn" value={f.placeEn} onChange={set("placeEn")} />
+              </div>
+              <div style={{ fontSize: 9 }}>
+                <CertEdit label sizeKey="hsPlaceGu" value={f.placeGu} onChange={set("placeGu")} />
+              </div>
+              <div style={{ marginTop: 8, fontWeight: 700 }}>
+                <CertEdit label sizeKey="hsSectionEn" value={f.sectionEn} onChange={set("sectionEn")} />
+              </div>
+              <div style={{ fontSize: 9 }}>
+                <CertEdit label sizeKey="hsSectionGu" value={f.sectionGu} onChange={set("sectionGu")} />
+              </div>
             </div>
 
             <div style={{ textAlign: "right" }}>
               <div>
-                No. :{" "}
-                <Fill value={data.serialNo} minWidth={52} center />
+                <Lab><CertEdit label sizeKey="hsNoLabel" value={f.noLabel} onChange={set("noLabel")} /></Lab>
+                <Fill sizeKey="hsSerial" value={f.serialNo} onChange={set("serialNo")} minWidth={52} center />
               </div>
               <div style={{ marginTop: 6 }}>
-                G.R. No. / જી.આર.નં. : <Fill value={S.grNumber || ""} minWidth={56} center />
+                <Lab><CertEdit label sizeKey="hsGrLabel" value={f.grLabel} onChange={set("grLabel")} /></Lab>
+                <Fill sizeKey="hsGr" value={f.grNumber} onChange={set("grNumber")} minWidth={56} center />
               </div>
               <div style={{ marginTop: 6 }}>
-                Medium / માધ્યમ : <span style={{ fontWeight: 600, textDecoration: "underline" }}>{medium}</span>
+                <Lab><CertEdit label sizeKey="hsMediumLabel" value={f.mediumLabel} onChange={set("mediumLabel")} /></Lab>
+                <Fill sizeKey="hsMedium" value={f.medium} onChange={set("medium")} minWidth={90} center />
               </div>
             </div>
           </div>
 
           {/* Fields 1–14 */}
-          <Field n={1} en="Full Name of the Student" gu={<>વિદ્યાર્થીનું પૂરેપૂરું નામ <Fill value={nameGu} flex={1} minWidth={160} /></>}>
-            <Fill value={nameEn} flex={1} minWidth={180} />
+          <Field n="" en={<CertEdit label sizeKey="hsNameEnLabel" value={f.nameEnLabel} onChange={set("nameEnLabel")} />} gu={<><Lab><CertEdit label sizeKey="hsNameGuLabel" value={f.nameGuLabel} onChange={set("nameGuLabel")} /></Lab><Fill sizeKey="hsNameGu" value={f.nameGu} onChange={set("nameGu")} flex={1} minWidth={160} /></>}>
+            <Fill sizeKey="hsNameEn" value={f.nameEn} onChange={set("nameEn")} flex={1} minWidth={180} />
           </Field>
 
-          <Field n={2} en="Religion and Caste" gu={<>ધર્મ અને જાતિ <Fill value={religionCasteGu} flex={1} minWidth={140} /></>}>
-            <Fill value={religionCasteEn} flex={1} minWidth={160} />
+          <Field n="" en={<CertEdit label sizeKey="hsCasteEnLabel" value={f.casteEnLabel} onChange={set("casteEnLabel")} />} gu={<><Lab><CertEdit label sizeKey="hsCasteGuLabel" value={f.casteGuLabel} onChange={set("casteGuLabel")} /></Lab><Fill sizeKey="hsCasteGu" value={f.religionCasteGu} onChange={set("religionCasteGu")} flex={1} minWidth={140} /></>}>
+            <Fill sizeKey="hsCasteEn" value={f.religionCasteEn} onChange={set("religionCasteEn")} flex={1} minWidth={160} />
           </Field>
 
-          <Field n={3} en="Mother's Name" gu={<>માતાનું નામ <Fill value={motherGu} flex={1} minWidth={140} /></>}>
-            <Fill value={motherEn} flex={1} minWidth={160} />
+          <Field n="" en={<CertEdit label sizeKey="hsMotherEnLabel" value={f.motherEnLabel} onChange={set("motherEnLabel")} />} gu={<><Lab><CertEdit label sizeKey="hsMotherGuLabel" value={f.motherGuLabel} onChange={set("motherGuLabel")} /></Lab><Fill sizeKey="hsMotherGu" value={f.motherGu} onChange={set("motherGu")} flex={1} minWidth={140} /></>}>
+            <Fill sizeKey="hsMotherEn" value={f.motherEn} onChange={set("motherEn")} flex={1} minWidth={160} />
           </Field>
 
-          <Field
-            n={4}
-            en={
-              <>
-                Place of Birth <span style={{ fontWeight: 400 }}>(With Taluka / District)</span>
-              </>
-            }
-            gu={<>જન્મ સ્થળ (તાલુકા, જિલ્લા સહિત) <Fill value={birthPlaceGu} flex={1} minWidth={140} /></>}
-          >
-            <Fill value={birthPlaceEn} flex={1} minWidth={160} />
+          <Field n="" en={<CertEdit label sizeKey="hsBirthEnLabel" value={f.birthEnLabel} onChange={set("birthEnLabel")} />} gu={<><Lab><CertEdit label sizeKey="hsBirthGuLabel" value={f.birthGuLabel} onChange={set("birthGuLabel")} /></Lab><Fill sizeKey="hsBirthGu" value={f.birthPlaceGu} onChange={set("birthPlaceGu")} flex={1} minWidth={140} /></>}>
+            <Fill sizeKey="hsBirthEn" value={f.birthPlaceEn} onChange={set("birthPlaceEn")} flex={1} minWidth={160} />
           </Field>
 
           <Field
-            n={5}
-            en="Date of Birth"
+            n=""
+            en={<CertEdit label sizeKey="hsDobEnLabel" value={f.dobEnLabel} onChange={set("dobEnLabel")} />}
             gu={
               <>
-                ખ્રિસ્તી વર્ષ અનુસાર જન્મ તારીખ <Fill value={dob} minWidth={96} />
+                <Lab><CertEdit label sizeKey="hsDobGuLabel" value={f.dobGuLabel} onChange={set("dobGuLabel")} /></Lab>
+                <Fill sizeKey="hsDobGu" value={f.dob} onChange={set("dob")} minWidth={96} />
                 <span style={{ width: "100%", fontSize: 10, marginTop: 2, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "flex-end" }}>
-                  <span>(આંકડામાં અને શબ્દમાં)</span>
-                  <Fill value={dobWordsGu} flex={1} minWidth={200} />
+                  <CertEdit label sizeKey="hsDobHintGu" value={f.dobHintGu} onChange={set("dobHintGu")} />
+                  <Fill sizeKey="hsDobWordsGu" value={f.dobWordsGu} onChange={set("dobWordsGu")} flex={1} minWidth={200} />
                 </span>
               </>
             }
           >
-            <Fill value={dob} minWidth={110} />
+            <Fill sizeKey="hsDobEn" value={f.dob} onChange={set("dob")} minWidth={110} />
             <span style={{ width: "100%", fontWeight: 400, fontSize: 9.5, marginTop: 2 }}>
-              (In Figures and words as per Christian Calendar)
+              <CertEdit label sizeKey="hsDobHintEn" value={f.dobHintEn} onChange={set("dobHintEn")} />
             </span>
-            <Fill value={dobWordsEn} flex={1} minWidth={200} />
+            <Fill sizeKey="hsDobWordsEn" value={f.dobWordsEn} onChange={set("dobWordsEn")} flex={1} minWidth={200} />
           </Field>
 
-          <Field n={6} en="Last School Attended" gu={<>જ્યાં ભણ્યો હોય તે છેલ્લી શાળા <Fill value={lastSchoolGu} flex={1} minWidth={140} /></>}>
-            <Fill value={lastSchoolEn} flex={1} minWidth={160} />
+          <Field n="" en={<CertEdit label sizeKey="hsLastEnLabel" value={f.lastEnLabel} onChange={set("lastEnLabel")} />} gu={<><Lab><CertEdit label sizeKey="hsLastGuLabel" value={f.lastGuLabel} onChange={set("lastGuLabel")} /></Lab><Fill sizeKey="hsLastGu" value={f.lastSchoolGu} onChange={set("lastSchoolGu")} flex={1} minWidth={140} /></>}>
+            <Fill sizeKey="hsLastEn" value={f.lastSchoolEn} onChange={set("lastSchoolEn")} flex={1} minWidth={160} />
           </Field>
 
           {/* 7 + 8 on same row */}
@@ -364,13 +537,13 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                   fontSize: 11,
                 }}
               >
-                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 4 }}>
-                  <span style={{ fontWeight: 700 }}>7. Date of Admission (With Class)</span>
-                  <Fill value={data.admissionDate || ""} flex={1} minWidth={90} />
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 0 }}>
+                  <Lab><CertEdit label sizeKey="hsAdmEnLabel" value={f.admEnLabel} onChange={set("admEnLabel")} style={{ fontWeight: 700 }} /></Lab>
+                  <Fill sizeKey="hsAdmission" value={f.admissionDate} onChange={set("admissionDate")} flex={1} minWidth={90} />
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 4 }}>
-                  <span style={{ fontWeight: 700 }}>8. Date of Leaving the School</span>
-                  <Fill value={data.leavingDate || ""} flex={1} minWidth={90} />
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 0 }}>
+                  <Lab><CertEdit label sizeKey="hsLeaveEnLabel" value={f.leaveEnLabel} onChange={set("leaveEnLabel")} style={{ fontWeight: 700 }} /></Lab>
+                  <Fill sizeKey="hsLeaving" value={f.leavingDate} onChange={set("leavingDate")} flex={1} minWidth={90} />
                 </div>
               </div>
               <div
@@ -382,46 +555,46 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                   fontSize: 10,
                 }}
               >
-                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 4 }}>
-                  <span>પ્રવેશ તારીખ (ધોરણ સહિત)</span>
-                  <Fill value={data.admissionDate || ""} flex={1} minWidth={70} />
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 0 }}>
+                  <Lab><CertEdit label sizeKey="hsAdmGuLabel" value={f.admGuLabel} onChange={set("admGuLabel")} /></Lab>
+                  <Fill sizeKey="hsAdmissionGu" value={f.admissionDate} onChange={set("admissionDate")} flex={1} minWidth={70} />
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 4 }}>
-                  <span>શાળા છોડ્યા તારીખ</span>
-                  <Fill value={data.leavingDate || ""} flex={1} minWidth={70} />
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 0 }}>
+                  <Lab><CertEdit label sizeKey="hsLeaveGuLabel" value={f.leaveGuLabel} onChange={set("leaveGuLabel")} /></Lab>
+                  <Fill sizeKey="hsLeavingGu" value={f.leavingDate} onChange={set("leavingDate")} flex={1} minWidth={70} />
                 </div>
               </div>
             </div>
           </div>
 
           <Field
-            n={9}
-            en="In which Standard he/she Studying & Since When?"
+            n=""
+            en={<CertEdit label sizeKey="hsStudyEnLabel" value={f.studyEnLabel} onChange={set("studyEnLabel")} />}
             gu={
               <>
-                કયા ધોરણમાં અભ્યાસ કરે છે? ક્યારથી?{" "}
-                <Fill value={[studyingGu, data.studyingSince ? lcGuText(data.studyingSince) : ""].filter(Boolean).join(" · ")} flex={1} minWidth={140} />
+                <Lab><CertEdit label sizeKey="hsStudyGuLabel" value={f.studyGuLabel} onChange={set("studyGuLabel")} /></Lab>
+                <Fill sizeKey="hsStudyGu" value={f.studyGu} onChange={set("studyGu")} flex={1} minWidth={140} />
               </>
             }
           >
-            <Fill value={studying} minWidth={90} />
-            <Fill value={data.studyingSince || ""} flex={1} minWidth={120} />
+            <Fill sizeKey="hsStudying" value={f.studying} onChange={set("studying")} minWidth={90} />
+            <Fill sizeKey="hsStudyingSince" value={f.studyingSince} onChange={set("studyingSince")} flex={1} minWidth={120} />
           </Field>
 
-          <Field n={10} en="Reason for leaving the School" gu={<>શાળા છોડ્યાનું કારણ <Fill value={reasonGu} flex={1} minWidth={140} /></>}>
-            <Fill value={reasonEn} flex={1} minWidth={160} />
+          <Field n="" en={<CertEdit label sizeKey="hsReasonEnLabel" value={f.reasonEnLabel} onChange={set("reasonEnLabel")} />} gu={<><Lab><CertEdit label sizeKey="hsReasonGuLabel" value={f.reasonGuLabel} onChange={set("reasonGuLabel")} /></Lab><Fill sizeKey="hsReasonGu" value={f.reasonGu} onChange={set("reasonGu")} flex={1} minWidth={140} /></>}>
+            <Fill sizeKey="hsReasonEn" value={f.reasonEn} onChange={set("reasonEn")} flex={1} minWidth={160} />
           </Field>
 
-          <Field n={11} en="Progress" gu={<>પ્રગતિ <Fill value={progressGu} flex={1} minWidth={140} /></>}>
-            <Fill value={progressEn} flex={1} minWidth={160} />
+          <Field n="" en={<CertEdit label sizeKey="hsProgressEnLabel" value={f.progressEnLabel} onChange={set("progressEnLabel")} />} gu={<><Lab><CertEdit label sizeKey="hsProgressGuLabel" value={f.progressGuLabel} onChange={set("progressGuLabel")} /></Lab><Fill sizeKey="hsProgressGu" value={f.progressGu} onChange={set("progressGu")} flex={1} minWidth={140} /></>}>
+            <Fill sizeKey="hsProgressEn" value={f.progressEn} onChange={set("progressEn")} flex={1} minWidth={160} />
           </Field>
 
-          <Field n={12} en="Conduct" gu={<>વર્તણૂંક <Fill value={conductGu} flex={1} minWidth={140} /></>}>
-            <Fill value={conductEn} flex={1} minWidth={160} />
+          <Field n="" en={<CertEdit label sizeKey="hsConductEnLabel" value={f.conductEnLabel} onChange={set("conductEnLabel")} />} gu={<><Lab><CertEdit label sizeKey="hsConductGuLabel" value={f.conductGuLabel} onChange={set("conductGuLabel")} /></Lab><Fill sizeKey="hsConductGu" value={f.conductGu} onChange={set("conductGu")} flex={1} minWidth={140} /></>}>
+            <Fill sizeKey="hsConductEn" value={f.conductEn} onChange={set("conductEn")} flex={1} minWidth={160} />
           </Field>
 
-          <Field n={13} en="Remarks" gu={<>વિશેષ નોંધ <Fill value={remarksGu} flex={1} minWidth={140} /></>}>
-            <Fill value={data.remarks || ""} flex={1} minWidth={120} />
+          <Field n="" en={<CertEdit label sizeKey="hsRemarksEnLabel" value={f.remarksEnLabel} onChange={set("remarksEnLabel")} />} gu={<><Lab><CertEdit label sizeKey="hsRemarksGuLabel" value={f.remarksGuLabel} onChange={set("remarksGuLabel")} /></Lab><Fill sizeKey="hsRemarksGu" value={f.remarksGu} onChange={set("remarksGu")} flex={1} minWidth={140} /></>}>
+            <Fill sizeKey="hsRemarksEn" value={f.remarksEn} onChange={set("remarksEn")} flex={1} minWidth={120} />
             <span
               style={{
                 width: "100%",
@@ -434,54 +607,57 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                 fontWeight: 600,
               }}
             >
-              Appeared in S.S.C. Exam March /
-              <Fill value={data.sscExam || ""} minWidth={48} center />
-              Seat No.
-              <Fill value={data.sscSeatNo || ""} minWidth={90} center />
+              <CertEdit label sizeKey="hsSscLine" value={f.sscLine} onChange={set("sscLine")} />
+              <Fill sizeKey="hsSscExam" value={f.sscExam} onChange={set("sscExam")} minWidth={48} center />
+              <Lab><CertEdit label sizeKey="hsSeatLabel" value={f.seatLabel} onChange={set("seatLabel")} /></Lab>
+              <Fill sizeKey="hsSeatNo" value={f.sscSeatNo} onChange={set("sscSeatNo")} minWidth={90} center />
             </span>
           </Field>
 
-          <Field
-            n={14}
-            en={
-              <>
-                UID No. / <span style={{ fontWeight: 600 }}>યુઆઈડી નં.</span>
-              </>
-            }
-          >
+          <Field n="" en={<CertEdit label sizeKey="hsUidLabel" value={f.uidLabel} onChange={set("uidLabel")} />}>
             <div style={{ display: "flex", gap: 1.5, flexWrap: "nowrap" }}>
-              {uidBoxes.map((ch, i) => (
-                <div
+              {uidChars.map((ch, i) => (
+                <CertEdit
                   key={i}
+                  sizeKey={`hsUid${i}`}
+                  value={ch}
+                  onChange={(next) => {
+                    const chars = (f.uid || "").padEnd(18, " ").slice(0, 18).split("");
+                    const typed = next.replace(/\s/g, "");
+                    if (!typed) chars[i] = " ";
+                    else {
+                      for (let k = 0; k < typed.length && i + k < 18; k++) chars[i + k] = typed[k];
+                    }
+                    set("uid")(chars.join("").slice(0, 18));
+                  }}
                   style={{
                     width: 16,
                     height: 19,
                     border: "1px solid #111",
-                    display: "flex",
+                    display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
                     fontSize: 10,
-                    fontWeight: ch ? 700 : 400,
+                    fontWeight: 700,
+                    textAlign: "center",
                     flexShrink: 0,
                   }}
-                >
-                  {ch || ""}
-                </div>
+                />
               ))}
             </div>
           </Field>
 
           {/* Date + certify */}
           <div style={{ marginTop: 10, borderTop: "1px solid #bbb", paddingTop: 8 }}>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, marginBottom: 6, fontSize: 11 }}>
-              <span style={{ fontWeight: 700 }}>Date / તારીખ :</span>
-              <Fill value={data.issueDate} minWidth={110} />
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 0, marginBottom: 6, fontSize: 11 }}>
+              <Lab><CertEdit label sizeKey="hsDateLabel" value={f.dateLabel} onChange={set("dateLabel")} style={{ fontWeight: 700 }} /></Lab>
+              <Fill sizeKey="hsIssueDate" value={f.issueDate} onChange={set("issueDate")} minWidth={110} />
             </div>
             <p style={{ margin: "0 0 2px", fontSize: 10, lineHeight: 1.5, fontWeight: 600 }}>
-              I Certify that the above information is verified by me with school register and found to be correct.
+              <CertEdit label multiline sizeKey="hsCertEn" value={f.certEn} onChange={set("certEn")} />
             </p>
             <p style={{ margin: 0, fontSize: 9.5, lineHeight: 1.5 }}>
-              આથી પ્રમાણિત કરવામાં આવે છે કે ઉપરની માહિતીની ચકાસણી શાળાના જનરલ રજીસ્ટર સાથે કરવામાં આવેલ છે અને સાચી માલૂમ પડેલ છે.
+              <CertEdit label multiline sizeKey="hsCertGu" value={f.certGu} onChange={set("certGu")} />
             </p>
           </div>
 
@@ -495,16 +671,22 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
               fontSize: 11,
             }}
           >
-            {[
-              { en: "Clerk", gu: "કલાર્ક" },
-              { en: "Class Teacher", gu: "વર્ગ શિક્ષક" },
-              { en: "Principal", gu: "આચાર્ય" },
-            ].map((s) => (
-              <div key={s.en} style={{ textAlign: "center" }}>
+            {(
+              [
+                ["signClerk", "signClerkGu", "hsSignClerk", "hsSignClerkGu"],
+                ["signTeacher", "signTeacherGu", "hsSignTeacher", "hsSignTeacherGu"],
+                ["signPrincipal", "signPrincipalGu", "hsSignPrincipal", "hsSignPrincipalGu"],
+              ] as const
+            ).map(([enKey, guKey, enSize, guSize]) => (
+              <div key={enKey} style={{ textAlign: "center" }}>
                 <div style={{ height: 32 }} />
                 <div style={{ borderTop: "1px solid #111", paddingTop: 4 }}>
-                  <div style={{ fontWeight: 700 }}>{s.en}</div>
-                  <div style={{ fontSize: 10 }}>{s.gu}</div>
+                  <div style={{ fontWeight: 700 }}>
+                    <CertEdit label sizeKey={enSize} value={f[enKey]} onChange={set(enKey)} />
+                  </div>
+                  <div style={{ fontSize: 10 }}>
+                    <CertEdit label sizeKey={guSize} value={f[guKey]} onChange={set(guKey)} />
+                  </div>
                 </div>
               </div>
             ))}
@@ -520,12 +702,9 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
               lineHeight: 1.5,
             }}
           >
-            <b>Statutory Warning :</b> No one can issue this certificate or make any changes in any entry except the
-            Principal of the school or the authorized person appointed for such work in the absence or unavailability of
-            the Principal.
+            <CertEdit label multiline sizeKey="hsWarningEn" value={f.warningEn} onChange={set("warningEn")} />
             <br />
-            : શાળાના આચાર્ય અથવા તેમની ગેરહાજરીમાં સહી કરવા માટે અધિકૃત કરેલ વ્યક્તિ સિવાય અન્ય કોઈ વ્યક્તિ આ પ્રમાણપત્ર આપી શકશે નહીં કે
-            તેની કોઈ નોંધમાં ફેરફાર કરી શકશે નહીં.
+            <CertEdit label multiline sizeKey="hsWarningGu" value={f.warningGu} onChange={set("warningGu")} />
           </div>
         </div>
       </div>
@@ -539,5 +718,6 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
         }
       `}</style>
     </div>
+    </CertFontScope>
   );
 }

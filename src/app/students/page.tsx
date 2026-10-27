@@ -48,6 +48,7 @@ import { InfoModal } from "@/components/ui/info-modal";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/hooks/use-confirm";
+import { DeactivateStudentDialog } from "@/components/students/deactivate-student-dialog";
 import { genderShort, normalizeGender } from "@/lib/gender-utils";
 import { useSchoolFeatures } from "@/components/school/use-school-features";
 import {
@@ -375,6 +376,7 @@ function StudentsContent() {
   const router = useRouter();
   const pathname = usePathname();
   const { confirm, ConfirmDialog } = useConfirm();
+  const [deactivateTarget, setDeactivateTarget] = useState<StudentRow | null>(null);
   const { has } = useSchoolFeatures();
   const canAutoApply = has("scholarship_auto_apply");
   const searchParams = useSearchParams();
@@ -758,33 +760,13 @@ function StudentsContent() {
     });
   };
 
-  const deactivateStudent = async (id: string) => {
-    await confirm({
-      title: t("students.deactivateTitle"),
-      message: t("students.confirmDeactivate"),
-      confirmLabel: t("students.deactivate"),
-      cancelLabel: t("common.cancel"),
-      variant: "destructive",
-      onConfirm: async () => {
-        const res = await fetch(`/api/students/${id}/active`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ active: false }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(
-            typeof data.error === "string" ? data.error : t("students.deactivateFailed"),
-          );
-        }
-        setSelected((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-        await fetchStudents();
-      },
+  const finishDeactivate = async (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
     });
+    await fetchStudents();
   };
 
   const exportSelected = () => {
@@ -938,7 +920,7 @@ function StudentsContent() {
           <StudentRowActions
             studentId={row.original.id}
             showAutoApply={canAutoApply}
-            onDeactivate={() => deactivateStudent(row.original.id)}
+            onDeactivate={() => setDeactivateTarget(row.original)}
             onDelete={() => deleteStudent(row.original)}
             onAssignClass={() => openAssignFor([row.original.id])}
           />
@@ -1557,7 +1539,7 @@ function StudentsContent() {
                                         studentId={student.id}
                                         compact
                                         showAutoApply={canAutoApply}
-                                        onDeactivate={() => deactivateStudent(student.id)}
+                                        onDeactivate={() => setDeactivateTarget(student)}
                                         onDelete={() => deleteStudent(student)}
                                         onAssignClass={() => openAssignFor([student.id])}
                                       />
@@ -1707,6 +1689,13 @@ function StudentsContent() {
         </div>
       </InfoModal>
       <ConfirmDialog />
+      {deactivateTarget ? (
+        <DeactivateStudentDialog
+          student={deactivateTarget}
+          onClose={() => setDeactivateTarget(null)}
+          onDone={() => finishDeactivate(deactivateTarget.id)}
+        />
+      ) : null}
     </PageShell>
   );
 }

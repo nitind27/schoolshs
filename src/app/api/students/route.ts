@@ -21,6 +21,11 @@ import {
   pendingWorkWhere,
 } from "@/lib/student-list-filters";
 import { searchStudentIds } from "@/lib/student-search.server";
+import {
+  assertSupervisorStudentAccess,
+  getSupervisorClassIds,
+  supervisorClassIdFilter,
+} from "@/lib/supervisor-scope";
 import { studentListName, type StudentNameLike } from "@/lib/student-names";
 
 function studentDisplayName(s: StudentNameLike) {
@@ -151,6 +156,12 @@ export async function GET(request: NextRequest) {
       andStudentWhere(where, { OR: pendingWorkOrFilters() });
     }
 
+    const supervisorClassIds = await getSupervisorClassIds(session);
+    const supervisorFilter = supervisorClassIdFilter(supervisorClassIds);
+    if (supervisorFilter) {
+      andStudentWhere(where, { classId: supervisorFilter });
+    }
+
     const classSelect = {
       id: true,
       name: true,
@@ -238,9 +249,13 @@ export async function GET(request: NextRequest) {
       const base = {
         schoolId: session.schoolId,
         status: enrolledStudentStatusFilter(),
-      } as const;
+        ...(supervisorFilter ? { classId: supervisorFilter } : {}),
+      };
       const classStdRows = await prisma.schoolClass.findMany({
-        where: { schoolId: session.schoolId },
+        where: {
+          schoolId: session.schoolId,
+          ...(supervisorFilter ? { id: supervisorFilter } : {}),
+        },
         select: { standard: true },
         distinct: ["standard"],
       });
@@ -352,6 +367,8 @@ export async function POST(request: NextRequest) {
       if (gr) {
         const byGr = await findStudentByGrNumber(session.schoolId, gr);
         if (byGr) {
+          await assertSupervisorStudentAccess(session, byGr);
+          await assertSupervisorStudentAccess(session, { classId: data.classId || byGr.classId });
           await assertStudentAccountEmailAvailable(data.email, byGr.id);
           const student = await prisma.student.update({
             where: { id: byGr.id },
@@ -379,6 +396,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Draft conflict — please refresh the page" }, { status: 409 });
       }
 
+      await assertSupervisorStudentAccess(session, { classId: data.classId });
       await assertStudentAccountEmailAvailable(data.email);
       const student = await prisma.student.create({
         data: toStudentUncheckedCreate(data as Record<string, unknown>, {
@@ -428,6 +446,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Student with this Aadhaar already exists in your school" }, { status: 409 });
     }
 
+    await assertSupervisorStudentAccess(session, { classId: data.classId });
     await assertStudentAccountEmailAvailable(data.email);
     const student = await prisma.student.create({
       data: toStudentUncheckedCreate(data as Record<string, unknown>, {

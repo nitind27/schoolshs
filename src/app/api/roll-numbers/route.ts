@@ -6,6 +6,7 @@ import { assertStudentsInSchool } from "@/lib/school-assertions";
 import { enrolledStudentStatusFilter } from "@/lib/student-list-filters";
 import { resequenceClassRollNumbers } from "@/lib/roll-resequence";
 import { sortStudentsBySavedRoll } from "@/lib/roll-order";
+import { getSupervisorClassIds, supervisorClassIdFilter, assertSupervisorClassAccess } from "@/lib/supervisor-scope";
 
 const ROLES = ["school_admin", "teacher", "clerk"] as const;
 
@@ -13,6 +14,8 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireSchoolAuth([...ROLES]);
     const classId = request.nextUrl.searchParams.get("classId");
+    const supervisorFilter = supervisorClassIdFilter(await getSupervisorClassIds(session));
+    if (classId) await assertSupervisorClassAccess(session, classId);
     const teacherWhere =
       session.role === "teacher"
         ? {
@@ -21,7 +24,11 @@ export async function GET(request: NextRequest) {
         : {};
 
     const classes = await prisma.schoolClass.findMany({
-      where: { schoolId: session.schoolId, ...teacherWhere },
+      where: {
+        schoolId: session.schoolId,
+        ...teacherWhere,
+        ...(supervisorFilter ? { id: supervisorFilter } : {}),
+      },
       orderBy: [{ standard: "asc" }, { section: "asc" }],
       select: {
         id: true,
@@ -106,6 +113,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     await assertTeacherHomeroomAccess(session, classId);
+    await assertSupervisorClassAccess(session, classId);
 
     if (body.autoAssign === true) {
       const updated = await prisma.$transaction(

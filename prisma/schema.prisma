@@ -63,12 +63,14 @@ model School {
   schoolReligions        SchoolReligion[]
   studentEditLinks       StudentEditLink[]
   staffMarksGrants       StaffMarksGrant[]
+  staffSupervisorClasses StaffSupervisorClass[]
   standardSubjects       StandardSubject[]
   examSeatAssignments    ExamSeatAssignment[]
   holidays               Holiday[]
   activities             Activity[]
   galleryEvents          GalleryEvent[]
   helpConversations      HelpConversation[]
+  changeLogs             ChangeLog[]
 
   @@index([isActive])
   @@index([district])
@@ -384,6 +386,19 @@ model SchoolSettings {
    * Print uses this map after Fix.
    */
   lcFontJson           Json?
+  /**
+   * Printed text for Sunday / holiday columns on the monthly attendance patrak.
+   * Keys are YYYY-MM-DD. Empty string means print no banner on that date.
+   */
+  attendanceDayNotesJson Json?
+  /**
+   * Scholarship paper desk — last date (YYYY-MM-DD) for missing Aadhaar / bank / caste / income papers.
+   */
+  scholarshipPapersDue String? @db.VarChar(10)
+  /**
+   * School template theme id (forest, navy, royal, …). Empty uses Forest.
+   */
+  themeId String? @db.VarChar(32)
 
   @@map("schoolsettings")
 }
@@ -561,8 +576,9 @@ model Staff {
   bankName         String?
   bankAccount      String?
   ifscCode         String?
-  classes          SchoolClass[]          @relation("ClassTeacher")
-  marksGrants      StaffMarksGrant[]
+  classes            SchoolClass[]          @relation("ClassTeacher")
+  marksGrants        StaffMarksGrant[]
+  supervisorClasses  StaffSupervisorClass[]
   user             User?
   attendanceMonths StaffAttendanceMonth[]
   payrolls         StaffPayroll[]
@@ -758,12 +774,31 @@ model SchoolClass {
   examSeatAssignments ExamSeatAssignment[]
   studentEditLinks    StudentEditLink[]
   marksGrants         StaffMarksGrant[]
+  supervisorClasses   StaffSupervisorClass[]
 
   @@unique([schoolId, standard, section, stream, academicYear])
   @@index([schoolId])
   @@index([standard])
   @@index([academicYear])
   @@map("schoolclass")
+}
+
+/** Classes a Supervisor may manage with full student authority. */
+model StaffSupervisorClass {
+  id        String      @id @default(cuid())
+  createdAt DateTime    @default(now())
+  schoolId  String
+  school    School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staffId   String
+  staff     Staff       @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  classId   String
+  schoolClass SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, classId])
+  @@index([schoolId])
+  @@index([staffId])
+  @@index([classId])
+  @@map("staffsupervisorclass")
 }
 
 /** Subject marks a non-class-teacher may enter from the staff app. */
@@ -990,6 +1025,12 @@ model Student {
    * Scholarship/workflow status restored when student is re-activated from archived
    */
   previousStatus   String?
+  /**
+   * How the class roll was handled on deactivate.
+   * shift = later rolls moved up and the name left the patrak.
+   * blank = roll stays; name stays on the monthly attendance patrak with empty attendance.
+   */
+  deactivateRollMode String? @db.Text
   admissionStatus  String    @default("pending")
   verifiedAt       DateTime?
   verifiedBy       String?
@@ -1562,6 +1603,36 @@ model DailyAttendanceBookRow {
   @@unique([bookId, classId])
   @@index([bookId])
   @@map("dailyattendancebookrow")
+}
+
+/**
+ * Who changed a student record or exam marks.
+ * One row per student per save. Passwords are never stored here.
+ */
+model ChangeLog {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  actorUserId String?
+  actorName   String
+  actorRole   String
+  /**
+   * student | marks
+   */
+  kind        String
+  /**
+   * update | deactivate | activate | delete
+   */
+  action      String
+  targetId    String
+  targetLabel String   @db.Text
+  summary     String   @db.Text
+  detailJson  String?  @db.Text
+
+  @@index([schoolId, createdAt])
+  @@index([schoolId, kind, createdAt])
+  @@map("changelog")
 }
 
 /**

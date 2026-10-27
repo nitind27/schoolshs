@@ -10,7 +10,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** Bump when schema changes — forces fresh client in dev HMR */
-const SCHEMA_VERSION = 42;
+const SCHEMA_VERSION = 46;
 
 function isClientFresh(client: PrismaClient): boolean {
   const hasLoginSecurity =
@@ -26,6 +26,10 @@ function isClientFresh(client: PrismaClient): boolean {
   const hasLetterheadJson = "letterheadJson" in Prisma.SchoolSettingsScalarFieldEnum;
   const hasPreviousStatus = "previousStatus" in Prisma.StudentScalarFieldEnum;
   const hasLcFonts = "lcFontJson" in Prisma.SchoolSettingsScalarFieldEnum;
+  const hasDeactivateRollMode = "deactivateRollMode" in Prisma.StudentScalarFieldEnum;
+  const hasAttendanceDayNotes = "attendanceDayNotesJson" in Prisma.SchoolSettingsScalarFieldEnum;
+  const hasScholarshipDue = "scholarshipPapersDue" in Prisma.SchoolSettingsScalarFieldEnum;
+  const hasThemeId = "themeId" in Prisma.SchoolSettingsScalarFieldEnum;
 
   return (
     "user" in client &&
@@ -48,6 +52,7 @@ function isClientFresh(client: PrismaClient): boolean {
     "schoolReligion" in client &&
     "studentEditLink" in client &&
     "staffMarksGrant" in client &&
+    "staffSupervisorClass" in client &&
     hasLoginSecurity &&
     hasEmailVerification &&
     hasStaffGuNames &&
@@ -55,7 +60,12 @@ function isClientFresh(client: PrismaClient): boolean {
     hasExamTemplate &&
     hasLetterheadJson &&
     hasPreviousStatus &&
-    hasLcFonts
+    hasLcFonts &&
+    hasDeactivateRollMode &&
+    hasAttendanceDayNotes &&
+    hasScholarshipDue &&
+    hasThemeId &&
+    "changeLog" in client
   );
 }
 

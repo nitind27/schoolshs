@@ -154,6 +154,7 @@ export function buildAttendanceRows(
     middleName?: string | null;
     surname: string;
     rollNumber?: string | null;
+    attendanceBlank?: boolean;
   })[],
   saved: Map<
     string,
@@ -182,7 +183,8 @@ export function buildAttendanceRows(
 
   return sorted.map((s, i) => {
     const rec = saved.get(s.id);
-    const days = rec ? parseDaysJson(rec.daysJson) : emptyDays();
+    const blank = Boolean(s.attendanceBlank);
+    const days = blank ? emptyDays() : rec ? parseDaysJson(rec.daysJson) : emptyDays();
     const schoolFee = rec?.schoolFee || "";
     const termFee = rec?.termFee || "";
     const admissionFee = rec?.admissionFee || "";
@@ -192,7 +194,7 @@ export function buildAttendanceRows(
         .map((x) => parseFloat(x || "0"))
         .filter((n) => !isNaN(n))
         .reduce((a, b) => a + b, 0) || "";
-    const monthTotal = rec?.monthTotal ?? countMonthPresent(days);
+    const monthTotal = blank ? 0 : rec?.monthTotal ?? countMonthPresent(days);
 
     return {
       studentId: s.id,
@@ -201,18 +203,19 @@ export function buildAttendanceRows(
       caste: formatReligionCasteGu({ religion: s.religion, caste: s.caste }),
       category: formatCategoryCode(s.category),
       dob: s.dateOfBirth,
-      schoolFee,
-      termFee,
-      admissionFee,
-      otherFee,
-      totalFee: totalFee ? String(totalFee) : "",
+      schoolFee: blank ? "" : schoolFee,
+      termFee: blank ? "" : termFee,
+      admissionFee: blank ? "" : admissionFee,
+      otherFee: blank ? "" : otherFee,
+      totalFee: blank ? "" : totalFee ? String(totalFee) : "",
       serial: i + 1,
       name: studentFullNameGu(s) || studentFullName(s),
       attendance: days,
-      monthTotal: String(monthTotal),
-      prevTotal: String(rec?.prevTotal ?? ""),
-      cumulative: String(rec?.cumulative ?? monthTotal + (rec?.prevTotal ?? 0)),
-      note: rec?.note || "",
+      monthTotal: blank ? "" : String(monthTotal),
+      prevTotal: blank ? "" : String(rec?.prevTotal ?? ""),
+      cumulative: blank ? "" : String(rec?.cumulative ?? monthTotal + (rec?.prevTotal ?? 0)),
+      note: blank ? "" : rec?.note || "",
+      held: blank,
     };
   });
 }
@@ -220,6 +223,16 @@ export function buildAttendanceRows(
 /** Printed registers leave the total columns blank until the month has at least one attendance mark. */
 export function toClassRegisterRows(rows: AttendanceRow[]): ClassRegisterRow[] {
   return rows.map(({ studentId: _id, rollNumber: _r, ...rest }) => {
+    if (rest.held) {
+      return {
+        ...rest,
+        attendance: emptyDays(),
+        monthTotal: "",
+        prevTotal: "",
+        cumulative: "",
+        note: "",
+      };
+    }
     const hasEntry = countMarkedDays(rest.attendance) > 0;
     const nonZero = (v: string) => (parseInt(v || "0", 10) > 0 ? v : "");
     return {

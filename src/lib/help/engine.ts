@@ -31,6 +31,9 @@ function normalize(s: string) {
 }
 
 function topicAllowed(topic: HelpTopic, role: UserRole) {
+  if (role === "supervisor") {
+    return topic.roles.includes("supervisor") || topic.roles.includes("school_admin");
+  }
   return topic.roles.includes(role);
 }
 
@@ -89,6 +92,7 @@ export function isHrefAllowedForRole(href: string, role: UserRole): boolean {
     case "super_admin":
       return href.startsWith("/admin");
     case "school_admin":
+    case "supervisor":
       return (
         !href.startsWith("/admin") &&
         !href.startsWith("/teacher") &&
@@ -152,6 +156,7 @@ const GREET: Record<HelpLang, Record<UserRole, string>> = {
   en: {
     super_admin: "System help: ask about platform / school management pages in your panel. I’ll reply automatically.",
     school_admin: "System help: ask where a page is or how a feature works (students, scholarship, attendance, accounts…). Auto replies only.",
+    supervisor: "System help: ask about your assigned classes — students, attendance, marks, and the school panels you can open.",
     teacher: "System help: ask about your teacher panel — class, attendance, timetable, marks. I’ll answer automatically.",
     clerk: "System help: ask about clerk tasks — scholarship, students, day-to-day pages. Auto replies only.",
     ca: "System help: ask about audit, vouchers, and reports in your CA panel. I’ll answer automatically.",
@@ -160,6 +165,7 @@ const GREET: Record<HelpLang, Record<UserRole, string>> = {
   hi: {
     super_admin: "सिस्टम मदद: प्लेटफ़ॉर्म / स्कूल प्रबंधन के पेज पूछें। जवाब अपने-आप मिलेगा।",
     school_admin: "सिस्टम मदद: पेज कहाँ है या फीचर कैसे काम करता है पूछें (छात्र, छात्रवृत्ति, हाजरी, हिसाब…)। सिर्फ ऑटो जवाब।",
+    supervisor: "सिस्टम मदद: दिए गए वर्ग के छात्र, हाजरी और अंक पूछें। जवाब अपने-आप।",
     teacher: "सिस्टम मदद: टीचर पैनल — क्लास, हाजरी, समयसारणी, अंक पूछें। जवाब अपने-आप।",
     clerk: "सिस्टम मदद: क्लर्क काम — छात्रवृत्ति, छात्र आदि पूछें। सिर्फ ऑटो जवाब।",
     ca: "सिस्टम मदद: ऑडिट, वाउचर, रिपोर्ट पूछें। जवाब अपने-आप।",
@@ -168,6 +174,7 @@ const GREET: Record<HelpLang, Record<UserRole, string>> = {
   gu: {
     super_admin: "સિસ્ટમ મદદ: પ્લેટફોર્મ / શાળા મેનેજમેન્ટ પેજ વિશે પૂછો. જવાબ આપમેળે મળશે.",
     school_admin: "સિસ્ટમ મદદ: પેજ ક્યાં છે અથવા ફીચર કેવી રીતે કામ કરે તે પૂછો (વિદ્યાર્થી, શિષ્યવૃત્તિ, હાજરી, હિસાબ…). ફક્ત ઓટો જવાબ.",
+    supervisor: "સિસ્ટમ મદદ: આપેલા વર્ગના વિદ્યાર્થી, હાજરી અને ગુણ પૂછો. જવાબ આપમેળે.",
     teacher: "સિસ્ટમ મદદ: ટીચર પેનલ — વર્ગ, હાજરી, સમયપત્રક, ગુણ પૂછો. જવાબ આપમેળે.",
     clerk: "સિસ્ટમ મદદ: ક્લાર્ક કામ — શિષ્યવૃત્તિ, વિદ્યાર્થી વગેરે પૂછો. ફક્ત ઓટો જવાબ.",
     ca: "સિસ્ટમ મદદ: ઓડિટ, વાઉચર, રિપોર્ટ પૂછો. જવાબ આપમેળે.",

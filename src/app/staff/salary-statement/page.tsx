@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PageShell } from "@/components/layout/page-shell";
 import { Download, Printer, Save, IndianRupee, Wand2 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
+import { SalaryMonthRange } from "@/components/staff/salary-month-range";
 import {
   SALARY_FIELDS,
   currentFinancialYear,
@@ -22,6 +23,7 @@ import {
   type SalaryCategory,
   type SalaryFieldKey,
 } from "@/lib/salary-statement";
+import { defaultMonthRange, rangeSearch, sliceMonthRange } from "@/lib/salary-month-range";
 import "./salary-statement.css";
 
 type Grid = Record<string, Record<SalaryFieldKey, number>>; // "category:month" -> values
@@ -48,8 +50,24 @@ export default function SalaryStatementPage() {
   const [schoolType, setSchoolType] = useState<string | null>(null);
   const [staffCounts, setStaffCounts] = useState(emptyStaffCounts);
   const [monthCounts, setMonthCounts] = useState<Record<string, number>>({});
+  const [fromKey, setFromKey] = useState("");
+  const [toKey, setToKey] = useState("");
 
-  const months = useMemo(() => fyMonths(fy), [fy]);
+  const allMonths = useMemo(() => fyMonths(fy), [fy]);
+  const visibleMonths = useMemo(() => {
+    const fallback = defaultMonthRange(allMonths);
+    return sliceMonthRange(allMonths, fromKey || fallback.from, toKey || fallback.to);
+  }, [allMonths, fromKey, toKey]);
+  const rangeFrom = visibleMonths[0] ? `${visibleMonths[0].year}-${String(visibleMonths[0].month).padStart(2, "0")}` : "";
+  const rangeTo = visibleMonths.length
+    ? `${visibleMonths[visibleMonths.length - 1].year}-${String(visibleMonths[visibleMonths.length - 1].month).padStart(2, "0")}`
+    : "";
+
+  useEffect(() => {
+    const next = defaultMonthRange(fyMonths(fy));
+    setFromKey(next.from);
+    setToKey(next.to);
+  }, [fy]);
   const categories = useMemo(() => visibleSalaryCategories(schoolType), [schoolType]);
 
   useEffect(() => {
@@ -116,14 +134,14 @@ export default function SalaryStatementPage() {
     const out = {} as Record<SalaryCategory, Record<SalaryFieldKey, number>>;
     for (const c of categories) {
       const totals = emptyValues();
-      for (const { month } of months) {
+      for (const { month } of visibleMonths) {
         const v = getValues(c, month);
         for (const f of SALARY_FIELDS) totals[f.key] += v[f.key];
       }
       out[c] = totals;
     }
     return out;
-  }, [months, getValues, categories]);
+  }, [visibleMonths, getValues, categories]);
 
   const grandTotals = useMemo(() => {
     const totals = emptyValues();
@@ -137,7 +155,7 @@ export default function SalaryStatementPage() {
     setSaving(true);
     try {
       const rows = categories.flatMap((category) =>
-        months.map(({ month, year }) => ({ category, month, year, values: getValues(category, month) })),
+        allMonths.map(({ month, year }) => ({ category, month, year, values: getValues(category, month) })),
       );
       const res = await fetch("/api/staff/salary-statement", {
         method: "PUT",
@@ -154,7 +172,7 @@ export default function SalaryStatementPage() {
   const downloadExcel = async () => {
     setExporting(true);
     try {
-      const res = await fetch(`/api/staff/salary-statement/export?fy=${encodeURIComponent(fy)}`);
+      const res = await fetch(`/api/staff/salary-statement/export?fy=${encodeURIComponent(fy)}&${rangeSearch(visibleMonths)}`);
       if (!res.ok) return;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -184,6 +202,16 @@ export default function SalaryStatementPage() {
             onChange={(e) => setFy(e.target.value)}
             options={fyOptions().map((y) => ({ value: y, label: y }))}
             className="w-32"
+          />
+          <SalaryMonthRange
+            months={allMonths}
+            labelFor={(item) => monthLabel(item.month, item.year)}
+            from={rangeFrom}
+            to={rangeTo}
+            onChange={(from, to) => {
+              setFromKey(from);
+              setToKey(to);
+            }}
           />
           <Button size="sm" variant="outline" onClick={fillFromStaff} disabled={loading || saving}>
             <Wand2 className="h-4 w-4" />
@@ -215,11 +243,16 @@ export default function SalaryStatementPage() {
       ) : (
         <div className="salary-statement-area space-y-6">
           <p className="print:hidden rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm text-teal-900">
-            {t("salaryStatement.autoFillHint")}
+            {t("salaryStatement.autoFillHint")} {t("salaryRange.hint")}
           </p>
           <div className="ss-print-header">
             <h2 className="ss-school">{schoolName}</h2>
-            <p className="ss-title">ANNUAL SALARY STATEMENT — {fy}</p>
+            <p className="ss-title">
+              ANNUAL SALARY STATEMENT — {fy}
+              {visibleMonths.length > 0
+                ? ` (${monthLabel(visibleMonths[0].month, visibleMonths[0].year)} – ${monthLabel(visibleMonths[visibleMonths.length - 1].month, visibleMonths[visibleMonths.length - 1].year)})`
+                : ""}
+            </p>
           </div>
 
           {categories.map((category) => (
@@ -246,7 +279,7 @@ export default function SalaryStatementPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {months.map(({ month, year }) => {
+                      {visibleMonths.map(({ month, year }) => {
                         const values = getValues(category, month);
                         return (
                           <tr key={month}>

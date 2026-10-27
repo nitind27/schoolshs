@@ -11,6 +11,7 @@ import {
   sanitizeEditLinkValue,
   type EditLinkField,
 } from "@/lib/student-edit-link";
+import { logStudentEdits, studentAuditLabel } from "@/lib/change-log";
 
 function bearer(request: NextRequest) {
   const header = request.headers.get("authorization") || "";
@@ -86,6 +87,18 @@ export async function POST(request: NextRequest) {
       }
 
       await syncGrEntryForStudent(link.schoolId, student);
+      await logStudentEdits(
+        {
+          userId: link.createdById || "",
+          name: "Edit link",
+          role: "edit_link",
+          schoolId: link.schoolId,
+        },
+        student.id,
+        studentAuditLabel(student),
+        existing,
+        student,
+      );
       updated++;
     }
 

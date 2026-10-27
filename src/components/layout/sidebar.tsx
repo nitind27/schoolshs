@@ -23,6 +23,9 @@ import {
   FileSearch,
   FileText,
   ClipboardList,
+  AlertTriangle,
+  History,
+  Palette,
   IndianRupee,
   CalendarClock,
   Hash,
@@ -143,6 +146,12 @@ const useNavGroups = (
             icon: Link2,
             featureKey: "students",
           },
+          {
+            href: "/students/scholarship-gaps",
+            label: t("paperDesk.title"),
+            icon: FileSearch,
+            featureKey: "students",
+          },
         ],
       },
       {
@@ -195,6 +204,12 @@ const useNavGroups = (
             featureKey: "staff",
           },
           {
+            href: "/staff/salary-certificate",
+            label: t("salaryCert.title"),
+            icon: FileText,
+            featureKey: "staff",
+          },
+          {
             href: "/staff/income-tax",
             label: t("incomeTax.title"),
             icon: Calculator,
@@ -241,6 +256,26 @@ const useNavGroups = (
         label: t("navExt.studentAttendance"),
         icon: ClipboardList,
         featureKey: "attendance",
+      },
+      {
+        type: "link",
+        href: "/attendance/shortfall",
+        label: t("shortfall.title"),
+        icon: AlertTriangle,
+        featureKey: "attendance",
+      },
+      {
+        type: "link",
+        href: "/activity/changes",
+        label: t("changeLog.title"),
+        icon: History,
+        featureKey: "students",
+      },
+      {
+        type: "link",
+        href: "/settings/theme",
+        label: t("theme.title"),
+        icon: Palette,
       },
       {
         type: "link",
@@ -457,7 +492,13 @@ export function Sidebar() {
   const filteredGroups = navGroups
     .map((g) => ({
       ...g,
-      items: filterNavEntries(g.items, enabledFeatures, isFeatureEnabled),
+      items: filterNavEntries(g.items, enabledFeatures, isFeatureEnabled).filter((item) => {
+        if (item.type === "link" && item.href === "/settings/theme") {
+          return user?.role === "school_admin" || user?.role === "supervisor";
+        }
+        if (user?.role !== "supervisor") return true;
+        return item.type !== "link" || item.href !== "/results/marks-access";
+      }),
     }))
     .filter((g) => g.items.length > 0);
 
@@ -491,7 +532,7 @@ export function Sidebar() {
         )}
         style={{
           width: mobileOpen ? SIDEBAR_EXPANDED_W : width,
-          background: "#111827",
+          background: "var(--sidebar-bg)",
           borderRight: "1px solid rgba(255,255,255,.06)",
         }}
       >
@@ -507,8 +548,8 @@ export function Sidebar() {
             <div
               className="shrink-0 rounded-xl p-2.5 flex items-center justify-center"
               style={{
-                background: "rgba(4,120,87,.35)",
-                border: "1px solid rgba(13,148,136,.45)",
+                background: "var(--sidebar-mark)",
+                border: "1px solid var(--sidebar-mark-line)",
               }}
             >
               <GraduationCap className="h-5 w-5 text-white" />

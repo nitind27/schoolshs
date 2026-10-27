@@ -16,6 +16,7 @@ import { HelpChatbot } from "@/components/help/help-chatbot";
 import { PageLoader } from "@/components/ui/loader";
 import { RouteProgressGate } from "@/components/layout/route-progress";
 import { SidebarCollapseProvider } from "@/components/layout/sidebar-collapse";
+import { SchoolThemeProvider } from "@/components/theme/school-theme";
 import { SchoolFeatureRouteGuard } from "@/components/school/school-feature-route-guard";
 
 function LayoutForRole({ role, children }: { role: UserRole; children: React.ReactNode }) {
@@ -264,6 +265,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <RouteProgressGate />
         </Suspense>
         <AppShellInner>{children}</AppShellInner>
+        <SchoolThemeProvider />
         <HelpChatbot />
       </SidebarCollapseProvider>
     </LocaleProvider>

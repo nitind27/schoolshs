@@ -1,0 +1,146 @@
+/* School template themes. Tokens are set on <html data-theme="…">. */
+
+html[data-theme="forest"] {
+  --sidebar-bg: #111827;
+  --sidebar-bg-2: #0f172a;
+  --sidebar-hover: #1f2937;
+  --sidebar-active: #047857;
+  --sidebar-active-hover: #065f46;
+  --sidebar-mark: rgba(4, 120, 87, 0.35);
+  --sidebar-mark-line: rgba(13, 148, 136, 0.45);
+  --brand-500: #0d9488;
+  --brand-600: #047857;
+  --brand-700: #065f46;
+  --hero-wash: #ecfdf5;
+}
+html[data-theme="navy"] {
+  --sidebar-bg: #0b1b33;
+  --sidebar-bg-2: #071226;
+  --sidebar-hover: #13284a;
+  --sidebar-active: #1d4ed8;
+  --sidebar-active-hover: #1e40af;
+  --sidebar-mark: rgba(29, 78, 216, 0.4);
+  --sidebar-mark-line: rgba(147, 197, 253, 0.45);
+  --brand-500: #3b82f6;
+  --brand-600: #1d4ed8;
+  --brand-700: #1e3a8a;
+  --hero-wash: #eff6ff;
+}
+html[data-theme="royal"] {
+  --sidebar-bg: #1e1b4b;
+  --sidebar-bg-2: #17153f;
+  --sidebar-hover: #312e81;
+  --sidebar-active: #4f46e5;
+  --sidebar-active-hover: #4338ca;
+  --sidebar-mark: rgba(79, 70, 229, 0.4);
+  --sidebar-mark-line: rgba(199, 210, 254, 0.5);
+  --brand-500: #818cf8;
+  --brand-600: #4f46e5;
+  --brand-700: #3730a3;
+  --hero-wash: #eef2ff;
+}
+html[data-theme="ocean"] {
+  --sidebar-bg: #0c4a6e;
+  --sidebar-bg-2: #082f49;
+  --sidebar-hover: #075985;
+  --sidebar-active: #0284c7;
+  --sidebar-active-hover: #0369a1;
+  --sidebar-mark: rgba(14, 165, 233, 0.35);
+  --sidebar-mark-line: rgba(186, 230, 253, 0.55);
+  --brand-500: #0ea5e9;
+  --brand-600: #0284c7;
+  --brand-700: #075985;
+  --hero-wash: #f0f9ff;
+}
+html[data-theme="burgundy"] {
+  --sidebar-bg: #2a1218;
+  --sidebar-bg-2: #1a0b10;
+  --sidebar-hover: #3f1d27;
+  --sidebar-active: #be123c;
+  --sidebar-active-hover: #9f1239;
+  --sidebar-mark: rgba(190, 18, 60, 0.4);
+  --sidebar-mark-line: rgba(253, 164, 175, 0.45);
+  --brand-500: #e11d48;
+  --brand-600: #be123c;
+  --brand-700: #9f1239;
+  --hero-wash: #fff1f2;
+}
+html[data-theme="copper"] {
+  --sidebar-bg: #1c1410;
+  --sidebar-bg-2: #120e0c;
+  --sidebar-hover: #3f2a22;
+  --sidebar-active: #c2410c;
+  --sidebar-active-hover: #9a3412;
+  --sidebar-mark: rgba(194, 65, 12, 0.4);
+  --sidebar-mark-line: rgba(253, 186, 116, 0.5);
+  --brand-500: #f97316;
+  --brand-600: #c2410c;
+  --brand-700: #9a3412;
+  --hero-wash: #fff7ed;
+}
+html[data-theme="plum"] {
+  --sidebar-bg: #2e1065;
+  --sidebar-bg-2: #1e0a45;
+  --sidebar-hover: #4c1d95;
+  --sidebar-active: #7c3aed;
+  --sidebar-active-hover: #6d28d9;
+  --sidebar-mark: rgba(124, 58, 237, 0.4);
+  --sidebar-mark-line: rgba(221, 214, 254, 0.5);
+  --brand-500: #a78bfa;
+  --brand-600: #7c3aed;
+  --brand-700: #5b21b6;
+  --hero-wash: #f5f3ff;
+}
+html[data-theme="jade"] {
+  --sidebar-bg: #042f2e;
+  --sidebar-bg-2: #022c22;
+  --sidebar-hover: #134e4a;
+  --sidebar-active: #0f766e;
+  --sidebar-active-hover: #115e59;
+  --sidebar-mark: rgba(20, 184, 166, 0.35);
+  --sidebar-mark-line: rgba(153, 246, 228, 0.5);
+  --brand-500: #14b8a6;
+  --brand-600: #0f766e;
+  --brand-700: #115e59;
+  --hero-wash: #f0fdfa;
+}
+
+.shell-aside {
+  background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-2) 100%) !important;
+}
+
+.shell-flyout {
+  background: var(--sidebar-bg) !important;
+}
+
+.page-hero {
+  background: linear-gradient(135deg, #ffffff 0%, var(--hero-wash) 100%);
+}
+
+.tn-shell {
+  --tn-accent: var(--brand-600);
+  --tn-accent-deep: var(--brand-700);
+}
+
+::selection {
+  background: var(--hero-wash);
+  color: var(--brand-700);
+}
+
+/* Primary blue actions follow the school theme. Success, warning and danger stay semantic. */
+html[data-theme] .bg-blue-600 { background-color: var(--brand-600) !important; }
+html[data-theme] .bg-blue-700,
+html[data-theme] .hover\:bg-blue-700:hover,
+html[data-theme] .hover\:bg-blue-800:hover,
+html[data-theme] .active\:bg-blue-800:active { background-color: var(--brand-700) !important; }
+html[data-theme] .bg-blue-50 { background-color: var(--hero-wash) !important; }
+html[data-theme] .bg-blue-100 { background-color: var(--hero-wash) !important; }
+html[data-theme] .text-blue-600,
+html[data-theme] .text-blue-700,
+html[data-theme] .hover\:text-blue-700:hover,
+html[data-theme] .text-cyan-700,
+html[data-theme] .text-cyan-800 { color: var(--brand-700) !important; }
+html[data-theme] .border-blue-500,
+html[data-theme] .border-blue-600,
+html[data-theme] .border-l-blue-500 { border-color: var(--brand-600) !important; }
+html[data-theme] .ring-blue-500 { --tw-ring-color: var(--brand-500) !important; }

@@ -10,6 +10,7 @@ import {
 import { normalizeGender } from "@/lib/gender-utils";
 import { FINANCIAL_YEARS } from "@/lib/constants";
 import { studentFullNameEn, studentFullNameGu } from "@/lib/student-names";
+import { getSupervisorClassIds, supervisorClassIdFilter } from "@/lib/supervisor-scope";
 
 function parseFilters(searchParams: URLSearchParams): DashboardFilters {
   return {
@@ -29,10 +30,16 @@ export async function GET(request: NextRequest) {
     const where = buildStudentWhere(session.schoolId, filters);
     const schoolScope = { schoolId: session.schoolId };
     const classWhere = buildClassWhere(session.schoolId, filters.academicYear);
+    const supervisorFilter = supervisorClassIdFilter(await getSupervisorClassIds(session));
+    if (supervisorFilter) {
+      where.classId = supervisorFilter;
+      classWhere.id = supervisorFilter;
+    }
     // Meta / admissions scoped to selected year (or whole school if none)
     const metaWhere = buildStudentWhere(session.schoolId, {
       academicYear: filters.academicYear,
     });
+    if (supervisorFilter) metaWhere.classId = supervisorFilter;
 
     const [
       total,

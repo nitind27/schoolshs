@@ -213,7 +213,11 @@ export function StaffPortalAccountPanel({
             <span>
               {t("accountSettings.portalRole")}:{" "}
               <strong className="text-slate-800">
-                {data?.account?.role === "clerk" ? t("roles.clerk") : t("roles.teacher")}
+                {data?.account?.role === "clerk"
+                  ? t("roles.clerk")
+                  : data?.account?.role === "supervisor"
+                    ? t("roles.supervisor")
+                    : t("roles.teacher")}
               </strong>
             </span>
             {data?.account?.lastLoginAt && (
@@ -318,6 +322,7 @@ export function StaffPortalAccountPanel({
                 required
                 options={[
                   { value: "teacher", label: t("roles.teacher") },
+                  { value: "supervisor", label: t("roles.supervisor") },
                   { value: "clerk", label: t("roles.clerk") },
                 ]}
                 value={role}
@@ -403,6 +408,7 @@ export function StaffPortalAccountPanel({
               required
               options={[
                 { value: "teacher", label: t("roles.teacher") },
+                { value: "supervisor", label: t("roles.supervisor") },
                 { value: "clerk", label: t("roles.clerk") },
               ]}
               value={role}

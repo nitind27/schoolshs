@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireStaffAuth } from "@/lib/auth";
-import { resequenceClassRollNumbers } from "@/lib/roll-resequence";
+import { notifySchoolRoles } from "@/lib/notifications";
+import { studentAuditLabel, writeChangeLog } from "@/lib/change-log";
+import { assignNextClassRoll, closeClassRollGap } from "@/lib/roll-resequence";
 
 /**
  * Activate / deactivate a student.
@@ -18,10 +20,18 @@ export async function PATCH(
     const body = await request.json().catch(() => ({}));
     const active = body.active === true || body.active === "true";
     const deactivate = body.active === false || body.active === "false" || body.deactivate === true;
+    const rollMode = body.rollMode === "blank" ? "blank" : body.rollMode === "shift" ? "shift" : null;
 
     if (!active && !deactivate) {
       return NextResponse.json(
         { error: "Send { active: true } or { active: false }" },
+        { status: 400 },
+      );
+    }
+
+    if (deactivate && !rollMode) {
+      return NextResponse.json(
+        { error: "Choose how the class roll should be handled" },
         { status: 400 },
       );
     }
@@ -32,9 +42,15 @@ export async function PATCH(
         id: true,
         status: true,
         previousStatus: true,
+        deactivateRollMode: true,
         firstName: true,
         surname: true,
         classId: true,
+        grNumber: true,
+        rollNumber: true,
+        standard: true,
+        section: true,
+        schoolClass: { select: { standard: true, section: true, name: true } },
         user: { select: { id: true, isActive: true } },
       },
     });
@@ -53,13 +69,15 @@ export async function PATCH(
         });
       }
 
+      const keepSeat = rollMode === "blank";
       const updated = await prisma.$transaction(async (tx) => {
         const row = await tx.student.update({
           where: { id },
           data: {
             previousStatus: student.status || "ready",
             status: "archived",
-            rollNumber: null,
+            deactivateRollMode: rollMode,
+            ...(keepSeat ? {} : { rollNumber: null }),
           },
         });
         if (student.user?.id) {
@@ -72,8 +90,8 @@ export async function PATCH(
             data: { revokedAt: new Date(), revokeReason: "student_deactivated" },
           });
         }
-        if (student.classId) {
-          await resequenceClassRollNumbers(tx, {
+        if (!keepSeat && student.classId) {
+          await closeClassRollGap(tx, {
             schoolId: session.schoolId,
             classId: student.classId,
             excludeStudentId: id,
@@ -82,9 +100,62 @@ export async function PATCH(
         return row;
       });
 
+      const studentName = [student.firstName, student.surname].filter(Boolean).join(" ").trim() || "Student";
+      const classLabel = [
+        student.standard || student.schoolClass?.standard || "",
+        student.section || student.schoolClass?.section || "",
+      ]
+        .filter(Boolean)
+        .join("-");
+      const modeText = keepSeat
+        ? "Name stays on the monthly attendance patrak with blank attendance. Other roll numbers were not changed."
+        : "Later roll numbers moved up, and the name was removed from the monthly attendance patrak.";
+      const details = [
+        student.grNumber ? `GR ${student.grNumber}` : "",
+        student.rollNumber ? `Roll ${student.rollNumber}` : "",
+        classLabel ? `Class ${classLabel}` : "",
+      ].filter(Boolean);
+      try {
+        await notifySchoolRoles({
+          schoolId: session.schoolId,
+          roles: ["school_admin", "supervisor"],
+          type: "student",
+          title: "Student deactivated",
+          body: `${session.name || "A staff member"} deactivated ${studentName}${
+            details.length ? ` (${details.join(", ")})` : ""
+          }. ${modeText}`,
+          href: "/students/inactive",
+          meta: {
+            kind: "student_deactivated",
+            studentId: student.id,
+            studentName,
+            grNumber: student.grNumber,
+            rollNumber: student.rollNumber,
+            classLabel,
+            rollMode,
+            actorUserId: session.userId,
+            actorName: session.name || "",
+          },
+        });
+      } catch (notifyError) {
+        console.error("deactivate notification", notifyError);
+      }
+
+      await writeChangeLog({
+        actor: session,
+        kind: "student",
+        action: "deactivate",
+        targetId: student.id,
+        targetLabel: studentAuditLabel(student),
+        summary: keepSeat
+          ? "Deactivated. Name stays on the attendance patrak with blank attendance."
+          : "Deactivated. Later roll numbers moved up and the name left the patrak.",
+      });
+
       return NextResponse.json({
         ok: true,
         active: false,
+        rollMode,
         student: { id: updated.id, status: updated.status, previousStatus: updated.previousStatus },
       });
     }
@@ -103,6 +174,7 @@ export async function PATCH(
         data: {
           status: restoreStatus,
           previousStatus: null,
+          deactivateRollMode: null,
         },
       });
       if (student.user?.id) {
@@ -111,13 +183,24 @@ export async function PATCH(
           data: { isActive: true },
         });
       }
-      if (student.classId && restoreStatus !== "draft") {
-        await resequenceClassRollNumbers(tx, {
+      const keptSeat = student.deactivateRollMode === "blank" && Boolean(student.rollNumber);
+      if (!keptSeat && student.classId && restoreStatus !== "draft") {
+        await assignNextClassRoll(tx, {
           schoolId: session.schoolId,
           classId: student.classId,
+          studentId: id,
         });
       }
       return row;
+    });
+
+    await writeChangeLog({
+      actor: session,
+      kind: "student",
+      action: "activate",
+      targetId: student.id,
+      targetLabel: studentAuditLabel(student),
+      summary: "Student activated again",
     });
 
     return NextResponse.json({

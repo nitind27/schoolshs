@@ -249,15 +249,23 @@ function cleanMark(v: number | null | undefined): number | null {
  * Build display rows from official Songadh template order only.
  * Extra exam subjects are ignored so the printed card stays 11 fixed rows.
  */
-/** Standards 6–8 result (school 24261004404): computer, PE, and GK take marks in both terms. */
+/**
+ * School 24261004404 progress card.
+ * પ્રથમ સત્ર is 800: ચિત્રકામ, શારીરિક શિક્ષણ and સામાન્ય જ્ઞાન show —.
+ * દ્વિતીય સત્ર is 1000: only સામાન્ય જ્ઞાન shows —.
+ * વર્ષાન્તે is 1800 (800 + 1000).
+ */
 export function withUpperPrimaryResultMarks(
   def: PragatiSubjectDef,
   schoolCode?: string | null,
 ): PragatiSubjectDef {
   const code = String(schoolCode || "").trim();
   if (code !== "24261004404") return def;
-  if (def.key === "comp" || def.key === "pe" || def.key === "gk") {
-    return { ...def, sem1Max: 100, sem2Max: 100 };
+  if (def.key === "art" || def.key === "pe") {
+    return { ...def, sem1Max: null, sem2Max: 100 };
+  }
+  if (def.key === "gk") {
+    return { ...def, sem1Max: null, sem2Max: null };
   }
   return def;
 }
@@ -320,9 +328,10 @@ function computeSubjectRow(
     annual = fallback;
   }
 
-  // Clamp marks that don't apply
+  // Clamp marks that don't apply. A dash subject must not add into the year total.
   if (sem1Max == null) sem1 = null;
   if (sem2Max == null) sem2 = null;
+  if (annualMax == null) annual = null;
 
   const g1 = pragatiGradeFromPercent(pragatiPercent(sem1, sem1Max));
   const g2 = pragatiGradeFromPercent(pragatiPercent(sem2, sem2Max));

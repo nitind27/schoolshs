@@ -40,7 +40,7 @@ export default function RootLayout({
       <body className={`${geistSans.className} ${notoGujarati.className} min-h-full`}>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var k="shs_locale_v3",e="shs_locale_explicit";localStorage.removeItem("shs_locale");localStorage.removeItem("shs_locale_v2");var explicit=localStorage.getItem(e)==="1";var stored=localStorage.getItem(k);var loc=(explicit&&(stored==="en"||stored==="gu"))?stored:"gu";if(!explicit){localStorage.setItem(k,"gu");loc="gu";}document.documentElement.lang=loc==="gu"?"gu":"en";document.documentElement.classList.add(loc==="gu"?"locale-gu":"locale-en");document.documentElement.classList.remove(loc==="gu"?"locale-en":"locale-gu");}catch(err){}})();`,
+            __html: `(function(){try{var k="shs_locale_v3",e="shs_locale_explicit";localStorage.removeItem("shs_locale");localStorage.removeItem("shs_locale_v2");var explicit=localStorage.getItem(e)==="1";var stored=localStorage.getItem(k);var loc=(explicit&&(stored==="en"||stored==="gu"))?stored:"gu";if(!explicit){localStorage.setItem(k,"gu");loc="gu";}document.documentElement.lang=loc==="gu"?"gu":"en";document.documentElement.classList.add(loc==="gu"?"locale-gu":"locale-en");document.documentElement.classList.remove(loc==="gu"?"locale-en":"locale-gu");var theme=localStorage.getItem("shs_theme");var themes={forest:1,navy:1,royal:1,ocean:1,burgundy:1,copper:1,plum:1,jade:1};if(theme&&themes[theme])document.documentElement.setAttribute("data-theme",theme);}catch(err){}})();`,
           }}
         />
         <AppShell>{children}</AppShell>

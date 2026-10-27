@@ -10,6 +10,7 @@ import {
   salaryCategoryDisplayLabel,
   type SalaryCategory,
 } from "@/lib/salary-statement";
+import { sliceMonthRange } from "@/lib/salary-month-range";
 import { loadSchoolSalaryStatement } from "@/lib/salary-statement-server";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,10 @@ export async function GET(request: NextRequest) {
     const schoolName = built.schoolName || "";
     const schoolType = built.schoolType;
 
-    const months = fyMonths(financialYear);
+    const months = sliceMonthRange(fyMonths(financialYear), searchParams.get("from"), searchParams.get("to"));
+    const span = months.length
+      ? `${monthLabel(months[0].month, months[0].year)} – ${monthLabel(months[months.length - 1].month, months[months.length - 1].year)}`
+      : financialYear;
     // month -> field -> sum
     const byMonth = new Map<number, Record<string, number>>();
     for (const row of rows) {
@@ -52,7 +56,7 @@ export async function GET(request: NextRequest) {
     const colCount = months.length + 2;
 
     ws.mergeCells(1, 1, 1, colCount);
-    ws.getCell(1, 1).value = `SALARY LEDGER ${financialYear} — ${catLabel} — ${schoolName}`;
+    ws.getCell(1, 1).value = `SALARY LEDGER ${financialYear} (${span}) — ${catLabel} — ${schoolName}`;
     ws.getCell(1, 1).font = { bold: true, size: 12 };
     ws.getCell(1, 1).alignment = { horizontal: "center" };
 

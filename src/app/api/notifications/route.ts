@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import {
   buildNotificationFeed,
@@ -19,6 +20,28 @@ export async function GET(request: NextRequest) {
       40,
       Math.max(5, parseInt(request.nextUrl.searchParams.get("take") || "20", 10) || 20)
     );
+    if (request.nextUrl.searchParams.get("kind") === "deactivation") {
+      const rows = await prisma.notification.findMany({
+        where: {
+          userId: session.userId,
+          schoolId: session.schoolId,
+          type: "student",
+          title: "Student deactivated",
+        },
+        orderBy: { createdAt: "desc" },
+        take,
+        select: { id: true, title: true, body: true, href: true, createdAt: true },
+      });
+      return NextResponse.json({
+        items: rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          body: row.body,
+          href: row.href,
+          createdAt: row.createdAt.toISOString(),
+        })),
+      });
+    }
     const feed = await buildNotificationFeed(session.userId, session.role as UserRole, {
       take,
       schoolId: session.schoolId,

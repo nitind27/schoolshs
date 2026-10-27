@@ -10,16 +10,24 @@ import {
   toClassRegisterRows,
 } from "@/lib/attendance";
 import { assertTeacherAttendanceAccess } from "@/lib/teacher-attendance";
+import {
+  assertSupervisorClassAccess,
+  assertSupervisorStudentsAccess,
+  getSupervisorClassIds,
+  supervisorClassIdFilter,
+} from "@/lib/supervisor-scope";
 import { assertStudentsInSchool } from "@/lib/school-assertions";
 
 async function fetchStudents(
   schoolId: string,
   classId: string | null,
   standard: string | null,
-  section: string | null
+  section: string | null,
+  classFilter?: { in: string[] } | null,
 ) {
   const where: Record<string, unknown> = { schoolId, status: { not: "archived" } };
   if (classId) where.classId = classId;
+  else if (classFilter) where.classId = classFilter;
   if (standard) where.standard = standard;
   if (section) where.section = section;
 
@@ -41,12 +49,15 @@ export async function GET(request: NextRequest) {
     const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()), 10);
 
     await assertTeacherAttendanceAccess(session, classId);
+    const supervisorFilter = supervisorClassIdFilter(await getSupervisorClassIds(session));
+    if (classId) await assertSupervisorClassAccess(session, classId);
 
     const students = await fetchStudents(
       session.schoolId,
       classId,
       standard,
-      section
+      section,
+      supervisorFilter,
     );
 
     const studentIds = students.map((s) => s.id);
@@ -101,9 +112,11 @@ export async function PUT(request: NextRequest) {
     }
 
     await assertTeacherAttendanceAccess(session, classId);
+    if (classId) await assertSupervisorClassAccess(session, classId);
 
     const studentIds = entries.map((e) => e.studentId);
     await assertStudentsInSchool(session.schoolId, studentIds);
+    await assertSupervisorStudentsAccess(session, studentIds);
 
     // Persist roll numbers edited in the attendance grid
     for (const entry of entries) {

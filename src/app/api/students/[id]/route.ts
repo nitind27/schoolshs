@@ -12,6 +12,8 @@ import {
   assertStudentAccountEmailAvailable,
   syncStudentPortalAccount,
 } from "@/lib/student-account";
+import { assertSupervisorStudentAccess } from "@/lib/supervisor-scope";
+import { logStudentEdits, studentAuditLabel, writeChangeLog } from "@/lib/change-log";
 
 async function getOwnedStudent(id: string, schoolId: string) {
   return prisma.student.findFirst({ where: { id, schoolId } });
@@ -26,6 +28,7 @@ export async function GET(
     const { id } = await params;
     const student = await getOwnedStudent(id, session.schoolId);
     if (!student) return NextResponse.json({ error: "Student not found" }, { status: 404 });
+    await assertSupervisorStudentAccess(session, student);
     return NextResponse.json(student);
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
@@ -42,6 +45,7 @@ export async function PUT(
     const { id } = await params;
     const existing = await getOwnedStudent(id, session.schoolId);
     if (!existing) return NextResponse.json({ error: "Student not found" }, { status: 404 });
+    await assertSupervisorStudentAccess(session, existing);
 
     const body = await request.json();
     const isDraft = body.draft === true;
@@ -105,6 +109,7 @@ export async function PUT(
       }
     }
 
+    await assertSupervisorStudentAccess(session, { classId: data.classId || existing.classId });
     await assertStudentAccountEmailAvailable(data.email, id);
     const student = await prisma.student.update({
       where: { id },
@@ -119,6 +124,14 @@ export async function PUT(
     if (student.grNumber?.trim() && student.status !== "draft") {
       await syncGrEntryForStudent(session.schoolId, student);
     }
+
+    await logStudentEdits(
+      session,
+      student.id,
+      studentAuditLabel(student),
+      existing,
+      student,
+    );
 
     return NextResponse.json({ student, errors });
   } catch (error) {
@@ -136,7 +149,16 @@ export async function DELETE(
     const { id } = await params;
     const existing = await getOwnedStudent(id, session.schoolId);
     if (!existing) return NextResponse.json({ error: "Student not found" }, { status: 404 });
+    await assertSupervisorStudentAccess(session, existing);
 
+    await writeChangeLog({
+      actor: session,
+      kind: "student",
+      action: "delete",
+      targetId: id,
+      targetLabel: studentAuditLabel(existing),
+      summary: "Student record deleted",
+    });
     await deleteStudentCompletely({ studentId: id, schoolId: session.schoolId });
     return NextResponse.json({ success: true });
   } catch (error) {

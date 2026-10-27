@@ -110,6 +110,8 @@ export interface ClassRegisterRow {
   prevTotal: string;
   cumulative: string;
   note: string;
+  /** Deactivated student kept on the patrak with blank attendance. */
+  held?: boolean;
 }
 
 export interface ScholarshipReportRow {

@@ -42,6 +42,12 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
       group: t("teacherNav.groupMyWork"),
     },
     {
+      href: "/attendance/shortfall",
+      label: t("shortfall.title"),
+      icon: ClipboardList,
+      group: t("teacherNav.groupMyWork"),
+    },
+    {
       href: "/teacher/timetable",
       label: t("timetable.myTimetable"),
       icon: CalendarClock,

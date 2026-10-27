@@ -5,6 +5,7 @@ import { requireSchoolFeature } from "@/lib/school-feature-access";
 import { studentFullName } from "@/lib/certificates/date-to-words";
 import { studentFullNameGu, type StudentNameLike } from "@/lib/student-names";
 import { buildAttendanceRows, toClassRegisterRows } from "@/lib/attendance";
+import { buildMonthDayColumns, cleanAttendanceDayNotes } from "@/lib/attendance-day-columns";
 import { assertTeacherAttendanceAccess } from "@/lib/teacher-attendance";
 import { mapStudentToGrRow } from "@/lib/certificates/general-register";
 import type {
@@ -182,7 +183,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const where: Record<string, unknown> = { schoolId: session.schoolId, status: { not: "archived" } };
+    const where: Record<string, unknown> = {
+      schoolId: session.schoolId,
+      ...(type === "patrak" && !studentId
+        ? { OR: [{ status: { not: "archived" } }, { deactivateRollMode: "blank" }] }
+        : { status: { not: "archived" } }),
+    };
     // Single-student mode: ignore class filters so analysis / deep-links never miss the student
     if (studentId) {
       where.id = studentId;
@@ -211,11 +217,40 @@ export async function GET(request: NextRequest) {
           })
         : [];
       const saved = new Map(records.map((r) => [r.studentId, r]));
+      const counted = students.filter((s) => s.status !== "archived");
+      const registerStudents = students.map((s) => ({
+        ...s,
+        attendanceBlank: s.status === "archived",
+      }));
+      const monthNumSafe = Number.isFinite(monthNum) ? monthNum : new Date().getMonth() + 1;
+      const yearNumSafe = Number.isFinite(yearNum) ? yearNum : new Date().getFullYear();
+      const monthKey = `${yearNumSafe}-${String(monthNumSafe).padStart(2, "0")}`;
+      const [holidays, settings] = await Promise.all([
+        prisma.holiday.findMany({
+          where: {
+            schoolId: session.schoolId,
+            date: { startsWith: monthKey },
+            type: { in: ["public", "school"] },
+          },
+          select: { date: true, name: true, nameGu: true },
+        }),
+        prisma.schoolSettings.findFirst({
+          where: { schoolId: session.schoolId },
+          select: { attendanceDayNotesJson: true },
+        }),
+      ]);
+      const dayColumns = buildMonthDayColumns({
+        year: yearNumSafe,
+        month: monthNumSafe,
+        holidays,
+        saved: cleanAttendanceDayNotes(settings?.attendanceDayNotesJson),
+      });
       return NextResponse.json({
-        patrak: buildPatrak(students, { month, year, standard: std, section: sec, classTeacher: "" }),
-        registerRows: buildClassRegisterFromAttendance(students, saved),
-        scholarship: buildScholarshipRows(students),
-        admissions: buildAdmissionRows(students),
+        patrak: buildPatrak(counted, { month, year, standard: std, section: sec, classTeacher: "" }),
+        registerRows: buildClassRegisterFromAttendance(registerStudents, saved),
+        dayColumns,
+        scholarship: buildScholarshipRows(counted),
+        admissions: buildAdmissionRows(counted),
         leavers: buildLeaverRows(),
       });
     }

@@ -1,0 +1,76 @@
+@media print {
+  @page ops-a4 {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .shell-aside,
+  .shell-footer,
+  .shell-menu-btn,
+  header.tn-shell,
+  .page-hero,
+  .no-print {
+    display: none !important;
+  }
+
+  .shell-main {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .ops-print,
+  .ops-print * {
+    visibility: visible !important;
+  }
+
+  .ops-print {
+    page: ops-a4;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .ops-print table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .cert-table {
+    table-layout: auto !important;
+    font-size: 11pt;
+    line-height: 1.25;
+  }
+
+  .cert-table th,
+  .cert-table td {
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    padding: 3px 8px !important;
+    vertical-align: middle !important;
+    border: 1px solid #000 !important;
+  }
+}

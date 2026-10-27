@@ -17,7 +17,7 @@ import { GlobalDataTable } from "@/components/ui/global-data-table";
 import { ClickableStaffPhoto } from "@/components/staff/staff-photo-lightbox";
 import { staffPhotoPublicUrl } from "@/lib/staff-photo";
 
-type StaffRow = Staff & { _count?: { classes: number } };
+type StaffRow = Staff & { _count?: { classes: number; supervisorClasses?: number } };
 
 export default function StaffPage() {
   const t = useT();
@@ -25,8 +25,10 @@ export default function StaffPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [designation, setDesignation] = useState("");
+  const requestSeq = useMemo(() => ({ current: 0 }), []);
   const [dashHref, setDashHref] = useState("/dashboard");
   const [isAdmin, setIsAdmin] = useState(false);
   const [hrSummary, setHrSummary] = useState<{
@@ -47,17 +49,24 @@ export default function StaffPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const fetchStaff = useCallback(async () => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     if (search) params.set("search", search);
     if (designation) params.set("designation", designation);
     const res = await fetch(`/api/staff?${params}`);
     const data = await res.json();
+    if (seq !== requestSeq.current) return;
     setStaff(data.staff || []);
     setTotal(data.total ?? 0);
     setLoading(false);
-  }, [search, designation, page]);
+  }, [search, designation, page, requestSeq]);
 
   useEffect(() => {
     fetchStaff();
@@ -120,7 +129,7 @@ export default function StaffPage() {
       },
       {
         header: t("staffPage.classesColumn"),
-        accessorFn: (s) => s._count?.classes ?? 0,
+        accessorFn: (s) => (s._count?.classes ?? 0) + (s._count?.supervisorClasses ?? 0),
         cell: ({ getValue }) => <span className="font-semibold">{String(getValue())}</span>,
       },
       {
@@ -203,8 +212,8 @@ export default function StaffPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               placeholder={t("staffPage.searchPlaceholder")}
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              value={searchInput}
+              onChange={(e) => { setSearchInput(e.target.value); setPage(1); }}
               className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>

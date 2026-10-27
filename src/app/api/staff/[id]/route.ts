@@ -4,6 +4,7 @@ import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { fillStaffGuNames } from "@/lib/gujarati/transliterate-server";
 import { staffSalaryFields } from "@/lib/staff-salary";
 import { staffServiceFields } from "@/lib/staff-register";
+import { isSupervisorDesignation, pickStaffPortalRole } from "@/lib/staff-portal";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -15,10 +16,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       where: { id, schoolId: session.schoolId },
       include: {
         classes: { include: { _count: { select: { students: true } } } },
+        supervisorClasses: { select: { classId: true } },
       },
     });
     if (!staff) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
-    return NextResponse.json(staff);
+    return NextResponse.json({
+      ...staff,
+      supervisorClassIds: staff.supervisorClasses.map((row) => row.classId),
+    });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
     return NextResponse.json({ error: "Failed to fetch staff" }, { status: 500 });
@@ -31,7 +36,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const existing = await prisma.staff.findFirst({
       where: { id, schoolId: session.schoolId },
-      include: { user: { select: { id: true, email: true } } },
+      include: { user: { select: { id: true, email: true, role: true } } },
     });
     if (!existing) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
 
@@ -104,13 +109,52 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const staff = await prisma.$transaction(async (tx) => {
       const updated = await tx.staff.update({ where: { id }, data });
       if (existing.user) {
-        const userPatch: { email?: string; name: string } = {
+        const userPatch: { email?: string; name: string; role?: string } = {
           name: `${data.firstName} ${data.lastName}`.trim(),
         };
         if (nextEmail && nextEmail !== existing.user.email.toLowerCase()) {
           userPatch.email = nextEmail;
         }
+        if (session.role === "school_admin") {
+          const nextRole = pickStaffPortalRole(designation);
+          if (nextRole === "supervisor" || existing.user.role === "supervisor") {
+            userPatch.role = nextRole;
+          }
+        }
         await tx.user.update({ where: { id: existing.user.id }, data: userPatch });
+      }
+      if (session.role === "school_admin" && !isSupervisorDesignation(designation)) {
+        await tx.staffSupervisorClass.deleteMany({
+          where: { staffId: id, schoolId: session.schoolId },
+        });
+      } else if (
+        session.role === "school_admin" &&
+        isSupervisorDesignation(designation) &&
+        Array.isArray(body.supervisorClassIds)
+      ) {
+        const classIds: string[] = [];
+        for (const value of body.supervisorClassIds as unknown[]) {
+          const id = String(value || "").trim();
+          if (id && !classIds.includes(id)) classIds.push(id);
+        }
+        await tx.staffSupervisorClass.deleteMany({
+          where: { staffId: id, schoolId: session.schoolId },
+        });
+        if (classIds.length) {
+          const classes = await tx.schoolClass.findMany({
+            where: { schoolId: session.schoolId, id: { in: classIds } },
+            select: { id: true },
+          });
+          if (classes.length) {
+            await tx.staffSupervisorClass.createMany({
+              data: classes.map((item) => ({
+                schoolId: session.schoolId,
+                staffId: id,
+                classId: item.id,
+              })),
+            });
+          }
+        }
       }
       return updated;
     });

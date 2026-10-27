@@ -16,6 +16,7 @@ import {
   totalDeduction,
   type SlipFieldKey,
 } from "@/lib/salary-slip";
+import { sliceMonthRange } from "@/lib/salary-month-range";
 import { staffServiceDates } from "@/lib/staff-register";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +47,10 @@ export async function GET(request: NextRequest) {
     const byMonth = new Map(
       buildSlipYearRows(financialYear, staff, dbRows).map((row) => [row.month, row]),
     );
-    const months = slipFyMonths(financialYear);
+    const months = sliceMonthRange(slipFyMonths(financialYear), searchParams.get("from"), searchParams.get("to"));
+    const span = months.length
+      ? `${slipMonthLabel(months[0].month, months[0].year)} – ${slipMonthLabel(months[months.length - 1].month, months[months.length - 1].year)}`
+      : financialYear;
     const { retireDate } = staffServiceDates(staff);
 
     const headers = [
@@ -70,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     ws.mergeCells(2, 1, 2, headers.length);
     ws.getCell(2, 1).value =
-      `STATEMENT OF EMPLOYEE INCOME OF SALARY & ANNUAL DEDUCTION & PERSONAL DETAILS — FINANCIAL YEAR: ${financialYear}`;
+      `STATEMENT OF EMPLOYEE INCOME OF SALARY & ANNUAL DEDUCTION & PERSONAL DETAILS — FINANCIAL YEAR: ${financialYear} (${span})`;
     ws.getCell(2, 1).font = { bold: true, size: 10 };
     ws.getCell(2, 1).alignment = { horizontal: "center" };
 

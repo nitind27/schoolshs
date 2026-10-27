@@ -421,6 +421,24 @@ function DobUnit({
   );
 }
 
+/** Label and colon stay together; one space after the colon, then the value. */
+function Lab({
+  children,
+  className,
+  style,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <span className={className} style={{ whiteSpace: "nowrap", ...style }}>
+      {children}
+      {" :\u00A0"}
+    </span>
+  );
+}
+
 /**
  * English label + value on one underline; Gujarati caption + value on the line below.
  */
@@ -450,16 +468,23 @@ function FieldRow({
   return (
     <div className="lc-up-field">
       <div className="lc-up-field-top">
-        <Editable
-          sizeKey={`${sizePrefix}EnLabel`}
-          value={`${n}. ${en}`}
-          onChange={(v) => onEn(v.replace(/^\d+\.\s*/, ""))}
-          className="lc-up-field-en"
-        />
+        <Lab className="lc-up-field-en">
+          <Editable
+            sizeKey={`${sizePrefix}EnLabel`}
+            value={`${n}. ${en}`}
+            onChange={(v) => onEn(v.replace(/^\d+\.\s*/, ""))}
+          />
+        </Lab>
         <Fill sizeKey={`${sizePrefix}En`} value={value} onChange={onValue} />
       </div>
       <div className="lc-up-field-gu">
-        <Editable sizeKey={`${sizePrefix}GuLabel`} value={gu} onChange={onGu} />
+        {onValueGu ? (
+          <Lab>
+            <Editable sizeKey={`${sizePrefix}GuLabel`} value={gu} onChange={onGu} />
+          </Lab>
+        ) : (
+          <Editable sizeKey={`${sizePrefix}GuLabel`} value={gu} onChange={onGu} />
+        )}
         {onValueGu ? <Fill sizeKey={`${sizePrefix}Gu`} value={valueGu} onChange={onValueGu} /> : null}
       </div>
     </div>
@@ -605,13 +630,13 @@ function buildFields(data: LCData, school: ReturnType<typeof useCertificateBrand
     addressGu: school.addressGu || "નવાગામ તા. સોનગઢ, જી. તાપી",
     titleGu: "શાળા છોડ્યાનું પ્રમાણપત્ર",
     titleEn: "School Leaving Certificate",
-    lcNoLabel: "L.C No./ક્રમ નં. :",
+    lcNoLabel: "L.C No./ક્રમ નં.",
     lcNo: data.serialNo || "",
-    grLabel: "G.R.No./જી.આર.નં. :",
+    grLabel: "G.R.No./જી.આર.નં.",
     grNumber: S.grNumber || "",
     diseLabel: "School Dise No.(સ્કૂલ ડાયસ નં.)",
     diseCode: school.diseCode || "",
-    mediumLabel: "Medium/માધ્યમ :",
+    mediumLabel: "Medium/માધ્યમ",
     medium,
     apaarLabel: "APAAR ID No. (અપાર આઈડી નંબર)",
     apaar: data.apaarId || S.apaarId || "",
@@ -665,7 +690,7 @@ function buildFields(data: LCData, school: ReturnType<typeof useCertificateBrand
     reasonGuLabel: "શાળા છોડ્યાનું કારણ",
     reasonEn: data.reason || "",
     reasonGu: lcPrinted(p?.reasonGu, lcGuText(data.reason)),
-    bankLabel: "12. Bank Account No./બેંક ખાતા નંબર :",
+    bankLabel: "12. Bank Account No./બેંક ખાતા નંબર",
     bankAccount: S.accountNumber || "",
     bankIfscLabel: "Bank Name & IFSC Code",
     bankIfsc: [S.bankName, S.ifscCode].filter(Boolean).join("  "),
@@ -683,7 +708,7 @@ function buildFields(data: LCData, school: ReturnType<typeof useCertificateBrand
     remarksGu: lcPrinted(p?.remarksGu, lcGuText(data.remarks)),
     outwardLabel: "School Outward No./શાળાનો જાવક નંબર",
     outwardNo: data.outwardNo || "",
-    dateLabel: "Date/તારીખ :",
+    dateLabel: "Date/તારીખ",
     issueDate: data.issueDate || "",
     certEn:
       "I Certify that the above information is verified by me with school register and found to be correct.",
@@ -787,18 +812,24 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             <Editable sizeKey="titleGu" value={f.titleGu} onChange={set("titleGu")} className="lc-up-title-gu" />
             <Editable sizeKey="titleEn" value={f.titleEn} onChange={set("titleEn")} className="lc-up-title-en" />
             <div className="lc-up-lcno">
-              <Editable sizeKey="lcNoLabel" value={f.lcNoLabel} onChange={set("lcNoLabel")} />
+              <Lab>
+                <Editable sizeKey="lcNoLabel" value={f.lcNoLabel} onChange={set("lcNoLabel")} />
+              </Lab>
               <Editable sizeKey="lcNo" value={f.lcNo} onChange={set("lcNo")} className="lc-up-lcno-box" />
             </div>
           </div>
 
           <div className="lc-up-id-row">
-            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 6, flex: "1 1 0", minWidth: 0 }}>
-              <Editable sizeKey="grLabel" value={f.grLabel} onChange={set("grLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 0, flex: "1 1 0", minWidth: 0 }}>
+              <Lab style={{ fontWeight: 700 }}>
+                <Editable sizeKey="grLabel" value={f.grLabel} onChange={set("grLabel")} />
+              </Lab>
               <Fill sizeKey="grNumber" value={f.grNumber} onChange={set("grNumber")} />
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 6, flex: "1.2 1 0", minWidth: 0 }}>
-              <Editable sizeKey="diseLabel" value={f.diseLabel} onChange={set("diseLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 0, flex: "1.2 1 0", minWidth: 0 }}>
+              <Lab style={{ fontWeight: 700 }}>
+                <Editable sizeKey="diseLabel" value={f.diseLabel} onChange={set("diseLabel")} />
+              </Lab>
               <Editable
                 sizeKey="diseCode"
                 value={f.diseCode}
@@ -806,8 +837,10 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                 style={{ fontWeight: 800, letterSpacing: "0.02em", whiteSpace: "nowrap" }}
               />
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 6, flexShrink: 0 }}>
-              <Editable sizeKey="mediumLabel" value={f.mediumLabel} onChange={set("mediumLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 0, flexShrink: 0 }}>
+              <Lab style={{ fontWeight: 700 }}>
+                <Editable sizeKey="mediumLabel" value={f.mediumLabel} onChange={set("mediumLabel")} />
+              </Lab>
               <Fill
                 sizeKey="medium"
                 value={f.medium}
@@ -818,12 +851,16 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
           </div>
 
           <div className="lc-up-id-line">
-            <Editable sizeKey="apaarLabel" value={f.apaarLabel} onChange={set("apaarLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+            <Lab style={{ fontWeight: 700 }}>
+              <Editable sizeKey="apaarLabel" value={f.apaarLabel} onChange={set("apaarLabel")} />
+            </Lab>
             <Fill sizeKey="apaar" value={f.apaar} onChange={set("apaar")} />
           </div>
 
           <div className="lc-up-id-line lc-up-id-line--last">
-            <Editable sizeKey="uidLabel" value={f.uidLabel} onChange={set("uidLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+            <Lab style={{ fontWeight: 700 }}>
+              <Editable sizeKey="uidLabel" value={f.uidLabel} onChange={set("uidLabel")} />
+            </Lab>
             <Fill sizeKey="childUid" value={f.childUid} onChange={set("childUid")} />
           </div>
 
@@ -838,12 +875,13 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             <Editable sizeKey="dobHint" value={f.dobHint} onChange={set("dobHint")} className="lc-up-dob-hint" />
             <div className="lc-up-dob-row">
               <div className="lc-up-dob-words">
-                <Editable
-                  sizeKey="dobWordsLabel"
-                  value={f.dobWordsLabel}
-                  onChange={set("dobWordsLabel")}
-                  style={{ fontWeight: 700, whiteSpace: "nowrap", lineHeight: 1.2 }}
-                />
+                <Lab style={{ fontWeight: 700, lineHeight: 1.2 }}>
+                  <Editable
+                    sizeKey="dobWordsLabel"
+                    value={f.dobWordsLabel}
+                    onChange={set("dobWordsLabel")}
+                  />
+                </Lab>
                 <Fill sizeKey="dobWords" value={f.dobWords} onChange={set("dobWords")} />
               </div>
               <div className="lc-up-dob-boxes">
@@ -862,11 +900,15 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
 
           <div className="lc-up-bank">
             <div className="lc-up-bank-row">
-              <Editable sizeKey="bankLabel" value={f.bankLabel} onChange={set("bankLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+              <Lab style={{ fontWeight: 700 }}>
+                <Editable sizeKey="bankLabel" value={f.bankLabel} onChange={set("bankLabel")} />
+              </Lab>
               <Fill sizeKey="bankAccount" value={f.bankAccount} onChange={set("bankAccount")} />
             </div>
             <div className="lc-up-bank-row">
-              <Editable sizeKey="bankIfscLabel" value={f.bankIfscLabel} onChange={set("bankIfscLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+              <Lab style={{ fontWeight: 700 }}>
+                <Editable sizeKey="bankIfscLabel" value={f.bankIfscLabel} onChange={set("bankIfscLabel")} />
+              </Lab>
               <Fill sizeKey="bankIfsc" value={f.bankIfsc} onChange={set("bankIfsc")} />
             </div>
           </div>
@@ -878,11 +920,15 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
           <div className="lc-up-footer">
             <div className="lc-up-meta">
               <div className="lc-up-meta-row">
-                <Editable sizeKey="outwardLabel" value={f.outwardLabel} onChange={set("outwardLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+                <Lab style={{ fontWeight: 700 }}>
+                  <Editable sizeKey="outwardLabel" value={f.outwardLabel} onChange={set("outwardLabel")} />
+                </Lab>
                 <Fill sizeKey="outwardNo" value={f.outwardNo} onChange={set("outwardNo")} style={{ flex: "0 1 160px", maxWidth: 180 }} />
               </div>
               <div className="lc-up-meta-row">
-                <Editable sizeKey="dateLabel" value={f.dateLabel} onChange={set("dateLabel")} style={{ fontWeight: 700, whiteSpace: "nowrap" }} />
+                <Lab style={{ fontWeight: 700 }}>
+                  <Editable sizeKey="dateLabel" value={f.dateLabel} onChange={set("dateLabel")} />
+                </Lab>
                 <Fill sizeKey="issueDate" value={f.issueDate} onChange={set("issueDate")} style={{ flex: "0 1 140px", maxWidth: 160 }} />
               </div>
             </div>

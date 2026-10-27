@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { DayColumn } from "@/lib/attendance-day-columns";
+import { useT } from "@/i18n/locale-provider";
 import { toGujaratiDigits } from "@/lib/certificates/gujarati-date";
 import {
   GUJARATI_MONTHS,
@@ -247,6 +249,7 @@ function buildSheet3DaySummaries(
     let absent = 0;
     let marked = 0;
     for (const r of students) {
+      if (r.held) continue;
       const mark = (r.attendance[i] || "").toString().trim().toUpperCase();
       if (mark === "P" || mark === "H") {
         present += 1;
@@ -376,6 +379,7 @@ function RegisterSpread({
   summaryStudents = [],
   admissions = [],
   leavers = [],
+  dayMessages = {},
 }: {
   rows: ClassRegisterRow[];
   variant: "sheet2" | "sheet3";
@@ -390,6 +394,7 @@ function RegisterSpread({
   summaryStudents?: ClassRegisterRow[];
   admissions?: AdmissionReportRow[];
   leavers?: LeaverReportRow[];
+  dayMessages?: Record<number, string>;
 }) {
   const isSheet3 = variant === "sheet3";
   const leftCols = isSheet3 ? LEFT_SHEET3_COLS : LEFT_SHEET2_COLS;
@@ -491,7 +496,7 @@ function RegisterSpread({
                 <td className="patrak-c patrak-cat-cell">{r.category}</td>
                 {isSheet3 && <td />}
                 <td className="patrak-c patrak-ser-cell">{g(r.serial)}</td>
-                <td className="patrak-name-cell font-gujarati">{r.name}</td>
+                <td className="patrak-name-cell font-gujarati" title={r.held ? "Inactive" : undefined}>{r.name}</td>
               </tr>
             ))}
             {isSheet3 &&
@@ -564,7 +569,7 @@ function RegisterSpread({
             </tr>
             <tr className="patrak-reg-h2">
               {DAYS.map((d) => (
-                <th key={d} className="patrak-day-h">{g(d)}</th>
+                <th key={d} className={`patrak-day-h${dayMessages[d] ? " patrak-day-off" : ""}`}>{g(d)}</th>
               ))}
               <th className="patrak-w-ser patrak-vhdr"><span>{"\u0A95\u0ACD\u0AB0\u0AAE\u0ABE\u0A82\u0A95"}</span></th>
               <th className="patrak-vhdr patrak-w-sum">
@@ -592,11 +597,22 @@ function RegisterSpread({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {rows.map((r, rowIndex) => (
               <tr key={`R-${r.serial}`}>
-                {DAYS.map((d) => (
-                  <td key={d} className="patrak-day-c">{r.attendance[d - 1] || ""}</td>
-                ))}
+                {DAYS.map((d) => {
+                  const banner = dayMessages[d];
+                  if (banner) {
+                    if (rowIndex > 0) return null;
+                    return (
+                      <td key={d} rowSpan={rows.length} className="patrak-day-c patrak-day-banner">
+                        <span className="patrak-day-banner-text">{banner}</span>
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={d} className="patrak-day-c">{r.attendance[d - 1] || ""}</td>
+                  );
+                })}
                 <td className="patrak-c patrak-ser-cell">{g(r.serial)}</td>
                 <td className="patrak-c">{r.monthTotal ? g(r.monthTotal) : ""}</td>
                 <td className="patrak-c">{r.prevTotal ? g(r.prevTotal) : ""}</td>
@@ -788,6 +804,67 @@ export function MonthlyAttendancePatrakView({
   const sheet2Rows = padRegister(registerRows, 1, 40);
   const sheet3Rows = padRegister(registerRows, 41, 32);
   const adm = padAdmission(admissions, 6);
+  const t = useT();
+  const [dayColumns, setDayColumns] = useState<DayColumn[]>([]);
+  const [dayDraft, setDayDraft] = useState<Record<string, string>>({});
+  const [daySaving, setDaySaving] = useState(false);
+  const [dayNote, setDayNote] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const month = data.month;
+    const year = data.year;
+    fetch(`/api/attendance/day-notes?month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((json) => {
+        if (cancelled || !json?.columns) return;
+        const columns = json.columns as DayColumn[];
+        setDayColumns(columns);
+        const next: Record<string, string> = {};
+        for (const column of columns) next[column.date] = column.message;
+        setDayDraft(next);
+        setDayNote("");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [data.month, data.year]);
+
+  const dayMessages = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const column of dayColumns) {
+      const text = (dayDraft[column.date] ?? column.message).trim();
+      if (text) map[column.day] = text;
+    }
+    return map;
+  }, [dayColumns, dayDraft]);
+
+  const saveDayNotes = async () => {
+    setDaySaving(true);
+    setDayNote("");
+    try {
+      const response = await fetch("/api/attendance/day-notes", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month: data.month, year: data.year, notes: dayDraft }),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof json.error === "string" ? json.error : t("certificates.dayNotesFailed"));
+      if (Array.isArray(json.columns)) {
+        const columns = json.columns as DayColumn[];
+        setDayColumns(columns);
+        const next: Record<string, string> = {};
+        for (const column of columns) next[column.date] = column.message;
+        setDayDraft(next);
+      }
+      setDayNote(t("certificates.dayNotesSaved"));
+    } catch (error) {
+      setDayNote(error instanceof Error ? error.message : t("certificates.dayNotesFailed"));
+    } finally {
+      setDaySaving(false);
+    }
+  };
 
   const computerNoKey = `patrak-computer-no-${data.standard}-${data.section}`;
   const [computerNo, setComputerNo] = useState("");
@@ -801,6 +878,39 @@ export function MonthlyAttendancePatrakView({
 
   return (
     <div className="patrak-root">
+      {dayColumns.length > 0 ? (
+        <div className="patrak-day-notes no-print">
+          <div className="patrak-day-notes-head">
+            <div>
+              <strong>{t("certificates.dayNotesTitle")}</strong>
+              <p>{t("certificates.dayNotesHint")}</p>
+            </div>
+            <button type="button" onClick={() => void saveDayNotes()} disabled={daySaving}>
+              {daySaving ? t("common.saving") : t("certificates.dayNotesSave")}
+            </button>
+          </div>
+          <div className="patrak-day-notes-grid">
+            {dayColumns.map((column) => (
+              <label key={column.date}>
+                <span>
+                  {column.date.slice(8)}
+                  <em>{column.kind === "holiday" ? t("certificates.dayNotesHoliday") : t("certificates.dayNotesSunday")}</em>
+                </span>
+                <input
+                  value={dayDraft[column.date] ?? column.message}
+                  maxLength={40}
+                  placeholder={column.title}
+                  onChange={(event) =>
+                    setDayDraft((prev) => ({ ...prev, [column.date]: event.target.value }))
+                  }
+                />
+              </label>
+            ))}
+          </div>
+          {dayNote ? <p className="patrak-day-notes-status">{dayNote}</p> : null}
+        </div>
+      ) : null}
+
       <p className="patrak-print-hint no-print">
         સ્ક્રીન પર જોડેલું દેખાય છે. Print: <strong>Legal 8.5×14 in · Portrait</strong> —
         ડાબું પાનું, પછી જમણું (જોડી શકાય). Fit to page બંધ (100%).
@@ -976,6 +1086,7 @@ export function MonthlyAttendancePatrakView({
         yearShort={yearShort}
         month={data.month}
         year={data.year}
+        dayMessages={dayMessages}
       />
 
       {/* PDF pages 4-5: open-book spread students 41-72 */}
@@ -993,6 +1104,7 @@ export function MonthlyAttendancePatrakView({
         summaryStudents={registerRows}
         admissions={admissions}
         leavers={leavers}
+        dayMessages={dayMessages}
       />
 
       {/* ── Last page: reports (legal portrait) ───────────────── */}
@@ -1772,6 +1884,97 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-reg-right-page tbody td { font-size: 7.5pt; }
         .patrak-root .patrak-day-c {
           height: var(--patrak-row-h) !important;
+        }
+        .patrak-root td.patrak-day-banner {
+          height: auto !important;
+          min-height: 0 !important;
+          vertical-align: middle;
+          text-align: center;
+          background: #f4fafc;
+          white-space: normal !important;
+          overflow: hidden;
+          padding: 1.5mm 0 !important;
+        }
+        .patrak-root .patrak-day-banner-text {
+          writing-mode: vertical-rl;
+          transform: rotate(180deg);
+          display: inline-block;
+          max-width: 5.4mm;
+          font-size: 7pt;
+          font-weight: 700;
+          line-height: 1.05;
+          letter-spacing: 0.08em;
+          white-space: nowrap;
+        }
+        .patrak-root th.patrak-day-off {
+          background: #e7f4f8;
+        }
+        .patrak-root .patrak-day-notes {
+          max-width: 920px;
+          margin: 0 auto 12px;
+          padding: 12px 14px;
+          border: 1px solid #bfdbfe;
+          border-radius: 12px;
+          background: #f8fbff;
+          color: #1e3a8a;
+        }
+        .patrak-root .patrak-day-notes-head {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: flex-start;
+          margin-bottom: 10px;
+        }
+        .patrak-root .patrak-day-notes-head p {
+          margin: 2px 0 0;
+          font-size: 12px;
+          color: #334155;
+        }
+        .patrak-root .patrak-day-notes-head button {
+          border: 0;
+          border-radius: 8px;
+          background: #1d4ed8;
+          color: #fff;
+          font-weight: 600;
+          font-size: 13px;
+          padding: 8px 14px;
+          cursor: pointer;
+        }
+        .patrak-root .patrak-day-notes-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 8px;
+        }
+        .patrak-root .patrak-day-notes-grid label {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          font-size: 12px;
+          color: #0f172a;
+        }
+        .patrak-root .patrak-day-notes-grid span {
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+          font-weight: 700;
+        }
+        .patrak-root .patrak-day-notes-grid em {
+          font-style: normal;
+          font-weight: 600;
+          color: #1d4ed8;
+        }
+        .patrak-root .patrak-day-notes-grid input {
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          padding: 6px 8px;
+          font-size: 13px;
+          color: #0f172a;
+          background: #fff;
+        }
+        .patrak-root .patrak-day-notes-status {
+          margin: 8px 0 0;
+          font-size: 12px;
+          color: #166534;
         }
         .patrak-root .patrak-w-gr { width: 13mm; }
         .patrak-root .patrak-w-dob { width: 15mm; }

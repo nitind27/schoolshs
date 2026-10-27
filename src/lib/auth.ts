@@ -93,7 +93,11 @@ export async function requireAuth(roles?: UserRole[]): Promise<SessionUser> {
 }
 
 export async function requireSchoolAuth(roles?: UserRole[]): Promise<SessionUser & { schoolId: string }> {
-  const allowed = roles || SCHOOL_ROLES;
+  const allowed = [...(roles || SCHOOL_ROLES)];
+  // Supervisor uses the school panels. Routes that list school_admin stay open for them.
+  if (allowed.includes("school_admin") && !allowed.includes("supervisor")) {
+    allowed.push("supervisor");
+  }
   const session = await requireAuth(allowed);
   if (!session.schoolId) throw new AuthError("School not assigned", 403);
   return session as SessionUser & { schoolId: string };

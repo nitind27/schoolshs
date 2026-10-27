@@ -21,6 +21,8 @@ import {
   assertTeacherMarksAccess,
   teacherSubjectCodesForClass,
 } from "@/lib/teacher-scope";
+import { assertSupervisorClassAccess } from "@/lib/supervisor-scope";
+import { describeMarkChange, logMarkEdits, studentAuditLabel } from "@/lib/change-log";
 
 function matchSubject(
   def: MarksSheetSubjectDef,
@@ -40,6 +42,7 @@ export async function GET(request: NextRequest) {
     if (!classId) return NextResponse.json({ error: "classId required" }, { status: 400 });
 
     await assertTeacherMarksAccess(session, classId);
+    await assertSupervisorClassAccess(session, classId);
     const allowedCodes = await teacherSubjectCodesForClass(session, classId);
 
     const schoolClass = await prisma.schoolClass.findFirst({
@@ -174,6 +177,7 @@ export async function POST(request: NextRequest) {
     }
 
     await assertTeacherMarksAccess(session, classId);
+    await assertSupervisorClassAccess(session, classId);
     const allowedCodes = await teacherSubjectCodesForClass(session, classId);
     if (allowedCodes && allowedCodes.length === 0) {
       return NextResponse.json(
@@ -203,6 +207,9 @@ export async function POST(request: NextRequest) {
       session.schoolId,
     );
     const examSubjects = await syncExamSubjects(exam.id, sheetConfig.subjects);
+    const existingRows = await prisma.examResult.findMany({ where: { examId } });
+    const beforeByKey = new Map(existingRows.map((row) => [`${row.studentId}:${row.subjectId}`, row]));
+    const markEdits: { studentId: string; studentLabel: string; line: string }[] = [];
 
     for (const st of students) {
       for (const sub of st.subjectInputs || []) {
@@ -222,6 +229,20 @@ export async function POST(request: NextRequest) {
           special: sub.special,
           letterGrade: sub.letterGrade,
         });
+        const before = beforeByKey.get(`${st.studentId}:${examSub.id}`);
+        const line = describeMarkChange(def.name, before ? {
+          marksObtained: before.marksObtained,
+          isAbsent: before.isAbsent,
+          graceMarks: before.graceMarks,
+          achievementMarks: before.achievementMarks,
+          remarks: before.remarks,
+        } : null, {
+          marksObtained: Number(sub.annual) || 0,
+          graceMarks: Number(sub.grace) || 0,
+          achievementMarks: Number(sub.achievement) || 0,
+          remarks,
+        });
+        if (line) markEdits.push({ studentId: st.studentId, studentLabel: "", line });
 
         await prisma.examResult.upsert({
           where: {
@@ -272,6 +293,29 @@ export async function POST(request: NextRequest) {
         if (existing) await prisma.reportCard.update({ where: { id: existing.id }, data: rcData });
         else await prisma.reportCard.create({ data: rcData });
       }
+    }
+
+    if (markEdits.length) {
+      const ids = [...new Set(markEdits.map((row) => row.studentId))];
+      const people = await prisma.student.findMany({
+        where: { schoolId: session.schoolId, id: { in: ids } },
+        select: {
+          id: true,
+          firstName: true,
+          middleName: true,
+          surname: true,
+          firstNameGu: true,
+          middleNameGu: true,
+          surnameGu: true,
+          grNumber: true,
+        },
+      });
+      const labels = new Map(people.map((person) => [person.id, studentAuditLabel(person)]));
+      await logMarkEdits(
+        session,
+        exam.name,
+        markEdits.map((row) => ({ ...row, studentLabel: labels.get(row.studentId) || "Student" })),
+      );
     }
 
     return NextResponse.json({ success: true, count: students.length });

@@ -279,6 +279,7 @@ export function hrefToFeature(href: string): SchoolFeatureKey | null {
     "/exams": "results",
     "/exam-seat-numbers": "results",
     "/students": "students",
+    "/activity/changes": "students",
     "/staff": "staff",
     "/staff/attendance": "staff",
     "/staff/payroll": "staff",

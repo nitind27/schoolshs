@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import type { UserRole } from "@/lib/roles";
 
-const STAFF_PORTAL_ROLES: UserRole[] = ["teacher", "clerk"];
+const STAFF_PORTAL_ROLES: UserRole[] = ["teacher", "clerk", "supervisor"];
 
 /** Designations that get a portal login on staff create */
 export function shouldCreatePortalLogin(designation: string): boolean {
@@ -21,8 +21,13 @@ export function shouldCreatePortalLogin(designation: string): boolean {
   );
 }
 
+export function isSupervisorDesignation(designation?: string | null): boolean {
+  return (designation || "").toLowerCase().includes("supervisor");
+}
+
 export function pickStaffPortalRole(designation?: string | null): UserRole {
   const d = (designation || "").toLowerCase();
+  if (d.includes("supervisor")) return "supervisor";
   if (d.includes("clerk") || d.includes("accountant")) return "clerk";
   return "teacher";
 }

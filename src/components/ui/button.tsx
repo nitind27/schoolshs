@@ -16,14 +16,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default:     "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-blue-500 shadow-sm",
+        default:     "bg-[var(--brand-600)] text-white hover:bg-[var(--brand-700)] active:bg-[var(--brand-700)] focus-visible:ring-[var(--brand-500)] shadow-sm",
         secondary:   "bg-slate-100 text-slate-800 hover:bg-slate-200 active:bg-slate-300 focus-visible:ring-slate-400",
         outline:     "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400 focus-visible:ring-slate-400 shadow-sm",
         ghost:       "text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-400",
         destructive: "bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-500 shadow-sm",
         success:     "bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 focus-visible:ring-emerald-500 shadow-sm",
         warning:     "bg-amber-500 text-white hover:bg-amber-600 active:bg-amber-700 focus-visible:ring-amber-400 shadow-sm",
-        link:        "text-blue-600 underline-offset-4 hover:underline p-0 h-auto shadow-none",
+        link:        "text-[var(--brand-700)] underline-offset-4 hover:underline p-0 h-auto shadow-none",
       },
       size: {
         default: "min-h-10 h-auto px-3 py-2 text-sm sm:px-4",

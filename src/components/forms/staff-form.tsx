@@ -63,6 +63,7 @@ type StaffFormData = Partial<Staff> & {
   higherGradeFirstYears?: number | string | null;
   higherGradeSecond?: string | null;
   higherGradeSecondYears?: number | string | null;
+  supervisorClassIds?: string[];
 };
 
 type GuTouchKey = "firstNameGu" | "lastNameGu";
@@ -211,6 +212,10 @@ export function StaffForm({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
+  const [supervisorClassIds, setSupervisorClassIds] = useState<string[]>(
+    Array.isArray(initialData.supervisorClassIds) ? initialData.supervisorClassIds : [],
+  );
+  const [classOptions, setClassOptions] = useState<{ id: string; name: string; academicYear: string }[]>([]);
   const [ifscStatus, setIfscStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const ifscTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastIfsc = useRef("");
@@ -218,6 +223,28 @@ export function StaffForm({
 
   const resolvedSubmitLabel = submitLabel ?? t("staffPage.saveStaff");
   const roleWork = getStaffRoleWork(String(form.designation || ""));
+  const isSupervisor = String(form.designation || "").toLowerCase().includes("supervisor");
+
+  useEffect(() => {
+    if (!isSupervisor) return;
+    let alive = true;
+    fetch("/api/classes")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!alive) return;
+        setClassOptions(
+          (data.classes || []).map((item: { id: string; name: string; academicYear?: string }) => ({
+            id: item.id,
+            name: item.name,
+            academicYear: item.academicYear || "",
+          })),
+        );
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [isSupervisor]);
   const isEditMode = Boolean(initialData?.id);
   const staffId = form.id || initialData?.id || null;
 
@@ -419,6 +446,7 @@ export function StaffForm({
     try {
       const payload = ensureStaffGuNames({
         ...form,
+        supervisorClassIds: isSupervisor ? supervisorClassIds : [],
         employeeId: normalizeTeacherCode(String(form.employeeId || "")),
         firstName: String(form.firstName || "").trim(),
         lastName: String(form.lastName || "").trim(),
@@ -478,6 +506,34 @@ export function StaffForm({
               error={errors.designation}
               onChange={(e) => update("designation", e.target.value)}
             />
+
+            {isSupervisor ? (
+              <div className="staff-form__span-2 rounded-2xl border border-teal-200 bg-teal-50/40 p-3">
+                <p className="text-sm font-semibold text-slate-900">{t("staffPage.supervisorClasses")}</p>
+                <p className="staff-form__hint">{t("staffPage.supervisorClassesHint")}</p>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {classOptions.map((item) => (
+                    <label key={item.id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        checked={supervisorClassIds.includes(item.id)}
+                        onChange={() =>
+                          setSupervisorClassIds((prev) =>
+                            prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id],
+                          )
+                        }
+                      />
+                      <span className="min-w-0">
+                        <span className="block font-medium text-slate-900">{item.name}</span>
+                        {item.academicYear ? <span className="text-xs text-slate-500">{item.academicYear}</span> : null}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {!classOptions.length ? <p className="mt-2 text-sm text-slate-500">{t("common.noData")}</p> : null}
+              </div>
+            ) : null}
 
             <Input
               label={t("staffPage.department")}

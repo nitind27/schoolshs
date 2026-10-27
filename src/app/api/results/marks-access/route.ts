@@ -6,6 +6,9 @@ import { seedClassSubjects } from "@/lib/class-subjects";
 export async function GET() {
   try {
     const session = await requireSchoolAuth(["school_admin"]);
+    if (session.role === "supervisor") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
     const [staff, classes, grants] = await Promise.all([
       prisma.staff.findMany({
         where: { schoolId: session.schoolId, isActive: true },
@@ -74,6 +77,9 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const session = await requireSchoolAuth(["school_admin"]);
+    if (session.role === "supervisor") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
     const body = await request.json();
     const staffId = String(body.staffId || "").trim();
     const classId = String(body.classId || "").trim();

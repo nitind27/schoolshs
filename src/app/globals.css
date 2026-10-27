@@ -2,6 +2,7 @@
 @import "../components/landing/landing.css";
 @import "../components/dashboard/dashboard.css";
 @import "../components/student-portal/student-portal.css";
+@import "./themes.css";
 
 /* ── Design Tokens ─────────────────────────────────────────── */
 :root {
@@ -33,6 +34,10 @@
   --hero: #00695c;
   --hero-dark: #00574b;
   --hero-accent: #0d9488;
+  --hero-wash: #ecfdf5;
+  --sidebar-bg-2: #0f172a;
+  --sidebar-mark: rgba(4, 120, 87, 0.35);
+  --sidebar-mark-line: rgba(13, 148, 136, 0.45);
 
   /* Sidebar */
   --sidebar-bg: #111827;
@@ -312,7 +317,7 @@ html.locale-en {
 
 /* ── Page header ───────────────────────────────────────────── */
 .page-hero {
-  background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
+  background: linear-gradient(135deg, #ffffff 0%, var(--hero-wash, #ecfdf5) 100%);
   border: 1px solid #e5e7eb;
   border-radius: 16px;
 }

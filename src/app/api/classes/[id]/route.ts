@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { normalizeClass } from "../route";
 import { assertStaffInSchool, assertClassTeacherAvailable } from "@/lib/school-assertions";
+import { assertSupervisorClassAccess } from "@/lib/supervisor-scope";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -22,6 +23,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       },
     });
     if (!schoolClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
+    await assertSupervisorClassAccess(session, schoolClass.id);
     return NextResponse.json(schoolClass);
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
@@ -32,6 +34,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
+    if (session.role === "supervisor") {
+      return NextResponse.json({ error: "Only the school admin can change class teachers" }, { status: 403 });
+    }
     const { id } = await params;
     const existing = await prisma.schoolClass.findFirst({ where: { id, schoolId: session.schoolId } });
     if (!existing) return NextResponse.json({ error: "Class not found" }, { status: 404 });
@@ -65,6 +70,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
+    if (session.role === "supervisor") {
+      return NextResponse.json({ error: "Only the school admin can change class setup" }, { status: 403 });
+    }
     const { id } = await params;
     const existing = await prisma.schoolClass.findFirst({ where: { id, schoolId: session.schoolId } });
     if (!existing) return NextResponse.json({ error: "Class not found" }, { status: 404 });
@@ -138,6 +146,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk"]);
+    if (session.role === "supervisor") {
+      return NextResponse.json({ error: "Only the school admin can delete a class" }, { status: 403 });
+    }
     const { id } = await params;
     const existing = await prisma.schoolClass.findFirst({ where: { id, schoolId: session.schoolId } });
     if (!existing) return NextResponse.json({ error: "Class not found" }, { status: 404 });

@@ -123,6 +123,11 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
           icon: CalendarDays,
         },
         {
+          href: "/attendance/shortfall",
+          label: t("shortfall.title"),
+          icon: ClipboardList,
+        },
+        {
           href: "/timetable",
           label: t("navExt.timetable"),
           icon: CalendarClock,
@@ -174,6 +179,11 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
           icon: CreditCard,
         },
         {
+          href: "/staff/salary-certificate",
+          label: t("salaryCert.title"),
+          icon: FileText,
+        },
+        {
           href: "/staff/income-tax",
           label: t("incomeTax.title"),
           icon: Calculator,
@@ -200,6 +210,16 @@ export function ClerkLayout({ children }: { children: React.ReactNode }) {
           href: "/clerk/scholarship",
           label: t("clerkNav.scholarship"),
           icon: FileCheck,
+        },
+        {
+          href: "/students/scholarship-gaps",
+          label: t("paperDesk.title"),
+          icon: FileSearch,
+        },
+        {
+          href: "/activity/changes",
+          label: t("changeLog.title"),
+          icon: ClipboardList,
         },
         { href: "/import", label: t("nav.bulkImport"), icon: Upload },
         { href: "/bulk-submit", label: t("nav.bulkSubmit"), icon: Send },

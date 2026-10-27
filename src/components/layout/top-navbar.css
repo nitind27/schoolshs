@@ -5,8 +5,8 @@
   --tn-muted: #64748b;
   --tn-line: #e5e7eb;
   --tn-soft: #f8fafc;
-  --tn-accent: #047857;
-  --tn-accent-deep: #065f46;
+  --tn-accent: var(--brand-600);
+  --tn-accent-deep: var(--brand-700);
   --tn-warm: #f59e0b;
 }
 
