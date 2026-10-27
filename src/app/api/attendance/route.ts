@@ -28,8 +28,10 @@ async function fetchStudents(
   const where: Record<string, unknown> = { schoolId, status: { not: "archived" } };
   if (classId) where.classId = classId;
   else if (classFilter) where.classId = classFilter;
-  if (standard) where.standard = standard;
-  if (section) where.section = section;
+  else {
+    if (standard) where.standard = standard;
+    if (section) where.section = section;
+  }
 
   return prisma.student.findMany({
     where,

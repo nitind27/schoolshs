@@ -273,12 +273,6 @@ const useNavGroups = (
       },
       {
         type: "link",
-        href: "/settings/theme",
-        label: t("theme.title"),
-        icon: Palette,
-      },
-      {
-        type: "link",
         href: "/activities",
         label: t("nav.activities"),
         icon: Trophy,
@@ -451,6 +445,12 @@ const useNavGroups = (
             featureKey: "id_cards",
           },
         ],
+      },
+      {
+        type: "link",
+        href: "/settings/theme",
+        label: t("theme.title"),
+        icon: Palette,
       },
     ],
   },

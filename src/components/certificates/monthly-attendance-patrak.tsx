@@ -1572,7 +1572,7 @@ export function MonthlyAttendancePatrakView({
           padding: 0.5mm 1mm !important;
           overflow: hidden;
         }
-        .patrak-root .patrak-unified tbody td,
+        .patrak-root .patrak-unified tbody td:not(.patrak-day-banner),
         .patrak-root .patrak-unified tfoot td {
           height: var(--patrak-row-h) !important;
           min-height: var(--patrak-row-h) !important;
@@ -1885,9 +1885,10 @@ export function MonthlyAttendancePatrakView({
         .patrak-root .patrak-day-c {
           height: var(--patrak-row-h) !important;
         }
-        .patrak-root td.patrak-day-banner {
+        .patrak-root .patrak-unified tbody td.patrak-day-banner {
           height: auto !important;
           min-height: 0 !important;
+          max-height: none !important;
           vertical-align: middle;
           text-align: center;
           background: #f4fafc;

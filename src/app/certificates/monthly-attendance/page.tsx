@@ -28,6 +28,7 @@ function MonthlyAttendanceContent() {
     studentId: "", month: String(new Date().getMonth() + 1), year: String(new Date().getFullYear()),
   });
   const [source, setSource] = useState<"none" | "preview" | "live">("none");
+  const [loadError, setLoadError] = useState("");
   const [patrak, setPatrak] = useState<MonthlyPatrakData | null>(null);
   const [registerRows, setRegisterRows] = useState<ClassRegisterRow[]>([]);
   const [admissions, setAdmissions] = useState<AdmissionReportRow[]>([]);
@@ -44,14 +45,24 @@ function MonthlyAttendanceContent() {
     if (filters.classId) params.set("classId", filters.classId);
     if (filters.standard) params.set("standard", filters.standard);
     if (filters.section) params.set("section", filters.section);
+    setLoadError("");
     const res = await fetch(`/api/certificates?${params}`);
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.patrak) {
+      setPatrak(null);
+      setRegisterRows([]);
+      setAdmissions([]);
+      setLeavers([]);
+      setSource("none");
+      setLoadError(typeof data.error === "string" ? data.error : t("certificates.previewOrLoad"));
+      return;
+    }
     setPatrak(data.patrak || null);
     setRegisterRows(data.registerRows || []);
     setAdmissions(data.admissions || []);
     setLeavers(data.leavers || []);
     setSource("live");
-  }, [filters]);
+  }, [filters, t]);
 
   const isPreview = source === "preview";
   const displayData = isPreview ? SAMPLE_PATRAK : patrak;
@@ -70,6 +81,9 @@ function MonthlyAttendanceContent() {
       printMargin="3mm"
     >
       <CertificateFilters value={filters} onChange={setFilters} onLoad={load} showMonth />
+      {loadError ? (
+        <p className="no-print text-center text-sm text-red-700">{loadError}</p>
+      ) : null}
       {displayData ? (
         <MonthlyAttendancePatrakView
           data={displayData}

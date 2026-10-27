@@ -192,8 +192,11 @@ export async function GET(request: NextRequest) {
     // Single-student mode: ignore class filters so analysis / deep-links never miss the student
     if (studentId) {
       where.id = studentId;
+    } else if (classId) {
+      // Class is the list. Extra standard/section filters drop students whose
+      // own section text does not match the class, so the patrak loads empty.
+      where.classId = classId;
     } else {
-      if (classId) where.classId = classId;
       if (standard) where.standard = standard;
       if (section) where.section = section;
     }
