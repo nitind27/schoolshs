@@ -3,31 +3,30 @@
    ========================================================================== */
 
 .student-portal-shell {
-  --sp-ink: #09202a;
-  --sp-ink-soft: #133a47;
-  --sp-accent: #0d9488;
-  --sp-accent-soft: #14b8a6;
+  --sp-ink: #07151c;
+  --sp-ink-soft: #12323d;
+  --sp-accent: #0f9d8e;
+  --sp-accent-soft: #2dd4bf;
   --sp-accent-light: #ccfbf1;
-  --sp-accent-glow: rgba(13, 148, 136, 0.25);
-  --sp-canvas: #f8fafc;
+  --sp-accent-glow: rgba(15, 157, 142, 0.28);
+  --sp-gold: #e8c36a;
+  --sp-canvas: #f4f7fb;
   --sp-paper: #ffffff;
-  --sp-line: #e2e8f0;
-  --sp-line-subtle: #f1f5f9;
-  --sp-muted: #64748b;
-  --sp-shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
-  --sp-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
-  --sp-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
-  --sp-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
-
+  --sp-line: #dce5ee;
+  --sp-line-subtle: #eef3f8;
+  --sp-muted: #5b6b7a;
+  --sp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --sp-shadow-md: 0 10px 28px -12px rgba(15, 36, 48, 0.18);
+  --sp-shadow-lg: 0 22px 40px -18px rgba(7, 25, 35, 0.28);
+  --sp-shadow-xl: 0 30px 50px -20px rgba(7, 25, 35, 0.32);
   --sp-display: var(--font-lp-display, "Bricolage Grotesque"), ui-sans-serif, system-ui, sans-serif;
   --sp-body: var(--font-lp-body, "Figtree"), ui-sans-serif, system-ui, sans-serif;
 
   min-height: 100vh;
   background:
-    radial-gradient(circle 800px at 15% 10%, rgba(20, 184, 166, 0.08), transparent 70%),
-    radial-gradient(circle 600px at 85% 20%, rgba(59, 130, 246, 0.06), transparent 70%),
-    radial-gradient(circle 500px at 50% 90%, rgba(20, 184, 166, 0.05), transparent 70%),
-    linear-gradient(180deg, #f0fdfa 0%, #f8fafc 18%, #f8fafc 85%, #f1f5f9 100%);
+    radial-gradient(1200px 520px at 8% -8%, rgba(45, 212, 191, 0.16), transparent 55%),
+    radial-gradient(900px 480px at 100% 0%, rgba(14, 165, 233, 0.1), transparent 50%),
+    linear-gradient(180deg, #e8f7f4 0%, #f4f7fb 22%, #f7f9fc 100%);
   color: var(--sp-ink);
   font-family: var(--sp-body);
 }
@@ -63,28 +62,27 @@ html.locale-gu .student-portal-shell h3 {
 }
 
 /* ==========================================================================
-   Hero Section — Modern Ambient Mesh Gradient with Glass Accents
+   Hero Section
    ========================================================================== */
 .student-hero {
   position: relative;
   overflow: hidden;
-  padding: 1.75rem 1.5rem;
-  border-radius: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 1.6rem 1.25rem 1.5rem;
+  border-radius: 1.75rem;
+  border: 1px solid rgba(232, 195, 106, 0.22);
   background:
-    radial-gradient(circle at 85% 15%, rgba(45, 212, 191, 0.22), transparent 45%),
-    radial-gradient(circle at 10% 85%, rgba(14, 165, 233, 0.18), transparent 45%),
-    linear-gradient(135deg, #071923 0%, #0a2733 40%, #0c3b44 75%, #0d5c64 100%);
+    radial-gradient(ellipse 70% 80% at 100% 0%, rgba(45, 212, 191, 0.28), transparent 55%),
+    radial-gradient(ellipse 50% 60% at 0% 100%, rgba(14, 165, 233, 0.2), transparent 50%),
+    linear-gradient(145deg, #04141c 0%, #0a2a34 38%, #0c4650 72%, #0e6b6a 100%);
   color: #ffffff;
   box-shadow:
-    0 16px 36px -8px rgba(7, 25, 35, 0.4),
-    0 6px 14px -3px rgba(13, 148, 136, 0.25);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+    0 24px 48px -16px rgba(4, 20, 28, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 @media (min-width: 640px) {
   .student-hero {
-    padding: 2.25rem 2rem;
+    padding: 2.1rem 2rem 1.9rem;
   }
 }
 
@@ -92,91 +90,309 @@ html.locale-gu .student-portal-shell h3 {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.05;
+  opacity: 0.07;
   background-image:
     linear-gradient(to right, #ffffff 1px, transparent 1px),
     linear-gradient(to bottom, #ffffff 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-size: 36px 36px;
+  mask-image: linear-gradient(180deg, #000 30%, transparent 100%);
   pointer-events: none;
 }
 
 .student-hero::after {
   content: "";
   position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle, rgba(20, 184, 166, 0.25) 0%, transparent 65%);
+  top: -40%;
+  right: -12%;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(232, 195, 106, 0.22) 0%, transparent 68%);
   border-radius: 50%;
-  filter: blur(40px);
   pointer-events: none;
+}
+
+.student-hero-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .student-hero-inner {
+    grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.7fr);
+    align-items: center;
+    gap: 2rem;
+  }
 }
 
 .student-hero-kicker {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 195, 106, 0.35);
+  background: rgba(232, 195, 106, 0.12);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #5eead4;
+  color: #f3d89a;
 }
 
 .student-hero-name {
-  margin-top: 0.4rem;
+  margin-top: 0.55rem;
   font-family: var(--sp-display);
-  font-size: clamp(1.6rem, 3.8vw, 2.35rem);
+  font-size: clamp(1.7rem, 4vw, 2.55rem);
   font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
   color: #ffffff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
 .student-hero-meta {
-  margin-top: 0.5rem;
+  margin-top: 0.55rem;
   font-size: 0.92rem;
-  color: #cbd5e1;
+  color: #c5d4dc;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
 .student-hero-tags {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 1.25rem;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.student-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.2rem;
+}
+
+.student-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: 1rem;
+  padding: 0.72rem 1.05rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  border: 1px solid transparent;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.student-hero-btn:hover {
+  transform: translateY(-1px);
+}
+
+.student-hero-btn--primary {
+  background: linear-gradient(180deg, #f4d78a, #e0b44a);
+  color: #3a2a08;
+  box-shadow: 0 10px 20px -10px rgba(224, 180, 74, 0.8);
+}
+
+.student-hero-btn--ghost {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  backdrop-filter: blur(10px);
 }
 
 .student-hero-avatar-ring {
   position: relative;
   display: grid;
   place-items: center;
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: 1.25rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
-  border: 2px solid rgba(94, 234, 212, 0.6);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.35);
+  width: 5.1rem;
+  height: 5.1rem;
+  border-radius: 1.4rem;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04));
+  border: 2px solid rgba(243, 216, 154, 0.7);
+  box-shadow:
+    0 12px 28px -8px rgba(0, 0, 0, 0.45),
+    0 0 0 6px rgba(255, 255, 255, 0.06);
   color: #ffffff;
-  font-size: 1.5rem;
+  font-size: 1.55rem;
   font-weight: 800;
   overflow: hidden;
   flex-shrink: 0;
 }
 
+.student-hero-avatar-ring::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #34d399;
+  border: 2px solid #0a2a34;
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.25);
+}
+
 @media (min-width: 640px) {
   .student-hero-avatar-ring {
-    width: 5.25rem;
-    height: 5.25rem;
-    font-size: 1.75rem;
+    width: 6.1rem;
+    height: 6.1rem;
+    font-size: 1.85rem;
+    border-radius: 1.6rem;
   }
+}
+
+.student-hero-aside {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.student-hero-chip {
+  padding: 0.85rem 0.95rem;
+  border-radius: 1.05rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px);
+}
+
+.student-hero-chip span {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ec9c4;
+}
+
+.student-hero-chip strong {
+  display: block;
+  margin-top: 0.28rem;
+  font-family: var(--sp-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.student-page-banner {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.3rem 1.25rem 1.45rem;
+  border-radius: 1.4rem;
+  border: 1px solid rgba(15, 157, 142, 0.16);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(45, 212, 191, 0.16), transparent 46%),
+    linear-gradient(135deg, #ffffff 0%, #eef8f6 100%);
+  box-shadow: var(--sp-shadow-sm);
+}
+
+.student-page-banner::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #e8c36a, #0f9d8e);
+}
+
+.student-subhero {
+  position: relative;
+  overflow: hidden;
+  padding: 1.4rem 1.3rem;
+  border-radius: 1.55rem;
+  border: 1px solid rgba(232, 195, 106, 0.2);
+  background:
+    radial-gradient(ellipse 70% 80% at 100% 0%, rgba(45, 212, 191, 0.26), transparent 55%),
+    radial-gradient(ellipse 50% 50% at 0% 100%, rgba(232, 195, 106, 0.12), transparent 48%),
+    linear-gradient(145deg, #04141c 0%, #0a2a34 42%, #0c4650 100%);
+  color: #fff;
+  box-shadow:
+    0 18px 36px -16px rgba(4, 20, 28, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.student-subhero::after {
+  content: "";
+  position: absolute;
+  top: -30%;
+  right: -8%;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(232, 195, 106, 0.18) 0%, transparent 68%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.student-timeline-step {
+  border-color: #e2e8f0;
+  background: #fff;
+  color: #94a3b8;
+}
+
+.student-timeline-step.is-done {
+  border-color: #34d399;
+  background: #10b981;
+  color: #fff;
+  box-shadow: 0 8px 16px -8px rgba(16, 185, 129, 0.55);
+}
+
+.student-subhero .student-timeline-step {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.student-subhero .student-timeline-step.is-done {
+  border-color: #34d399;
+  background: #10b981;
+  color: #fff;
+}
+
+.student-timeline-label {
+  color: #334155;
+}
+
+.student-timeline-label.is-done {
+  color: #047857;
+}
+
+.student-timeline-desc {
+  color: #94a3b8;
+}
+
+.student-subhero .student-timeline-label {
+  color: #c5d4dc;
+}
+
+.student-subhero .student-timeline-label.is-done {
+  color: #6ee7b7;
+}
+
+.student-subhero .student-timeline-desc {
+  color: #8aa8b0;
+}
+
+.student-subhero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.18rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 195, 106, 0.35);
+  background: rgba(232, 195, 106, 0.12);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f3d89a;
 }
 
 /* ==========================================================================
@@ -197,20 +413,32 @@ html.locale-gu .student-portal-shell h3 {
 .student-metric-card {
   position: relative;
   overflow: hidden;
-  padding: 1.15rem 1.25rem;
+  padding: 1.2rem 1.2rem 1.15rem;
   border: 1px solid var(--sp-line);
-  border-radius: 1.15rem;
-  background: var(--sp-paper);
+  border-radius: 1.25rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbfa 100%);
   box-shadow: var(--sp-shadow-sm);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.student-metric-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, #0f9d8e, #2dd4bf);
+}
+
+.student-metric-card[data-accent="indigo"]::before { background: linear-gradient(90deg, #4f46e5, #818cf8); }
+.student-metric-card[data-accent="amber"]::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.student-metric-card[data-accent="emerald"]::before { background: linear-gradient(90deg, #059669, #34d399); }
+.student-metric-card[data-accent="rose"]::before { background: linear-gradient(90deg, #e11d48, #fb7185); }
+.student-metric-card[data-accent="sky"]::before { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+
 .student-metric-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(13, 148, 136, 0.4);
-  box-shadow:
-    0 12px 24px -6px rgba(13, 148, 136, 0.1),
-    0 4px 8px -2px rgba(15, 23, 42, 0.04);
+  transform: translateY(-3px);
+  border-color: rgba(15, 157, 142, 0.35);
+  box-shadow: var(--sp-shadow-md);
 }
 
 .student-metric-card .sp-metric-label {
@@ -261,7 +489,7 @@ html.locale-gu .student-portal-shell h3 {
    ========================================================================== */
 .student-portal-header {
   position: relative;
-  padding: 0.5rem 0 0.25rem;
+  padding: 0;
   border: 0;
   background: transparent;
 }
@@ -310,41 +538,44 @@ html.locale-gu .student-portal-shell h3 {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.15rem 1.25rem;
+  min-height: 6.4rem;
+  padding: 1.15rem 1.2rem;
   border: 1px solid var(--sp-line);
-  border-radius: 1.15rem;
-  background: var(--sp-paper);
+  border-radius: 1.3rem;
+  background: linear-gradient(180deg, #ffffff, #f8fbfc);
   text-decoration: none;
   box-shadow: var(--sp-shadow-sm);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .student-quick-link:hover {
-  border-color: rgba(13, 148, 136, 0.45);
-  background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
-  box-shadow:
-    0 10px 22px -5px rgba(13, 148, 136, 0.12),
-    0 4px 8px -2px rgba(15, 23, 42, 0.04);
-  transform: translateY(-2px);
+  border-color: rgba(15, 157, 142, 0.4);
+  background: #ffffff;
+  box-shadow: var(--sp-shadow-md);
+  transform: translateY(-3px);
 }
 
 .student-quick-link .sp-ql-icon {
   display: grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 0.85rem;
-  background: linear-gradient(135deg, #09202a, #0f4c54);
-  color: #5eead4;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  background: linear-gradient(145deg, #0b3b44, #0f9d8e);
+  color: #ecfeff;
   flex-shrink: 0;
-  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
-  transition: transform 0.2s ease, background 0.2s ease;
+  box-shadow: 0 8px 16px -8px rgba(15, 157, 142, 0.7);
+  transition: transform 0.2s ease;
 }
 
+.student-quick-link[data-tone="indigo"] .sp-ql-icon { background: linear-gradient(145deg, #312e81, #6366f1); }
+.student-quick-link[data-tone="amber"] .sp-ql-icon { background: linear-gradient(145deg, #92400e, #f59e0b); }
+.student-quick-link[data-tone="violet"] .sp-ql-icon { background: linear-gradient(145deg, #5b21b6, #8b5cf6); }
+.student-quick-link[data-tone="sky"] .sp-ql-icon { background: linear-gradient(145deg, #075985, #0ea5e9); }
+.student-quick-link[data-tone="rose"] .sp-ql-icon { background: linear-gradient(145deg, #9f1239, #f43f5e); }
+
 .student-quick-link:hover .sp-ql-icon {
-  transform: scale(1.06);
-  background: linear-gradient(135deg, #0d9488, #0f766e);
-  color: #ffffff;
+  transform: scale(1.07) rotate(-4deg);
 }
 
 .student-quick-link h3 {
@@ -378,7 +609,7 @@ html.locale-gu .student-portal-shell h3 {
 .student-section {
   position: relative;
   border: 1px solid var(--sp-line);
-  border-radius: 1.25rem;
+  border-radius: 1.4rem;
   background: var(--sp-paper);
   padding: 1.35rem 1.35rem;
   box-shadow: var(--sp-shadow-sm);
@@ -448,7 +679,8 @@ html.locale-gu .student-portal-shell h3 {
   line-height: 1.3;
 }
 
-.student-hero .student-status-pill:not(.student-status-pill--muted):not(.student-status-pill--success):not(.student-status-pill--warning) {
+.student-hero .student-status-pill:not(.student-status-pill--muted):not(.student-status-pill--success):not(.student-status-pill--warning),
+.student-subhero .student-status-pill:not(.student-status-pill--muted):not(.student-status-pill--success):not(.student-status-pill--warning) {
   border-color: rgba(255, 255, 255, 0.25);
   background: rgba(255, 255, 255, 0.12);
   color: #f1f5f9;
@@ -551,17 +783,38 @@ html.locale-gu .student-portal-shell h3 {
 }
 
 /* Footer Stamp */
+.student-help-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.2rem 1.3rem;
+  border-radius: 1.4rem;
+  border: 1px solid rgba(15, 157, 142, 0.22);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(45, 212, 191, 0.18), transparent 42%),
+    linear-gradient(135deg, #0b3b44, #0f766e);
+  color: #fff;
+  box-shadow: var(--sp-shadow-md);
+}
+
+@media (min-width: 640px) {
+  .student-help-banner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
 .student-footer-meta {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 1.15rem 1.35rem;
-  border: 1px solid var(--sp-line);
-  border-radius: 1.15rem;
-  background: var(--sp-paper);
-  box-shadow: var(--sp-shadow-sm);
+  padding: 1.05rem 1.25rem;
+  border: 1px dashed var(--sp-line);
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 @media (min-width: 640px) {

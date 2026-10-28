@@ -77,32 +77,31 @@ export default function StudentExamSeatNumbersPage() {
           {assignments.map((assignment) => (
             <article
               key={assignment.id}
-              className="relative overflow-hidden rounded-3xl border border-indigo-200/80 bg-white shadow-md hover:shadow-lg transition-all duration-300"
+              className="relative overflow-hidden rounded-3xl border border-teal-200/70 bg-white shadow-md transition-all duration-300 hover:shadow-lg"
             >
-              {/* Ticket Top Strip */}
-              <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 p-4 text-white">
+              <div className="bg-gradient-to-r from-[#04141c] via-[#0a2a34] to-[#0e6b6a] p-4 text-white">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/30 text-indigo-300">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-[#f3d89a]">
                       <Armchair className="h-4 w-4" />
                     </span>
-                    <span className="text-xs font-black tracking-wider uppercase text-indigo-200">
+                    <span className="text-xs font-black uppercase tracking-wider text-teal-100">
                       Examination Hall Ticket
                     </span>
                   </div>
-                  <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-indigo-100">
+                  <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-[#f3d89a]">
                     {assignment.academicYear}
                   </span>
                 </div>
               </div>
 
               {/* Perforated Divider simulation */}
-              <div className="relative flex items-center justify-between px-2 py-1 bg-indigo-50/50 border-y border-dashed border-indigo-200">
-                <div className="-ml-4 h-4 w-4 rounded-full bg-slate-100 border-r border-indigo-200" />
-                <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-600">
+              <div className="relative flex items-center justify-between border-y border-dashed border-teal-200 bg-teal-50/50 px-2 py-1">
+                <div className="-ml-4 h-4 w-4 rounded-full border-r border-teal-200 bg-slate-100" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-teal-700">
                   {assignment.termLabelEn}
                 </span>
-                <div className="-mr-4 h-4 w-4 rounded-full bg-slate-100 border-l border-indigo-200" />
+                <div className="-mr-4 h-4 w-4 rounded-full border-l border-teal-200 bg-slate-100" />
               </div>
 
               {/* Ticket Content */}
@@ -112,7 +111,7 @@ export default function StudentExamSeatNumbersPage() {
                   <div>
                     <h3 className="font-extrabold text-slate-900 text-base">{fullName}</h3>
                     {fullNameGu && fullNameGu !== fullName && (
-                      <p className="text-xs text-indigo-600 font-semibold">{fullNameGu}</p>
+                      <p className="text-xs font-semibold text-teal-700">{fullNameGu}</p>
                     )}
                   </div>
                   <div className="text-right">
@@ -124,11 +123,11 @@ export default function StudentExamSeatNumbersPage() {
                 </div>
 
                 {/* Seat Number Display */}
-                <div className="my-4 rounded-2xl border-2 border-dashed border-indigo-300 bg-indigo-50/70 p-5 text-center shadow-inner">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-700">
+                <div className="my-4 rounded-2xl border-2 border-dashed border-teal-300 bg-teal-50/70 p-5 text-center shadow-inner">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-teal-700">
                     {t("examSeats.seatNumber") || "OFFICIAL SEAT NUMBER"}
                   </p>
-                  <p className="mt-1 font-mono text-4xl font-black tracking-widest text-indigo-950">
+                  <p className="mt-1 font-mono text-4xl font-black tracking-widest text-teal-950">
                     {assignment.seatNumber}
                   </p>
                   <p className="mt-1 text-[11px] text-slate-500 font-medium">

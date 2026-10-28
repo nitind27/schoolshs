@@ -193,7 +193,7 @@ export function StudentPageHeader({
   backLabel?: string;
 }) {
   return (
-    <div className="student-portal-header mb-6">
+    <div className="student-page-banner student-portal-header">
       {backHref && (
         <div className="mb-3">
           <Link
@@ -247,7 +247,7 @@ export function StudentMetricCard({
   const currentAccent = accentClasses[accent] || accentClasses.teal;
 
   return (
-    <div className={cn("student-metric-card group", currentAccent.border)}>
+    <div className={cn("student-metric-card group", currentAccent.border)} data-accent={accent}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="sp-metric-label">{label}</p>
@@ -270,15 +270,17 @@ export function StudentQuickLink({
   label,
   desc,
   badge,
+  tone = "teal",
 }: {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   desc: string;
   badge?: string | number;
+  tone?: "teal" | "indigo" | "amber" | "violet" | "sky" | "rose";
 }) {
   return (
-    <Link href={href} className="student-quick-link group">
+    <Link href={href} className="student-quick-link group" data-tone={tone}>
       <div className="sp-ql-icon">
         <Icon className="h-5 w-5" />
       </div>
@@ -465,7 +467,7 @@ export function StudentScholarshipTimeline({ status }: { status: string }) {
   };
 
   return (
-    <div className="relative py-4">
+    <div className="student-timeline relative py-4">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {steps.map((st, i) => {
           const state = getStepState(i);
@@ -474,23 +476,16 @@ export function StudentScholarshipTimeline({ status }: { status: string }) {
             <div key={st.key} className="relative flex flex-col items-center text-center">
               <div
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-2xl border-2 transition-all duration-300",
-                  isDone
-                    ? "border-emerald-500 bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                    : "border-slate-200 bg-white text-slate-400"
+                  "student-timeline-step flex h-10 w-10 items-center justify-center rounded-2xl border-2 transition-all duration-300",
+                  isDone && "is-done"
                 )}
               >
                 {isDone ? <CheckCircle2 className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
               </div>
-              <p
-                className={cn(
-                  "mt-2 text-xs font-bold",
-                  isDone ? "text-emerald-700" : "text-slate-500"
-                )}
-              >
+              <p className={cn("student-timeline-label mt-2 text-xs font-bold", isDone && "is-done")}>
                 {st.label}
               </p>
-              <p className="mt-0.5 text-[11px] text-slate-400 max-w-[130px]">{st.desc}</p>
+              <p className="student-timeline-desc mt-0.5 max-w-[130px] text-[11px]">{st.desc}</p>
             </div>
           );
         })}
@@ -536,7 +531,7 @@ export function StudentDigitalIdModal({
         </button>
 
         {/* ID Card Outer */}
-        <div id="student-printable-id-card" className="relative p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white">
+        <div id="student-printable-id-card" className="relative bg-gradient-to-br from-[#04141c] via-[#0a2a34] to-[#0e6b6a] p-6 text-white">
           {/* Decorative Pattern */}
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 

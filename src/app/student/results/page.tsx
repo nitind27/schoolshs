@@ -39,32 +39,28 @@ export default function StudentResultsPage() {
 
       {/* Aggregate Results Overview */}
       {reportCards.length > 0 && (
-        <div className="relative overflow-hidden rounded-3xl border border-teal-200/80 bg-gradient-to-r from-teal-900 via-slate-900 to-slate-950 p-6 sm:p-7 text-white shadow-lg">
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <section className="student-subhero">
+          <div className="relative z-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-500/20 text-teal-300 border border-teal-400/30">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-[#f3d89a]">
                 <Medal className="h-6 w-6" />
               </div>
               <div>
-                <span className="text-teal-300 text-xs font-bold uppercase tracking-wider">
-                  Academic Record
-                </span>
-                <h2 className="text-xl sm:text-2xl font-black">
+                <span className="student-subhero-kicker">Academic Record</span>
+                <h2 className="mt-1.5 text-xl font-extrabold sm:text-2xl">
                   {reportCards.length} Published Report {reportCards.length === 1 ? "Card" : "Cards"}
                 </h2>
-                <p className="text-xs text-slate-300 mt-0.5">
+                <p className="mt-0.5 text-xs text-teal-100/80">
                   Class {student.standard || "—"}-{student.section || "—"} • Roll: {student.rollNumber || "—"}
                 </p>
               </div>
             </div>
-
-            <div className="flex items-center gap-3">
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur-md text-teal-200 border border-white/15">
-                Official Board & School Format
-              </span>
-            </div>
+            <span className="student-hero-chip w-fit">
+              <span>Format</span>
+              <strong>Official School</strong>
+            </span>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Report Cards List */}

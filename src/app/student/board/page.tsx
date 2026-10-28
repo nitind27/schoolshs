@@ -29,17 +29,17 @@ function BoardExamCard({
 
   return (
     <div className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-sm hover:shadow-md transition-all duration-200">
-      <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-teal-50/80 via-slate-50 to-white px-6 py-4">
+      <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-[#04141c] via-[#0a2a34] to-[#0e6b6a] px-6 py-4 text-white">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-sm">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-[#f3d89a]">
             <GraduationCap className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="font-extrabold text-slate-900 text-base">{title}</h2>
-            <p className="text-xs text-slate-500">Official State Board Certificate Record</p>
+            <h2 className="text-base font-extrabold text-white">{title}</h2>
+            <p className="text-xs text-teal-100/80">Official State Board Certificate Record</p>
           </div>
         </div>
-        <span className="rounded-full bg-teal-100/80 px-3 py-1 text-xs font-bold text-teal-800">
+        <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold text-[#f3d89a]">
           {board || "GSEB"}
         </span>
       </div>

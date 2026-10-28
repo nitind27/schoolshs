@@ -4599,6 +4599,13 @@ const en = {
   },
   studentPortal: {
     welcomeBack: "Welcome back",
+    digitalId: "Digital Student ID",
+    viewProfile: "My Profile",
+    studentServices: "Student services",
+    academicSnapshot: "Latest academic card",
+    needHelp: "Need help with scholarship or profile?",
+    needHelpHint: "Contact the school clerk or administrator during school hours.",
+    verifiedSession: "Authenticated student session",
     classRoll: "Class {{standard}}-{{section}} • Roll: {{roll}}",
     personalInfo: "Personal Information",
     fullName: "Full Name",

@@ -26,7 +26,7 @@ const THEMES: Record<Theme, { gradient: string; accent: string; badge: string; t
   sky:     { gradient: "from-slate-900 via-sky-950 to-cyan-950",    accent: "#0ea5e9",  badge: "bg-sky-500",     text: "text-sky-200",     border: "border-sky-900" },
   teacher: { gradient: "from-slate-950 via-teal-950 to-indigo-950", accent: "#2dd4bf", badge: "bg-teal-500", text: "text-teal-200", border: "border-teal-900" },
   clerk:   { gradient: "from-slate-950 via-cyan-950 to-slate-900",  accent: "#22d3ee", badge: "bg-cyan-500", text: "text-cyan-100", border: "border-cyan-900" },
-  student: { gradient: "from-slate-950 via-slate-900 to-teal-950", accent: "#14b8a6", badge: "bg-teal-600", text: "text-teal-100", border: "border-teal-900" },
+  student: { gradient: "from-[#04141c] via-[#0a2a34] to-[#0e6b6a]", accent: "#e8c36a", badge: "bg-teal-600", text: "text-teal-100", border: "border-teal-900/60" },
   ca:      { gradient: "from-stone-950 via-amber-950 to-yellow-950", accent: "#fbbf24", badge: "bg-amber-400", text: "text-amber-100", border: "border-amber-900/40" },
 };
 

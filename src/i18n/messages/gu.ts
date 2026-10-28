@@ -4542,6 +4542,13 @@ const gu: Messages = {
   },
   studentPortal: {
     welcomeBack: "પાછા આવકાર",
+    digitalId: "ડિજિટલ સ્ટુડન્ટ ID",
+    viewProfile: "મારી પ્રોફાઇલ",
+    studentServices: "વિદ્યાર્થી સેવાઓ",
+    academicSnapshot: "તાજું શૈક્ષણિક કાર્ડ",
+    needHelp: "શિષ્યવૃત્તિ કે પ્રોફાઇલમાં મદદ જોઈએ?",
+    needHelpHint: "શાળા સમયમાં ક્લાર્ક અથવા એડમિનિસ્ટ્રેટરનો સંપર્ક કરો.",
+    verifiedSession: "પ્રમાણિત વિદ્યાર્થી સેશન",
     classRoll: "વર્ગ {{standard}}-{{section}} • રોલ: {{roll}}",
     personalInfo: "વ્યક્તિગત માહિતી",
     fullName: "પૂરું નામ",

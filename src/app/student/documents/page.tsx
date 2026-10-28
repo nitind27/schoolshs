@@ -30,34 +30,29 @@ export default function StudentDocumentsPage() {
         backLabel="Back to Dashboard"
       />
 
-      {/* Document Vault Notice */}
-      <div className="relative overflow-hidden rounded-3xl border border-teal-200/80 bg-gradient-to-r from-teal-900 via-slate-900 to-slate-950 p-6 text-white shadow-lg">
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <section className="student-subhero">
+        <div className="relative z-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500/20 text-teal-300 border border-teal-400/30">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-[#f3d89a]">
               <Lock className="h-6 w-6" />
             </div>
             <div>
-              <span className="text-teal-300 text-xs font-bold uppercase tracking-wider">
-                Government Verified Vault
-              </span>
-              <h3 className="text-lg font-black text-white">
+              <span className="student-subhero-kicker">Verified Vault</span>
+              <h3 className="mt-1.5 text-lg font-extrabold text-white">
                 Encrypted Student Document Repository
               </h3>
-              <p className="text-xs text-slate-300 mt-0.5">
+              <p className="mt-0.5 text-xs text-teal-100/80">
                 {t("studentPortal.documentsSelfUploadHint") ||
                   "Upload clear scanned copies of Aadhaar, caste certificate, income certificate, and bank passbook for verification."}
               </p>
             </div>
           </div>
-          <div className="shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3.5 py-1 text-xs font-bold text-emerald-300 border border-emerald-400/30">
-              <ShieldCheck className="h-4 w-4" />
-              <span>SSL Protected</span>
-            </span>
-          </div>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/20 px-3.5 py-1.5 text-xs font-bold text-emerald-200">
+            <ShieldCheck className="h-4 w-4" />
+            SSL Protected
+          </span>
         </div>
-      </div>
+      </section>
 
       {/* Main Documents Section */}
       <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm">
