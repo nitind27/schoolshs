@@ -23,6 +23,7 @@ import {
   Send,
   CheckCircle2,
   X,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
@@ -39,11 +40,11 @@ import {
 import "@/components/landing/landing.css";
 
 const PORTAL_ROLES = [
-  { key: "school_admin", icon: Building2 },
-  { key: "teacher", icon: BookOpen },
-  { key: "clerk", icon: UserCheck },
-  { key: "student", icon: GraduationCap },
-  { key: "ca", icon: Calculator },
+  { key: "school_admin", icon: Building2, tone: "teal" },
+  { key: "teacher", icon: BookOpen, tone: "sky" },
+  { key: "clerk", icon: UserCheck, tone: "amber" },
+  { key: "student", icon: GraduationCap, tone: "violet" },
+  { key: "ca", icon: Calculator, tone: "rose" },
 ] as const;
 
 const SERVICES = [
@@ -175,9 +176,25 @@ function useScrollReveal() {
   return rootRef;
 }
 
+function useScrollProgress() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const el = document.documentElement;
+      const scrolled = el.scrollTop || document.body.scrollTop;
+      const total = el.scrollHeight - el.clientHeight;
+      setProgress(total > 0 ? (scrolled / total) * 100 : 0);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return progress;
+}
+
 export function SchoolLandingPage() {
   const t = useT();
   const pageRef = useScrollReveal();
+  const scrollProgress = useScrollProgress();
   const [scrolled, setScrolled] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -282,7 +299,13 @@ export function SchoolLandingPage() {
 
   return (
     <div ref={pageRef} id="top" className="landing-site min-h-screen">
-      <header className={`lp-header ${scrolled ? "is-scrolled" : ""}`}>
+      {/* Scroll progress */}
+      <div
+        className="lp-scroll-progress"
+        style={{ width: `${scrollProgress}%` }}
+        aria-hidden
+      />
+      <header className={`lp-header ${scrolled ? "is-scrolled" : "is-top"}`}>
         <div className="lp-shell lp-header-inner">
           <Link href="/" className="lp-logo">
             <span className="lp-brand-mark" aria-hidden>
@@ -301,7 +324,7 @@ export function SchoolLandingPage() {
           </nav>
 
           <div className="lp-header-actions">
-            <LanguageSwitcher variant="compact" />
+            <LanguageSwitcher variant={scrolled ? "compact" : "hero"} />
             <Link href="/login" className="lp-btn-enter">
               {t("landing.ctaPortal")}
               <ArrowRight className="h-3.5 w-3.5" />
@@ -310,7 +333,7 @@ export function SchoolLandingPage() {
         </div>
       </header>
 
-      <section className="lp-hero lp-hero--v2" aria-label={t("landing.productName")}>
+      <section className="lp-hero lp-hero--v2 lp-hero--v3" aria-label={t("landing.productName")}>
         <div className="lp-hero-media">
           <video
             ref={heroVideoRef}
@@ -328,10 +351,10 @@ export function SchoolLandingPage() {
           <div className="lp-hero-grain" aria-hidden />
         </div>
 
-        <div className="lp-shell lp-hero-content landing-fade landing-fade--show">
+        <div className="lp-shell lp-hero-stage landing-fade landing-fade--show">
           <div className="lp-hero-panel">
             <p className="lp-hero-kicker">
-              <span className="lp-hero-dot" />
+              <Sparkles className="h-3.5 w-3.5" />
               {t("landing.heroBadge")}
             </p>
             <h1 className="lp-hero-title">{t("landing.heroHeadline")}</h1>
@@ -367,6 +390,95 @@ export function SchoolLandingPage() {
                 {t("landing.ctaExplore")}
               </a>
             </div>
+
+            <div className="lp-hero-trust">
+              <span>{t("landing.trustSecure")}</span>
+              <span>{t("landing.trustRoles")}</span>
+              <span>{t("landing.trustMulti")}</span>
+            </div>
+          </div>
+
+          <aside className="lp-hero-showcase" aria-label={t("landing.heroShowcaseTitle")}>
+            <div className="lp-hero-card">
+              <div className="lp-hero-card-bar">
+                <span className="lp-hero-live">
+                  <span className="lp-hero-dot" />
+                  {t("landing.heroShowcaseLive")}
+                </span>
+                <strong>{t("landing.heroShowcaseTitle")}</strong>
+              </div>
+              <ul className="lp-hero-card-grid">
+                <li>
+                  <Shield className="h-4 w-4" />
+                  <span>{t("landing.aboutPoint1")}</span>
+                </li>
+                <li>
+                  <Award className="h-4 w-4" />
+                  <span>{t("landing.aboutPoint2")}</span>
+                </li>
+                <li>
+                  <FileText className="h-4 w-4" />
+                  <span>{t("landing.aboutPoint3")}</span>
+                </li>
+              </ul>
+              <p className="lp-hero-card-trust">{t("landing.leadTrust")}</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      {/* Scroll cue */}
+      <div className="lp-scroll-cue" aria-hidden>
+        <div className="lp-scroll-cue-wheel">
+          <span className="lp-scroll-cue-dot" />
+        </div>
+      </div>
+
+      <div className="lp-marquee" aria-hidden>
+        <div className="lp-marquee-track">
+          {[1, 2, 3, 4, 1, 2, 3, 4].map((n, i) => (
+            <span key={`${n}-${i}`}>{t(`landing.marquee${n}`)}</span>
+          ))}
+        </div>
+      </div>
+
+      <section className="lp-about-strip">
+        <div className="lp-shell landing-fade">
+          <div className="lp-about-grid">
+            <div>
+              <p className="lp-eyebrow">{t("landing.aboutEyebrow")}</p>
+              <h2>{t("landing.aboutTitle")}</h2>
+              <p className="lp-section-lead">{t("landing.aboutDesc")}</p>
+              {/* Quick stats */}
+              <div className="lp-about-stats" aria-label="Platform Statistics">
+                <div className="lp-about-stat">
+                  <span className="lp-about-stat-val">{t("landing.statModulesVal")}</span>
+                  <span className="lp-about-stat-label">{t("landing.statModules")}</span>
+                </div>
+                <div className="lp-about-stat">
+                  <span className="lp-about-stat-val">{t("landing.statPortalsVal")}</span>
+                  <span className="lp-about-stat-label">{t("landing.statPortals")}</span>
+                </div>
+                <div className="lp-about-stat">
+                  <span className="lp-about-stat-val">{t("landing.statSecureVal")}</span>
+                  <span className="lp-about-stat-label">{t("landing.statSecure")}</span>
+                </div>
+              </div>
+            </div>
+            <ul className="lp-about-points">
+              <li>
+                <CheckCircle2 className="h-5 w-5" />
+                <span>{t("landing.aboutPoint1")}</span>
+              </li>
+              <li>
+                <CheckCircle2 className="h-5 w-5" />
+                <span>{t("landing.aboutPoint2")}</span>
+              </li>
+              <li>
+                <CheckCircle2 className="h-5 w-5" />
+                <span>{t("landing.aboutPoint3")}</span>
+              </li>
+            </ul>
           </div>
         </div>
       </section>
@@ -381,7 +493,7 @@ export function SchoolLandingPage() {
             <p className="lp-section-lead">{t("landing.modulesDesc")}</p>
           </div>
 
-          <ol className="lp-module-rail">
+          <ol className="lp-module-rail lp-module-grid">
             {SERVICES.map((s, i) => (
               <li key={s.key} className={`landing-fade landing-fade--d${((i % 3) + 1) as 1 | 2 | 3}`}>
                 <button
@@ -392,7 +504,7 @@ export function SchoolLandingPage() {
                 >
                   <span className="lp-module-num">{String(i + 1).padStart(2, "0")}</span>
                   <div className="lp-module-icon">
-                    <s.icon className="h-4 w-4" />
+                    <s.icon className="h-5 w-5" />
                   </div>
                   <div>
                     <h3>{t(`landing.module_${s.key}`)}</h3>
@@ -429,13 +541,14 @@ export function SchoolLandingPage() {
                 key={p.key}
                 href={p.key === "ca" ? "/login?portal=ca" : "/login"}
                 className={`lp-role landing-fade landing-fade--d${((i % 3) + 1) as 1 | 2 | 3}`}
+                data-tone={p.tone}
               >
                 <div className="lp-role-icon">
                   <p.icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3>{t(`roles.${p.key}`)}</h3>
-                  <p>{t("landing.portalLoginHint")}</p>
+                  <p>{t(`landing.portalHint_${p.key}`)}</p>
                 </div>
                 <ArrowRight className="lp-role-arrow h-4 w-4" />
               </Link>
