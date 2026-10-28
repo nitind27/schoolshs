@@ -75,7 +75,7 @@ function Fill({
   value = "",
   onChange,
   sizeKey,
-  minWidth = 0,
+  minWidth = 80,
   flex,
   center,
 }: {
@@ -95,6 +95,8 @@ function Fill({
         display: "inline-block",
         borderBottom: "1px solid #111",
         minWidth,
+        width: "100%",
+        boxSizing: "border-box",
         flex: flex ?? 1,
         verticalAlign: "bottom",
         lineHeight: 1.35,
@@ -102,6 +104,8 @@ function Fill({
         padding: "0 3px 1px",
         textAlign: center ? "center" : "left",
         wordBreak: "break-word",
+        overflow: "visible",
+        whiteSpace: "normal",
       }}
     />
   );
@@ -110,20 +114,27 @@ function Fill({
 /** Label | colon | value — colons stay in one vertical line, like the printed LC. */
 const LINE: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr)",
+  gridTemplateColumns: "minmax(11rem, 46%) 1.7em minmax(8rem, 1fr)",
+  columnGap: 6,
+  alignItems: "end",
+};
+
+const LINE_COMPACT: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "auto 1.4em minmax(3rem, 1fr)",
   columnGap: 4,
   alignItems: "end",
 };
 
 function Label({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return <span style={{ minWidth: 0, ...style }}>{children}</span>;
+  return <span style={{ ...style }}>{children}</span>;
 }
 
 function Slot({ children }: { children: React.ReactNode }) {
   return (
     <>
       <span style={{ whiteSpace: "nowrap", fontWeight: 700, paddingBottom: 1 }}>{": —"}</span>
-      <div style={{ minWidth: 0, display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "2px 6px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "2px 6px", minWidth: "3rem" }}>
         {children}
       </div>
     </>
@@ -134,13 +145,15 @@ function Line({
   children,
   extra,
   style,
+  compact,
 }: {
   children: React.ReactNode;
   extra?: React.ReactNode;
   style?: React.CSSProperties;
+  compact?: boolean;
 }) {
   return (
-    <div style={{ ...LINE, ...style }}>
+    <div style={{ ...(compact ? LINE_COMPACT : LINE), ...style }}>
       {children}
       {extra ? <div style={{ gridColumn: "1 / -1" }}>{extra}</div> : null}
     </div>
@@ -415,27 +428,27 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             }}
           >
             <div>
-              <Line>
+              <Line compact>
                 <Label><CertEdit label sizeKey="hsSscLabel" value={f.sscLabel} onChange={set("sscLabel")} /></Label>
                 <Slot><CertEdit sizeKey="hsSscIndex" value={f.sscIndex} onChange={set("sscIndex")} style={{ fontWeight: 700 }} /></Slot>
               </Line>
-              <Line style={{ fontSize: 9 }}>
+              <Line compact style={{ fontSize: 9 }}>
                 <Label><CertEdit label sizeKey="hsSscGu" value={f.sscGu} onChange={set("sscGu")} /></Label>
                 <Slot><CertEdit sizeKey="hsSscIndexGu" value={f.sscIndex} onChange={set("sscIndex")} /></Slot>
               </Line>
-              <Line style={{ marginTop: 3 }}>
+              <Line compact style={{ marginTop: 3 }}>
                 <Label><CertEdit label sizeKey="hsHscLabel" value={f.hscLabel} onChange={set("hscLabel")} /></Label>
                 <Slot><CertEdit sizeKey="hsHscIndex" value={f.hscIndex} onChange={set("hscIndex")} style={{ fontWeight: 700 }} /></Slot>
               </Line>
-              <Line style={{ fontSize: 9 }}>
+              <Line compact style={{ fontSize: 9 }}>
                 <Label><CertEdit label sizeKey="hsHscGu" value={f.hscGu} onChange={set("hscGu")} /></Label>
                 <Slot><CertEdit sizeKey="hsHscIndexGu" value={f.hscIndex} onChange={set("hscIndex")} /></Slot>
               </Line>
-              <Line style={{ marginTop: 3 }}>
+              <Line compact style={{ marginTop: 3 }}>
                 <Label><CertEdit label sizeKey="hsDiseLabel" value={f.diseLabel} onChange={set("diseLabel")} /></Label>
                 <Slot><CertEdit sizeKey="hsDiseCode" value={f.diseCode} onChange={set("diseCode")} style={{ fontWeight: 700 }} /></Slot>
               </Line>
-              <Line style={{ fontSize: 9 }}>
+              <Line compact style={{ fontSize: 9 }}>
                 <Label><CertEdit label sizeKey="hsDiseGu" value={f.diseGu} onChange={set("diseGu")} /></Label>
                 <Slot><CertEdit sizeKey="hsDiseCodeGu" value={f.diseCode} onChange={set("diseCode")} /></Slot>
               </Line>
@@ -457,15 +470,15 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             </div>
 
             <div>
-              <Line>
+              <Line compact>
                 <Label><CertEdit label sizeKey="hsNoLabel" value={f.noLabel} onChange={set("noLabel")} /></Label>
                 <Slot><Fill sizeKey="hsSerial" value={f.serialNo} onChange={set("serialNo")} minWidth={52} center /></Slot>
               </Line>
-              <Line style={{ marginTop: 6 }}>
+              <Line compact style={{ marginTop: 6 }}>
                 <Label><CertEdit label sizeKey="hsGrLabel" value={f.grLabel} onChange={set("grLabel")} /></Label>
                 <Slot><Fill sizeKey="hsGr" value={f.grNumber} onChange={set("grNumber")} minWidth={56} center /></Slot>
               </Line>
-              <Line style={{ marginTop: 6 }}>
+              <Line compact style={{ marginTop: 6 }}>
                 <Label><CertEdit label sizeKey="hsMediumLabel" value={f.mediumLabel} onChange={set("mediumLabel")} /></Label>
                 <Slot><Fill sizeKey="hsMedium" value={f.medium} onChange={set("medium")} minWidth={90} center /></Slot>
               </Line>
@@ -474,7 +487,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
 
           {/* Fields 1–14 */}
           <Field en={<CertEdit label sizeKey="hsNameEnLabel" value={f.nameEnLabel} onChange={set("nameEnLabel")} />} gu={<><Label><CertEdit label sizeKey="hsNameGuLabel" value={f.nameGuLabel} onChange={set("nameGuLabel")} /></Label><Slot><Fill sizeKey="hsNameGu" value={f.nameGu} onChange={set("nameGu")} flex={1} /></Slot></>}>
-            <Fill sizeKey="hsNameEn" value={f.nameEn} onChange={set("nameEn")} flex={1} />
+            <Fill sizeKey="hsNameEn" value={f.nameEn} onChange={set("nameEn")} flex={1} minWidth={160} />
           </Field>
 
           <Field en={<CertEdit label sizeKey="hsCasteEnLabel" value={f.casteEnLabel} onChange={set("casteEnLabel")} />} gu={<><Label><CertEdit label sizeKey="hsCasteGuLabel" value={f.casteGuLabel} onChange={set("casteGuLabel")} /></Label><Slot><Fill sizeKey="hsCasteGu" value={f.religionCasteGu} onChange={set("religionCasteGu")} flex={1} /></Slot></>}>

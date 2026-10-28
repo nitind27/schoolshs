@@ -132,8 +132,8 @@
 }
 .lc-up-id-line {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr);
-  column-gap: 4px;
+  grid-template-columns: minmax(11rem, 46%) 1.7em minmax(8rem, 1fr);
+  column-gap: 6px;
   align-items: end;
   font-size: 11px;
   margin-bottom: 3px;
@@ -148,15 +148,14 @@
 }
 .lc-up-field-top {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr);
-  column-gap: 4px;
+  grid-template-columns: minmax(11rem, 46%) 1.7em minmax(8rem, 1fr);
+  column-gap: 6px;
   align-items: end;
   font-size: 11.5px;
   line-height: 1.2;
 }
 .lc-up-field-en {
   font-weight: 700;
-  min-width: 0;
 }
 .lc-up-colon {
   white-space: nowrap;
@@ -164,21 +163,21 @@
   padding-bottom: 1px;
 }
 .lc-up-slot {
-  min-width: 0;
+  min-width: 8rem;
   display: flex;
   align-items: flex-end;
 }
 .lc-up-slot .lc-up-fill {
   width: 100%;
-  min-width: 0;
+  min-width: 48px;
 }
 .lc-up-field-gu {
   margin: 2px 0 0;
   font-size: 10px;
   line-height: 1.15;
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr);
-  column-gap: 4px;
+  grid-template-columns: minmax(11rem, 46%) 1.7em minmax(8rem, 1fr);
+  column-gap: 6px;
   align-items: end;
 }
 /* Gujarati matras sit above the Latin ascender line — give them room inside the clipped box */
@@ -201,8 +200,10 @@
   padding: 1px 6px 2px;
   font-size: 12px;
   letter-spacing: 0.01em;
-  white-space: nowrap;
-  overflow: hidden;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .lc-up-edit {
@@ -391,8 +392,8 @@
 }
 .lc-up-bank-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr);
-  column-gap: 4px;
+  grid-template-columns: minmax(11rem, 46%) 1.7em minmax(8rem, 1fr);
+  column-gap: 6px;
   align-items: end;
   font-size: 11.5px;
 }
@@ -412,8 +413,8 @@
 }
 .lc-up-meta-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr);
-  column-gap: 4px;
+  grid-template-columns: minmax(11rem, 46%) 1.7em minmax(8rem, 1fr);
+  column-gap: 6px;
   align-items: end;
   margin-bottom: 3px;
 }
