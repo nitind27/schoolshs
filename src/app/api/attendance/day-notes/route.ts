@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       prisma.holiday.findMany({
         where: {
           schoolId: session.schoolId,
-          date: { startsWith: monthKey },
+          date: { gte: `${monthKey}-01`, lte: `${monthKey}-31` },
           type: { in: ["public", "school"] },
         },
         select: { date: true, name: true, nameGu: true },
@@ -98,7 +98,7 @@ export async function PUT(request: NextRequest) {
     const holidays = await prisma.holiday.findMany({
       where: {
         schoolId: session.schoolId,
-        date: { startsWith: monthKey },
+        date: { gte: `${monthKey}-01`, lte: `${monthKey}-31` },
         type: { in: ["public", "school"] },
       },
       select: { date: true, name: true, nameGu: true },
