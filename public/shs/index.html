@@ -1482,6 +1482,73 @@
             border-color: #fecaca;
             color: #b91c1c;
         }
+        .lh-size-box {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .lh-size-scope {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            margin: 8px 0;
+        }
+        .lh-size-scope button {
+            min-height: 30px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .lh-size-scope button.on {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+            color: #fff;
+        }
+        .lh-size-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .lh-size-grid label,
+        .lh-size-line {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #334155;
+        }
+        .lh-size-grid input,
+        .lh-size-grid select,
+        .lh-size-line input,
+        .lh-size-line select {
+            height: 32px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            padding: 0 8px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #fff;
+        }
+        .lh-size-line input[type="color"] {
+            padding: 2px 4px;
+        }
+        .lh-size-pair {
+            display: flex;
+            gap: 4px;
+        }
+        .lh-size-pair input { flex: 1; min-width: 0; }
+        .lh-size-pair select { width: 58px; }
+        @media screen {
+            .content-area .lh-grid td.lh-grid-on,
+            .content-area .lh-grid th.lh-grid-on {
+                outline: 2px solid #2563eb;
+                outline-offset: -2px;
+            }
+        }
 
         /* Editable styles */
         [contenteditable="true"] {
@@ -1721,32 +1788,32 @@
                 line-height: 1.45 !important;
             }
             .content-area .lh-grid {
-                width: 100% !important;
-                table-layout: auto !important;
-                font-size: 11pt !important;
-                line-height: 1.25 !important;
-                border-collapse: collapse !important;
+                width: 100%;
+                table-layout: fixed;
+                font-size: 11pt;
+                line-height: 1.25;
+                border-collapse: collapse;
             }
-            .content-area .lh-grid,
             .content-area .lh-grid td,
             .content-area .lh-grid th {
-                border: 1px solid #000 !important;
+                border: 1px solid #000;
+                word-break: normal;
+                overflow-wrap: normal;
+                white-space: nowrap;
+                padding: 2px 8px;
+                vertical-align: middle;
+                line-height: 1.25;
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
             }
-            .content-area .lh-grid td,
-            .content-area .lh-grid th {
-                word-break: normal !important;
-                overflow-wrap: normal !important;
-                white-space: nowrap !important;
-                padding: 2px 8px !important;
-                vertical-align: middle !important;
-                line-height: 1.25 !important;
+            .content-area .lh-grid.lh-grid-noborder td,
+            .content-area .lh-grid.lh-grid-noborder th {
+                border-color: transparent;
             }
             .content-area .lh-grid tr.lh-grid-head td {
-                font-weight: 700 !important;
-                text-align: center !important;
-                background: #f3f4f6 !important;
+                font-weight: 700;
+                text-align: center;
+                background: #f3f4f6;
             }
 
             .page-number {
@@ -3136,6 +3203,60 @@
             <button type="button" onclick="gridClearCell()">Clear cell</button>
             <button type="button" class="lh-table-danger" onclick="gridDeleteTable()">Delete table</button>
         </div>
+        <div class="lh-size-box" id="tableSizeBox">
+            <p class="lh-table-status" id="tableSizeHint">Click a cell. Size and border apply to the target you pick.</p>
+            <div class="lh-size-scope" id="gridScope">
+                <button type="button" data-scope="cell" class="on" onclick="setGridScope('cell')">Cell</button>
+                <button type="button" data-scope="row" onclick="setGridScope('row')">Row</button>
+                <button type="button" data-scope="col" onclick="setGridScope('col')">Column</button>
+                <button type="button" data-scope="table" onclick="setGridScope('table')">Table</button>
+            </div>
+            <div class="lh-size-grid">
+                <label>Column width
+                    <span class="lh-size-pair">
+                        <input id="gridColWidth" type="number" min="4" max="800" value="25" oninput="applyGridColWidth()">
+                        <select id="gridColUnit" onchange="applyGridColWidth()">
+                            <option value="%">%</option>
+                            <option value="px">px</option>
+                        </select>
+                    </span>
+                </label>
+                <label>Row height (px)
+                    <input id="gridRowHeight" type="number" min="16" max="500" value="32" oninput="applyGridRowHeight()">
+                </label>
+                <label>Border (px)
+                    <input id="gridBorderWidth" type="number" min="0" max="8" step="0.5" value="1" oninput="applyGridBorder()">
+                </label>
+                <label>Line
+                    <select id="gridBorderStyle" onchange="applyGridBorder()">
+                        <option value="solid">Solid</option>
+                        <option value="dashed">Dashed</option>
+                        <option value="dotted">Dotted</option>
+                        <option value="double">Double</option>
+                        <option value="none">None</option>
+                    </select>
+                </label>
+                <label class="lh-size-line">Border colour
+                    <input id="gridBorderColor" type="color" value="#111111" oninput="applyGridBorder()">
+                </label>
+                <label class="lh-size-line">Cell colour
+                    <input id="gridBg" type="color" value="#ffffff" oninput="applyGridPaint()">
+                </label>
+                <label>Padding (px)
+                    <input id="gridPad" type="number" min="0" max="28" value="5" oninput="applyGridPaint()">
+                </label>
+                <label>Text size (px)
+                    <input id="gridFont" type="number" min="8" max="32" value="13" oninput="applyGridPaint()">
+                </label>
+            </div>
+            <div class="lh-table-manage">
+                <button type="button" onclick="gridVAlign('top')">Top</button>
+                <button type="button" onclick="gridVAlign('middle')">Middle</button>
+                <button type="button" onclick="gridVAlign('bottom')">Bottom</button>
+                <button type="button" onclick="gridWrap(false)">One line</button>
+                <button type="button" onclick="gridWrap(true)">Wrap text</button>
+            </div>
+        </div>
     </aside>
 
     <!-- Voice Typing Status Bar -->
@@ -3710,6 +3831,7 @@
                 status: 'Click a cell in the table to edit it.',
                 size: '{{rows}} rows × {{cols}} columns',
                 needCell: 'Click a cell in the table you want to change.',
+                sizeHint: 'Click a cell. Width, height, border and colour apply to Cell, Row, Column or Table.',
                 maxRows: 'A table can have up to 40 rows.',
                 maxCols: 'A table can have up to 12 columns.',
                 noRight: 'There is no cell on the right.'
@@ -3720,6 +3842,7 @@
                 status: 'ફેરફાર માટે ટેબલના ખાનામાં ક્લિક કરો.',
                 size: '{{rows}} પંક્તિ × {{cols}} કૉલમ',
                 needCell: 'જે ટેબલ બદલવી હોય તેના ખાનામાં ક્લિક કરો.',
+                sizeHint: 'ખાનામાં ક્લિક કરો. પહોળાઈ, ઊંચાઈ અને બોર્ડર Cell, Row, Column અથવા Table પર લાગશે.',
                 maxRows: 'એક ટેબલમાં વધુમાં વધુ 40 પંક્તિ.',
                 maxCols: 'એક ટેબલમાં વધુમાં વધુ 12 કૉલમ.',
                 noRight: 'જમણી બાજુ ખાનું નથી.'
@@ -3751,6 +3874,8 @@
             if (note) note.textContent = tableMsg('note');
             const status = document.getElementById('tableCellStatus');
             if (status) status.textContent = tableMsg('status');
+            const sizeHint = document.getElementById('tableSizeHint');
+            if (sizeHint) sizeHint.textContent = tableMsg('sizeHint');
             if (activeLetterPage) setActiveLetterPage(activeLetterPage);
             paintGridPicker();
         }
@@ -3852,8 +3977,20 @@
             return { cell: cell, row: cell.parentElement, table: table };
         }
 
+        let gridHit = null;
+
+        function rememberedGridHit() {
+            const live = activeGridCell();
+            if (live) {
+                gridHit = live;
+                return live;
+            }
+            if (gridHit && gridHit.cell && document.body.contains(gridHit.cell)) return gridHit;
+            return null;
+        }
+
         function gridNeedCell() {
-            const hit = activeGridCell();
+            const hit = rememberedGridHit();
             if (!hit) {
                 alert(tableMsg('needCell'));
                 return null;
@@ -3877,6 +4014,16 @@
             const heading = !document.getElementById('gridHead') || document.getElementById('gridHead').checked;
             const table = document.createElement('table');
             table.className = 'lh-grid';
+            table.style.tableLayout = 'fixed';
+            table.style.width = '100%';
+            const group = document.createElement('colgroup');
+            const share = Math.floor(1000 / cols) / 10;
+            for (let c = 0; c < cols; c++) {
+                const col = document.createElement('col');
+                col.style.width = share + '%';
+                group.appendChild(col);
+            }
+            table.appendChild(group);
             const body = document.createElement('tbody');
             for (let r = 0; r < rows; r++) {
                 const tr = document.createElement('tr');
@@ -3920,6 +4067,224 @@
             return td;
         }
 
+        let gridScope = 'cell';
+
+        function setGridScope(scope) {
+            gridScope = scope;
+            document.querySelectorAll('#gridScope button').forEach(function(btn) {
+                btn.classList.toggle('on', btn.dataset.scope === scope);
+            });
+        }
+
+        function gridColumnCount(table) {
+            let max = 0;
+            table.querySelectorAll('tr').forEach(function(tr) {
+                let n = 0;
+                Array.from(tr.cells).forEach(function(td) { n += td.colSpan || 1; });
+                if (n > max) max = n;
+            });
+            return max;
+        }
+
+        function gridVisualIndex(cell) {
+            let index = 0;
+            let prev = cell.previousElementSibling;
+            while (prev) {
+                index += prev.colSpan || 1;
+                prev = prev.previousElementSibling;
+            }
+            return index;
+        }
+
+        function gridCellAt(row, visualIndex) {
+            let cursor = 0;
+            const cells = Array.from(row.cells);
+            for (let i = 0; i < cells.length; i++) {
+                if (cursor === visualIndex) return cells[i];
+                cursor += cells[i].colSpan || 1;
+                if (cursor > visualIndex) return cells[i];
+            }
+            return null;
+        }
+
+        function ensureGridCols(table) {
+            let group = table.querySelector('colgroup');
+            if (!group) {
+                group = document.createElement('colgroup');
+                table.insertBefore(group, table.firstChild);
+            }
+            const count = Math.max(1, gridColumnCount(table));
+            while (group.children.length < count) group.appendChild(document.createElement('col'));
+            while (group.children.length > count) group.lastElementChild.remove();
+            table.style.tableLayout = 'fixed';
+            if (!table.style.width) table.style.width = '100%';
+            return group;
+        }
+
+        function gridStyleTargets(hit) {
+            const all = Array.from(hit.table.querySelectorAll('td, th'));
+            if (gridScope === 'table') return all;
+            if (gridScope === 'row') return Array.from(hit.row.cells);
+            if (gridScope === 'col') {
+                const index = gridVisualIndex(hit.cell);
+                return all.filter(function(td) {
+                    const start = gridVisualIndex(td);
+                    return index >= start && index < start + (td.colSpan || 1);
+                });
+            }
+            return [hit.cell];
+        }
+
+        function numField(id, fallback) {
+            const el = document.getElementById(id);
+            const n = el ? parseFloat(el.value) : NaN;
+            return Number.isFinite(n) ? n : fallback;
+        }
+
+        function applyGridColWidth() {
+            const hit = rememberedGridHit();
+            if (!hit) return;
+            const width = numField('gridColWidth', 0);
+            if (width < 4) return;
+            const unit = (document.getElementById('gridColUnit') || {}).value === 'px' ? 'px' : '%';
+            const group = ensureGridCols(hit.table);
+            const value = width + unit;
+            if (gridScope === 'table') {
+                Array.from(group.children).forEach(function(col) { col.style.width = value; });
+            } else {
+                const start = gridVisualIndex(hit.cell);
+                const span = hit.cell.colSpan || 1;
+                for (let i = 0; i < span; i++) {
+                    if (group.children[start + i]) group.children[start + i].style.width = value;
+                }
+            }
+            rememberGridEdit();
+        }
+
+        function applyGridRowHeight() {
+            const hit = rememberedGridHit();
+            if (!hit) return;
+            const height = Math.max(16, numField('gridRowHeight', 32));
+            const rows = gridScope === 'table' ? Array.from(hit.table.querySelectorAll('tr')) : [hit.row];
+            rows.forEach(function(tr) {
+                tr.style.height = height + 'px';
+                Array.from(tr.cells).forEach(function(td) { td.style.height = height + 'px'; });
+            });
+            rememberGridEdit();
+        }
+
+        function applyGridBorder() {
+            const hit = rememberedGridHit();
+            if (!hit) return;
+            const width = Math.max(0, numField('gridBorderWidth', 1));
+            const style = (document.getElementById('gridBorderStyle') || {}).value || 'solid';
+            const color = (document.getElementById('gridBorderColor') || {}).value || '#111111';
+            hit.table.classList.remove('lh-grid-noborder');
+            if (style === 'none' || width === 0) {
+                if (gridScope === 'table') hit.table.classList.add('lh-grid-noborder');
+            }
+            gridStyleTargets(hit).forEach(function(td) {
+                td.style.borderWidth = width + 'px';
+                td.style.borderStyle = style === 'none' || width === 0 ? 'none' : style;
+                td.style.borderColor = color;
+            });
+            rememberGridEdit();
+        }
+
+        function applyGridPaint() {
+            const hit = rememberedGridHit();
+            if (!hit) return;
+            const pad = Math.max(0, numField('gridPad', 5));
+            const font = Math.max(8, numField('gridFont', 13));
+            const bg = (document.getElementById('gridBg') || {}).value || '#ffffff';
+            gridStyleTargets(hit).forEach(function(td) {
+                td.style.padding = pad + 'px';
+                td.style.fontSize = font + 'px';
+                td.style.background = bg;
+            });
+            rememberGridEdit();
+        }
+
+        function gridVAlign(align) {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            gridStyleTargets(hit).forEach(function(td) { td.style.verticalAlign = align; });
+            rememberGridEdit();
+        }
+
+        function gridWrap(wrap) {
+            const hit = gridNeedCell();
+            if (!hit) return;
+            gridStyleTargets(hit).forEach(function(td) {
+                td.style.whiteSpace = wrap ? 'normal' : 'nowrap';
+                td.style.wordBreak = wrap ? 'break-word' : 'normal';
+            });
+            rememberGridEdit();
+        }
+
+        function cssColorToHex(value) {
+            const text = String(value || '').trim();
+            if (/^#[0-9a-f]{6}$/i.test(text)) return text.toLowerCase();
+            const rgb = text.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+            if (!rgb) return '';
+            return '#' + [rgb[1], rgb[2], rgb[3]].map(function(part) {
+                return Number(part).toString(16).padStart(2, '0');
+            }).join('');
+        }
+
+        function readGridInspector(hit) {
+            if (!hit) return;
+            document.querySelectorAll('.lh-grid-on').forEach(function(el) { el.classList.remove('lh-grid-on'); });
+            hit.cell.classList.add('lh-grid-on');
+            ensureGridCols(hit.table);
+            const col = hit.table.querySelector('colgroup').children[gridVisualIndex(hit.cell)];
+            const width = col && String(col.style.width || '').match(/^(\d+(?:\.\d+)?)(px|%)$/);
+            const widthInput = document.getElementById('gridColWidth');
+            const unitInput = document.getElementById('gridColUnit');
+            if (width && widthInput && unitInput) {
+                widthInput.value = width[1];
+                unitInput.value = width[2];
+            }
+            const rowHeight = parseInt(hit.row.style.height, 10);
+            const rowInput = document.getElementById('gridRowHeight');
+            if (rowInput && rowHeight) rowInput.value = String(rowHeight);
+            const borderWidth = parseFloat(hit.cell.style.borderTopWidth || hit.cell.style.borderWidth);
+            const borderInput = document.getElementById('gridBorderWidth');
+            if (borderInput && Number.isFinite(borderWidth)) borderInput.value = String(borderWidth);
+            const borderStyle = hit.cell.style.borderTopStyle || hit.cell.style.borderStyle;
+            const styleInput = document.getElementById('gridBorderStyle');
+            if (styleInput && borderStyle) styleInput.value = borderStyle === 'none' ? 'none' : borderStyle;
+            const borderHex = cssColorToHex(hit.cell.style.borderTopColor || hit.cell.style.borderColor);
+            const colorInput = document.getElementById('gridBorderColor');
+            if (colorInput && borderHex) colorInput.value = borderHex;
+            const bgHex = cssColorToHex(hit.cell.style.backgroundColor);
+            const bgInput = document.getElementById('gridBg');
+            if (bgInput && bgHex) bgInput.value = bgHex;
+            const pad = parseFloat(hit.cell.style.paddingTop || hit.cell.style.padding);
+            const padInput = document.getElementById('gridPad');
+            if (padInput && Number.isFinite(pad)) padInput.value = String(pad);
+            const font = parseFloat(hit.cell.style.fontSize);
+            const fontInput = document.getElementById('gridFont');
+            if (fontInput && Number.isFinite(font)) fontInput.value = String(font);
+            const status = document.getElementById('tableCellStatus');
+            if (status) {
+                const rowNo = Array.from(hit.table.querySelectorAll('tr')).indexOf(hit.row) + 1;
+                status.textContent = 'Row ' + rowNo + ', column ' + (gridVisualIndex(hit.cell) + 1);
+            }
+        }
+
+        let gridInspectCell = null;
+        document.addEventListener('selectionchange', function() {
+            const hit = activeGridCell();
+            const cell = hit && hit.cell;
+            if (cell === gridInspectCell) return;
+            gridInspectCell = cell || null;
+            if (hit) {
+                gridHit = hit;
+                readGridInspector(hit);
+            }
+        });
+
         function gridAddRow(direction) {
             const hit = gridNeedCell();
             if (!hit) return;
@@ -3951,14 +4316,25 @@
                 alert(tableMsg('maxCols'));
                 return;
             }
-            const index = hit.cell.cellIndex;
+            const index = gridVisualIndex(hit.cell);
             hit.table.querySelectorAll('tr').forEach(function(tr) {
                 const td = blankGridCell();
-                const ref = tr.cells[index];
+                const ref = gridCellAt(tr, index);
                 if (!ref) tr.appendChild(td);
                 else if (direction < 0) ref.before(td);
                 else ref.after(td);
             });
+            let group = hit.table.querySelector('colgroup');
+            if (!group) {
+                group = document.createElement('colgroup');
+                hit.table.insertBefore(group, hit.table.firstChild);
+            }
+            const col = document.createElement('col');
+            const marker = group.children[index];
+            if (!marker) group.appendChild(col);
+            else if (direction < 0) marker.before(col);
+            else marker.after(col);
+            ensureGridCols(hit.table);
             rememberGridEdit();
         }
 
@@ -3973,10 +4349,18 @@
         function gridDeleteCol() {
             const hit = gridNeedCell();
             if (!hit) return;
-            const index = hit.cell.cellIndex;
+            const index = gridVisualIndex(hit.cell);
             const rows = hit.table.querySelectorAll('tr');
-            if (!rows[0] || rows[0].cells.length <= 1) hit.table.remove();
-            else rows.forEach(function(tr) { if (tr.cells[index]) tr.cells[index].remove(); });
+            const count = gridColumnCount(hit.table);
+            if (count <= 1) hit.table.remove();
+            else {
+                rows.forEach(function(tr) {
+                    const td = gridCellAt(tr, index);
+                    if (td) td.remove();
+                });
+                const group = hit.table.querySelector('colgroup');
+                if (group && group.children[index]) group.children[index].remove();
+            }
             rememberGridEdit();
         }
 

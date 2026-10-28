@@ -421,7 +421,7 @@ function DobUnit({
   );
 }
 
-/** Label and colon stay together; one space after the colon, then the value. */
+/** Label only. The colon is not attached to this text. */
 function Lab({
   children,
   className,
@@ -432,10 +432,22 @@ function Lab({
   style?: React.CSSProperties;
 }) {
   return (
-    <span className={className} style={{ whiteSpace: "nowrap", ...style }}>
+    <span className={className} style={{ whiteSpace: "nowrap", flex: "0 0 auto", ...style }}>
       {children}
-      {" :\u00A0"}
     </span>
+  );
+}
+
+/** Colon stays on the label's line, away from the label, with a dash before the value. */
+function Slot({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <span className="lc-up-lead" />
+      <span className="lc-up-slot">
+        <span className="lc-up-colon">{": —\u00A0"}</span>
+        {children}
+      </span>
+    </>
   );
 }
 
@@ -475,7 +487,9 @@ function FieldRow({
             onChange={(v) => onEn(v.replace(/^\d+\.\s*/, ""))}
           />
         </Lab>
-        <Fill sizeKey={`${sizePrefix}En`} value={value} onChange={onValue} />
+        <Slot>
+          <Fill sizeKey={`${sizePrefix}En`} value={value} onChange={onValue} />
+        </Slot>
       </div>
       <div className="lc-up-field-gu">
         {onValueGu ? (
@@ -485,7 +499,11 @@ function FieldRow({
         ) : (
           <Editable sizeKey={`${sizePrefix}GuLabel`} value={gu} onChange={onGu} />
         )}
-        {onValueGu ? <Fill sizeKey={`${sizePrefix}Gu`} value={valueGu} onChange={onValueGu} /> : null}
+        {onValueGu ? (
+          <Slot>
+            <Fill sizeKey={`${sizePrefix}Gu`} value={valueGu} onChange={onValueGu} />
+          </Slot>
+        ) : null}
       </div>
     </div>
   );
@@ -815,38 +833,46 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
               <Lab>
                 <Editable sizeKey="lcNoLabel" value={f.lcNoLabel} onChange={set("lcNoLabel")} />
               </Lab>
-              <Editable sizeKey="lcNo" value={f.lcNo} onChange={set("lcNo")} className="lc-up-lcno-box" />
+              <Slot>
+                <Editable sizeKey="lcNo" value={f.lcNo} onChange={set("lcNo")} className="lc-up-lcno-box" />
+              </Slot>
             </div>
           </div>
 
           <div className="lc-up-id-row">
-            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 0, flex: "1 1 0", minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "nowrap", gap: 0, flex: "1 1 0", minWidth: 0 }}>
               <Lab style={{ fontWeight: 700 }}>
                 <Editable sizeKey="grLabel" value={f.grLabel} onChange={set("grLabel")} />
               </Lab>
-              <Fill sizeKey="grNumber" value={f.grNumber} onChange={set("grNumber")} />
+              <Slot>
+                <Fill sizeKey="grNumber" value={f.grNumber} onChange={set("grNumber")} />
+              </Slot>
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 0, flex: "1.2 1 0", minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "nowrap", gap: 0, flex: "1.2 1 0", minWidth: 0 }}>
               <Lab style={{ fontWeight: 700 }}>
                 <Editable sizeKey="diseLabel" value={f.diseLabel} onChange={set("diseLabel")} />
               </Lab>
-              <Editable
-                sizeKey="diseCode"
-                value={f.diseCode}
-                onChange={set("diseCode")}
-                style={{ fontWeight: 800, letterSpacing: "0.02em", whiteSpace: "nowrap" }}
-              />
+              <Slot>
+                <Editable
+                  sizeKey="diseCode"
+                  value={f.diseCode}
+                  onChange={set("diseCode")}
+                  style={{ fontWeight: 800, letterSpacing: "0.02em", whiteSpace: "nowrap" }}
+                />
+              </Slot>
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 0, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "nowrap", gap: 0, flex: "1 1 0", minWidth: 0 }}>
               <Lab style={{ fontWeight: 700 }}>
                 <Editable sizeKey="mediumLabel" value={f.mediumLabel} onChange={set("mediumLabel")} />
               </Lab>
-              <Fill
-                sizeKey="medium"
-                value={f.medium}
-                onChange={set("medium")}
-                style={{ flex: "0 0 auto", minWidth: 110, textAlign: "center" }}
-              />
+              <Slot>
+                <Fill
+                  sizeKey="medium"
+                  value={f.medium}
+                  onChange={set("medium")}
+                  style={{ flex: "0 0 auto", minWidth: 72, textAlign: "center" }}
+                />
+              </Slot>
             </div>
           </div>
 
@@ -854,14 +880,18 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
             <Lab style={{ fontWeight: 700 }}>
               <Editable sizeKey="apaarLabel" value={f.apaarLabel} onChange={set("apaarLabel")} />
             </Lab>
-            <Fill sizeKey="apaar" value={f.apaar} onChange={set("apaar")} />
+            <Slot>
+              <Fill sizeKey="apaar" value={f.apaar} onChange={set("apaar")} />
+            </Slot>
           </div>
 
           <div className="lc-up-id-line lc-up-id-line--last">
             <Lab style={{ fontWeight: 700 }}>
               <Editable sizeKey="uidLabel" value={f.uidLabel} onChange={set("uidLabel")} />
             </Lab>
-            <Fill sizeKey="childUid" value={f.childUid} onChange={set("childUid")} />
+            <Slot>
+              <Fill sizeKey="childUid" value={f.childUid} onChange={set("childUid")} />
+            </Slot>
           </div>
 
           <FieldRow sizePrefix="name" n={1} en={f.nameEnLabel} gu={f.nameGuLabel} value={f.nameEn} valueGu={f.nameGu} onEn={set("nameEnLabel")} onGu={set("nameGuLabel")} onValue={set("nameEn")} onValueGu={set("nameGu")} />
@@ -882,7 +912,9 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                     onChange={set("dobWordsLabel")}
                   />
                 </Lab>
-                <Fill sizeKey="dobWords" value={f.dobWords} onChange={set("dobWords")} />
+                <Slot>
+                  <Fill sizeKey="dobWords" value={f.dobWords} onChange={set("dobWords")} />
+                </Slot>
               </div>
               <div className="lc-up-dob-boxes">
                 <DobUnit valueKey="dobDay" labelKey="dobDayLabel" value={f.dobDay} label={f.dobDayLabel} kind="day" onValue={set("dobDay")} onLabel={set("dobDayLabel")} />
@@ -903,13 +935,17 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
               <Lab style={{ fontWeight: 700 }}>
                 <Editable sizeKey="bankLabel" value={f.bankLabel} onChange={set("bankLabel")} />
               </Lab>
-              <Fill sizeKey="bankAccount" value={f.bankAccount} onChange={set("bankAccount")} />
+              <Slot>
+                <Fill sizeKey="bankAccount" value={f.bankAccount} onChange={set("bankAccount")} />
+              </Slot>
             </div>
             <div className="lc-up-bank-row">
               <Lab style={{ fontWeight: 700 }}>
                 <Editable sizeKey="bankIfscLabel" value={f.bankIfscLabel} onChange={set("bankIfscLabel")} />
               </Lab>
-              <Fill sizeKey="bankIfsc" value={f.bankIfsc} onChange={set("bankIfsc")} />
+              <Slot>
+                <Fill sizeKey="bankIfsc" value={f.bankIfsc} onChange={set("bankIfsc")} />
+              </Slot>
             </div>
           </div>
 
@@ -923,13 +959,17 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                 <Lab style={{ fontWeight: 700 }}>
                   <Editable sizeKey="outwardLabel" value={f.outwardLabel} onChange={set("outwardLabel")} />
                 </Lab>
-                <Fill sizeKey="outwardNo" value={f.outwardNo} onChange={set("outwardNo")} style={{ flex: "0 1 160px", maxWidth: 180 }} />
+                <Slot>
+                  <Fill sizeKey="outwardNo" value={f.outwardNo} onChange={set("outwardNo")} style={{ flex: "0 1 160px", maxWidth: 180 }} />
+                </Slot>
               </div>
               <div className="lc-up-meta-row">
                 <Lab style={{ fontWeight: 700 }}>
                   <Editable sizeKey="dateLabel" value={f.dateLabel} onChange={set("dateLabel")} />
                 </Lab>
-                <Fill sizeKey="issueDate" value={f.issueDate} onChange={set("issueDate")} style={{ flex: "0 1 140px", maxWidth: 160 }} />
+                <Slot>
+                  <Fill sizeKey="issueDate" value={f.issueDate} onChange={set("issueDate")} style={{ flex: "0 1 140px", maxWidth: 160 }} />
+                </Slot>
               </div>
             </div>
 
