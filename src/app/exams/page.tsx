@@ -6,6 +6,7 @@ import {
   BookOpenCheck,
   CheckSquare,
   Layers,
+  Monitor,
   Plus,
   RefreshCw,
   Save,
@@ -13,6 +14,7 @@ import {
   Upload,
   Armchair,
 } from "lucide-react";
+import { makeTermKey, type ExamSubjectScope, type ExamTermRole } from "@/lib/results/exam-terms";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +25,6 @@ import { useT } from "@/i18n/locale-provider";
 import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
-import { makeTermKey, type ExamTermRole } from "@/lib/results/exam-terms";
 import { useSchoolFeatures } from "@/components/school/use-school-features";
 import "../subjects/subjects-hub.css";
 
@@ -37,6 +38,7 @@ type TemplateItem = {
   maxMarks: number;
   role: ExamTermRole;
   internalMax?: number;
+  subjectScope?: ExamSubjectScope;
 };
 
 type ClassExamRow = {
@@ -139,15 +141,30 @@ export default function ExamsHubPage() {
   const [draftMax, setDraftMax] = useState(50);
   const [draftInternalMax, setDraftInternalMax] = useState(20);
   const [draftTotalMax, setDraftTotalMax] = useState(100);
+  const [draftComputerOnly, setDraftComputerOnly] = useState(false);
   const [deleteKey, setDeleteKey] = useState<string | null>(null);
+
+  const isComputerItem = (item: TemplateItem) =>
+    item.role === "component" && item.subjectScope === "computer";
 
   const totalOutOf = useMemo(() => {
     return template.reduce((sum, item) => {
+      if (isComputerItem(item)) return sum;
+      return sum + Math.max(0, Number(item.totalMax) || 0);
+    }, 0);
+  }, [template]);
+
+  const computerOutOf = useMemo(() => {
+    return template.reduce((sum, item) => {
+      if (!isComputerItem(item)) return sum;
       return sum + Math.max(0, Number(item.totalMax) || 0);
     }, 0);
   }, [template]);
 
   const componentCount = template.filter((x) => x.role === "component").length;
+  const generalComponentCount = template.filter(
+    (x) => x.role === "component" && x.subjectScope !== "computer",
+  ).length;
   const hasInvalidSplit = template.some(
     (x) => x.maxMarks + (x.internalMax ?? 0) !== x.totalMax,
   );
@@ -180,6 +197,10 @@ export default function ExamsHubPage() {
           role: item.role === "final" ? "final" : "component",
           internalMax:
             item.internalMax ?? (item.role === "final" ? 20 : 0),
+          subjectScope:
+            item.role === "final" || item.subjectScope !== "computer"
+              ? "all"
+              : "computer",
         }));
         setTemplate(
           upperPrimarySchool && isLegacyUpperPrimaryTemplate(next)
@@ -216,7 +237,25 @@ export default function ExamsHubPage() {
     setDraftTotalMax(100);
     setDraftMax(80);
     setDraftInternalMax(20);
+    setDraftComputerOnly(false);
     setAddOpen(true);
+  };
+
+  const setItemComputerOnly = (item: TemplateItem, next: boolean) => {
+    if (item.role === "final") return;
+    if (next) {
+      const remainingGeneral = template.filter(
+        (x) =>
+          x.role === "component" &&
+          x.subjectScope !== "computer" &&
+          x.key !== item.key,
+      ).length;
+      if (remainingGeneral < 1) {
+        toast.warning(t("examsHub.keepOneExam"));
+        return;
+      }
+    }
+    updateItem(item.key, { subjectScope: next ? "computer" : "all" });
   };
 
   const confirmAdd = () => {
@@ -239,6 +278,7 @@ export default function ExamsHubPage() {
       maxMarks: Math.max(0, Number(draftMax) || 0),
       internalMax: Math.max(0, Number(draftInternalMax) || 0),
       role: "component",
+      subjectScope: draftComputerOnly ? "computer" : "all",
     };
     setTemplate((prev) => {
       const finalIdx = prev.findIndex((x) => x.role === "final");
@@ -264,7 +304,7 @@ export default function ExamsHubPage() {
       setDeleteKey(null);
       return;
     }
-    if (componentCount <= 1) {
+    if (!isComputerItem(target) && generalComponentCount <= 1) {
       toast.warning(t("examsHub.keepOneExam"));
       setDeleteKey(null);
       return;
@@ -279,7 +319,7 @@ export default function ExamsHubPage() {
       toast.error(t("examsHub.fixSplitBeforeApply"));
       return;
     }
-    if (!template.some((item) => item.role === "component")) {
+    if (generalComponentCount < 1) {
       toast.error(t("examsHub.keepOneExam"));
       return;
     }
@@ -313,7 +353,7 @@ export default function ExamsHubPage() {
       toast.error(t("examsHub.selectClassHint"));
       return;
     }
-    if (!template.some((x) => x.role === "component")) {
+    if (generalComponentCount < 1) {
       toast.error(t("examsHub.keepOneExam"));
       return;
     }
@@ -454,21 +494,40 @@ export default function ExamsHubPage() {
             </div>
 
             <div className="space-y-3 p-3 sm:p-4">
-              {template.map((item, idx) => (
+              {template.map((item, idx) => {
+                const computer = isComputerItem(item);
+                const generalNumber = template
+                  .slice(0, idx + 1)
+                  .filter((x) => x.role === "component" && x.subjectScope !== "computer")
+                  .length;
+                return (
                 <div
                   key={item.key}
                   className={cn(
                     "rounded-xl border p-3 sm:p-4 space-y-3",
-                    item.role === "final" ? "border-amber-200 bg-amber-50/40" : "border-slate-200 bg-white",
+                    item.role === "final"
+                      ? "border-amber-200 bg-amber-50/40"
+                      : computer
+                        ? "border-sky-200 bg-sky-50/50"
+                        : "border-slate-200 bg-white",
                   )}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       {item.role === "final"
                         ? t("examTerms.final")
-                        : `${t("examsHub.componentExam")} ${idx + 1}`}
+                        : computer
+                          ? t("examsHub.computerExam")
+                          : `${t("examsHub.componentExam")} ${generalNumber}`}
                     </p>
-                    {item.role === "component" && (
+                    <div className="flex items-center gap-1">
+                      {computer && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-800">
+                          <Monitor className="h-3 w-3" />
+                          {t("examsHub.computerBadge")}
+                        </span>
+                      )}
+                      {item.role === "component" && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -478,7 +537,8 @@ export default function ExamsHubPage() {
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                    )}
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -527,6 +587,22 @@ export default function ExamsHubPage() {
                       }
                     />
                   </div>
+                  {item.role === "component" && (
+                    <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                        checked={computer}
+                        onChange={(e) => setItemComputerOnly(item, e.target.checked)}
+                      />
+                      <span>
+                        <span className="font-medium">{t("examsHub.computerOnly")}</span>
+                        <span className="mt-0.5 block text-xs text-slate-500">
+                          {t("examsHub.computerResultHint")}
+                        </span>
+                      </span>
+                    </label>
+                  )}
                   {item.maxMarks + (item.internalMax ?? 0) !== item.totalMax && (
                     <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
                       {t("examsHub.splitError", {
@@ -538,7 +614,8 @@ export default function ExamsHubPage() {
                     </p>
                   )}
                 </div>
-              ))}
+                );
+              })}
 
               <Button type="button" variant="outline" className="w-full border-dashed" onClick={openAdd}>
                 <Plus className="h-4 w-4" />
@@ -553,6 +630,11 @@ export default function ExamsHubPage() {
                 <p className="text-xs mt-1 text-emerald-800/80">
                   {t("examsHub.templateCount", { count: componentCount })} · {t("examsHub.autoTotalHint")}
                 </p>
+                {computerOutOf > 0 && (
+                  <p className="text-xs mt-1 text-sky-900">
+                    {t("examsHub.autoTotalComputer", { total: computerOutOf })}
+                  </p>
+                )}
                 {upperPrimarySchool &&
                 template.length === 2 &&
                 template.every((item) => item.maxMarks === 80 && (item.internalMax ?? 0) === 20) ? (
@@ -571,7 +653,7 @@ export default function ExamsHubPage() {
               <div>
                 <h2 className="subhub__panel-title">{t("examsHub.applyTitle")}</h2>
                 <p className="subhub__panel-desc">
-                  {t("examsHub.applyDesc", { total: totalOutOf, mids: componentCount })}
+                  {t("examsHub.applyDesc", { total: totalOutOf, mids: generalComponentCount })}
                 </p>
               </div>
               <div className="subhub__filters">
@@ -671,11 +753,24 @@ export default function ExamsHubPage() {
                             className="p-3 text-xs text-slate-500"
                             data-label={t("examsHub.colBreakdown")}
                           >
-                            {(c.termsList || [])
-                              .map((x) =>
-                                `${x.maxMarks}+${x.internalMax ?? 0}`,
-                              )
-                              .join("+") || "—"}
+                            {(() => {
+                              const general = (c.termsList || []).filter(
+                                (x) => x.subjectScope !== "computer",
+                              );
+                              const computers = (c.termsList || []).filter(
+                                (x) => x.subjectScope === "computer",
+                              );
+                              const generalText = general
+                                .map((x) => `${x.maxMarks}+${x.internalMax ?? 0}`)
+                                .join("+");
+                              const computerText = computers
+                                .map((x) => `${x.maxMarks}+${x.internalMax ?? 0}`)
+                                .join("+");
+                              if (!generalText && !computerText) return "—";
+                              return computerText
+                                ? `${generalText || "—"} · COMP ${computerText}`
+                                : generalText;
+                            })()}
                           </td>
                         </tr>
                       );
@@ -732,6 +827,27 @@ export default function ExamsHubPage() {
               setDraftInternalMax(Math.max(0, Number(e.target.value) || 0))
             }
           />
+          <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-slate-300"
+              checked={draftComputerOnly}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setDraftComputerOnly(next);
+                if (next && /^Mid Exam \d+$/i.test(draftName.trim())) {
+                  setDraftName("Computer Exam");
+                  setDraftNameGu("કોમ્પ્યુટર પરીક્ષા");
+                }
+              }}
+            />
+            <span>
+              <span className="font-medium">{t("examsHub.computerOnly")}</span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                {t("examsHub.computerOnlyHint")}
+              </span>
+            </span>
+          </label>
           {draftMax + draftInternalMax !== draftTotalMax && (
             <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
               {t("examsHub.splitError", {

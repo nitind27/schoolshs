@@ -11,6 +11,8 @@ import {
 /** Any unique term id — mid1/mid2/final or custom_* */
 export type ExamTermKey = string;
 export type ExamTermRole = "component" | "final";
+/** `computer` = this exam is only for Computer; result card still uses the same Computer column. */
+export type ExamSubjectScope = "all" | "computer";
 
 /** @deprecated Prefer counting active component terms */
 export type MidExamCount = number;
@@ -28,6 +30,8 @@ export interface ExamTermDef {
   maxMarks: number;
   /** Teacher/internal assessment out-of for this exam */
   internalMax?: number;
+  /** Default all subjects. `computer` limits marks entry to Computer only. */
+  subjectScope?: ExamSubjectScope;
   published: boolean;
   publishedAt: string | null;
   locked: boolean;
@@ -94,6 +98,7 @@ export function createComponentTerm(opts: {
   internalMax?: number;
   totalMax?: number;
   existingKeys?: string[];
+  subjectScope?: ExamSubjectScope;
 }): ExamTermDef {
   const existing = opts.existingKeys || [];
   const key = opts.key || makeTermKey(opts.labelEn, existing);
@@ -107,6 +112,7 @@ export function createComponentTerm(opts: {
     maxMarks: opts.maxMarks ?? 50,
     internalMax: opts.internalMax ?? 0,
     totalMax: opts.totalMax ?? (opts.maxMarks ?? 50) + (opts.internalMax ?? 0),
+    subjectScope: opts.subjectScope === "computer" ? "computer" : "all",
   });
 }
 
@@ -280,6 +286,7 @@ function normalizeFromLegacyRecord(parsed: {
         publishedAt: patch.publishedAt ?? null,
         locked: !!patch.locked,
         examDate: patch.examDate ?? null,
+        subjectScope: patch.subjectScope === "computer" ? "computer" : "all",
       }),
     );
   }
@@ -319,6 +326,8 @@ export function parseExamTermMeta(raw?: string | null): ExamTermMeta {
                 (Number(t.maxMarks) || 0) +
                   (Number(t.internalMax) || (role === "final" ? 20 : 0)),
             ),
+            subjectScope:
+              role === "final" || t.subjectScope !== "computer" ? "all" : "computer",
             published: !!t.published,
             publishedAt: t.publishedAt ?? null,
             locked: !!t.locked,
@@ -396,9 +405,63 @@ export function isValidTermKey(term: string, meta: ExamTermMeta): boolean {
   return meta.terms.some((t) => t.key === term);
 }
 
+export function isComputerTerm(term: ExamTermDef): boolean {
+  return term.subjectScope === "computer" && term.role !== "final";
+}
+
+export function isComputerSubject(code?: string | null, name?: string | null): boolean {
+  const c = String(code || "").trim().toUpperCase();
+  if (c === "COMP" || c === "ICT") return true;
+  return /computer|કોમ્પ્યુટર|કોમ્પ્યુટર|ict/i.test(String(name || ""));
+}
+
+export function generalTerms(meta: ExamTermMeta): ExamTermDef[] {
+  return meta.terms.filter((term) => !isComputerTerm(term));
+}
+
+export function computerTerms(meta: ExamTermMeta): ExamTermDef[] {
+  return meta.terms.filter((term) => isComputerTerm(term));
+}
+
+export function hasComputerExams(meta: ExamTermMeta): boolean {
+  return computerTerms(meta).length > 0;
+}
+
+export function termAllowsSubject(
+  term: ExamTermDef,
+  meta: ExamTermMeta,
+  code?: string | null,
+  name?: string | null,
+): boolean {
+  const computer = isComputerSubject(code, name);
+  if (isComputerTerm(term)) return computer;
+  if (hasComputerExams(meta)) return !computer;
+  return true;
+}
+
+export function filterSubjectsForTerm<T extends {
+  code?: string | null;
+  name?: string | null;
+  subjectCode?: string | null;
+  subjectName?: string | null;
+}>(
+  subjects: T[],
+  term: ExamTermDef,
+  meta: ExamTermMeta,
+): T[] {
+  return subjects.filter((subject) =>
+    termAllowsSubject(
+      term,
+      meta,
+      subject.code || subject.subjectCode,
+      subject.name || subject.subjectName,
+    ),
+  );
+}
+
 export function totalTermMaxFromMeta(meta: ExamTermMeta): number {
   let total = 0;
-  for (const term of activeExamTerms(meta)) {
+  for (const term of generalTerms(meta)) {
     total += Math.max(
       0,
       Number(term.totalMax) ||
@@ -406,6 +469,18 @@ export function totalTermMaxFromMeta(meta: ExamTermMeta): number {
     );
   }
   return total || 200;
+}
+
+export function computerTermMaxFromMeta(meta: ExamTermMeta): number {
+  let total = 0;
+  for (const term of computerTerms(meta)) {
+    total += Math.max(
+      0,
+      Number(term.totalMax) ||
+        (Number(term.maxMarks) || 0) + (Number(term.internalMax) || 0),
+    );
+  }
+  return total;
 }
 
 /** Legacy-shaped breakdown for older callers; extras go into third+ via total */
@@ -418,7 +493,7 @@ export function termMaxBreakdown(meta: ExamTermMeta): {
   total: number;
   components: Array<{ key: string; maxMarks: number; labelEn: string }>;
 } {
-  const comps = componentTerms(meta);
+  const comps = generalTerms(meta).filter((t) => t.role === "component");
   const fin = finalTerm(meta);
   const first = comps[0]?.maxMarks || 0;
   const second = comps[1]?.maxMarks || 0;
@@ -472,7 +547,7 @@ export function applyTermMetaToSheetConfig(
 ): MarksSheetConfig {
   const total = totalTermMaxFromMeta(meta);
   const fin = finalTerm(meta);
-  const comps = componentTerms(meta);
+  const comps = componentTerms(meta).filter((term) => !isComputerTerm(term));
 
   const configuredRows = comps.flatMap((t, idx) => {
     // Keep classic kinds for first 3 so old sheets stay familiar
@@ -636,10 +711,11 @@ export function numericSubjects(config: {
 
 export function computeTermCompletion(
   term: ExamTermDef,
-  _meta: ExamTermMeta,
+  meta: ExamTermMeta,
   students: Array<{
     subjectMarks: Array<{
       subjectCode: string;
+      subjectName?: string | null;
       subjectType: "numeric" | "grade";
       termValue: number | null;
       internalValue?: number | null;
@@ -661,7 +737,11 @@ export function computeTermCompletion(
   let pending = 0;
 
   for (const st of students) {
-    const numeric = st.subjectMarks.filter((s) => s.subjectType === "numeric");
+    const numeric = st.subjectMarks.filter(
+      (s) =>
+        s.subjectType === "numeric" &&
+        termAllowsSubject(term, meta, s.subjectCode, s.subjectName),
+    );
     if (!numeric.length) {
       pending++;
       continue;
@@ -769,7 +849,7 @@ export function buildStudentTermRows(
 ) {
   const term = getTerm(meta, termKey);
   if (!term) return [];
-  const subjects = sheetConfig.subjects;
+  const subjects = filterSubjectsForTerm(sheetConfig.subjects, term, meta);
 
   return students.map((st) => {
     const subjectMarks = subjects.map((def) => {
@@ -838,6 +918,7 @@ export function metaFromTemplateTerms(
     role?: ExamTermRole;
     internalMax?: number;
     examDate?: string | null;
+    subjectScope?: ExamSubjectScope;
   }>,
 ): ExamTermMeta {
   const components: ExamTermDef[] = [];
@@ -863,6 +944,7 @@ export function metaFromTemplateTerms(
       internalMax: item.internalMax,
       totalMax: item.totalMax,
       existingKeys: components.map((c) => c.key),
+      subjectScope: item.subjectScope === "computer" ? "computer" : "all",
     });
     if (item.examDate) term.examDate = item.examDate;
     components.push(term);

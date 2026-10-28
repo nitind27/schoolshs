@@ -1350,6 +1350,7 @@
             overflow-wrap: anywhere;
             word-break: break-word;
             background: #fff;
+            empty-cells: show;
         }
         .content-area .lh-grid tr.lh-grid-head td {
             font-weight: 700;
@@ -1377,7 +1378,7 @@
             z-index: 420;
             top: 108px;
             right: 16px;
-            width: min(360px, calc(100vw - 24px));
+            width: min(400px, calc(100vw - 24px));
             max-height: calc(100vh - 124px);
             overflow: auto;
             background: #fff;
@@ -1485,25 +1486,43 @@
             border-color: #fecaca;
             color: #b91c1c;
         }
+        .lh-table-manage button.on {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+            color: #fff;
+        }
         .lh-size-box {
             margin-top: 12px;
             padding-top: 10px;
             border-top: 1px solid #e2e8f0;
         }
+        .lh-size-kicker {
+            grid-column: 1 / -1;
+            margin: 12px 0 2px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
         .lh-size-scope {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 4px;
             margin: 8px 0;
+        }
+        .lh-size-scope.lh-size-scope-5 {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
         }
         .lh-size-scope button {
             min-height: 30px;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
             background: #fff;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             cursor: pointer;
+            padding: 0 4px;
         }
         .lh-size-scope button.on {
             background: #1d4ed8;
@@ -1550,6 +1569,10 @@
             .content-area .lh-grid th.lh-grid-on {
                 outline: 2px solid #2563eb;
                 outline-offset: -2px;
+            }
+            .content-area .lh-grid.lh-grid-all-on {
+                outline: 2px dashed #0f766e;
+                outline-offset: 3px;
             }
         }
 
@@ -1775,7 +1798,7 @@
                 color: #666;
             }
 
-            [contenteditable="true"] {
+            [contenteditable="true"]:not(td):not(th) {
                 border: none !important;
                 background: transparent !important;
                 box-shadow: none !important;
@@ -1791,29 +1814,35 @@
                 line-height: 1.45 !important;
             }
             .content-area .lh-grid {
-                width: 100%;
-                table-layout: fixed;
-                font-size: 11pt;
-                line-height: 1.25;
-                border-collapse: collapse;
+                width: 100% !important;
+                table-layout: fixed !important;
+                font-size: 13px;
+                line-height: 1.35;
+                border-collapse: collapse !important;
+                border-spacing: 0 !important;
+                empty-cells: show !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             .content-area .lh-grid td,
             .content-area .lh-grid th {
-                border: 1px solid #000;
+                border: 1px solid #000 !important;
                 min-width: 0;
-                box-sizing: border-box;
+                box-sizing: border-box !important;
                 white-space: normal;
                 overflow-wrap: anywhere;
                 word-break: break-word;
-                padding: 2px 8px;
-                vertical-align: middle;
-                line-height: 1.25;
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
+                padding: 5px 6px;
+                vertical-align: top;
+                empty-cells: show !important;
+                background-clip: padding-box !important;
+                print-color-adjust: exact !important;
+                -webkit-print-color-adjust: exact !important;
             }
             .content-area .lh-grid.lh-grid-noborder td,
             .content-area .lh-grid.lh-grid-noborder th {
-                border-color: transparent;
+                border: none !important;
             }
             .content-area .lh-grid tr.lh-grid-head td {
                 font-weight: 700;
@@ -2903,6 +2932,20 @@
             max-width: 210mm !important;
             width: 210mm !important;
         }
+        html.lh-exporting .content-area .lh-grid {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            empty-cells: show !important;
+        }
+        html.lh-exporting .content-area .lh-grid td,
+        html.lh-exporting .content-area .lh-grid th {
+            border: 1px solid #000 !important;
+            background-clip: padding-box !important;
+        }
+        html.lh-exporting .content-area .lh-grid.lh-grid-noborder td,
+        html.lh-exporting .content-area .lh-grid.lh-grid-noborder th {
+            border: none !important;
+        }
 
         .lh-pdf-host {
             position: relative;
@@ -3209,13 +3252,42 @@
             <button type="button" class="lh-table-danger" onclick="gridDeleteTable()">Delete table</button>
         </div>
         <div class="lh-size-box" id="tableSizeBox">
-            <p class="lh-table-status" id="tableSizeHint">Click a cell. Size and border apply to the target you pick.</p>
-            <div class="lh-size-scope" id="gridScope">
+            <p class="lh-size-kicker" id="tableSizeTitle">Size &amp; border</p>
+            <p class="lh-table-status" id="tableSizeHint">Click a cell. Size and border apply to Cell, Row, Column, Table, or All tables.</p>
+            <div class="lh-size-scope lh-size-scope-5" id="gridScope">
                 <button type="button" data-scope="cell" class="on" onclick="setGridScope('cell')">Cell</button>
                 <button type="button" data-scope="row" onclick="setGridScope('row')">Row</button>
                 <button type="button" data-scope="col" onclick="setGridScope('col')">Column</button>
                 <button type="button" data-scope="table" onclick="setGridScope('table')">Table</button>
+                <button type="button" data-scope="all" onclick="setGridScope('all')">All</button>
             </div>
+            <p class="lh-size-kicker" id="tableBoxTitle">Table size</p>
+            <div class="lh-size-grid">
+                <label>Table width
+                    <span class="lh-size-pair">
+                        <input id="gridTableWidth" type="number" min="10" max="1200" value="100" oninput="applyGridTableBox()">
+                        <select id="gridTableUnit" onchange="applyGridTableBox()">
+                            <option value="%">%</option>
+                            <option value="px">px</option>
+                        </select>
+                    </span>
+                </label>
+                <label>Table height (px)
+                    <input id="gridTableHeight" type="number" min="0" max="1600" value="0" oninput="applyGridTableBox()">
+                </label>
+                <label>Margin top (px)
+                    <input id="gridTableMt" type="number" min="0" max="80" value="10" oninput="applyGridTableBox()">
+                </label>
+                <label>Margin bottom (px)
+                    <input id="gridTableMb" type="number" min="0" max="80" value="10" oninput="applyGridTableBox()">
+                </label>
+            </div>
+            <div class="lh-table-manage" id="gridTableAlign">
+                <button type="button" data-align="left" class="on" onclick="setGridTableAlign('left')">Table left</button>
+                <button type="button" data-align="center" onclick="setGridTableAlign('center')">Table center</button>
+                <button type="button" data-align="right" onclick="setGridTableAlign('right')">Table right</button>
+            </div>
+            <p class="lh-size-kicker" id="tableCellSizeTitle">Cell / row / column</p>
             <div class="lh-size-grid">
                 <label>Column width
                     <span class="lh-size-pair">
@@ -3229,8 +3301,34 @@
                 <label>Row height (px)
                     <input id="gridRowHeight" type="number" min="16" max="500" value="32" oninput="applyGridRowHeight()">
                 </label>
+                <label>Min cell W (px)
+                    <input id="gridMinW" type="number" min="0" max="400" value="0" oninput="applyGridPaint()">
+                </label>
+                <label>Min cell H (px)
+                    <input id="gridMinH" type="number" min="0" max="400" value="0" oninput="applyGridPaint()">
+                </label>
+                <label>Padding (px)
+                    <input id="gridPad" type="number" min="0" max="28" value="5" oninput="applyGridPaint()">
+                </label>
+                <label>Text size (px)
+                    <input id="gridFont" type="number" min="8" max="32" value="13" oninput="applyGridPaint()">
+                </label>
+                <label>Line height
+                    <input id="gridLine" type="number" min="1" max="3" step="0.05" value="1.35" oninput="applyGridPaint()">
+                </label>
+                <label class="lh-size-line">Cell colour
+                    <input id="gridBg" type="color" value="#ffffff" oninput="applyGridPaint()">
+                </label>
+            </div>
+            <p class="lh-size-kicker" id="tableBorderTitle">Border</p>
+            <div class="lh-size-scope" id="gridBorderSides">
+                <button type="button" data-sides="all" class="on" onclick="setGridBorderSides('all')">All sides</button>
+                <button type="button" data-sides="outer" onclick="setGridBorderSides('outer')">Outer</button>
+                <button type="button" data-sides="inner" onclick="setGridBorderSides('inner')">Inner</button>
+            </div>
+            <div class="lh-size-grid">
                 <label>Border (px)
-                    <input id="gridBorderWidth" type="number" min="0" max="8" step="0.5" value="1" oninput="applyGridBorder()">
+                    <input id="gridBorderWidth" type="number" min="0" max="12" step="0.5" value="1" oninput="applyGridBorder()">
                 </label>
                 <label>Line
                     <select id="gridBorderStyle" onchange="applyGridBorder()">
@@ -3244,14 +3342,14 @@
                 <label class="lh-size-line">Border colour
                     <input id="gridBorderColor" type="color" value="#111111" oninput="applyGridBorder()">
                 </label>
-                <label class="lh-size-line">Cell colour
-                    <input id="gridBg" type="color" value="#ffffff" oninput="applyGridPaint()">
+                <label>Collapse
+                    <select id="gridCollapse" onchange="applyGridBorder()">
+                        <option value="collapse">Collapse</option>
+                        <option value="separate">Separate</option>
+                    </select>
                 </label>
-                <label>Padding (px)
-                    <input id="gridPad" type="number" min="0" max="28" value="5" oninput="applyGridPaint()">
-                </label>
-                <label>Text size (px)
-                    <input id="gridFont" type="number" min="8" max="32" value="13" oninput="applyGridPaint()">
+                <label>Cell spacing (px)
+                    <input id="gridSpacing" type="number" min="0" max="24" value="0" oninput="applyGridBorder()">
                 </label>
             </div>
             <div class="lh-table-manage">
@@ -3836,7 +3934,11 @@
                 status: 'Click a cell in the table to edit it.',
                 size: '{{rows}} rows × {{cols}} columns',
                 needCell: 'Click a cell in the table you want to change.',
-                sizeHint: 'Click a cell. Width, height, border and colour apply to Cell, Row, Column or Table.',
+                sizeHint: 'Pick Cell, Row, Column, Table, or All. Width, height, border, padding and text size apply to that target.',
+                sizeTitle: 'Size & border',
+                boxTitle: 'Table size',
+                cellTitle: 'Cell / row / column',
+                borderTitle: 'Border',
                 maxRows: 'A table can have up to 40 rows.',
                 maxCols: 'A table can have up to 12 columns.',
                 noRight: 'There is no cell on the right.'
@@ -3847,7 +3949,11 @@
                 status: 'ફેરફાર માટે ટેબલના ખાનામાં ક્લિક કરો.',
                 size: '{{rows}} પંક્તિ × {{cols}} કૉલમ',
                 needCell: 'જે ટેબલ બદલવી હોય તેના ખાનામાં ક્લિક કરો.',
-                sizeHint: 'ખાનામાં ક્લિક કરો. પહોળાઈ, ઊંચાઈ અને બોર્ડર Cell, Row, Column અથવા Table પર લાગશે.',
+                sizeHint: 'Cell, Row, Column, Table અથવા All પસંદ કરો. પહોળાઈ, ઊંચાઈ, બોર્ડર અને પેડિંગ તે ટાર્ગેટ પર લાગશે.',
+                sizeTitle: 'સાઇઝ અને બોર્ડર',
+                boxTitle: 'ટેબલ સાઇઝ',
+                cellTitle: 'સેલ / પંક્તિ / કૉલમ',
+                borderTitle: 'બોર્ડર',
                 maxRows: 'એક ટેબલમાં વધુમાં વધુ 40 પંક્તિ.',
                 maxCols: 'એક ટેબલમાં વધુમાં વધુ 12 કૉલમ.',
                 noRight: 'જમણી બાજુ ખાનું નથી.'
@@ -3881,6 +3987,14 @@
             if (status) status.textContent = tableMsg('status');
             const sizeHint = document.getElementById('tableSizeHint');
             if (sizeHint) sizeHint.textContent = tableMsg('sizeHint');
+            const sizeTitle = document.getElementById('tableSizeTitle');
+            if (sizeTitle) sizeTitle.textContent = tableMsg('sizeTitle');
+            const boxTitle = document.getElementById('tableBoxTitle');
+            if (boxTitle) boxTitle.textContent = tableMsg('boxTitle');
+            const cellTitle = document.getElementById('tableCellSizeTitle');
+            if (cellTitle) cellTitle.textContent = tableMsg('cellTitle');
+            const borderTitle = document.getElementById('tableBorderTitle');
+            if (borderTitle) borderTitle.textContent = tableMsg('borderTitle');
             if (activeLetterPage) setActiveLetterPage(activeLetterPage);
             paintGridPicker();
         }
@@ -4037,6 +4151,7 @@
                 if (heading && r === 0) tr.className = 'lh-grid-head';
                 for (let c = 0; c < cols; c++) {
                     const td = document.createElement('td');
+                    td.style.border = '1px solid #111';
                     td.appendChild(document.createElement('br'));
                     tr.appendChild(td);
                 }
@@ -4072,6 +4187,7 @@
         function blankGridCell() {
             const td = document.createElement('td');
             td.setAttribute('contenteditable', 'true');
+            td.style.border = '1px solid #111';
             td.appendChild(document.createElement('br'));
             return td;
         }
@@ -4079,8 +4195,35 @@
         function lockGrid(table) {
             if (!table) return;
             table.setAttribute('contenteditable', 'false');
+            const plain = table.classList.contains('lh-grid-noborder');
             table.querySelectorAll('td, th').forEach(function(td) {
                 td.setAttribute('contenteditable', 'true');
+                if (plain) return;
+                const width = td.style.borderTopWidth || td.style.borderWidth;
+                const style = td.style.borderTopStyle || td.style.borderStyle;
+                if (!width || width === '0px' || style === 'none') {
+                    td.style.border = '1px solid #111';
+                }
+            });
+        }
+
+        function paintClonedGridBorders(clonedDoc) {
+            if (!clonedDoc) return;
+            clonedDoc.querySelectorAll('.content-area table.lh-grid').forEach(function(table) {
+                table.style.borderCollapse = 'separate';
+                table.style.borderSpacing = '0';
+                const hide = table.classList.contains('lh-grid-noborder');
+                table.querySelectorAll('td, th').forEach(function(td) {
+                    if (hide) {
+                        td.style.border = 'none';
+                        return;
+                    }
+                    const width = td.style.borderTopWidth || td.style.borderWidth || '1px';
+                    const style = td.style.borderTopStyle || td.style.borderStyle || 'solid';
+                    const color = td.style.borderTopColor || td.style.borderColor || '#000';
+                    const missing = !width || width === '0px' || style === 'none' || color === 'transparent' || color === 'rgba(0, 0, 0, 0)';
+                    td.style.border = missing ? '1px solid #000' : (width + ' ' + style + ' ' + color);
+                });
             });
         }
 
@@ -4119,12 +4262,59 @@
         }
 
         let gridScope = 'cell';
+        let gridBorderSides = 'all';
+        let gridTableAlign = 'left';
+
+        function letterGrids() {
+            return Array.from(document.querySelectorAll('.content-area table.lh-grid'));
+        }
+
+        function firstGridHit() {
+            const table = letterGrids()[0];
+            if (!table || !table.rows.length || !table.rows[0].cells.length) return null;
+            return { table: table, row: table.rows[0], cell: table.rows[0].cells[0] };
+        }
+
+        function rememberedGridHitOrAll() {
+            const live = rememberedGridHit();
+            if (live) return live;
+            if (gridScope === 'all') return firstGridHit();
+            return null;
+        }
+
+        function gridTargetTables(hit) {
+            if (gridScope === 'all') return letterGrids();
+            return hit && hit.table ? [hit.table] : [];
+        }
 
         function setGridScope(scope) {
             gridScope = scope;
             document.querySelectorAll('#gridScope button').forEach(function(btn) {
                 btn.classList.toggle('on', btn.dataset.scope === scope);
             });
+            document.querySelectorAll('.content-area table.lh-grid').forEach(function(table) {
+                table.classList.toggle('lh-grid-all-on', scope === 'all');
+            });
+            const status = document.getElementById('tableCellStatus');
+            if (scope === 'all' && status) {
+                status.textContent = 'All tables · ' + letterGrids().length;
+            }
+        }
+
+        function setGridBorderSides(sides) {
+            gridBorderSides = sides;
+            document.querySelectorAll('#gridBorderSides button').forEach(function(btn) {
+                btn.classList.toggle('on', btn.dataset.sides === sides);
+            });
+            applyGridBorder();
+        }
+
+        function setGridTableAlign(align) {
+            gridTableAlign = align;
+            document.querySelectorAll('#gridTableAlign button').forEach(function(btn) {
+                btn.classList.toggle('on', btn.dataset.align === align);
+            });
+            applyGridTableBox();
         }
 
         function gridColumnCount(table) {
@@ -4172,9 +4362,10 @@
             return group;
         }
 
-        function gridStyleTargets(hit) {
-            const all = Array.from(hit.table.querySelectorAll('td, th'));
-            if (gridScope === 'table') return all;
+        function cellsForTableScope(table, hit) {
+            const all = Array.from(table.querySelectorAll('td, th'));
+            if (gridScope === 'all' || gridScope === 'table') return all;
+            if (!hit || table !== hit.table) return [];
             if (gridScope === 'row') return Array.from(hit.row.cells);
             if (gridScope === 'col') {
                 const index = gridVisualIndex(hit.cell);
@@ -4186,81 +4377,190 @@
             return [hit.cell];
         }
 
+        function gridStyleTargets(hit) {
+            if (gridScope === 'all') {
+                const cells = [];
+                letterGrids().forEach(function(table) {
+                    Array.from(table.querySelectorAll('td, th')).forEach(function(td) { cells.push(td); });
+                });
+                return cells;
+            }
+            return cellsForTableScope(hit.table, hit);
+        }
+
         function numField(id, fallback) {
             const el = document.getElementById(id);
             const n = el ? parseFloat(el.value) : NaN;
             return Number.isFinite(n) ? n : fallback;
         }
 
-        function applyGridColWidth() {
-            const hit = rememberedGridHit();
-            if (!hit) return;
-            const width = numField('gridColWidth', 0);
-            if (width < 4) return;
-            const unit = (document.getElementById('gridColUnit') || {}).value === 'px' ? 'px' : '%';
-            ensureGridCols(hit.table);
-            const value = width + unit;
-            const start = gridScope === 'table' ? 0 : gridVisualIndex(hit.cell);
-            const count = gridScope === 'table' ? gridColumnCount(hit.table) : (hit.cell.colSpan || 1);
-            for (let i = 0; i < count; i++) paintColumnWidth(hit.table, start + i, value);
-            rememberGridEdit();
+        function applyTableAlign(table) {
+            const mt = numField('gridTableMt', 10) + 'px';
+            const mb = numField('gridTableMb', 10) + 'px';
+            table.style.marginTop = mt;
+            table.style.marginBottom = mb;
+            if (gridTableAlign === 'center') {
+                table.style.marginLeft = 'auto';
+                table.style.marginRight = 'auto';
+            } else if (gridTableAlign === 'right') {
+                table.style.marginLeft = 'auto';
+                table.style.marginRight = '0';
+            } else {
+                table.style.marginLeft = '0';
+                table.style.marginRight = 'auto';
+            }
         }
 
-        function applyGridRowHeight() {
-            const hit = rememberedGridHit();
-            if (!hit) return;
-            const height = Math.max(16, numField('gridRowHeight', 32));
-            const rows = gridScope === 'table' ? Array.from(hit.table.querySelectorAll('tr')) : [hit.row];
-            rows.forEach(function(tr) {
-                tr.style.height = height + 'px';
-                Array.from(tr.cells).forEach(function(td) { td.style.height = height + 'px'; });
+        function applyGridTableBox() {
+            const hit = rememberedGridHitOrAll();
+            const tables = gridTargetTables(hit);
+            if (!tables.length) return;
+            const width = numField('gridTableWidth', 100);
+            const unit = (document.getElementById('gridTableUnit') || {}).value === 'px' ? 'px' : '%';
+            const height = numField('gridTableHeight', 0);
+            tables.forEach(function(table) {
+                table.style.width = Math.max(10, width) + unit;
+                table.style.maxWidth = '100%';
+                table.style.tableLayout = 'fixed';
+                table.style.height = height > 0 ? height + 'px' : '';
+                applyTableAlign(table);
             });
             rememberGridEdit();
         }
 
+        function applyGridColWidth() {
+            const hit = rememberedGridHitOrAll();
+            const tables = gridTargetTables(hit);
+            if (!tables.length) return;
+            const width = numField('gridColWidth', 0);
+            if (width < 4) return;
+            const unit = (document.getElementById('gridColUnit') || {}).value === 'px' ? 'px' : '%';
+            const value = width + unit;
+            const whole = gridScope === 'table' || gridScope === 'all';
+            tables.forEach(function(table) {
+                ensureGridCols(table);
+                const start = whole ? 0 : gridVisualIndex(hit.cell);
+                const count = whole ? gridColumnCount(table) : (hit.cell.colSpan || 1);
+                for (let i = 0; i < count; i++) paintColumnWidth(table, start + i, value);
+            });
+            rememberGridEdit();
+        }
+
+        function applyGridRowHeight() {
+            const hit = rememberedGridHitOrAll();
+            const tables = gridTargetTables(hit);
+            if (!tables.length) return;
+            const height = Math.max(16, numField('gridRowHeight', 32));
+            tables.forEach(function(table) {
+                const rows = (gridScope === 'table' || gridScope === 'all')
+                    ? Array.from(table.rows)
+                    : (table === hit.table ? [hit.row] : []);
+                rows.forEach(function(tr) {
+                    tr.style.height = height + 'px';
+                    Array.from(tr.cells).forEach(function(td) { td.style.height = height + 'px'; });
+                });
+            });
+            rememberGridEdit();
+        }
+
+        function cellEdgeFlags(td, table) {
+            const rowIndex = Array.from(table.rows).indexOf(td.parentElement);
+            const col = gridVisualIndex(td);
+            const span = td.colSpan || 1;
+            const lastRow = table.rows.length - 1;
+            const lastCol = gridColumnCount(table) - 1;
+            return {
+                top: rowIndex === 0,
+                bottom: rowIndex === lastRow,
+                left: col === 0,
+                right: col + span - 1 >= lastCol
+            };
+        }
+
+        function paintCellBorder(td, table, width, style, color, sides) {
+            const w = width + 'px';
+            const s = (style === 'none' || width === 0) ? 'none' : style;
+            function setSide(name, on) {
+                td.style['border' + name + 'Width'] = on ? w : '0px';
+                td.style['border' + name + 'Style'] = on ? s : 'none';
+                td.style['border' + name + 'Color'] = color;
+            }
+            if (sides === 'all') {
+                td.style.borderWidth = w;
+                td.style.borderStyle = s;
+                td.style.borderColor = color;
+                return;
+            }
+            const edge = cellEdgeFlags(td, table);
+            const outer = sides === 'outer';
+            setSide('Top', outer ? edge.top : !edge.top);
+            setSide('Bottom', outer ? edge.bottom : !edge.bottom);
+            setSide('Left', outer ? edge.left : !edge.left);
+            setSide('Right', outer ? edge.right : !edge.right);
+        }
+
         function applyGridBorder() {
-            const hit = rememberedGridHit();
-            if (!hit) return;
+            const hit = rememberedGridHitOrAll();
+            const tables = gridTargetTables(hit);
+            if (!tables.length) return;
             const width = Math.max(0, numField('gridBorderWidth', 1));
             const style = (document.getElementById('gridBorderStyle') || {}).value || 'solid';
             const color = (document.getElementById('gridBorderColor') || {}).value || '#111111';
-            hit.table.classList.remove('lh-grid-noborder');
-            if (style === 'none' || width === 0) {
-                if (gridScope === 'table') hit.table.classList.add('lh-grid-noborder');
-            }
-            gridStyleTargets(hit).forEach(function(td) {
-                td.style.borderWidth = width + 'px';
-                td.style.borderStyle = style === 'none' || width === 0 ? 'none' : style;
-                td.style.borderColor = color;
+            const collapse = (document.getElementById('gridCollapse') || {}).value || 'collapse';
+            const spacing = Math.max(0, numField('gridSpacing', 0));
+            const hide = style === 'none' || width === 0;
+            tables.forEach(function(table) {
+                table.classList.toggle('lh-grid-noborder', hide && (gridScope === 'table' || gridScope === 'all'));
+                table.style.borderCollapse = collapse;
+                table.style.borderSpacing = collapse === 'separate' ? spacing + 'px' : '0';
+                table.style.border = collapse === 'separate'
+                    ? (hide ? 'none' : width + 'px ' + style + ' ' + color)
+                    : '';
+                cellsForTableScope(table, hit).forEach(function(td) {
+                    paintCellBorder(td, table, width, style, color, gridBorderSides);
+                });
             });
             rememberGridEdit();
         }
 
         function applyGridPaint() {
-            const hit = rememberedGridHit();
-            if (!hit) return;
+            const hit = rememberedGridHitOrAll();
+            if (!hit && gridScope !== 'all') return;
             const pad = Math.max(0, numField('gridPad', 5));
             const font = Math.max(8, numField('gridFont', 13));
+            const line = numField('gridLine', 1.35);
+            const minW = Math.max(0, numField('gridMinW', 0));
+            const minH = Math.max(0, numField('gridMinH', 0));
             const bg = (document.getElementById('gridBg') || {}).value || '#ffffff';
-            gridStyleTargets(hit).forEach(function(td) {
+            gridStyleTargets(hit || firstGridHit()).forEach(function(td) {
                 td.style.padding = pad + 'px';
                 td.style.fontSize = font + 'px';
+                td.style.lineHeight = String(line);
                 td.style.background = bg;
+                td.style.minWidth = minW > 0 ? minW + 'px' : '';
+                td.style.minHeight = minH > 0 ? minH + 'px' : '';
+                td.style.boxSizing = 'border-box';
             });
             rememberGridEdit();
         }
 
         function gridVAlign(align) {
-            const hit = gridNeedCell();
-            if (!hit) return;
-            gridStyleTargets(hit).forEach(function(td) { td.style.verticalAlign = align; });
+            const hit = rememberedGridHitOrAll();
+            if (!hit && gridScope !== 'all') {
+                alert(tableMsg('needCell'));
+                return;
+            }
+            gridStyleTargets(hit || firstGridHit()).forEach(function(td) { td.style.verticalAlign = align; });
             rememberGridEdit();
         }
 
         function gridWrap(wrap) {
-            const hit = gridNeedCell();
-            if (!hit) return;
-            gridStyleTargets(hit).forEach(function(td) {
+            const hit = rememberedGridHitOrAll();
+            if (!hit && gridScope !== 'all') {
+                alert(tableMsg('needCell'));
+                return;
+            }
+            gridStyleTargets(hit || firstGridHit()).forEach(function(td) {
                 td.style.whiteSpace = wrap ? 'normal' : 'nowrap';
                 td.style.wordBreak = wrap ? 'break-word' : 'normal';
             });
@@ -4311,10 +4611,52 @@
             const font = parseFloat(hit.cell.style.fontSize);
             const fontInput = document.getElementById('gridFont');
             if (fontInput && Number.isFinite(font)) fontInput.value = String(font);
+            const line = parseFloat(hit.cell.style.lineHeight);
+            const lineInput = document.getElementById('gridLine');
+            if (lineInput && Number.isFinite(line)) lineInput.value = String(line);
+            const minW = parseFloat(hit.cell.style.minWidth);
+            const minWInput = document.getElementById('gridMinW');
+            if (minWInput && Number.isFinite(minW)) minWInput.value = String(minW);
+            const minH = parseFloat(hit.cell.style.minHeight);
+            const minHInput = document.getElementById('gridMinH');
+            if (minHInput && Number.isFinite(minH)) minHInput.value = String(minH);
+            const tableWidth = String(hit.table.style.width || '').match(/^(\d+(?:\.\d+)?)(px|%)$/);
+            const tableWidthInput = document.getElementById('gridTableWidth');
+            const tableUnitInput = document.getElementById('gridTableUnit');
+            if (tableWidth && tableWidthInput && tableUnitInput) {
+                tableWidthInput.value = tableWidth[1];
+                tableUnitInput.value = tableWidth[2];
+            }
+            const tableHeight = parseInt(hit.table.style.height, 10);
+            const tableHeightInput = document.getElementById('gridTableHeight');
+            if (tableHeightInput) tableHeightInput.value = Number.isFinite(tableHeight) ? String(tableHeight) : '0';
+            const mt = parseFloat(hit.table.style.marginTop);
+            const mtInput = document.getElementById('gridTableMt');
+            if (mtInput && Number.isFinite(mt)) mtInput.value = String(mt);
+            const mb = parseFloat(hit.table.style.marginBottom);
+            const mbInput = document.getElementById('gridTableMb');
+            if (mbInput && Number.isFinite(mb)) mbInput.value = String(mb);
+            const collapseInput = document.getElementById('gridCollapse');
+            if (collapseInput && hit.table.style.borderCollapse) collapseInput.value = hit.table.style.borderCollapse;
+            const spacing = parseFloat(hit.table.style.borderSpacing);
+            const spacingInput = document.getElementById('gridSpacing');
+            if (spacingInput && Number.isFinite(spacing)) spacingInput.value = String(spacing);
+            const ml = String(hit.table.style.marginLeft || '');
+            const mr = String(hit.table.style.marginRight || '');
+            if (ml === 'auto' && mr === 'auto') gridTableAlign = 'center';
+            else if (ml === 'auto') gridTableAlign = 'right';
+            else gridTableAlign = 'left';
+            document.querySelectorAll('#gridTableAlign button').forEach(function(btn) {
+                btn.classList.toggle('on', btn.dataset.align === gridTableAlign);
+            });
             const status = document.getElementById('tableCellStatus');
             if (status) {
-                const rowNo = Array.from(hit.table.querySelectorAll('tr')).indexOf(hit.row) + 1;
-                status.textContent = 'Row ' + rowNo + ', column ' + (gridVisualIndex(hit.cell) + 1);
+                if (gridScope === 'all') {
+                    status.textContent = 'All tables · ' + letterGrids().length;
+                } else {
+                    const rowNo = Array.from(hit.table.querySelectorAll('tr')).indexOf(hit.row) + 1;
+                    status.textContent = 'Row ' + rowNo + ', column ' + (gridVisualIndex(hit.cell) + 1);
+                }
             }
         }
 
@@ -4447,16 +4789,24 @@
         }
 
         function gridAlign(align) {
-            const hit = gridNeedCell();
-            if (!hit) return;
-            hit.cell.style.textAlign = align;
+            const hit = rememberedGridHitOrAll();
+            if (!hit && gridScope !== 'all') {
+                alert(tableMsg('needCell'));
+                return;
+            }
+            gridStyleTargets(hit || firstGridHit()).forEach(function(td) { td.style.textAlign = align; });
             rememberGridEdit();
         }
 
         function gridToggleBorder() {
-            const hit = gridNeedCell();
-            if (!hit) return;
-            hit.table.classList.toggle('lh-grid-noborder');
+            const hit = rememberedGridHitOrAll();
+            const tables = gridTargetTables(hit);
+            if (!tables.length) {
+                alert(tableMsg('needCell'));
+                return;
+            }
+            const hide = !tables[0].classList.contains('lh-grid-noborder');
+            tables.forEach(function(table) { table.classList.toggle('lh-grid-noborder', hide); });
             rememberGridEdit();
         }
 
@@ -4545,7 +4895,14 @@
                     filename: 'Letterhead_' + new Date().toLocaleDateString('en-IN').replace(/\//g, '-') + '.pdf',
                     image: { type: 'jpeg', quality: 0.98 },
                     // windowWidth → media queries evaluate as desktop, so phones get the same A4 layout
-                    html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 1280 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        windowWidth: 1280,
+                        backgroundColor: '#ffffff',
+                        onclone: paintClonedGridBorders
+                    },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: ['css', 'legacy'], before: '.page-container + .page-container' }
                 }).from(wrapper).save();
@@ -5494,7 +5851,8 @@
                         backgroundColor: '#ffffff',
                         windowWidth: 794,
                         scrollX: 0,
-                        scrollY: 0
+                        scrollY: 0,
+                        onclone: paintClonedGridBorders
                     },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', hotfixes: ['px_scaling'] },
                     pagebreak: picked.length > 1
@@ -6160,6 +6518,10 @@
         .content-area {
             margin-top: 20px;
             line-height: 2;
+        }
+        .lh-grid td, .lh-grid th {
+            border: 1px solid #000;
+            padding: 4px 6px;
         }
         .underline {
             border-bottom: 1px solid #333;

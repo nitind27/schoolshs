@@ -6,8 +6,12 @@ import { computeStudentTotals, subjectFinalMarks } from "@/lib/results/calculati
 import { parseTermRemarks, type MarksSheetTermData } from "@/lib/results/marks-sheet-config";
 import { combineTheoryInternal } from "@/lib/results/pragati-patrak";
 import {
+  computerTerms,
   componentTerms,
   finalTerm,
+  hasComputerExams,
+  isComputerSubject,
+  isComputerTerm,
   parseExamTermMeta,
   readTermInternalScore,
   readTermScore,
@@ -108,19 +112,27 @@ function splitSemesterMarks(
   meta: ReturnType<typeof parseExamTermMeta>,
   term: MarksSheetTermData,
   annualMarks: number | null,
+  subjectCode?: string | null,
+  subjectName?: string | null,
 ) {
-  const comps = componentTerms(meta);
+  const useComputer =
+    isComputerSubject(subjectCode, subjectName) && hasComputerExams(meta);
+  const comps = useComputer
+    ? computerTerms(meta)
+    : componentTerms(meta).filter((examTerm) => !isComputerTerm(examTerm));
   const secondComponent = comps[1];
-  const second: ExamTermDef =
+  const second: ExamTermDef | null =
     secondComponent &&
     ((secondComponent.maxMarks || 0) > 0 || (secondComponent.internalMax || 0) > 0)
       ? secondComponent
-      : finalTerm(meta);
+      : useComputer
+        ? null
+        : finalTerm(meta);
   const firstExam = comps[0] || null;
   const theory1 = firstExam ? readTermScore(firstExam, term, annualMarks) : null;
   const internal1 = firstExam ? readTermInternalScore(firstExam, term) : null;
-  const theory2 = readTermScore(second, term, annualMarks);
-  const internal2 = readTermInternalScore(second, term);
+  const theory2 = second ? readTermScore(second, term, annualMarks) : null;
+  const internal2 = second ? readTermInternalScore(second, term) : null;
   return {
     theory1,
     internal1,
@@ -241,7 +253,15 @@ export async function GET(request: NextRequest) {
         const second =
           term.second ??
           pickScore("second", "sem2", "term2", "દ્વિતીય", "mid2");
-        const split = termMeta ? splitSemesterMarks(termMeta, term, r?.marksObtained ?? null) : null;
+        const split = termMeta
+          ? splitSemesterMarks(
+              termMeta,
+              term,
+              r?.marksObtained ?? null,
+              sub.code,
+              sub.name,
+            )
+          : null;
         const formative = pickScore(
           "formative",
           "omr",

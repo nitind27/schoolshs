@@ -544,6 +544,15 @@ const en = {
     paperTeacherTotal:
       "Paper {{paper}} + Teacher/Internal {{internal}} = {{total}} out of",
     reload: "Reload",
+    computerOnly: "This exam is for Computer only",
+    computerOnlyHint:
+      "Enter Computer marks on this exam. Add one Computer exam for each result term (1st / 2nd). The result card still shows Computer in the same column.",
+    computerExam: "Computer exam",
+    computerBadge: "Computer",
+    autoTotalComputer:
+      "Computer exam out-of: {{total}} — fills the Computer column on the result card",
+    computerResultHint:
+      "Result card stays the same. Computer marks from this exam fill the Computer row.",
   },
   login: {
     title: "Codeat Education",

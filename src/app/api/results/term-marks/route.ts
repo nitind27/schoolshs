@@ -12,6 +12,7 @@ import {
   getTerm,
   isValidTermKey,
   metaFromTemplateTerms,
+  filterSubjectsForTerm,
   parseExamTermMeta,
   parseTermRemarks,
   pickSubjectMarkField,
@@ -20,6 +21,7 @@ import {
   serializeTermRemarks,
   TERM_INTERNAL_MARK_KEYS,
   TERM_PAPER_MARK_KEYS,
+  termAllowsSubject,
   writeTermInternalScore,
   writeTermScore,
   type ExamTermKey,
@@ -60,6 +62,7 @@ function termStatsForExam(
       published: term.published,
       locked: term.locked,
       examDate: term.examDate,
+      subjectScope: term.subjectScope === "computer" ? "computer" : "all",
       ...completion,
     };
   });
@@ -139,7 +142,11 @@ export async function GET(request: NextRequest) {
     const completion = computeTermCompletion(term, meta, students);
 
     const visibleSubjects = filterByTeacherSubjects(
-      sheetConfig.subjects.filter((s) => s.type === "numeric" || term.role === "final"),
+      filterSubjectsForTerm(
+        sheetConfig.subjects.filter((s) => s.type === "numeric" || term.role === "final"),
+        term,
+        meta,
+      ),
       allowedCodes,
     );
     const visibleStudents = students.map((st) => ({
@@ -293,6 +300,7 @@ export async function POST(request: NextRequest) {
             (s) => s.code === String(sub.subjectCode || markSub.subjectCode || ""),
           );
           if (!def) continue;
+          if (!termAllowsSubject(term, meta, def.code, def.name)) continue;
           if (allowedSet && !allowedSet.has(def.code.toUpperCase())) continue;
           const examSub =
             exam.subjects.find((s) => s.code === def.code) ||

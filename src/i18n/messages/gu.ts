@@ -537,6 +537,15 @@ const gu: Messages = {
     paperTeacherTotal:
       "પેપર {{paper}} + શિક્ષક/આંતરિક {{internal}} = કુલ {{total}} આઉટ ઓફ",
     reload: "રીલોડ",
+    computerOnly: "આ પરીક્ષા માત્ર કોમ્પ્યુટર માટે છે",
+    computerOnlyHint:
+      "આ પરીક્ષામાં ફક્ત કોમ્પ્યુટરના ગુણ નાખો. રિઝલ્ટની દરેક ટર્મ (1st / 2nd) માટે એક કોમ્પ્યુટર પરીક્ષા ઉમેરો. રિઝલ્ટ કાર્ડમાં કોમ્પ્યુટર એ જ કૉલમમાં રહેશે.",
+    computerExam: "કોમ્પ્યુટર પરીક્ષા",
+    computerBadge: "કોમ્પ્યુટર",
+    autoTotalComputer:
+      "કોમ્પ્યુટર પરીક્ષા આઉટ-ઓફ: {{total}} — રિઝલ્ટમાં કોમ્પ્યુટર કૉલમ ભરાશે",
+    computerResultHint:
+      "રિઝલ્ટ કાર્ડ એ જ રહેશે. આ પરીક્ષાના કોમ્પ્યુટર ગુણ એ જ કૉલમમાં જશે.",
   },
   login: {
     title: "Codeat Education",

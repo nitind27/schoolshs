@@ -33,6 +33,7 @@ export type TermStat = {
   pending: number;
   total: number;
   percent: number;
+  subjectScope?: "all" | "computer";
 };
 
 const TERM_COLORS = [
@@ -101,6 +102,11 @@ export function ExamTermDashboard({
                     </p>
                     <h3 className="font-bold text-slate-900 mt-0.5">{ts.labelEn}</h3>
                     <p className="text-xs text-slate-400 gu-text">{ts.labelGu}</p>
+                    {ts.subjectScope === "computer" && (
+                      <span className="mt-1 inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-800">
+                        {t("examsHub.computerBadge")}
+                      </span>
+                    )}
                   </div>
                   {ts.published ? (
                     <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">

@@ -92,12 +92,13 @@ export async function GET(request: NextRequest) {
       const exam = examByClass.get(`${c.standard}::${c.section}`);
       const meta = parseExamTermMeta(exam?.termMeta);
       const comps = componentTerms(meta);
+      const generalComps = comps.filter((t) => t.subjectScope !== "computer");
       const fin = finalTerm(meta);
       return {
         ...c,
         examId: exam?.id ?? null,
         isPublished: exam?.isPublished ?? false,
-        midExamCount: comps.length,
+        midExamCount: generalComps.length,
         totalOutOf: totalTermMaxFromMeta(meta),
         termsList: meta.terms.map((t) => ({
           key: t.key,
@@ -107,11 +108,12 @@ export async function GET(request: NextRequest) {
           maxMarks: t.maxMarks,
           internalMax: t.internalMax,
           role: t.role,
+          subjectScope: t.subjectScope === "computer" ? "computer" : "all",
         })),
         terms: {
-          mid1: comps[0]?.maxMarks ?? 50,
-          mid2: comps[1]?.maxMarks ?? 50,
-          mid3: comps[2]?.maxMarks ?? 50,
+          mid1: generalComps[0]?.maxMarks ?? 50,
+          mid2: generalComps[1]?.maxMarks ?? 50,
+          mid3: generalComps[2]?.maxMarks ?? 50,
           final: fin.maxMarks,
           internal: fin.internalMax ?? 20,
         },
@@ -127,6 +129,7 @@ export async function GET(request: NextRequest) {
           maxMarks: term.maxMarks,
           internalMax: term.internalMax ?? 0,
           role: term.role,
+          subjectScope: term.subjectScope === "computer" ? "computer" : "all",
         }))
       : null;
 
@@ -171,6 +174,19 @@ export async function PUT(request: NextRequest) {
     if (invalidSplit) {
       return NextResponse.json(
         { error: "Paper marks + Teacher/Internal marks must equal Total marks" },
+        { status: 400 },
+      );
+    }
+
+    const hasGeneralComponent = body.templateTerms.some(
+      (term: { role?: string; key?: string; subjectScope?: string }) =>
+        term.role !== "final" &&
+        term.key !== "final" &&
+        term.subjectScope !== "computer",
+    );
+    if (!hasGeneralComponent) {
+      return NextResponse.json(
+        { error: "Keep at least one exam that is not Computer-only" },
         { status: 400 },
       );
     }
