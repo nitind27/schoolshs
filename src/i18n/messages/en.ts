@@ -488,14 +488,14 @@ const en = {
     title: "Exams",
     subtitle: "Create Mid / Final exams · set out-of marks · apply class-wise",
     introTitle: "Exam setup (separate from Subjects)",
-    intro1: "Add as many Mid / Unit exams as you need (+ Final + Internal)",
-    intro2: "Set out-of marks for each — totals & % auto-calculate",
+    intro1: "Add Exam 1, 2, 3… for the other subjects (+ Final)",
+    intro2: "Set Computer exams separately — other subjects stay as you set them",
     intro3: "Apply the same setup to selected class divisions",
     tabTemplate: "1. Exam template",
     tabApply: "2. Apply to classes",
     templateTitle: "Exam template",
     templateDesc:
-      "Add Mid1, Mid2, Mid3, Unit tests… then Final. Edit names and out-of marks freely.",
+      "Exam 1, 2, 3 keep the other subjects. Computer is set in its own block below.",
     saveTemplate: "Save template",
     templateSaved: "Exam template saved",
     templateSaveFailed: "Could not save exam template",
@@ -520,7 +520,7 @@ const en = {
     colOutOf: "Out of",
     colBreakdown: "Breakdown",
     addExam: "Add exam",
-    addExamHint: "Add Mid / Unit / any component exam. Final stays at the end.",
+    addExamHint: "This exam is for all subjects except Computer. Final stays at the end.",
     addNameRequired: "Enter exam name",
     examAdded: "Exam added to template",
     examDeleted: "Exam removed",
@@ -546,13 +546,23 @@ const en = {
     reload: "Reload",
     computerOnly: "This exam is for Computer only",
     computerOnlyHint:
-      "Enter Computer marks on this exam. Add one Computer exam for each result term (1st / 2nd). The result card still shows Computer in the same column.",
+      "Marks for this exam are Computer only. Exam 1 / 2 / 3 keep the other subjects.",
     computerExam: "Computer exam",
     computerBadge: "Computer",
     autoTotalComputer:
       "Computer exam out-of: {{total}} — fills the Computer column on the result card",
     computerResultHint:
       "Result card stays the same. Computer marks from this exam fill the Computer row.",
+    subjectExamsTitle: "Subject exams",
+    subjectExamsDesc:
+      "Exam 1, 2, 3… and Final. Out-of marks here stay on every subject except Computer.",
+    computerExamsTitle: "Computer exams",
+    computerExamsDesc:
+      "Set Computer separately. Add one Computer exam for each result term (1st / 2nd).",
+    addComputerExam: "Add Computer exam",
+    addComputerHint:
+      "Only Computer marks are entered here. Other subjects stay on Exam 1 / 2 / 3.",
+    computerEmpty: "No Computer exam yet. Add one for each result term you need.",
   },
   login: {
     title: "Codeat Education",
