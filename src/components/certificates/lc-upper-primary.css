@@ -97,9 +97,10 @@
   position: absolute;
   right: 0;
   top: 2px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1.4em auto;
+  column-gap: 4px;
   align-items: center;
-  gap: 0;
   font-size: 10px;
   font-weight: 700;
 }
@@ -122,11 +123,18 @@
   margin-bottom: 3px;
   flex-wrap: wrap;
 }
+.lc-up-id-row > div {
+  display: grid;
+  grid-template-columns: minmax(0, auto) 1.4em minmax(0, 1fr);
+  column-gap: 4px;
+  align-items: end;
+  min-width: 0;
+}
 .lc-up-id-line {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: nowrap;
-  gap: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr);
+  column-gap: 4px;
+  align-items: end;
   font-size: 11px;
   margin-bottom: 3px;
 }
@@ -139,41 +147,39 @@
   margin-bottom: 2px;
 }
 .lc-up-field-top {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: nowrap;
-  gap: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr);
+  column-gap: 4px;
+  align-items: end;
   font-size: 11.5px;
   line-height: 1.2;
 }
 .lc-up-field-en {
   font-weight: 700;
-  white-space: nowrap;
-  flex: 0 0 auto;
-}
-.lc-up-lead {
-  flex: 1 1 18px;
-  min-width: 18px;
-}
-.lc-up-slot {
-  display: inline-flex;
-  align-items: flex-end;
-  flex: 2 1 120px;
   min-width: 0;
-  flex-wrap: wrap;
 }
 .lc-up-colon {
   white-space: nowrap;
-  flex: 0 0 auto;
+  font-weight: 700;
+  padding-bottom: 1px;
 }
-.lc-up-field-gu {
-  margin: 2px 0 0 16px;
-  font-size: 10px;
-  line-height: 1.15;
+.lc-up-slot {
+  min-width: 0;
   display: flex;
   align-items: flex-end;
-  flex-wrap: nowrap;
-  gap: 0;
+}
+.lc-up-slot .lc-up-fill {
+  width: 100%;
+  min-width: 0;
+}
+.lc-up-field-gu {
+  margin: 2px 0 0;
+  font-size: 10px;
+  line-height: 1.15;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr);
+  column-gap: 4px;
+  align-items: end;
 }
 /* Gujarati matras sit above the Latin ascender line — give them room inside the clipped box */
 .lc-up-field-gu .lc-up-fill {
@@ -320,10 +326,10 @@
   max-width: none !important;
 }
 .lc-up-dob-words {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: nowrap;
-  gap: 0;
+  display: grid;
+  grid-template-columns: auto 1.4em minmax(0, 1fr);
+  column-gap: 4px;
+  align-items: end;
   flex: 1 1 auto;
   min-width: 0;
   font-size: 10px;
@@ -384,15 +390,14 @@
   margin-bottom: 2px;
 }
 .lc-up-bank-row {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: nowrap;
-  gap: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr);
+  column-gap: 4px;
+  align-items: end;
   font-size: 11.5px;
 }
 .lc-up-bank-row + .lc-up-bank-row {
   margin-top: 4px;
-  margin-left: 14px;
 }
 
 /* ── Footer stays on page 1 ── */
@@ -406,10 +411,10 @@
   font-size: 11px;
 }
 .lc-up-meta-row {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: nowrap;
-  gap: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) 1.7em minmax(0, 1.05fr);
+  column-gap: 4px;
+  align-items: end;
   margin-bottom: 3px;
 }
 .lc-up-cert-en {

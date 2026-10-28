@@ -421,7 +421,6 @@ function DobUnit({
   );
 }
 
-/** Label only. The colon is not attached to this text. */
 function Lab({
   children,
   className,
@@ -432,21 +431,18 @@ function Lab({
   style?: React.CSSProperties;
 }) {
   return (
-    <span className={className} style={{ whiteSpace: "nowrap", flex: "0 0 auto", ...style }}>
+    <span className={className} style={{ minWidth: 0, ...style }}>
       {children}
     </span>
   );
 }
 
-/** Colon stays on the label's line, away from the label, with a dash before the value. */
+/** Colon column + value. Parent uses the same 3-column grid so every ":" lines up. */
 function Slot({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <span className="lc-up-lead" />
-      <span className="lc-up-slot">
-        <span className="lc-up-colon">{": —\u00A0"}</span>
-        {children}
-      </span>
+      <span className="lc-up-colon">{": —"}</span>
+      <span className="lc-up-slot">{children}</span>
     </>
   );
 }
@@ -840,7 +836,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
           </div>
 
           <div className="lc-up-id-row">
-            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "nowrap", gap: 0, flex: "1 1 0", minWidth: 0 }}>
+            <div style={{ flex: "1 1 0", minWidth: 0 }}>
               <Lab style={{ fontWeight: 700 }}>
                 <Editable sizeKey="grLabel" value={f.grLabel} onChange={set("grLabel")} />
               </Lab>
@@ -848,7 +844,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                 <Fill sizeKey="grNumber" value={f.grNumber} onChange={set("grNumber")} />
               </Slot>
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "nowrap", gap: 0, flex: "1.2 1 0", minWidth: 0 }}>
+            <div style={{ flex: "1.2 1 0", minWidth: 0 }}>
               <Lab style={{ fontWeight: 700 }}>
                 <Editable sizeKey="diseLabel" value={f.diseLabel} onChange={set("diseLabel")} />
               </Lab>
@@ -861,7 +857,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                 />
               </Slot>
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", flexWrap: "nowrap", gap: 0, flex: "1 1 0", minWidth: 0 }}>
+            <div style={{ flex: "1 1 0", minWidth: 0 }}>
               <Lab style={{ fontWeight: 700 }}>
                 <Editable sizeKey="mediumLabel" value={f.mediumLabel} onChange={set("mediumLabel")} />
               </Lab>
@@ -870,7 +866,7 @@ export function LeavingCertificateView({ data }: { data: LCData }) {
                   sizeKey="medium"
                   value={f.medium}
                   onChange={set("medium")}
-                  style={{ flex: "0 0 auto", minWidth: 72, textAlign: "center" }}
+                  style={{ minWidth: 72, textAlign: "center" }}
                 />
               </Slot>
             </div>

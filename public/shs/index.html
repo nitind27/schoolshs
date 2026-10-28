@@ -1344,7 +1344,10 @@
             border: 1px solid #111;
             padding: 5px 6px;
             vertical-align: top;
-            min-width: 24px;
+            min-width: 0;
+            box-sizing: border-box;
+            white-space: normal;
+            overflow-wrap: anywhere;
             word-break: break-word;
             background: #fff;
         }
@@ -1797,9 +1800,11 @@
             .content-area .lh-grid td,
             .content-area .lh-grid th {
                 border: 1px solid #000;
-                word-break: normal;
-                overflow-wrap: normal;
-                white-space: nowrap;
+                min-width: 0;
+                box-sizing: border-box;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                word-break: break-word;
                 padding: 2px 8px;
                 vertical-align: middle;
                 line-height: 1.25;
@@ -3912,6 +3917,8 @@
         document.addEventListener('pointerdown', function(event) {
             const target = event.target;
             if (!target || !target.closest) return;
+            const grid = target.closest('table.lh-grid');
+            if (grid) lockGrid(grid);
             if (target.closest('#tablePanel, .lh-table-open')) return;
             const page = target.closest('.page-container');
             if (page) setActiveLetterPage(page);
@@ -4036,6 +4043,7 @@
                 body.appendChild(tr);
             }
             table.appendChild(body);
+            lockGrid(table);
             const spacer = document.createElement('p');
             spacer.appendChild(document.createElement('br'));
             const sel = window.getSelection();
@@ -4063,8 +4071,51 @@
 
         function blankGridCell() {
             const td = document.createElement('td');
+            td.setAttribute('contenteditable', 'true');
             td.appendChild(document.createElement('br'));
             return td;
+        }
+
+        function lockGrid(table) {
+            if (!table) return;
+            table.setAttribute('contenteditable', 'false');
+            table.querySelectorAll('td, th').forEach(function(td) {
+                td.setAttribute('contenteditable', 'true');
+            });
+        }
+
+        function cellsInGridColumn(table, index) {
+            const found = [];
+            Array.from(table.rows).forEach(function(tr) {
+                const td = gridCellAt(tr, index);
+                if (!td) return;
+                if (gridVisualIndex(td) !== index) return;
+                found.push(td);
+            });
+            return found;
+        }
+
+        function paintColumnWidth(table, index, value) {
+            const group = ensureGridCols(table);
+            if (group.children[index]) group.children[index].style.width = value;
+            cellsInGridColumn(table, index).forEach(function(td) {
+                td.style.width = value;
+                td.style.maxWidth = value;
+                td.style.boxSizing = 'border-box';
+            });
+        }
+
+        function syncGridColumnWidths(table) {
+            lockGrid(table);
+            const group = ensureGridCols(table);
+            for (let i = 0; i < group.children.length; i++) {
+                let value = group.children[i].style.width;
+                if (!value && table.rows[0]) {
+                    const first = gridCellAt(table.rows[0], i);
+                    if (first && gridVisualIndex(first) === i && first.style.width) value = first.style.width;
+                }
+                if (value) paintColumnWidth(table, i, value);
+            }
         }
 
         let gridScope = 'cell';
@@ -4147,17 +4198,11 @@
             const width = numField('gridColWidth', 0);
             if (width < 4) return;
             const unit = (document.getElementById('gridColUnit') || {}).value === 'px' ? 'px' : '%';
-            const group = ensureGridCols(hit.table);
+            ensureGridCols(hit.table);
             const value = width + unit;
-            if (gridScope === 'table') {
-                Array.from(group.children).forEach(function(col) { col.style.width = value; });
-            } else {
-                const start = gridVisualIndex(hit.cell);
-                const span = hit.cell.colSpan || 1;
-                for (let i = 0; i < span; i++) {
-                    if (group.children[start + i]) group.children[start + i].style.width = value;
-                }
-            }
+            const start = gridScope === 'table' ? 0 : gridVisualIndex(hit.cell);
+            const count = gridScope === 'table' ? gridColumnCount(hit.table) : (hit.cell.colSpan || 1);
+            for (let i = 0; i < count; i++) paintColumnWidth(hit.table, start + i, value);
             rememberGridEdit();
         }
 
@@ -4236,7 +4281,7 @@
             if (!hit) return;
             document.querySelectorAll('.lh-grid-on').forEach(function(el) { el.classList.remove('lh-grid-on'); });
             hit.cell.classList.add('lh-grid-on');
-            ensureGridCols(hit.table);
+            syncGridColumnWidths(hit.table);
             const col = hit.table.querySelector('colgroup').children[gridVisualIndex(hit.cell)];
             const width = col && String(col.style.width || '').match(/^(\d+(?:\.\d+)?)(px|%)$/);
             const widthInput = document.getElementById('gridColWidth');
@@ -4302,6 +4347,7 @@
             for (let i = 0; i < Math.max(1, count); i++) tr.appendChild(blankGridCell());
             if (direction < 0) hit.row.before(tr);
             else hit.row.after(tr);
+            syncGridColumnWidths(hit.table);
             rememberGridEdit();
         }
 
@@ -4335,6 +4381,7 @@
             else if (direction < 0) marker.before(col);
             else marker.after(col);
             ensureGridCols(hit.table);
+            syncGridColumnWidths(hit.table);
             rememberGridEdit();
         }
 
@@ -6340,6 +6387,9 @@
                 stamps = data.stamps;
                 loadStamps();
             }
+            document.querySelectorAll('.content-area .lh-grid').forEach(function(table) {
+                syncGridColumnWidths(table);
+            });
             } finally {
                 applyingState = false;
             }
