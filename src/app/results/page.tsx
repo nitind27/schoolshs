@@ -62,6 +62,14 @@ export default function ResultsPage() {
       accent: "bg-indigo-50 text-indigo-700 border-indigo-200",
       iconBg: "bg-indigo-600",
     },
+    {
+      href: "/results/gun-patrak",
+      icon: Printer,
+      title: t("results.hubGunPatrak"),
+      desc: t("results.hubGunPatrakDesc"),
+      accent: "bg-amber-50 text-amber-800 border-amber-200",
+      iconBg: "bg-amber-600",
+    },
   ];
 
   return (
@@ -80,7 +88,7 @@ export default function ResultsPage() {
         />
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {tools.map((tool) => (
           <Link key={tool.href} href={tool.href}>
             <Card className={`h-full border hover:shadow-md transition-all ${tool.accent}`}>

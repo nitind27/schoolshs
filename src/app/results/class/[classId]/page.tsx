@@ -230,6 +230,12 @@ export default function ResultsClassPage() {
               <Link href={`/results/marks-sheet?classId=${classId}`}>
                 <Button variant="outline" size="sm"><FileSpreadsheet className="h-4 w-4" /> {t("results.marksSheet")}</Button>
               </Link>
+              <Link href={`/results/gun-patrak?classId=${classId}`}>
+                <Button variant="outline" size="sm">
+                  <Printer className="h-4 w-4" />
+                  {t("results.gunPatrakTitle")}
+                </Button>
+              </Link>
               <Link href={`/results/print?examId=${exam.id}&classId=${classId}&mode=all`}>
                 <Button size="sm" className="bg-pink-600 hover:bg-pink-700">
                   <Printer className="h-4 w-4" />

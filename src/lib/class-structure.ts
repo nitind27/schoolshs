@@ -17,7 +17,7 @@ export const PRIMARY_UPPER_STANDARDS = ["6", "7", "8"] as const;
  */
 export function importStandardsForSchoolCode(code?: string | null): string[] {
   const c = String(code || "").trim();
-  if (c === "24261004403") return [...PRIMARY_LOWER_STANDARDS];
+  if (c === "24261004403") return ["Balvatika", ...PRIMARY_LOWER_STANDARDS];
   if (c === "24261004404") return [...PRIMARY_UPPER_STANDARDS];
   if (c === "24261004405") return [...MANAGE_STANDARDS];
   return [...MANAGE_STANDARDS];

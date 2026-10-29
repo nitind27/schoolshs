@@ -165,6 +165,12 @@ export function ExamTermDashboard({
                       {ts.published ? t("examTerms.viewMarks") : t("examTerms.enterMarks")}
                     </Button>
                   </Link>
+                  <Link href={`/results/gun-patrak?classId=${classId}&term=${ts.key}`}>
+                    <Button size="sm" variant="outline" className="gap-1">
+                      <Printer className="h-3.5 w-3.5" />
+                      {t("results.gunPatrakTitle")}
+                    </Button>
+                  </Link>
                   {["11", "12"].includes(standard) &&
                     ts.role === "component" && (
                       <Link

@@ -668,6 +668,24 @@ html.locale-en {
   .print-area:has(.patrak-root) .patrak-sheet {
     page: patrak-legal;
   }
+
+  @page gun-patrak-a4 {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  .print-area:has(.gp-sheet),
+  .gp-print-root {
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .print-area:has(.gp-sheet) .gp-sheet,
+  .gp-print-root .gp-sheet {
+    page: gun-patrak-a4;
+  }
 }
 
 @keyframes navbar-chat-slide {

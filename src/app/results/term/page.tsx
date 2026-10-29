@@ -209,6 +209,14 @@ export default function TermMarksPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {data && (
+            <Link href={`/results/gun-patrak?classId=${data.class.id}&term=${data.term.key}`}>
+              <Button size="lg" variant="outline" className="gap-2">
+                <Printer className="h-4 w-4" />
+                {t("results.gunPatrakTitle")}
+              </Button>
+            </Link>
+          )}
           {data &&
             ["11", "12"].includes(data.class.standard) &&
             data.term.role === "component" && (

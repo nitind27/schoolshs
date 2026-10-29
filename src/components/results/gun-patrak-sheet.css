@@ -1,0 +1,134 @@
+.gp-sheet {
+  --gp-line: #111;
+  width: 148mm;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 4mm 5mm 6mm;
+  background: #fff;
+  color: #111;
+  font-family: "Noto Sans Gujarati", "Noto Sans", serif;
+  page-break-after: always;
+  break-after: page;
+}
+
+.gp-sheet:last-child {
+  page-break-after: auto;
+  break-after: auto;
+}
+
+.gp-title {
+  margin: 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.gp-school {
+  margin: 1px 0 6px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.gp-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 10px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.gp-meta p,
+.gp-line {
+  margin: 0;
+  min-height: 1.35em;
+}
+
+.gp-wide {
+  grid-column: 1 / -1;
+}
+
+.gp-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 2px solid var(--gp-line);
+}
+
+.gp-table th,
+.gp-table td {
+  border: 1px solid var(--gp-line);
+  padding: 0 3px;
+  height: 6.15mm;
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.gp-table thead th {
+  height: 7.2mm;
+  font-size: 10.5px;
+  font-weight: 800;
+  background: #fff;
+}
+
+.gp-num {
+  width: 22%;
+  font-weight: 700;
+}
+
+.gp-marks {
+  width: 28%;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.gp-sign {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.gp-sign span {
+  flex: 1;
+}
+
+@media screen {
+  .gp-sheet {
+    box-shadow: 0 8px 28px rgb(15 23 42 / 0.12);
+    border: 1px solid #cbd5e1;
+    margin-bottom: 16px;
+  }
+}
+
+@media print {
+  .gp-print-root,
+  .gp-print-root * {
+    visibility: visible !important;
+  }
+
+  .gp-print-root {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: #fff !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+
+  .gp-sheet {
+    width: 148mm;
+    box-shadow: none;
+    border: 0;
+    margin: 0 auto;
+    page: gun-patrak-a4;
+  }
+}

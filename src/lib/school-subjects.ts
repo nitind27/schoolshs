@@ -3,8 +3,9 @@ import {
   ARTS_MARKS_SHEET_SUBJECTS,
   COMMERCE_MARKS_SHEET_SUBJECTS,
   SECONDARY_MARKS_SHEET_SUBJECTS,
-  SONGADH_PRIMARY_STD12_SUBJECTS,
-  SONGADH_PRIMARY_STD35_SUBJECTS,
+  SONGADH_PRIMARY_CODE,
+  songadhPrimaryMasterSubjects,
+  songadhPrimarySubjectsForStandard,
   type MarksSheetSubjectDef,
 } from "@/lib/results/marks-sheet-config";
 import { replaceClassSubjects, type ClassSubjectInput } from "@/lib/class-subjects";
@@ -27,15 +28,8 @@ function normalizeCode(code: string): string {
 function uniqueCatalog(schoolCode?: string): MarksSheetSubjectDef[] {
   const map = new Map<string, MarksSheetSubjectDef>();
 
-  // School 24261004403 — seed both std 1-2 and 3-5 subjects into master
-  if (schoolCode === "24261004403") {
-    for (const s of [
-      ...SONGADH_PRIMARY_STD12_SUBJECTS,
-      ...SONGADH_PRIMARY_STD35_SUBJECTS,
-    ]) {
-      if (!map.has(s.code)) map.set(s.code, s);
-    }
-    return Array.from(map.values());
+  if (schoolCode === SONGADH_PRIMARY_CODE) {
+    return songadhPrimaryMasterSubjects();
   }
 
   for (const s of [
@@ -70,7 +64,7 @@ export async function seedSchoolSubjectsFromDefaults(schoolId: string, schoolCod
         code: s.code,
         shortName: s.shortName,
         type: s.type,
-        maxMarks: s.type === "grade" ? 0 : 100,
+        maxMarks: s.type === "grade" ? 0 : s.maxMarks ?? 100,
         sortOrder: baseOrder + i,
         isActive: true,
       })),
@@ -221,14 +215,8 @@ export async function seedStandardDefaultsIfEmpty(
 
   let defs: MarksSheetSubjectDef[] = SECONDARY_MARKS_SHEET_SUBJECTS;
 
-  // School 24261004403 — Balvatidas Primary
-  if (schoolCode === "24261004403") {
-    const std = standard.trim().replace(/^0+/, "");
-    if (std === "1" || std === "2") {
-      defs = SONGADH_PRIMARY_STD12_SUBJECTS;
-    } else if (["3", "4", "5"].includes(std)) {
-      defs = SONGADH_PRIMARY_STD35_SUBJECTS;
-    }
+  if (schoolCode === SONGADH_PRIMARY_CODE) {
+    defs = songadhPrimarySubjectsForStandard(standard) || SECONDARY_MARKS_SHEET_SUBJECTS;
   } else if (["11", "12"].includes(standard)) {
     defs = streamKey === "Commerce"
       ? COMMERCE_MARKS_SHEET_SUBJECTS
@@ -264,17 +252,31 @@ export async function applyStandardToClasses(options: {
   }
   if (!links.length) throw new Error("No subjects assigned for this standard");
 
+  const school = await prisma.school.findUnique({
+    where: { id: schoolId },
+    select: { code: true, udiseCode: true },
+  });
+  const schoolCode = (school?.code || school?.udiseCode || "").trim();
+  const standardDefs =
+    schoolCode === SONGADH_PRIMARY_CODE
+      ? songadhPrimarySubjectsForStandard(standard)
+      : null;
+  const defByCode = new Map((standardDefs || []).map((d) => [d.code, d]));
+
   const inputs: ClassSubjectInput[] = links
     .filter((l) => l.subject.isActive)
-    .map((l, i) => ({
-      name: l.subject.name,
-      code: l.subject.code,
-      shortName: l.subject.shortName,
-      type: l.subject.type === "grade" ? "grade" : "numeric",
-      maxMarks: l.subject.maxMarks,
-      sortOrder: i,
-      isActive: true,
-    }));
+    .map((l, i) => {
+      const def = defByCode.get(l.subject.code);
+      return {
+        name: def?.name || l.subject.name,
+        code: l.subject.code,
+        shortName: def?.shortName || l.subject.shortName,
+        type: l.subject.type === "grade" ? "grade" : "numeric",
+        maxMarks: def?.maxMarks ?? l.subject.maxMarks,
+        sortOrder: i,
+        isActive: true,
+      };
+    });
 
   const where: Record<string, unknown> = { schoolId, standard };
   if (streamKey) where.stream = streamKey;

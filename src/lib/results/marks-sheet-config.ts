@@ -7,6 +7,8 @@ export type MarksSheetSubjectDef = {
   shortName: string;
   type: MarksSheetSubjectType;
   code: string;
+  /** Per-subject out-of when the school scheme is not 100 */
+  maxMarks?: number;
 };
 
 export type MarksSheetExamRowDef = {
@@ -99,33 +101,82 @@ export const SONGADH_UPPER_PRIMARY_SUBJECTS: MarksSheetSubjectDef[] = [
   { name: "સામાન્ય જ્ઞાન", shortName: "સા.જ્ઞા", type: "numeric", code: "GK" },
 ];
 
-// ─── School 24261004403 — Balvatidas Primary (Std 1–5) ────────────────────────
-// Image ref:
-//   ધોરણ 1-2  →  10+40=50 per subject  (6 subjects)
-//   ધોરણ 3-5  →  80+20=100 per subject  (9 subjects)
+// ─── School 24261004403 — બાલવાટિકા Primary (Balvatika + Std 1–5) ────────────
+// Notebook:
+//   બાલવાટિકા     →  10+40=50   (5 subjects)
+//   ધોરણ 1-2      →  10+40=50   (6 subjects)
+//   ધોરણ 3 થી 5   →  80+20=100  (9 subjects)
 
-/** School 24261004403 — Std 1 & 2 subjects (total 50 per subject) */
+export const SONGADH_PRIMARY_CODE = "24261004403";
+export const SONGADH_PRIMARY_STANDARDS = ["Balvatika", "1", "2", "3", "4", "5"] as const;
+
+function n50(partial: Omit<MarksSheetSubjectDef, "type" | "maxMarks">): MarksSheetSubjectDef {
+  return { ...partial, type: "numeric", maxMarks: 50 };
+}
+function n100(partial: Omit<MarksSheetSubjectDef, "type" | "maxMarks">): MarksSheetSubjectDef {
+  return { ...partial, type: "numeric", maxMarks: 100 };
+}
+
+/** School 24261004403 — બાલવાટિકા (total 50 per subject) */
+export const SONGADH_PRIMARY_BALVATIKA_SUBJECTS: MarksSheetSubjectDef[] = [
+  n50({ name: "ગુજરાતી (ભાષા)", shortName: "ગુ", code: "GUJ" }),
+  n50({ name: "ગણિત", shortName: "ગણ", code: "MATH" }),
+  n50({ name: "અભ્યાસક્રમ", shortName: "અભ્યા", code: "CURR" }),
+  n50({ name: "અંગ્રેજી", shortName: "અં", code: "ENG" }),
+  n50({ name: "ન્યાયશાસ્ત્ર", shortName: "ન્યા", code: "NYAYA" }),
+];
+
+/** School 24261004403 — Std 1 & 2 (total 50 per subject) */
 export const SONGADH_PRIMARY_STD12_SUBJECTS: MarksSheetSubjectDef[] = [
-  { name: "ગુજરાતી",        shortName: "ગુ",    type: "numeric", code: "GUJ"  },
-  { name: "ગણિત",            shortName: "ગણ",   type: "numeric", code: "MATH" },
-  { name: "અંગ્રેજી",       shortName: "અં",   type: "numeric", code: "ENG"  },
-  { name: "હિન્દી",         shortName: "હિ",   type: "numeric", code: "HIN"  },
-  { name: "સામાજ",           shortName: "સા.જ", type: "numeric", code: "SS"   },
-  { name: "વિજ્ઞાન",        shortName: "વિ",   type: "numeric", code: "SCI"  },
+  n50({ name: "ગુજરાતી", shortName: "ગુ", code: "GUJ" }),
+  n50({ name: "ગણિત", shortName: "ગણ", code: "MATH" }),
+  n50({ name: "અંગ્રેજી", shortName: "અં", code: "ENG" }),
+  n50({ name: "હિન્દી", shortName: "હિ", code: "HIN" }),
+  n50({ name: "સામાજિક જ્ઞાન", shortName: "સા.જ્ઞા", code: "SS" }),
+  n50({ name: "વિજ્ઞાન", shortName: "વિ", code: "SCI" }),
 ];
 
-/** School 24261004403 — Std 3 to 5 subjects (total 100 per subject) */
+/** School 24261004403 — Std 3 to 5 (total 100 per subject) */
 export const SONGADH_PRIMARY_STD35_SUBJECTS: MarksSheetSubjectDef[] = [
-  { name: "ગુજ",             shortName: "ગુ",   type: "numeric", code: "GUJ"  },
-  { name: "ગણ",              shortName: "ગણ",   type: "numeric", code: "MATH" },
-  { name: "પર્યાવ",         shortName: "પ.વ",  type: "numeric", code: "ENV"  },
-  { name: "હિ",              shortName: "હિ",   type: "numeric", code: "HIN"  },
-  { name: "અંગ",             shortName: "અં",   type: "numeric", code: "ENG"  },
-  { name: "સામ.જ",           shortName: "સા.જ", type: "numeric", code: "SS"   },
-  { name: "વિજ",             shortName: "વિ",   type: "numeric", code: "SCI"  },
-  { name: "કોમ્પ્યુટર",     shortName: "ક.પ",  type: "numeric", code: "COMP" },
-  { name: "P.T.",            shortName: "PT",   type: "numeric", code: "PT"   },
+  n100({ name: "ગુજરાતી", shortName: "ગુ", code: "GUJ" }),
+  n100({ name: "ગણિત", shortName: "ગણ", code: "MATH" }),
+  n100({ name: "પર્યાવરણ", shortName: "પ.વ", code: "ENV" }),
+  n100({ name: "હિન્દી", shortName: "હિ", code: "HIN" }),
+  n100({ name: "અંગ્રેજી", shortName: "અં", code: "ENG" }),
+  n100({ name: "સામાન્ય જ્ઞાન", shortName: "સા.જ્ઞા", code: "GK" }),
+  n100({ name: "વિજ્ઞાન", shortName: "વિ", code: "SCI" }),
+  n100({ name: "કમ્પ્યુટર", shortName: "કમ્પ્યુ", code: "COMP" }),
+  n100({ name: "P.T.", shortName: "PT", code: "PT" }),
 ];
+
+export function normalizeSongadhPrimaryStandard(standard: string): string {
+  const raw = String(standard || "").trim();
+  if (/^balvatika$/i.test(raw) || raw === "બાલવાટિકા") return "Balvatika";
+  return raw.replace(/^0+/, "") || raw;
+}
+
+export function songadhPrimarySubjectsForStandard(
+  standard: string,
+): MarksSheetSubjectDef[] | null {
+  const std = normalizeSongadhPrimaryStandard(standard);
+  if (std === "Balvatika") return SONGADH_PRIMARY_BALVATIKA_SUBJECTS;
+  if (std === "1" || std === "2") return SONGADH_PRIMARY_STD12_SUBJECTS;
+  if (["3", "4", "5"].includes(std)) return SONGADH_PRIMARY_STD35_SUBJECTS;
+  return null;
+}
+
+/** Master catalog — unique codes, full names */
+export function songadhPrimaryMasterSubjects(): MarksSheetSubjectDef[] {
+  const map = new Map<string, MarksSheetSubjectDef>();
+  for (const s of [
+    ...SONGADH_PRIMARY_STD35_SUBJECTS,
+    ...SONGADH_PRIMARY_STD12_SUBJECTS,
+    ...SONGADH_PRIMARY_BALVATIKA_SUBJECTS,
+  ]) {
+    if (!map.has(s.code)) map.set(s.code, { ...s, maxMarks: s.maxMarks ?? 100 });
+  }
+  return Array.from(map.values());
+}
 
 function buildConfig(subjects: MarksSheetSubjectDef[]): MarksSheetConfig {
   return {
@@ -140,15 +191,10 @@ function buildConfig(subjects: MarksSheetSubjectDef[]): MarksSheetConfig {
 export function getMarksSheetConfig(standard: string, stream?: string | null, schoolCode?: string | null): MarksSheetConfig {
   const code = (schoolCode || "").trim();
 
-  // School 24261004403 — Balvatidas Primary, Songadh
-  if (code === "24261004403") {
-    const std = String(standard || "").trim().replace(/^0+/, "");
-    if (std === "1" || std === "2") {
-      return buildConfig(SONGADH_PRIMARY_STD12_SUBJECTS);
-    }
-    if (["3", "4", "5"].includes(std)) {
-      return buildConfig(SONGADH_PRIMARY_STD35_SUBJECTS);
-    }
+  // School 24261004403 — બાલવાટિકા Primary, Songadh
+  if (code === "24261004403" || code === SONGADH_PRIMARY_CODE) {
+    const defs = songadhPrimarySubjectsForStandard(standard);
+    if (defs) return buildConfig(defs);
   }
 
   if (["11", "12"].includes(standard) && stream === "Commerce") {

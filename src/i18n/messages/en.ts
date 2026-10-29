@@ -3823,6 +3823,16 @@ const en = {
     hubMarksSheet: "2. Class Marks Sheet",
     hubMarksSheetDesc:
       "Official Gujarati register / certificate sheet — print ready",
+    hubGunPatrak: "3. Subject marks sheet",
+    hubGunPatrakDesc:
+      "One subject, one class — exam number and marks in the official ગુણ પત્રક format",
+    gunPatrakTitle: "ગુણ પત્રક",
+    gunPatrakSubtitle: "Class-wise single subject marks list — print the official slip",
+    gunPatrakPickClass: "Select a class and exam, then tap a subject.",
+    gunPatrakSubjects: "Subjects",
+    gunPatrakPrint: "Print",
+    gunPatrakPrintAll: "Print all subjects",
+    gunPatrakFilled: "{{filled}} / {{total}} marks filled",
     hubFlowHint:
       "Open a class below to publish results, print student cards, or continue marks work for that class.",
     hubClassesTitle: "Manage by Class",

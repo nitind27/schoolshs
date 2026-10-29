@@ -2,8 +2,8 @@ import { prisma } from "@/lib/db";
 import {
   getMarksSheetConfig,
   SONGADH_UPPER_PRIMARY_SUBJECTS,
-  SONGADH_PRIMARY_STD12_SUBJECTS,
-  SONGADH_PRIMARY_STD35_SUBJECTS,
+  SONGADH_PRIMARY_CODE,
+  songadhPrimarySubjectsForStandard,
   type MarksSheetConfig,
   type MarksSheetSubjectDef,
 } from "@/lib/results/marks-sheet-config";
@@ -99,7 +99,7 @@ export async function seedClassSubjects(
       code: s.code,
       shortName: s.shortName,
       type: s.type,
-      maxMarks: s.type === "grade" ? 0 : 100,
+      maxMarks: s.type === "grade" ? 0 : s.maxMarks ?? 100,
       sortOrder: i,
       isActive: true,
     })),
@@ -189,12 +189,9 @@ export async function ensureSongadhUpperPrimarySubjects(
   return changed;
 }
 
-const SONGADH_PRIMARY_CODE = "24261004403";
-
 /**
- * For school 24261004403 — seed/correct class subjects based on standard.
- * Std 1-2: SONGADH_PRIMARY_STD12_SUBJECTS (10+40=50)
- * Std 3-5: SONGADH_PRIMARY_STD35_SUBJECTS (80+20=100)
+ * For school 24261004403 — seed class subjects from the notebook scheme.
+ * બાલવાટિકા / Std 1-2: 10+40=50 · Std 3-5: 80+20=100
  * Only acts when class has NO subjects yet (seeding), not overwriting manual edits.
  */
 export async function ensureSongadhPrimarySubjects(
@@ -204,17 +201,11 @@ export async function ensureSongadhPrimarySubjects(
 ): Promise<boolean> {
   if ((schoolCode || "").trim() !== SONGADH_PRIMARY_CODE) return false;
 
-  const std = String(standard || "").trim().replace(/^0+/, "");
-  if (!["1", "2", "3", "4", "5"].includes(std)) return false;
+  const defs = songadhPrimarySubjectsForStandard(standard || "");
+  if (!defs?.length) return false;
 
-  // Only seed if class has no subjects at all
   const existingCount = await prisma.classSubject.count({ where: { classId } });
   if (existingCount > 0) return false;
-
-  const defs =
-    std === "1" || std === "2"
-      ? SONGADH_PRIMARY_STD12_SUBJECTS
-      : SONGADH_PRIMARY_STD35_SUBJECTS;
 
   await prisma.classSubject.createMany({
     data: defs.map((s, i) => ({
@@ -223,7 +214,7 @@ export async function ensureSongadhPrimarySubjects(
       code: s.code,
       shortName: s.shortName,
       type: s.type,
-      maxMarks: 100,
+      maxMarks: s.maxMarks ?? 100,
       sortOrder: i,
       isActive: true,
     })),
@@ -275,7 +266,7 @@ function foldSubjectName(value: string) {
 }
 
 const EXAM_SUBJECT_ALIASES: Record<string, string[]> = {
-  COMP: ["કોમ્પ્યુટર", "કોમ્પ્યુટર", "computer"],
+  COMP: ["કોમ્પ્યુટર", "કમ્પ્યુટર", "computer"],
   PE: [
     "શારીરિક શિક્ષણ",
     "શા. શિક્ષણ",
@@ -284,7 +275,12 @@ const EXAM_SUBJECT_ALIASES: Record<string, string[]> = {
     "health & physical ed.",
     "physical education",
   ],
-  GK: ["સામાન્ય જ્ઞાન", "general knowledge", "gk"],
+  PT: ["p.t.", "pt", "શારીરિક શિક્ષણ"],
+  GK: ["સામાન્ય જ્ઞાન", "સામ.જ", "general knowledge", "gk"],
+  SS: ["સામાજિક જ્ઞાન", "સમાજશાસ્ત્ર", "સામાજ", "social science"],
+  CURR: ["અભ્યાસક્રમ", "curriculum"],
+  NYAYA: ["ન્યાયશાસ્ત્ર"],
+  ENV: ["પર્યાવરણ", "પર્યાવ", "environment"],
 };
 
 function subjectNamesMatch(def: MarksSheetSubjectDef, name: string, code: string) {
@@ -312,7 +308,7 @@ export async function syncExamSubjects(
     const aliasHit = existing.find(
       (s) => !used.has(s.id) && subjectNamesMatch(def, s.name, s.code || ""),
     );
-    const nextMax = def.type === "grade" ? 0 : 100;
+    const nextMax = def.type === "grade" ? 0 : def.maxMarks ?? 100;
     const found =
       [byCode.get(def.code), byName.get(def.name), aliasHit].find(
         (s): s is NonNullable<typeof s> => {

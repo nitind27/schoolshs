@@ -3782,6 +3782,16 @@ const gu: Messages = {
     hubMarksSheet: "2. વર્ગ ગુણ પત્રક",
     hubMarksSheetDesc:
       "અધિકૃત ગુજરાતી રજિસ્ટર / સર્ટિફિકેટ પત્રક — પ્રિન્ટ તૈયાર",
+    hubGunPatrak: "3. વિષય ગુણ પત્રક",
+    hubGunPatrakDesc:
+      "એક વિષય, એક વર્ગ — પરીક્ષા નંબર અને મેળવેલ ગુણ, અધિકૃત ફોર્મેટમાં",
+    gunPatrakTitle: "ગુણ પત્રક",
+    gunPatrakSubtitle: "વર્ગ-વાર એક વિષયની માર્કસ યાદી — અધિકૃત સ્લિપ પ્રિન્ટ",
+    gunPatrakPickClass: "વર્ગ અને પરીક્ષા પસંદ કરો, પછી વિષય પર ક્લિક કરો.",
+    gunPatrakSubjects: "વિષયો",
+    gunPatrakPrint: "પ્રિન્ટ",
+    gunPatrakPrintAll: "બધા વિષય પ્રિન્ટ",
+    gunPatrakFilled: "{{filled}} / {{total}} ગુણ ભરાયા",
     hubFlowHint:
       "નીચે વર્ગ ખોલો — પરિણામ પ્રકાશિત, વિદ્યાર્થી કાર્ડ પ્રિન્ટ, અથવા તે વર્ગના ગુણનું કામ ચાલુ રાખો.",
     hubClassesTitle: "વર્ગ પ્રમાણે મેનેજ કરો",
