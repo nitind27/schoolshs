@@ -178,13 +178,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const hasGeneralComponent = body.templateTerms.some(
+    // Need at least one non-computer exam (component or final role both accepted)
+    const hasGeneralExam = body.templateTerms.some(
       (term: { role?: string; key?: string; subjectScope?: string }) =>
-        term.role !== "final" &&
-        term.key !== "final" &&
         term.subjectScope !== "computer",
     );
-    if (!hasGeneralComponent) {
+    if (!hasGeneralExam) {
       return NextResponse.json(
         { error: "Keep at least one exam that is not Computer-only" },
         { status: 400 },

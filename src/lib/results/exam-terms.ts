@@ -339,15 +339,7 @@ export function parseExamTermMeta(raw?: string | null): ExamTermMeta {
       let finals = terms.filter((t) => t.role === "final");
       let components = terms.filter((t) => t.role === "component");
       if (!finals.length) finals = [createFinalTerm()];
-      if (!components.length) {
-        components = [
-          createComponentTerm({
-            key: "mid1",
-            labelEn: "Mid Exam 1",
-            labelGu: "પહેલી મધ્યમાં પરીક્ષા",
-          }),
-        ];
-      }
+      // Do NOT force a mid1 — a template with only a final exam is valid
       const final = finals[finals.length - 1]!;
       const ordered = [...components, final];
       return {
@@ -922,7 +914,7 @@ export function metaFromTemplateTerms(
   }>,
 ): ExamTermMeta {
   const components: ExamTermDef[] = [];
-  let final = createFinalTerm();
+  let final: ExamTermDef | null = null;
 
   for (const item of items) {
     if (item.role === "final" || item.key === "final") {
@@ -950,19 +942,35 @@ export function metaFromTemplateTerms(
     components.push(term);
   }
 
-  if (!components.length) {
-    components.push(
-      createComponentTerm({
-        key: "mid1",
-        labelEn: "Mid Exam 1",
-        labelGu: "પહેલી મધ્યમાં પરીક્ષા",
-      }),
-    );
+  // If no explicit final was given but we have components, promote the last
+  // non-computer component to final so the term list always has a final entry.
+  if (!final) {
+    const lastGeneralIdx = [...components]
+      .map((c, i) => ({ c, i }))
+      .filter(({ c }) => c.subjectScope !== "computer")
+      .pop();
+
+    if (lastGeneralIdx) {
+      const promoted = components[lastGeneralIdx.i]!;
+      final = withStatus({
+        ...promoted,
+        role: "final",
+        fieldKey: "annual",
+      });
+      components.splice(lastGeneralIdx.i, 1);
+    } else {
+      // Absolute fallback — should never reach here with valid input
+      final = createFinalTerm();
+    }
   }
+
+  // If there are no components at all (user has only a single final exam),
+  // that is valid. Don't force-add a mid1.
+  const orderedTerms = [...components, final];
 
   return {
     version: 2,
-    terms: [...components, final],
+    terms: orderedTerms,
     midExamCount: components.length,
   };
 }
