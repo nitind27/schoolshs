@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
+import { cleanEditLinkFields, formatStoredEditLink } from "@/lib/student-edit-link";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-export async function PATCH(_request: NextRequest, { params }: RouteParams) {
+const linkInclude = {
+  schoolClass: {
+    select: { id: true, name: true, standard: true, section: true, academicYear: true },
+  },
+} as const;
+
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireSchoolAuth(["school_admin"]);
     const { id } = await params;
@@ -13,6 +20,28 @@ export async function PATCH(_request: NextRequest, { params }: RouteParams) {
       select: { id: true },
     });
     if (!existing) return NextResponse.json({ error: "Link not found" }, { status: 404 });
+
+    let body: Record<string, unknown> = {};
+    try {
+      const text = await request.text();
+      if (text) body = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      body = {};
+    }
+
+    if (Array.isArray(body.fields)) {
+      const fields = cleanEditLinkFields(body.fields);
+      if (!fields.length) {
+        return NextResponse.json({ error: "Select at least one field" }, { status: 400 });
+      }
+      const updated = await prisma.studentEditLink.update({
+        where: { id },
+        data: { fieldsJson: fields },
+        include: linkInclude,
+      });
+      return NextResponse.json({ success: true, link: formatStoredEditLink(updated) });
+    }
+
     await prisma.studentEditLink.update({
       where: { id },
       data: { isActive: false },
@@ -23,7 +52,7 @@ export async function PATCH(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("[edit-links PATCH]", error);
-    return NextResponse.json({ error: "Failed to close link" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update link" }, { status: 500 });
   }
 }
 

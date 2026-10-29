@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Copy, Link2, Lock, Trash2 } from "lucide-react";
+import { Check, Copy, Link2, Lock, Pencil, Trash2, X } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -31,16 +31,21 @@ type LinkRow = {
   fields: EditLinkField[];
   isActive: boolean;
   createdAt: string;
-  class: { name: string; academicYear: string };
+  class: { id: string; name: string; academicYear: string };
 };
 
-const GROUP_LABEL: Record<string, "groupName" | "groupFamily" | "groupCommunity" | "groupContact" | "groupIds" | "groupAddress"> = {
+const GROUP_LABEL: Record<string, string> = {
   name: "groupName",
   family: "groupFamily",
   community: "groupCommunity",
   contact: "groupContact",
   ids: "groupIds",
   address: "groupAddress",
+  hostel: "groupHostel",
+  academic: "groupAcademic",
+  education: "groupEducation",
+  bank: "groupBank",
+  notes: "groupNotes",
 };
 
 export function StudentEditLinksAdmin() {
@@ -54,6 +59,7 @@ export function StudentEditLinksAdmin() {
   const [fields, setFields] = useState<EditLinkField[]>(["caste", "category", "religion", "mobileNumber"]);
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [created, setCreated] = useState<LinkRow | null>(null);
+  const [editing, setEditing] = useState<LinkRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
@@ -104,6 +110,24 @@ export function StudentEditLinksAdmin() {
     window.setTimeout(() => setCopied(""), 1600);
   };
 
+  const startEdit = (link: LinkRow) => {
+    setError("");
+    setNotice("");
+    setCreated(null);
+    setPendingDelete("");
+    setEditing(link);
+    setClassId(link.class.id);
+    setFields([...link.fields]);
+    window.setTimeout(() => {
+      document.getElementById("edit-link-fields")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setFields(["caste", "category", "religion", "mobileNumber"]);
+  };
+
   const create = async () => {
     setError("");
     if (!classId) return;
@@ -121,9 +145,41 @@ export function StudentEditLinksAdmin() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || t("editLink.createFailed"));
       setCreated(json.link);
+      setEditing(null);
       await loadLinks();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("editLink.createFailed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveFields = async () => {
+    if (!editing) return;
+    setError("");
+    if (!fields.length) {
+      setError(t("editLink.needFields"));
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/students/edit-links/${editing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fields }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || t("editLink.updateFailed"));
+      const next = json.link as LinkRow | undefined;
+      if (next) {
+        setEditing(next);
+        setFields([...next.fields]);
+        setLinks((prev) => prev.map((item) => (item.id === next.id ? next : item)));
+        if (created?.id === next.id) setCreated(next);
+      }
+      setNotice(t("editLink.fieldsSaved"));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("editLink.updateFailed"));
     } finally {
       setBusy(false);
     }
@@ -148,6 +204,7 @@ export function StudentEditLinksAdmin() {
     }
     setLinks((prev) => prev.filter((item) => item.id !== id));
     if (created?.id === id) setCreated(null);
+    if (editing?.id === id) cancelEdit();
     setPendingDelete("");
     setNotice(t("editLink.deleted"));
   };
@@ -179,8 +236,12 @@ export function StudentEditLinksAdmin() {
             value={classId}
             emptyLabel={t("editLink.chooseClass")}
             options={classOptions}
+            disabled={Boolean(editing)}
             onChange={(event) => setClassId(event.target.value)}
           />
+          {editing ? (
+            <p className="mt-2 text-xs text-slate-500">{t("editLink.editClassLocked")}</p>
+          ) : null}
           <div className="mt-4">
             <div className="mb-2 flex items-end justify-between gap-3">
               <div>
@@ -220,11 +281,15 @@ export function StudentEditLinksAdmin() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section id="edit-link-fields" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-sm font-bold text-slate-900">{t("editLink.fieldsTitle")}</h2>
-              <p className="text-xs text-slate-500">{t("editLink.fieldsHint")}</p>
+              <h2 className="text-sm font-bold text-slate-900">
+                {editing ? t("editLink.editFieldsTitle") : t("editLink.fieldsTitle")}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {editing ? t("editLink.editFieldsHint") : t("editLink.fieldsHint")}
+              </p>
             </div>
             <div className="flex gap-2">
               <Button type="button" size="sm" variant="outline" onClick={() => setFields(EDIT_LINK_GROUPS.flatMap((group) => [...group.fields]))}>
@@ -235,11 +300,11 @@ export function StudentEditLinksAdmin() {
               </Button>
             </div>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {EDIT_LINK_GROUPS.map((group) => (
               <div key={group.id} className="rounded-xl border border-slate-200 p-3">
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-                  {t(`editLink.${GROUP_LABEL[group.id]}`)}
+                  {t(`editLink.${GROUP_LABEL[group.id] || group.id}`)}
                 </p>
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                   {group.fields.map((field) => (
@@ -257,11 +322,32 @@ export function StudentEditLinksAdmin() {
               </div>
             ))}
           </div>
-          <div className="mt-4 flex justify-end">
-            <Button type="button" onClick={create} loading={busy} disabled={!classId || !students.length}>
-              <Link2 className="h-4 w-4" />
-              {busy ? t("editLink.creating") : t("editLink.create")}
-            </Button>
+          {editing ? (
+            <div className="mt-4 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
+              <p className="font-semibold">{t("editLink.editKeepLogin")}</p>
+              <p className="mt-1 font-mono text-xs">
+                {t("editLink.linkId")}: {editing.code} · {t("editLink.password")}: {editing.password}
+              </p>
+            </div>
+          ) : null}
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            {editing ? (
+              <>
+                <Button type="button" variant="outline" onClick={cancelEdit} disabled={busy}>
+                  <X className="h-4 w-4" />
+                  {t("common.cancel")}
+                </Button>
+                <Button type="button" onClick={saveFields} loading={busy} disabled={!fields.length}>
+                  <Pencil className="h-4 w-4" />
+                  {busy ? t("editLink.savingFields") : t("editLink.saveFields")}
+                </Button>
+              </>
+            ) : (
+              <Button type="button" onClick={create} loading={busy} disabled={!classId || !students.length}>
+                <Link2 className="h-4 w-4" />
+                {busy ? t("editLink.creating") : t("editLink.create")}
+              </Button>
+            )}
           </div>
         </section>
 
@@ -272,7 +358,10 @@ export function StudentEditLinksAdmin() {
           ) : (
             <div className="space-y-3">
               {links.map((link) => (
-                <article key={link.id} className="rounded-xl border border-slate-200 p-3">
+                <article
+                  key={link.id}
+                  className={`rounded-xl border p-3 ${editing?.id === link.id ? "border-teal-300 bg-teal-50/50" : "border-slate-200"}`}
+                >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <p className="font-semibold text-slate-900">{link.class.name}</p>
@@ -281,6 +370,16 @@ export function StudentEditLinksAdmin() {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className={editing?.id === link.id ? "border-teal-300 bg-teal-50 text-teal-800" : ""}
+                        onClick={() => startEdit(link)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        {t("common.edit")}
+                      </Button>
                       {link.isActive ? (
                         <Button type="button" size="sm" variant="outline" onClick={() => revoke(link.id)}>
                           <Lock className="h-3.5 w-3.5" />

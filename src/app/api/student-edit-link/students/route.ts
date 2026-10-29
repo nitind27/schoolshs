@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { enrolledStudentStatusFilter } from "@/lib/student-list-filters";
 import { sortStudentsBySavedRoll } from "@/lib/roll-order";
-import { EDIT_LINK_FIELDS, readEditLinkToken, readStoredFields, type EditLinkField } from "@/lib/student-edit-link";
+import {
+  EDIT_LINK_FIELDS,
+  editLinkPrismaSelect,
+  readEditLinkToken,
+  readStoredFields,
+  type EditLinkField,
+} from "@/lib/student-edit-link";
 import { mergeReligionNames } from "@/lib/school-religions";
 
 function bearer(request: NextRequest) {
@@ -30,56 +36,32 @@ export async function GET(request: NextRequest) {
 
     const fields = readStoredFields(link.fieldsJson);
     const students = sortStudentsBySavedRoll(
-      await prisma.student.findMany({
+      (await prisma.student.findMany({
         where: {
           schoolId: link.schoolId,
           classId: link.classId,
           status: enrolledStudentStatusFilter(),
         },
-        select: {
-          id: true,
-          firstName: true,
-          middleName: true,
-          surname: true,
-          firstNameGu: true,
-          middleNameGu: true,
-          surnameGu: true,
-          fatherName: true,
-          fatherNameGu: true,
-          motherName: true,
-          motherNameGu: true,
-          guardianName: true,
-          category: true,
-          caste: true,
-          religion: true,
-          gender: true,
-          dateOfBirth: true,
-          mobileNumber: true,
-          email: true,
-          bloodGroup: true,
-          rollNumber: true,
-          grNumber: true,
-          aadhaarNumber: true,
-          childUid: true,
-          apaarId: true,
-          penNumber: true,
-          currentAddress: true,
-          currentCity: true,
-          currentDistrict: true,
-          currentPincode: true,
-          permanentAddress: true,
-          permanentCity: true,
-          permanentDistrict: true,
-          permanentPincode: true,
-        },
-      }),
+        select: editLinkPrismaSelect(),
+      })) as Array<{
+        id: string;
+        firstName?: string | null;
+        middleName?: string | null;
+        surname?: string | null;
+        gender?: string | null;
+        rollNumber?: string | null;
+        grNumber?: string | null;
+        religion?: string | null;
+      } & Record<string, unknown>>,
     );
 
     const customReligions = await prisma.schoolReligion.findMany({
       where: { schoolId: link.schoolId },
       select: { name: true },
     });
-    const used = students.map((student) => student.religion).filter(Boolean);
+    const used = students
+      .map((student) => student.religion)
+      .filter((name): name is string => Boolean(name));
     const religions = mergeReligionNames(
       customReligions.map((row) => row.name),
       used,

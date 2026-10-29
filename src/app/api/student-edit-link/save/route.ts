@@ -5,6 +5,7 @@ import { categoryFromCaste } from "@/lib/category-inference";
 import { syncGrEntryForStudent } from "@/lib/gr-student-sync";
 import { isBuiltinReligion, resolveReligionName } from "@/lib/school-religions";
 import {
+  editLinkValueForPrisma,
   isEditLinkField,
   readEditLinkToken,
   readStoredFields,
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       const values = row?.values && typeof row.values === "object" ? row.values : null;
       if (!studentId || !values) continue;
 
-      const patch: Partial<Record<EditLinkField, string | null>> = {};
+      const patch: Partial<Record<EditLinkField, string | number | boolean | null>> = {};
       let rowError = "";
       for (const [key, raw] of Object.entries(values as Record<string, unknown>)) {
         if (!isEditLinkField(key) || !allowed.has(key)) continue;
@@ -49,7 +50,9 @@ export async function POST(request: NextRequest) {
           rowError = cleaned.error;
           break;
         }
-        patch[key] = cleaned.value;
+        const coerced = editLinkValueForPrisma(key, cleaned.value);
+        if (coerced === undefined) continue;
+        patch[key] = coerced;
       }
       if (rowError) {
         errors.push({ studentId, error: rowError });
@@ -58,7 +61,10 @@ export async function POST(request: NextRequest) {
       if (!Object.keys(patch).length) continue;
 
       if (patch.caste && allowed.has("category") && patch.category === undefined) {
-        const suggested = categoryFromCaste({ caste: patch.caste, religion: patch.religion });
+        const suggested = categoryFromCaste({
+          caste: String(patch.caste),
+          religion: patch.religion == null ? undefined : String(patch.religion),
+        });
         if (suggested) patch.category = suggested;
       }
 
@@ -75,8 +81,8 @@ export async function POST(request: NextRequest) {
         data: patch as Prisma.StudentUpdateInput,
       });
 
-      if (patch.religion && !isBuiltinReligion(patch.religion)) {
-        const name = resolveReligionName(patch.religion);
+      if (patch.religion && !isBuiltinReligion(String(patch.religion))) {
+        const name = resolveReligionName(String(patch.religion));
         if (name) {
           await prisma.schoolReligion.upsert({
             where: { schoolId_name: { schoolId: link.schoolId, name } },

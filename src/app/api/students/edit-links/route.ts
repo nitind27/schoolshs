@@ -5,41 +5,11 @@ import { enrolledStudentStatusFilter } from "@/lib/student-list-filters";
 import { sortStudentsBySavedRoll } from "@/lib/roll-order";
 import {
   cleanEditLinkFields,
+  formatStoredEditLink,
   generateEditLinkCode,
   generateEditLinkPassword,
-  openEditLinkPassword,
-  readStoredFields,
   sealEditLinkPassword,
 } from "@/lib/student-edit-link";
-
-function publicLink(link: {
-  id: string;
-  code: string;
-  passwordEnc: string;
-  fieldsJson: unknown;
-  isActive: boolean;
-  createdAt: Date;
-  lastUsedAt: Date | null;
-  schoolClass: { id: string; name: string; standard: string; section: string; academicYear: string };
-}) {
-  return {
-    id: link.id,
-    code: link.code,
-    password: openEditLinkPassword(link.passwordEnc) || "",
-    path: `/student-edit/${link.code}`,
-    fields: readStoredFields(link.fieldsJson),
-    isActive: link.isActive,
-    createdAt: link.createdAt.toISOString(),
-    lastUsedAt: link.lastUsedAt?.toISOString() || null,
-    class: {
-      id: link.schoolClass.id,
-      name: link.schoolClass.name,
-      standard: link.schoolClass.standard,
-      section: link.schoolClass.section,
-      academicYear: link.schoolClass.academicYear,
-    },
-  };
-}
 
 const linkInclude = {
   schoolClass: {
@@ -56,7 +26,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       take: 50,
     });
-    return NextResponse.json({ links: links.map(publicLink) });
+    return NextResponse.json({ links: links.map(formatStoredEditLink) });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
@@ -146,7 +116,7 @@ export async function POST(request: NextRequest) {
       }),
     );
 
-    return NextResponse.json({ link: publicLink(created), students });
+    return NextResponse.json({ link: formatStoredEditLink(created), students });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

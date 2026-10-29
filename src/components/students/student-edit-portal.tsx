@@ -4,14 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useLocale, useT } from "@/i18n/locale-provider";
-import { CATEGORIES, GENDERS } from "@/lib/constants";
 import { categoryFromCaste } from "@/lib/category-inference";
 import { religionLabel } from "@/lib/school-religions";
 import {
+  EDIT_LINK_AREA_FIELDS,
+  EDIT_LINK_DATE_FIELDS,
   EDIT_LINK_LABELS,
+  EDIT_LINK_SELECT_OPTIONS,
+  isEditLinkBooleanField,
+  isEditLinkNumberField,
   type EditLinkField,
 } from "@/lib/student-edit-link";
 
@@ -23,8 +28,21 @@ type StudentRow = {
   values: Partial<Record<EditLinkField, string>>;
 };
 
-const SELECTS = new Set<EditLinkField>(["category", "gender", "religion"]);
-const AREAS = new Set<EditLinkField>(["currentAddress", "permanentAddress"]);
+const SELECT_LABEL: Partial<Record<EditLinkField, (value: string, lang: "en" | "gu", t: (key: string) => string) => string>> = {
+  gender: (value, _lang, t) => t(`gender.${value}`) || value,
+  maritalStatus: (value, _lang, t) =>
+    value === "Married" ? t("studentForm.married") : value === "Unmarried" ? t("studentForm.unmarried") : value,
+  residentType: (value, _lang, t) =>
+    value === "Urban" ? t("studentForm.urban") : value === "Rural" ? t("studentForm.rural") : value,
+  habitationType: (value, _lang, t) =>
+    value === "Rent" ? t("studentForm.rent") : value === "Own" ? t("studentForm.own") : value,
+  admissionType: (value, _lang, t) => {
+    if (value === "Lateral") return t("studentForm.lateral");
+    if (value === "Transfer") return t("studentForm.transfer");
+    if (value === "Regular") return t("studentForm.regular");
+    return value;
+  },
+};
 
 export function StudentEditPortal({ initialCode = "" }: { initialCode?: string }) {
   const t = useT();
@@ -270,24 +288,18 @@ function FieldInput({
   lang: "en" | "gu";
   onChange: (value: string) => void;
 }) {
-  if (field === "category") {
+  const t = useT();
+  if (isEditLinkBooleanField(field)) {
     return (
-      <Select
-        label={label}
-        value={value}
-        options={CATEGORIES.map((item) => ({ value: item, label: item }))}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    );
-  }
-  if (field === "gender") {
-    return (
-      <Select
-        label={label}
-        value={value}
-        options={GENDERS.map((item) => ({ value: item, label: item }))}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <label className="flex min-h-10 items-center gap-2 text-sm text-slate-800">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-slate-300"
+          checked={value === "true"}
+          onChange={(event) => onChange(event.target.checked ? "true" : "false")}
+        />
+        {label ? <span className="font-medium">{label}</span> : null}
+      </label>
     );
   }
   if (field === "religion") {
@@ -304,21 +316,52 @@ function FieldInput({
       />
     );
   }
-  if (AREAS.has(field)) {
+  const listed = EDIT_LINK_SELECT_OPTIONS[field];
+  if (listed) {
+    const options = listed.includes(value) || !value ? listed : [value, ...listed];
+    const labelFor = SELECT_LABEL[field];
+    return (
+      <Select
+        label={label}
+        value={value}
+        options={options.map((item) => ({
+          value: item,
+          label: labelFor ? labelFor(item, lang, t) : item,
+        }))}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    );
+  }
+  if (EDIT_LINK_DATE_FIELDS.has(field)) {
+    return (
+      <DateField
+        label={label}
+        value={value}
+        onChange={onChange}
+        outputFormat="dmy-slash"
+      />
+    );
+  }
+  if (EDIT_LINK_AREA_FIELDS.has(field)) {
     return (
       <label className="block space-y-1 text-sm">
         {label ? <span className="font-medium text-slate-700">{label}</span> : null}
         <textarea
           value={value}
-          rows={2}
+          rows={field === "notes" ? 3 : 2}
           onChange={(event) => onChange(event.target.value)}
           className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500"
         />
       </label>
     );
   }
-  if (SELECTS.has(field)) return null;
   return (
-    <Input label={label} value={value} onChange={(event) => onChange(event.target.value)} />
+    <Input
+      label={label}
+      type={isEditLinkNumberField(field) ? "number" : "text"}
+      step={field === "percentage10th" || field === "percentage12th" ? "0.01" : undefined}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
   );
 }
