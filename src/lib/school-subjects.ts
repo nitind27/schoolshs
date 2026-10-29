@@ -3,6 +3,8 @@ import {
   ARTS_MARKS_SHEET_SUBJECTS,
   COMMERCE_MARKS_SHEET_SUBJECTS,
   SECONDARY_MARKS_SHEET_SUBJECTS,
+  SONGADH_PRIMARY_STD12_SUBJECTS,
+  SONGADH_PRIMARY_STD35_SUBJECTS,
   type MarksSheetSubjectDef,
 } from "@/lib/results/marks-sheet-config";
 import { replaceClassSubjects, type ClassSubjectInput } from "@/lib/class-subjects";
@@ -22,8 +24,20 @@ function normalizeCode(code: string): string {
   return code.trim().toUpperCase().replace(/\s+/g, "_");
 }
 
-function uniqueCatalog(): MarksSheetSubjectDef[] {
+function uniqueCatalog(schoolCode?: string): MarksSheetSubjectDef[] {
   const map = new Map<string, MarksSheetSubjectDef>();
+
+  // School 24261004403 — seed both std 1-2 and 3-5 subjects into master
+  if (schoolCode === "24261004403") {
+    for (const s of [
+      ...SONGADH_PRIMARY_STD12_SUBJECTS,
+      ...SONGADH_PRIMARY_STD35_SUBJECTS,
+    ]) {
+      if (!map.has(s.code)) map.set(s.code, s);
+    }
+    return Array.from(map.values());
+  }
+
   for (const s of [
     ...SECONDARY_MARKS_SHEET_SUBJECTS,
     ...ARTS_MARKS_SHEET_SUBJECTS,
@@ -41,10 +55,10 @@ export async function listSchoolSubjects(schoolId: string) {
   });
 }
 
-export async function seedSchoolSubjectsFromDefaults(schoolId: string) {
+export async function seedSchoolSubjectsFromDefaults(schoolId: string, schoolCode?: string) {
   const existing = await prisma.schoolSubject.findMany({ where: { schoolId } });
   const have = new Set(existing.map((e) => e.code));
-  const catalog = uniqueCatalog();
+  const catalog = uniqueCatalog(schoolCode);
   const missing = catalog.filter((s) => !have.has(s.code));
 
   if (missing.length) {
@@ -194,14 +208,31 @@ export async function seedStandardDefaultsIfEmpty(
   });
   if (count > 0) return listStandardSubjects(schoolId, standard, streamKey);
 
-  await seedSchoolSubjectsFromDefaults(schoolId);
+  // Resolve school code for school-specific defaults
+  const school = await prisma.school.findUnique({
+    where: { id: schoolId },
+    select: { code: true, udiseCode: true },
+  });
+  const schoolCode = (school?.code || school?.udiseCode || "").trim();
+
+  await seedSchoolSubjectsFromDefaults(schoolId, schoolCode);
   const masters = await listSchoolSubjects(schoolId);
   const byCode = new Map(masters.map((m) => [m.code, m]));
 
   let defs: MarksSheetSubjectDef[] = SECONDARY_MARKS_SHEET_SUBJECTS;
-  if (["11", "12"].includes(standard)) {
-    defs =
-      streamKey === "Commerce" ? COMMERCE_MARKS_SHEET_SUBJECTS : ARTS_MARKS_SHEET_SUBJECTS;
+
+  // School 24261004403 — Balvatidas Primary
+  if (schoolCode === "24261004403") {
+    const std = standard.trim().replace(/^0+/, "");
+    if (std === "1" || std === "2") {
+      defs = SONGADH_PRIMARY_STD12_SUBJECTS;
+    } else if (["3", "4", "5"].includes(std)) {
+      defs = SONGADH_PRIMARY_STD35_SUBJECTS;
+    }
+  } else if (["11", "12"].includes(standard)) {
+    defs = streamKey === "Commerce"
+      ? COMMERCE_MARKS_SHEET_SUBJECTS
+      : ARTS_MARKS_SHEET_SUBJECTS;
   }
 
   const ids = defs.map((d) => byCode.get(d.code)?.id).filter(Boolean) as string[];

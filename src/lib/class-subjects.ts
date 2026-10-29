@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import {
   getMarksSheetConfig,
   SONGADH_UPPER_PRIMARY_SUBJECTS,
+  SONGADH_PRIMARY_STD12_SUBJECTS,
+  SONGADH_PRIMARY_STD35_SUBJECTS,
   type MarksSheetConfig,
   type MarksSheetSubjectDef,
 } from "@/lib/results/marks-sheet-config";
@@ -49,8 +51,9 @@ type SchoolClassRef = {
 export function defaultSubjectsForClass(
   standard: string,
   stream?: string | null,
+  schoolCode?: string | null,
 ): MarksSheetSubjectDef[] {
-  return getMarksSheetConfig(standard, stream).subjects;
+  return getMarksSheetConfig(standard, stream, schoolCode).subjects;
 }
 
 export function classSubjectsToMarksSheetConfig(
@@ -83,11 +86,12 @@ export async function seedClassSubjects(
   classId: string,
   standard: string,
   stream?: string | null,
+  schoolCode?: string | null,
 ): Promise<ClassSubjectRecord[]> {
   const existing = await prisma.classSubject.count({ where: { classId } });
   if (existing > 0) return listClassSubjects(classId);
 
-  const defaults = defaultSubjectsForClass(standard, stream);
+  const defaults = defaultSubjectsForClass(standard, stream, schoolCode);
   await prisma.classSubject.createMany({
     data: defaults.map((s, i) => ({
       classId,
@@ -185,26 +189,82 @@ export async function ensureSongadhUpperPrimarySubjects(
   return changed;
 }
 
+const SONGADH_PRIMARY_CODE = "24261004403";
+
+/**
+ * For school 24261004403 — seed/correct class subjects based on standard.
+ * Std 1-2: SONGADH_PRIMARY_STD12_SUBJECTS (10+40=50)
+ * Std 3-5: SONGADH_PRIMARY_STD35_SUBJECTS (80+20=100)
+ * Only acts when class has NO subjects yet (seeding), not overwriting manual edits.
+ */
+export async function ensureSongadhPrimarySubjects(
+  schoolCode: string | null | undefined,
+  classId: string,
+  standard?: string | null,
+): Promise<boolean> {
+  if ((schoolCode || "").trim() !== SONGADH_PRIMARY_CODE) return false;
+
+  const std = String(standard || "").trim().replace(/^0+/, "");
+  if (!["1", "2", "3", "4", "5"].includes(std)) return false;
+
+  // Only seed if class has no subjects at all
+  const existingCount = await prisma.classSubject.count({ where: { classId } });
+  if (existingCount > 0) return false;
+
+  const defs =
+    std === "1" || std === "2"
+      ? SONGADH_PRIMARY_STD12_SUBJECTS
+      : SONGADH_PRIMARY_STD35_SUBJECTS;
+
+  await prisma.classSubject.createMany({
+    data: defs.map((s, i) => ({
+      classId,
+      name: s.name,
+      code: s.code,
+      shortName: s.shortName,
+      type: s.type,
+      maxMarks: 100,
+      sortOrder: i,
+      isActive: true,
+    })),
+  });
+
+  return true;
+}
+
 export async function getClassMarksSheetConfig(
   classId: string,
   standard?: string,
   stream?: string | null,
   schoolId?: string,
 ): Promise<MarksSheetConfig> {
+  // Resolve school code once for school-specific subject logic
+  let schoolCode: string | null = null;
+  if (schoolId) {
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { code: true, udiseCode: true },
+    });
+    schoolCode = (school?.code || school?.udiseCode || "").trim() || null;
+  }
+
   let subjects = await listClassSubjects(classId);
   const active = subjects.filter((s) => s.isActive);
 
   if (active.length === 0 && standard) {
-    subjects = await seedClassSubjects(classId, standard, stream);
+    subjects = await seedClassSubjects(classId, standard, stream, schoolCode);
   }
 
   if (schoolId) {
-    const changed = await ensureSongadhUpperPrimarySubjects(schoolId, classId);
-    if (changed) subjects = await listClassSubjects(classId);
+    // School 24261004404 — ensure COMP, PE, GK extras
+    const changed404 = await ensureSongadhUpperPrimarySubjects(schoolId, classId);
+    // School 24261004403 — ensure class-wise subjects are correct
+    const changed403 = await ensureSongadhPrimarySubjects(schoolCode, classId, standard);
+    if (changed404 || changed403) subjects = await listClassSubjects(classId);
   }
 
   if (subjects.filter((s) => s.isActive).length === 0) {
-    return getMarksSheetConfig(standard || "10", stream);
+    return getMarksSheetConfig(standard || "10", stream, schoolCode);
   }
 
   return classSubjectsToMarksSheetConfig(subjects);
@@ -452,11 +512,18 @@ export async function resetClassSubjectsToDefaults(
   });
   if (!schoolClass) throw new Error("Class not found");
 
+  const school = await prisma.school.findUnique({
+    where: { id: schoolId },
+    select: { code: true, udiseCode: true },
+  });
+  const schoolCode = (school?.code || school?.udiseCode || "").trim() || null;
+
   await prisma.classSubject.deleteMany({ where: { classId } });
   const subjects = await seedClassSubjects(
     classId,
     schoolClass.standard,
     schoolClass.stream,
+    schoolCode,
   );
   await ensureClassExam(schoolId, schoolClass);
   return subjects;

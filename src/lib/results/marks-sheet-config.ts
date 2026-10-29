@@ -99,6 +99,34 @@ export const SONGADH_UPPER_PRIMARY_SUBJECTS: MarksSheetSubjectDef[] = [
   { name: "સામાન્ય જ્ઞાન", shortName: "સા.જ્ઞા", type: "numeric", code: "GK" },
 ];
 
+// ─── School 24261004403 — Balvatidas Primary (Std 1–5) ────────────────────────
+// Image ref:
+//   ધોરણ 1-2  →  10+40=50 per subject  (6 subjects)
+//   ધોરણ 3-5  →  80+20=100 per subject  (9 subjects)
+
+/** School 24261004403 — Std 1 & 2 subjects (total 50 per subject) */
+export const SONGADH_PRIMARY_STD12_SUBJECTS: MarksSheetSubjectDef[] = [
+  { name: "ગુજરાતી",        shortName: "ગુ",    type: "numeric", code: "GUJ"  },
+  { name: "ગણિત",            shortName: "ગણ",   type: "numeric", code: "MATH" },
+  { name: "અંગ્રેજી",       shortName: "અં",   type: "numeric", code: "ENG"  },
+  { name: "હિન્દી",         shortName: "હિ",   type: "numeric", code: "HIN"  },
+  { name: "સામાજ",           shortName: "સા.જ", type: "numeric", code: "SS"   },
+  { name: "વિજ્ઞાન",        shortName: "વિ",   type: "numeric", code: "SCI"  },
+];
+
+/** School 24261004403 — Std 3 to 5 subjects (total 100 per subject) */
+export const SONGADH_PRIMARY_STD35_SUBJECTS: MarksSheetSubjectDef[] = [
+  { name: "ગુજ",             shortName: "ગુ",   type: "numeric", code: "GUJ"  },
+  { name: "ગણ",              shortName: "ગણ",   type: "numeric", code: "MATH" },
+  { name: "પર્યાવ",         shortName: "પ.વ",  type: "numeric", code: "ENV"  },
+  { name: "હિ",              shortName: "હિ",   type: "numeric", code: "HIN"  },
+  { name: "અંગ",             shortName: "અં",   type: "numeric", code: "ENG"  },
+  { name: "સામ.જ",           shortName: "સા.જ", type: "numeric", code: "SS"   },
+  { name: "વિજ",             shortName: "વિ",   type: "numeric", code: "SCI"  },
+  { name: "કોમ્પ્યુટર",     shortName: "ક.પ",  type: "numeric", code: "COMP" },
+  { name: "P.T.",            shortName: "PT",   type: "numeric", code: "PT"   },
+];
+
 function buildConfig(subjects: MarksSheetSubjectDef[]): MarksSheetConfig {
   return {
     subjects,
@@ -109,7 +137,20 @@ function buildConfig(subjects: MarksSheetSubjectDef[]): MarksSheetConfig {
   };
 }
 
-export function getMarksSheetConfig(standard: string, stream?: string | null): MarksSheetConfig {
+export function getMarksSheetConfig(standard: string, stream?: string | null, schoolCode?: string | null): MarksSheetConfig {
+  const code = (schoolCode || "").trim();
+
+  // School 24261004403 — Balvatidas Primary, Songadh
+  if (code === "24261004403") {
+    const std = String(standard || "").trim().replace(/^0+/, "");
+    if (std === "1" || std === "2") {
+      return buildConfig(SONGADH_PRIMARY_STD12_SUBJECTS);
+    }
+    if (["3", "4", "5"].includes(std)) {
+      return buildConfig(SONGADH_PRIMARY_STD35_SUBJECTS);
+    }
+  }
+
   if (["11", "12"].includes(standard) && stream === "Commerce") {
     return buildConfig(COMMERCE_MARKS_SHEET_SUBJECTS);
   }
