@@ -60,8 +60,8 @@ export function splitGunPatrakColumns(page: GunPatrakCell[]) {
 }
 
 export function gunPatrakExamNo(
-  seatNumber?: string | null,
-  rollNumber?: string | null,
+  seatNumber: string | null | undefined,
+  rollNumber: string | null | undefined,
   fallback: number,
 ): string {
   const seat = String(seatNumber || "").trim();
