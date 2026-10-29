@@ -3,18 +3,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  Armchair,
   BookOpenCheck,
   CheckSquare,
+  GraduationCap,
   Layers,
   Monitor,
   Plus,
   RefreshCw,
   Save,
-  Trash2,
-  Upload,
-  Armchair,
+  Search,
   Star,
-  GripVertical,
+  Trash2,
+  Users,
 } from "lucide-react";
 import { makeTermKey, type ExamSubjectScope, type ExamTermRole } from "@/lib/results/exam-terms";
 import { PageShell } from "@/components/layout/page-shell";
@@ -29,8 +30,11 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import { useSchoolFeatures } from "@/components/school/use-school-features";
 import "../subjects/subjects-hub.css";
+import "./exams-hub.css";
 
-type TabId = "template" | "apply";
+type TabId = "classes" | "types";
+type ClassFilter = "all" | "ready" | "empty";
+type WizardStep = "type" | "marks";
 
 type TemplateItem = {
   key: string;
@@ -57,18 +61,8 @@ type ClassExamRow = {
   _count: { students: number };
 };
 
-function defaultTemplate(): TemplateItem[] {
-  return [
-    {
-      key: "mid1",
-      labelEn: "Exam 1",
-      labelGu: "પરીક્ષા 1",
-      totalMax: 100,
-      maxMarks: 100,
-      internalMax: 0,
-      role: "component",
-    },
-  ];
+function emptyTemplate(): TemplateItem[] {
+  return [];
 }
 
 /** 24261004404: two exams, year total theory 160 + internal 40 = 200. */
@@ -120,32 +114,54 @@ function isLegacyUpperPrimaryTemplate(items: TemplateItem[]) {
   return stock || triple;
 }
 
+function mapTemplateItems(source: TemplateItem[]): TemplateItem[] {
+  return source.map((item) => ({
+    key: item.key,
+    labelEn: item.labelEn,
+    labelGu: item.labelGu || item.labelEn,
+    totalMax: item.totalMax ?? item.maxMarks + (item.internalMax ?? 0),
+    maxMarks: item.maxMarks,
+    role: item.role === "final" ? "final" : "component",
+    internalMax: item.internalMax ?? 0,
+    subjectScope:
+      item.role === "final" || item.subjectScope !== "computer" ? "all" : "computer",
+  }));
+}
+
+function isComputerItem(item: TemplateItem) {
+  return item.role === "component" && item.subjectScope === "computer";
+}
+
 export default function ExamsHubPage() {
   const t = useT();
   const { letterhead } = useSchoolFeatures();
   const schoolCode = (letterhead?.code || letterhead?.udiseCode || "").trim();
   const upperPrimarySchool = schoolCode === "24261004404";
-  const [tab, setTab] = useState<TabId>("template");
+  const [tab, setTab] = useState<TabId>("classes");
   const [year, setYear] = useState(DEFAULT_ACADEMIC_YEAR);
   const [classes, setClasses] = useState<ClassExamRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [templateSaving, setTemplateSaving] = useState(false);
-  const [template, setTemplate] = useState<TemplateItem[]>(() => defaultTemplate());
+  const [template, setTemplate] = useState<TemplateItem[]>(() => emptyTemplate());
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [classSearch, setClassSearch] = useState("");
+  const [classFilter, setClassFilter] = useState<ClassFilter>("all");
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState<WizardStep>("type");
+  const [pickedKey, setPickedKey] = useState<string | null>(null);
+  const [addingType, setAddingType] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [addSaving, setAddSaving] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [draftNameGu, setDraftNameGu] = useState("");
-  const [draftMax, setDraftMax] = useState(100);
-  const [draftInternalMax, setDraftInternalMax] = useState(0);
+  const [draftMax, setDraftMax] = useState(80);
+  const [draftInternalMax, setDraftInternalMax] = useState(20);
   const [draftTotalMax, setDraftTotalMax] = useState(100);
   const [draftComputerOnly, setDraftComputerOnly] = useState(false);
+  const [draftFinal, setDraftFinal] = useState(false);
   const [deleteKey, setDeleteKey] = useState<string | null>(null);
-
-  const isComputerItem = (item: TemplateItem) =>
-    item.role === "component" && item.subjectScope === "computer";
 
   const totalOutOf = useMemo(() => {
     return template.reduce((sum, item) => {
@@ -164,20 +180,44 @@ export default function ExamsHubPage() {
   const generalItems = template.filter((item) => !isComputerItem(item));
   const computerItems = template.filter((item) => isComputerItem(item));
   const computerCount = computerItems.length;
-
   const generalComponentCount = template.filter(
     (x) => x.role === "component" && x.subjectScope !== "computer",
   ).length;
-
-  // Total exam count (general non-computer)
   const generalExamCount = generalItems.length;
-
   const hasInvalidSplit = template.some(
     (x) => x.maxMarks + (x.internalMax ?? 0) !== x.totalMax,
   );
-
-  // Validation: at least 1 general exam required
   const hasEnoughExams = generalExamCount >= 1;
+  const splitValid = draftMax + draftInternalMax === draftTotalMax;
+  const paperPct =
+    draftTotalMax > 0 ? Math.round((draftMax / draftTotalMax) * 100) : 0;
+
+  const readyCount = classes.filter((row) => (row.termsList || []).length > 0).length;
+  const emptyCount = classes.length - readyCount;
+
+  const filteredClasses = useMemo(() => {
+    const q = classSearch.trim().toLowerCase();
+    return classes.filter((row) => {
+      const hasExams = (row.termsList || []).length > 0;
+      if (classFilter === "ready" && !hasExams) return false;
+      if (classFilter === "empty" && hasExams) return false;
+      if (!q) return true;
+      const hay = `${row.name} ${row.standard} ${row.section} ${row.stream}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [classes, classFilter, classSearch]);
+
+  const selectedClasses = useMemo(
+    () => classes.filter((row) => selected.has(row.id)),
+    [classes, selected],
+  );
+
+  const pickedItem = template.find((item) => item.key === pickedKey) || null;
+  const alreadyOnCount = pickedItem
+    ? selectedClasses.filter((row) =>
+        (row.termsList || []).some((term) => term.key === pickedItem.key),
+      ).length
+    : 0;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -195,21 +235,7 @@ export default function ExamsHubPage() {
       const sample = rows.find((r) => r.examId && r.termsList?.length);
       const source = saved?.length ? saved : sample?.termsList;
       if (source?.length) {
-        const next: TemplateItem[] = source.map((item) => ({
-          key: item.key,
-          labelEn: item.labelEn,
-          labelGu: item.labelGu || item.labelEn,
-          totalMax:
-            item.totalMax ??
-            item.maxMarks + (item.internalMax ?? 0),
-          maxMarks: item.maxMarks,
-          role: item.role === "final" ? "final" : "component",
-          internalMax: item.internalMax ?? 0,
-          subjectScope:
-            item.role === "final" || item.subjectScope !== "computer"
-              ? "all"
-              : "computer",
-        }));
+        const next = mapTemplateItems(source);
         setTemplate(
           upperPrimarySchool && isLegacyUpperPrimaryTemplate(next)
             ? upperPrimaryTemplate()
@@ -217,6 +243,8 @@ export default function ExamsHubPage() {
         );
       } else if (upperPrimarySchool) {
         setTemplate(upperPrimaryTemplate());
+      } else {
+        setTemplate(emptyTemplate());
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("examsHub.loadFailed"));
@@ -229,13 +257,59 @@ export default function ExamsHubPage() {
     void load();
   }, [load]);
 
+  const toggleClass = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const toggleAll = () => {
-    if (selected.size === classes.length) setSelected(new Set());
-    else setSelected(new Set(classes.map((c) => c.id)));
+    if (selected.size === filteredClasses.length) setSelected(new Set());
+    else setSelected(new Set(filteredClasses.map((c) => c.id)));
   };
 
   const updateItem = (key: string, patch: Partial<TemplateItem>) => {
     setTemplate((prev) => prev.map((item) => (item.key === key ? { ...item, ...patch } : item)));
+  };
+
+  const setDraftSplit = (total: number, paper: number, internal: number) => {
+    const safeTotal = Math.max(0, total);
+    const safePaper = Math.max(0, Math.min(paper, safeTotal));
+    const safeInternal = Math.max(0, Math.min(internal, safeTotal - safePaper));
+    setDraftTotalMax(safeTotal);
+    setDraftMax(safePaper);
+    setDraftInternalMax(safeInternal);
+  };
+
+  const resetWizard = () => {
+    setWizardStep("type");
+    setPickedKey(null);
+    setAddingType(false);
+    setDraftName("");
+    setDraftNameGu("");
+    setDraftComputerOnly(false);
+    setDraftFinal(false);
+    setDraftSplit(100, 80, 20);
+  };
+
+  const openCreate = (classIds?: string[]) => {
+    if (classIds?.length) setSelected(new Set(classIds));
+    const nextSelected = classIds?.length ? classIds : [...selected];
+    if (!nextSelected.length) {
+      toast.error(t("examsHub.selectClassHint"));
+      return;
+    }
+    if (!template.length) {
+      toast.warning(t("examsHub.needTypeFirst"));
+      setTab("types");
+      openAdd(false);
+      return;
+    }
+    resetWizard();
+    setCreateOpen(true);
   };
 
   const openAdd = (computer = false) => {
@@ -244,18 +318,20 @@ export default function ExamsHubPage() {
       const source = generalItems.find((item) => item.role === "component") || generalItems[0];
       setDraftName(`Computer Exam ${n}`);
       setDraftNameGu(`કોમ્પ્યુટર પરીક્ષા ${n}`);
-      setDraftTotalMax(source?.totalMax ?? 100);
-      setDraftMax(source?.maxMarks ?? 80);
-      setDraftInternalMax(source?.internalMax ?? 20);
+      setDraftSplit(
+        source?.totalMax ?? 100,
+        source?.maxMarks ?? 80,
+        source?.internalMax ?? 20,
+      );
       setDraftComputerOnly(true);
+      setDraftFinal(false);
     } else {
       const n = generalComponentCount + 1;
       setDraftName(`Exam ${n}`);
       setDraftNameGu(`પરીક્ષા ${n}`);
-      setDraftTotalMax(100);
-      setDraftMax(100);
-      setDraftInternalMax(0);
+      setDraftSplit(100, 80, 20);
       setDraftComputerOnly(false);
+      setDraftFinal(false);
     }
     setAddOpen(true);
   };
@@ -266,12 +342,14 @@ export default function ExamsHubPage() {
       toast.warning(t("examsHub.addNameRequired"));
       return;
     }
-    if (draftMax + draftInternalMax !== draftTotalMax) {
+    if (!splitValid) {
       toast.warning(t("examsHub.splitMismatch"));
       return;
     }
     setAddSaving(true);
-    const key = makeTermKey(labelEn, template.map((x) => x.key));
+    const key = draftFinal
+      ? "final"
+      : makeTermKey(labelEn, template.map((x) => x.key));
     const item: TemplateItem = {
       key,
       labelEn,
@@ -279,19 +357,84 @@ export default function ExamsHubPage() {
       totalMax: Math.max(0, Number(draftTotalMax) || 0),
       maxMarks: Math.max(0, Number(draftMax) || 0),
       internalMax: Math.max(0, Number(draftInternalMax) || 0),
-      role: "component",
+      role: draftFinal ? "final" : "component",
       subjectScope: draftComputerOnly ? "computer" : "all",
     };
     setTemplate((prev) => {
-      const finalIdx = prev.findIndex((x) => x.role === "final");
-      if (finalIdx < 0) return [...prev, item];
-      const next = [...prev];
+      const withoutFinal =
+        draftFinal ? prev.map((row) => (row.role === "final" ? { ...row, role: "component" as const } : row)) : prev;
+      const filtered = withoutFinal.filter((row) => row.key !== key);
+      const finalIdx = filtered.findIndex((x) => x.role === "final");
+      if (item.role === "final" || finalIdx < 0) return [...filtered, item];
+      const next = [...filtered];
       next.splice(finalIdx, 0, item);
       return next;
     });
     setAddOpen(false);
     setAddSaving(false);
     toast.success(t("examsHub.examAdded"));
+    if (selected.size > 0) {
+      setPickedKey(key);
+      setDraftName(item.labelEn);
+      setDraftNameGu(item.labelGu);
+      setDraftComputerOnly(Boolean(item.subjectScope === "computer"));
+      setDraftFinal(item.role === "final");
+      setDraftSplit(item.totalMax, item.maxMarks, item.internalMax ?? 0);
+      setWizardStep("marks");
+      setCreateOpen(true);
+    }
+  };
+
+  const pickExamType = (item: TemplateItem) => {
+    setPickedKey(item.key);
+    setAddingType(false);
+    setDraftName(item.labelEn);
+    setDraftNameGu(item.labelGu);
+    setDraftComputerOnly(isComputerItem(item));
+    setDraftFinal(item.role === "final");
+    setDraftSplit(item.totalMax, item.maxMarks, item.internalMax ?? 0);
+    setWizardStep("marks");
+  };
+
+  const startNewTypeInWizard = () => {
+    setAddingType(true);
+    setPickedKey(null);
+    setDraftName("");
+    setDraftNameGu("");
+    setDraftComputerOnly(false);
+    setDraftFinal(false);
+    setDraftSplit(100, 80, 20);
+    setWizardStep("type");
+  };
+
+  const confirmNewTypeThenMarks = () => {
+    const labelEn = draftName.trim();
+    if (!labelEn) {
+      toast.warning(t("examsHub.addNameRequired"));
+      return;
+    }
+    const key = draftFinal ? "final" : makeTermKey(labelEn, template.map((x) => x.key));
+    const item: TemplateItem = {
+      key,
+      labelEn,
+      labelGu: draftNameGu.trim() || labelEn,
+      totalMax: draftTotalMax,
+      maxMarks: draftMax,
+      internalMax: draftInternalMax,
+      role: draftFinal ? "final" : "component",
+      subjectScope: draftComputerOnly ? "computer" : "all",
+    };
+    setTemplate((prev) => {
+      const withoutFinal = draftFinal
+        ? prev.map((row) => (row.role === "final" ? { ...row, role: "component" as const } : row))
+        : prev;
+      const filtered = withoutFinal.filter((row) => row.key !== key);
+      return [...filtered, item];
+    });
+    setPickedKey(key);
+    setAddingType(false);
+    setWizardStep("marks");
+    toast.success(t("examsHub.typeAdded"));
   };
 
   const confirmDelete = () => {
@@ -301,22 +444,14 @@ export default function ExamsHubPage() {
       setDeleteKey(null);
       return;
     }
-
-    // Allow deleting any exam including final
-    // But if deleting final, make sure another exam exists; if only 1 exam left total, prevent
     if (template.length <= 1) {
       toast.warning("ઓછામાં ઓછી એક પરીક્ષા હોવી જ જોઈએ");
       setDeleteKey(null);
       return;
     }
-
     const nextTemplate = template.filter((x) => x.key !== deleteKey);
-
-    // If we deleted the final exam, make sure there's still a final role
-    // Promote the last non-computer exam to final if no final exists
     const hasFinal = nextTemplate.some((x) => x.role === "final");
     if (!hasFinal) {
-      // Find last non-computer general item and make it final
       const lastGeneralIdx = [...nextTemplate]
         .map((x, i) => ({ x, i }))
         .filter(({ x }) => !isComputerItem(x))
@@ -328,21 +463,19 @@ export default function ExamsHubPage() {
         };
       }
     }
-
     setTemplate(nextTemplate);
     setDeleteKey(null);
     toast.success(t("examsHub.examDeleted"));
   };
 
-  // Mark an exam as Final (role="final") and demote old final to component
   const setAsFinal = (key: string) => {
-    setTemplate((prev) => {
-      return prev.map((item) => {
+    setTemplate((prev) =>
+      prev.map((item) => {
         if (item.key === key) return { ...item, role: "final" };
         if (item.role === "final") return { ...item, role: "component" };
         return item;
-      });
-    });
+      }),
+    );
     toast.success("અંતિમ પરીક્ષા બદલાઈ");
   };
 
@@ -355,7 +488,6 @@ export default function ExamsHubPage() {
       toast.error("ઓછામાં ઓછી એક પરીક્ષા ઉમેરો");
       return;
     }
-
     setTemplateSaving(true);
     try {
       const res = await fetch("/api/exams", {
@@ -371,27 +503,25 @@ export default function ExamsHubPage() {
       toast.success(t("examsHub.templateSaved"));
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : t("examsHub.templateSaveFailed"),
+        error instanceof Error ? error.message : t("examsHub.templateSaveFailed"),
       );
     } finally {
       setTemplateSaving(false);
     }
   };
 
-  const apply = async () => {
+  const createExam = async () => {
+    const item = template.find((row) => row.key === pickedKey);
     if (!selected.size) {
       toast.error(t("examsHub.selectClassHint"));
       return;
     }
-    if (!hasEnoughExams) {
-      toast.error("ઓછામાં ઓછી એક પરીક્ષા ઉમેરો");
+    if (!item) {
+      toast.error(t("examsHub.needTypeFirst"));
       return;
     }
-    if (hasInvalidSplit) {
-      toast.error(t("examsHub.fixSplitBeforeApply"));
-      setTab("template");
+    if (!splitValid) {
+      toast.error(t("examsHub.splitMismatch"));
       return;
     }
     setSaving(true);
@@ -400,20 +530,30 @@ export default function ExamsHubPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "apply",
+          action: "apply_exam",
           classIds: [...selected],
-          templateTerms: template,
+          examTerm: {
+            ...item,
+            labelEn: draftName.trim() || item.labelEn,
+            labelGu: draftNameGu.trim() || item.labelGu,
+            totalMax: draftTotalMax,
+            maxMarks: draftMax,
+            internalMax: draftInternalMax,
+            role: draftFinal ? "final" : item.role,
+            subjectScope: draftComputerOnly ? "computer" : item.subjectScope,
+          },
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       toast.push({
-        title: t("examsHub.applyDone", { count: data.applied }),
+        title: t("examsHub.examCreated", { count: data.applied }),
         variant: "success",
         duration: 3200,
       });
+      setCreateOpen(false);
+      resetWizard();
       await load();
-      setTab("apply");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("examsHub.applyFailed"));
     } finally {
@@ -421,11 +561,10 @@ export default function ExamsHubPage() {
     }
   };
 
-  // Render a single exam card in the template tab
   const renderExamCard = (item: TemplateItem, label: string, canDelete: boolean) => {
     const isFinal = item.role === "final";
     const isComputer = isComputerItem(item);
-    const splitValid = item.maxMarks + (item.internalMax ?? 0) === item.totalMax;
+    const itemSplitValid = item.maxMarks + (item.internalMax ?? 0) === item.totalMax;
 
     return (
       <div
@@ -439,10 +578,8 @@ export default function ExamsHubPage() {
               : "border-slate-200 bg-white",
         )}
       >
-        {/* Card Header */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <GripVertical className="h-4 w-4 text-slate-300 flex-shrink-0" />
             <div className="flex flex-wrap items-center gap-1.5 min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">
                 {label}
@@ -450,7 +587,7 @@ export default function ExamsHubPage() {
               {isFinal && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
                   <Star className="h-3 w-3" />
-                  અંતિમ
+                  {t("examsHub.roleFinal")}
                 </span>
               )}
               {isComputer && (
@@ -461,9 +598,7 @@ export default function ExamsHubPage() {
               )}
             </div>
           </div>
-
           <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Allow setting any exam as Final (except computer) */}
             {!isFinal && !isComputer && (
               <button
                 type="button"
@@ -472,10 +607,9 @@ export default function ExamsHubPage() {
                 onClick={() => setAsFinal(item.key)}
               >
                 <Star className="h-3 w-3" />
-                અંતિમ
+                {t("examsHub.roleFinal")}
               </button>
             )}
-            {/* Delete button for all exams */}
             {canDelete && (
               <Button
                 type="button"
@@ -489,8 +623,6 @@ export default function ExamsHubPage() {
             )}
           </div>
         </div>
-
-        {/* Name fields */}
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
             label={t("examsHub.labelEn")}
@@ -503,8 +635,6 @@ export default function ExamsHubPage() {
             onChange={(e) => updateItem(item.key, { labelGu: e.target.value })}
           />
         </div>
-
-        {/* Marks split */}
         <div className="grid gap-3 sm:grid-cols-3">
           <Input
             label={t("examsHub.totalOutOf")}
@@ -538,9 +668,7 @@ export default function ExamsHubPage() {
             }
           />
         </div>
-
-        {/* Split validation error */}
-        {!splitValid && (
+        {!itemSplitValid && (
           <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
             {t("examsHub.splitError", {
               paper: item.maxMarks,
@@ -589,21 +717,21 @@ export default function ExamsHubPage() {
         </div>
       }
     >
-      <div className="subhub">
+      <div className="subhub examhub">
         <div className="subhub__intro">
           <p>{t("examsHub.introTitle")}</p>
           <ol>
-            <li>પરીક્ષા ઉમેરો (Mid / Final) — ગુણ સેટ કરો</li>
-            <li>જે class માં apply કરો ત્યાં જ marks enter/show થશે</li>
-            <li>Final exam — Star icon ક્લિક કરી કોઈ પણ exam ને Final બનાવો</li>
+            <li>{t("examsHub.intro1")}</li>
+            <li>{t("examsHub.intro2")}</li>
+            <li>{t("examsHub.intro3")}</li>
           </ol>
         </div>
 
         <div className="subhub__tabs">
           {(
             [
-              { id: "template" as const, icon: Layers, label: t("examsHub.tabTemplate") },
-              { id: "apply" as const, icon: Upload, label: t("examsHub.tabApply") },
+              { id: "classes" as const, icon: GraduationCap, label: t("examsHub.tabClasses") },
+              { id: "types" as const, icon: Layers, label: t("examsHub.tabTypes") },
             ] as const
           ).map((tabItem) => (
             <button
@@ -618,14 +746,213 @@ export default function ExamsHubPage() {
           ))}
         </div>
 
-        {tab === "template" && (
+        {tab === "classes" && (
           <div className="subhub__panel">
             <div className="subhub__panel-head">
               <div>
-                <h2 className="subhub__panel-title">{t("examsHub.templateTitle")}</h2>
-                <p className="subhub__panel-desc">
-                  પરીક્ષા ઉમેરો/કાઢો · ગુણ સેટ કરો · Apply tab માં class ને assign કરો
-                </p>
+                <h2 className="subhub__panel-title">{t("examsHub.classesTitle")}</h2>
+                <p className="subhub__panel-desc">{t("examsHub.classesDesc")}</p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!selected.size}
+                onClick={() => openCreate()}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {t("examsHub.createExam")}
+              </Button>
+            </div>
+
+            <div className="space-y-4 p-3 sm:p-4">
+              <div className="examhub-stats">
+                <div className="examhub-stat examhub-stat--navy">
+                  <strong>{classes.length}</strong>
+                  <span>{t("examsHub.classesTitle")}</span>
+                </div>
+                <div className="examhub-stat examhub-stat--teal">
+                  <strong>{selected.size}</strong>
+                  <span>{t("examsHub.selectedClasses")}</span>
+                </div>
+                <div className="examhub-stat examhub-stat--sky">
+                  <strong>{readyCount}</strong>
+                  <span>{t("examsHub.filterReady")}</span>
+                </div>
+                <div className="examhub-stat examhub-stat--amber">
+                  <strong>{emptyCount}</strong>
+                  <span>{t("examsHub.filterEmpty")}</span>
+                </div>
+              </div>
+
+              <div className="examhub-toolbar">
+                <div className="examhub-toolbar__filters">
+                  <Select
+                    value={year}
+                    onChange={(e) => setYear(e.target.value)}
+                    options={FINANCIAL_YEARS.map((y) => ({ value: y, label: y }))}
+                    hideEmptyOption
+                  />
+                  <div className="examhub-search relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={classSearch}
+                      onChange={(e) => setClassSearch(e.target.value)}
+                      placeholder={t("examsHub.searchClass")}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <div className="examhub-pills">
+                  {(
+                    [
+                      { id: "all" as const, label: t("examsHub.filterAll") },
+                      { id: "ready" as const, label: t("examsHub.filterReady") },
+                      { id: "empty" as const, label: t("examsHub.filterEmpty") },
+                    ] as const
+                  ).map((pill) => (
+                    <button
+                      key={pill.id}
+                      type="button"
+                      className={cn("examhub-pill", classFilter === pill.id && "examhub-pill--on")}
+                      onClick={() => setClassFilter(pill.id)}
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
+                  <button type="button" className="examhub-pill" onClick={toggleAll}>
+                    <CheckSquare className="h-3.5 w-3.5" />
+                    {selected.size === filteredClasses.length && filteredClasses.length > 0
+                      ? t("examsHub.unselectAll")
+                      : t("examsHub.selectAll")}
+                  </button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center py-16">
+                  <Spinner />
+                </div>
+              ) : filteredClasses.length === 0 ? (
+                <div className="examhub-empty">
+                  <GraduationCap className="h-8 w-8 text-slate-300" />
+                  <p>{t("examsHub.noClasses")}</p>
+                </div>
+              ) : (
+                <div className="examhub-grid">
+                  {filteredClasses.map((row) => {
+                    const checked = selected.has(row.id);
+                    const terms = row.termsList || [];
+                    const general = terms.filter((x) => x.subjectScope !== "computer");
+                    const computers = terms.filter((x) => x.subjectScope === "computer");
+                    return (
+                      <div
+                        key={row.id}
+                        className={cn("examhub-card", checked && "examhub-card--on")}
+                        onClick={() => toggleClass(row.id)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggleClass(row.id);
+                          }
+                        }}
+                      >
+                        <div className="examhub-card__top">
+                          <input
+                            type="checkbox"
+                            className="examhub-card__check"
+                            checked={checked}
+                            onChange={() => toggleClass(row.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <span className="examhub-card__mark">{row.standard}</span>
+                          <div className="examhub-card__copy">
+                            <strong>{row.name}</strong>
+                            <span>
+                              {row.standard}-{row.section}
+                              {row.stream ? ` · ${row.stream}` : ""}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="examhub-card__meta">
+                          <span className="examhub-chip examhub-chip--count">
+                            <Users className="h-3 w-3" />
+                            {t("examsHub.studentsCount", { count: row._count.students })}
+                          </span>
+                          {general.length === 0 && computers.length === 0 ? (
+                            <span className="examhub-chip examhub-chip--empty">
+                              {t("examsHub.noExamYet")}
+                            </span>
+                          ) : (
+                            <>
+                              {general.map((term) => (
+                                <span
+                                  key={term.key}
+                                  className={cn(
+                                    "examhub-chip",
+                                    term.role === "final" ? "examhub-chip--final" : "examhub-chip--exam",
+                                  )}
+                                >
+                                  {term.role === "final" && <Star className="h-2.5 w-2.5" />}
+                                  {term.labelGu || term.labelEn}
+                                  <span className="opacity-70">({term.totalMax})</span>
+                                </span>
+                              ))}
+                              {computers.map((term) => (
+                                <span key={term.key} className="examhub-chip examhub-chip--comp">
+                                  <Monitor className="h-2.5 w-2.5" />
+                                  {term.labelGu || term.labelEn}
+                                  <span className="opacity-70">({term.totalMax})</span>
+                                </span>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="examhub-card__go"
+                          title={t("examsHub.createForClass")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCreate([row.id]);
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {selected.size > 0 && (
+              <div className="examhub-dock">
+                <div>
+                  <p>{t("examsHub.selectedCount", { count: selected.size })}</p>
+                  <span>{t("examsHub.dockHint")}</span>
+                </div>
+                <div className="examhub-dock__actions">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setSelected(new Set())}>
+                    {t("examsHub.unselectAll")}
+                  </Button>
+                  <Button type="button" size="sm" onClick={() => openCreate()}>
+                    <Plus className="h-3.5 w-3.5" />
+                    {t("examsHub.createExam")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === "types" && (
+          <div className="subhub__panel">
+            <div className="subhub__panel-head">
+              <div>
+                <h2 className="subhub__panel-title">{t("examsHub.typesTitle")}</h2>
+                <p className="subhub__panel-desc">{t("examsHub.typesDesc")}</p>
               </div>
               <div className="subhub__actions">
                 <Button
@@ -635,14 +962,8 @@ export default function ExamsHubPage() {
                   disabled={templateSaving || hasInvalidSplit || !hasEnoughExams}
                   onClick={() => void saveTemplate()}
                 >
-                  {templateSaving ? (
-                    <Spinner size="sm" />
-                  ) : (
-                    <Save className="h-3.5 w-3.5" />
-                  )}
-                  {templateSaving
-                    ? t("common.saving")
-                    : t("examsHub.saveTemplate")}
+                  {templateSaving ? <Spinner size="sm" /> : <Save className="h-3.5 w-3.5" />}
+                  {templateSaving ? t("common.saving") : t("examsHub.saveTemplate")}
                 </Button>
                 <Button type="button" variant="outline" size="sm" onClick={() => openAdd(false)}>
                   <Plus className="h-3.5 w-3.5" />
@@ -652,28 +973,21 @@ export default function ExamsHubPage() {
                   <Monitor className="h-3.5 w-3.5" />
                   {t("examsHub.addComputerExam")}
                 </Button>
-                <Button type="button" size="sm" onClick={() => setTab("apply")}>
-                  <Upload className="h-3.5 w-3.5" />
-                  {t("examsHub.goApply")}
-                </Button>
               </div>
             </div>
 
             <div className="space-y-3 p-3 sm:p-4">
-              {/* General subject exams */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">
                   {t("examsHub.subjectExamsTitle")}
                 </h3>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {t("examsHub.subjectExamsDesc")} · ⭐ = અંતિમ પરીક્ષા
-                </p>
+                <p className="mt-0.5 text-xs text-slate-500">{t("examsHub.subjectExamsDesc")}</p>
               </div>
 
               {generalItems.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
                   <Plus className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-                  <p>હજુ કોઈ પરીક્ષા નથી. &quot;પરીક્ષા ઉમેરો&quot; ક્લિક કરો.</p>
+                  <p>{t("examsHub.emptyTypes")}</p>
                 </div>
               ) : (
                 generalItems.map((item, idx) => {
@@ -684,9 +998,7 @@ export default function ExamsHubPage() {
                   const label = isFinal
                     ? t("examTerms.final")
                     : `${t("examsHub.componentExam")} ${compNumber}`;
-                  // Can delete if more than 1 general exam total
-                  const canDelete = generalItems.length > 1;
-                  return renderExamCard(item, label, canDelete);
+                  return renderExamCard(item, label, generalItems.length > 1);
                 })
               )}
 
@@ -700,7 +1012,6 @@ export default function ExamsHubPage() {
                 {t("examsHub.addExam")}
               </Button>
 
-              {/* Total summary */}
               {generalItems.length > 0 && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-900">
                   <p className="font-semibold flex items-center gap-2">
@@ -716,17 +1027,9 @@ export default function ExamsHubPage() {
                       {t("examsHub.autoTotalComputer", { total: computerOutOf })}
                     </p>
                   )}
-                  {upperPrimarySchool &&
-                  template.length === 2 &&
-                  template.every((item) => item.maxMarks === 80 && (item.internalMax ?? 0) === 20) ? (
-                    <p className="text-xs mt-1 text-emerald-950">
-                      પ્રથમ: આંતરિક 20 + લેખિત 80 = 100 · દ્વિતીય: લેખિત 80 + આંતરિક 20 = 100 · વર્ષાન્તે લેખિત 160 + આંતરિક 40 = 200
-                    </p>
-                  ) : null}
                 </div>
               )}
 
-              {/* Computer exams block */}
               <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-3 sm:p-4 space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -738,237 +1041,279 @@ export default function ExamsHubPage() {
                       {t("examsHub.computerExamsDesc")}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openAdd(true)}
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={() => openAdd(true)}>
                     <Plus className="h-3.5 w-3.5" />
                     {t("examsHub.addComputerExam")}
                   </Button>
                 </div>
-
                 {computerItems.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-sky-200 bg-white/70 px-3 py-4 text-center text-sm text-sky-900/80">
                     {t("examsHub.computerEmpty")}
                   </p>
                 ) : (
                   computerItems.map((item, idx) =>
-                    renderExamCard(
-                      item,
-                      `${t("examsHub.computerExam")} ${idx + 1}`,
-                      true, // computer exams can always be deleted
-                    ),
+                    renderExamCard(item, `${t("examsHub.computerExam")} ${idx + 1}`, true),
                   )
                 )}
               </div>
             </div>
           </div>
         )}
+      </div>
 
-        {tab === "apply" && (
-          <div className="subhub__panel">
-            <div className="subhub__panel-head">
+      <InfoModal
+        isOpen={createOpen}
+        onClose={() => !saving && setCreateOpen(false)}
+        title={t("examsHub.createExamTitle")}
+        eyebrow={t("examsHub.selectedCount", { count: selected.size })}
+        wide
+      >
+        <div className="examhub-wizard">
+          <div className="examhub-steps">
+            <div
+              className={cn(
+                "examhub-step",
+                wizardStep === "type" && "examhub-step--on",
+                wizardStep === "marks" && "examhub-step--done",
+              )}
+            >
+              <b>1</b>
+              <span>{t("examsHub.wizardStepType")}</span>
+            </div>
+            <div className={cn("examhub-step", wizardStep === "marks" && "examhub-step--on")}>
+              <b>2</b>
+              <span>{t("examsHub.wizardStepMarks")}</span>
+            </div>
+          </div>
+
+          <div className="examhub-selected">
+            {selectedClasses.slice(0, 6).map((row) => (
+              <em key={row.id}>{row.name}</em>
+            ))}
+            {selectedClasses.length > 6 && <em>+{selectedClasses.length - 6}</em>}
+          </div>
+
+          {wizardStep === "type" && (
+            <>
               <div>
-                <h2 className="subhub__panel-title">{t("examsHub.applyTitle")}</h2>
-                <p className="subhub__panel-desc">
-                  {t("examsHub.applyDesc", { total: totalOutOf, mids: generalComponentCount })}
-                  {" · "}
-                  <span className="font-semibold text-teal-800">
-                    જે class select કરો ત્યાં જ marks enter & show થશે
-                  </span>
-                </p>
+                <p className="text-sm font-semibold text-slate-900">{t("examsHub.pickExamType")}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{t("examsHub.pickExamTypeHint")}</p>
               </div>
-              <div className="subhub__filters">
-                <Select
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                  options={FINANCIAL_YEARS.map((y) => ({ value: y, label: y }))}
-                  emptyLabel=""
+
+              {template.length === 0 && !addingType ? (
+                <div className="examhub-empty">
+                  <p>{t("examsHub.emptyTypes")}</p>
+                </div>
+              ) : (
+                <div className="examhub-types">
+                  {template.map((item) => {
+                    const computer = isComputerItem(item);
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        className={cn(
+                          "examhub-type",
+                          item.role === "final" && "examhub-type--final",
+                          computer && "examhub-type--comp",
+                          pickedKey === item.key && "examhub-type--on",
+                        )}
+                        onClick={() => pickExamType(item)}
+                      >
+                        <span className="examhub-type__icon">
+                          {computer ? (
+                            <Monitor className="h-4 w-4" />
+                          ) : item.role === "final" ? (
+                            <Star className="h-4 w-4" />
+                          ) : (
+                            <BookOpenCheck className="h-4 w-4" />
+                          )}
+                        </span>
+                        <span className="examhub-type__copy">
+                          <strong>{item.labelGu || item.labelEn}</strong>
+                          <span>{item.labelEn}</span>
+                          <span className="examhub-type__marks">
+                            {t("examsHub.paperTeacherTotal", {
+                              paper: item.maxMarks,
+                              internal: item.internalMax ?? 0,
+                              total: item.totalMax,
+                            })}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {addingType ? (
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-sm text-slate-600">{t("examsHub.newTypeHint")}</p>
+                  <Input
+                    label={t("examsHub.labelEn")}
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    placeholder="e.g. First Exam"
+                  />
+                  <Input
+                    label={t("examsHub.labelGu")}
+                    value={draftNameGu}
+                    onChange={(e) => setDraftNameGu(e.target.value)}
+                    placeholder="દા.ત. પ્રથમ પરીક્ષા"
+                  />
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={draftFinal}
+                      onChange={(e) => {
+                        setDraftFinal(e.target.checked);
+                        if (e.target.checked) setDraftComputerOnly(false);
+                      }}
+                    />
+                    {t("examsHub.makeFinal")}
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={draftComputerOnly}
+                      disabled={draftFinal}
+                      onChange={(e) => setDraftComputerOnly(e.target.checked)}
+                    />
+                    {t("examsHub.computerType")}
+                  </label>
+                </div>
+              ) : (
+                <button type="button" className="examhub-add-type" onClick={startNewTypeInWizard}>
+                  <Plus className="mr-1 inline h-4 w-4" />
+                  {t("examsHub.addExamType")}
+                </button>
+              )}
+
+              <div className="subhub__modal-actions">
+                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                  {t("common.cancel")}
+                </Button>
+                {addingType ? (
+                  <Button type="button" onClick={confirmNewTypeThenMarks} disabled={!draftName.trim()}>
+                    {t("common.next")}
+                  </Button>
+                ) : (
+                  <Button type="button" disabled={!pickedKey} onClick={() => setWizardStep("marks")}>
+                    {t("common.next")}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+
+          {wizardStep === "marks" && (
+            <div className="examhub-marks">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {draftNameGu || draftName || pickedItem?.labelGu || pickedItem?.labelEn}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">{t("examsHub.marksStepHint")}</p>
+              </div>
+
+              {alreadyOnCount > 0 && (
+                <p className="examhub-ok">{t("examsHub.updatingExisting")}</p>
+              )}
+
+              <Input
+                label={t("examsHub.totalOutOf")}
+                type="number"
+                min={0}
+                value={draftTotalMax}
+                onChange={(e) => {
+                  const total = Math.max(0, Number(e.target.value) || 0);
+                  setDraftSplit(total, draftMax, total - draftMax);
+                }}
+              />
+
+              <div
+                className="examhub-split"
+                aria-hidden="true"
+              >
+                <div className="examhub-split__paper" style={{ width: `${Math.max(paperPct, 8)}%` }}>
+                  {t("examsHub.paperShare", { marks: draftMax })}
+                </div>
+                <div
+                  className="examhub-split__internal"
+                  style={{ width: `${Math.max(100 - paperPct, 8)}%` }}
+                >
+                  {t("examsHub.internalShare", { marks: draftInternalMax })}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input
+                  label={t("examsHub.paperOutOf")}
+                  type="number"
+                  min={0}
+                  value={draftMax}
+                  onChange={(e) => {
+                    const paper = Math.max(0, Number(e.target.value) || 0);
+                    setDraftSplit(draftTotalMax, paper, draftTotalMax - paper);
+                  }}
                 />
-                <Button type="button" variant="outline" size="sm" onClick={toggleAll}>
-                  <CheckSquare className="h-3.5 w-3.5" />
-                  {selected.size === classes.length
-                    ? t("examsHub.unselectAll")
-                    : t("examsHub.selectAll")}
+                <Input
+                  label={t("examsHub.teacherOutOf")}
+                  type="number"
+                  min={0}
+                  value={draftInternalMax}
+                  onChange={(e) => {
+                    const internal = Math.max(0, Number(e.target.value) || 0);
+                    setDraftSplit(draftTotalMax, draftTotalMax - internal, internal);
+                  }}
+                />
+              </div>
+
+              {splitValid ? (
+                <p className="examhub-ok">
+                  {t("examsHub.marksPreview", {
+                    paper: draftMax,
+                    internal: draftInternalMax,
+                    total: draftTotalMax,
+                  })}
+                </p>
+              ) : (
+                <p className="examhub-warn">
+                  {t("examsHub.splitError", {
+                    paper: draftMax,
+                    internal: draftInternalMax,
+                    sum: draftMax + draftInternalMax,
+                    total: draftTotalMax,
+                  })}
+                </p>
+              )}
+
+              <div className="subhub__modal-actions">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setWizardStep("type")}
+                  disabled={saving}
+                >
+                  {t("common.back")}
                 </Button>
                 <Button
                   type="button"
-                  size="sm"
-                  disabled={saving || !selected.size || hasInvalidSplit || !hasEnoughExams}
-                  onClick={() => void apply()}
+                  onClick={() => void createExam()}
+                  disabled={saving || !splitValid || !pickedKey}
                 >
-                  {saving ? <Spinner size="sm" /> : <Save className="h-3.5 w-3.5" />}
-                  {t("examsHub.applyBtn")}
+                  {saving ? <Spinner size="sm" /> : <Plus className="h-3.5 w-3.5" />}
+                  {t("examsHub.createAndApply")}
                 </Button>
               </div>
             </div>
+          )}
+        </div>
+      </InfoModal>
 
-            {/* Template summary for apply tab */}
-            {generalItems.length > 0 && (
-              <div className="mx-3 mt-3 sm:mx-4 rounded-xl border border-teal-200 bg-teal-50/60 px-4 py-3">
-                <p className="text-xs font-bold text-teal-900 mb-2">
-                  ✦ Template: નીચેની Exams selected classes ને apply થશે
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {generalItems.map((item) => (
-                    <span
-                      key={item.key}
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
-                        item.role === "final"
-                          ? "bg-amber-100 text-amber-800 border border-amber-200"
-                          : "bg-white text-teal-800 border border-teal-200",
-                      )}
-                    >
-                      {item.role === "final" && <Star className="h-3 w-3" />}
-                      {item.labelGu || item.labelEn}
-                      <span className="font-normal opacity-70">
-                        ({item.totalMax})
-                      </span>
-                    </span>
-                  ))}
-                  {computerItems.map((item) => (
-                    <span
-                      key={item.key}
-                      className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-800 border border-sky-200"
-                    >
-                      <Monitor className="h-3 w-3" />
-                      {item.labelGu || item.labelEn}
-                      <span className="font-normal opacity-70">({item.totalMax})</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {loading ? (
-              <div className="flex justify-center py-16">
-                <Spinner />
-              </div>
-            ) : classes.length === 0 ? (
-              <p className="p-8 text-center text-sm text-slate-500">{t("examsHub.noClasses")}</p>
-            ) : (
-              <div className="examhub__table-wrap overflow-x-auto">
-                <table className="examhub__table w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 border-b text-left text-xs text-slate-500">
-                      <th className="p-3 w-10" />
-                      <th className="p-3">{t("examsHub.colClass")}</th>
-                      <th className="p-3">{t("examsHub.colStudents")}</th>
-                      <th className="p-3">{t("examsHub.colMids")}</th>
-                      <th className="p-3">{t("examsHub.colOutOf")}</th>
-                      <th className="p-3">Current Exams</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {classes.map((c) => {
-                      const checked = selected.has(c.id);
-                      const general = (c.termsList || []).filter(
-                        (x) => x.subjectScope !== "computer",
-                      );
-                      const computers = (c.termsList || []).filter(
-                        (x) => x.subjectScope === "computer",
-                      );
-                      return (
-                        <tr
-                          key={c.id}
-                          className={cn(
-                            "border-b hover:bg-teal-50/40 cursor-pointer",
-                            checked && "bg-teal-50/60",
-                          )}
-                          onClick={() => {
-                            setSelected((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(c.id)) next.delete(c.id);
-                              else next.add(c.id);
-                              return next;
-                            });
-                          }}
-                        >
-                          <td className="examhub__check-cell p-3" data-label="">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => {}}
-                              className="h-4 w-4 rounded border-slate-300"
-                            />
-                          </td>
-                          <td
-                            className="p-3 font-medium text-slate-900"
-                            data-label={t("examsHub.colClass")}
-                          >
-                            {c.name}
-                            <span className="block text-[11px] text-slate-400 font-normal">
-                              {c.standard}-{c.section}
-                              {c.stream ? ` · ${c.stream}` : ""}
-                            </span>
-                          </td>
-                          <td className="p-3 text-slate-600" data-label={t("examsHub.colStudents")}>
-                            {c._count.students}
-                          </td>
-                          <td className="p-3" data-label={t("examsHub.colMids")}>
-                            {c.midExamCount}
-                          </td>
-                          <td
-                            className="p-3 font-semibold text-teal-800"
-                            data-label={t("examsHub.colOutOf")}
-                          >
-                            {c.totalOutOf || "—"}
-                          </td>
-                          <td
-                            className="p-3"
-                            data-label="Current Exams"
-                          >
-                            {general.length === 0 && computers.length === 0 ? (
-                              <span className="text-xs text-slate-400 italic">Applied નથી</span>
-                            ) : (
-                              <div className="flex flex-wrap gap-1">
-                                {general.map((x) => (
-                                  <span
-                                    key={x.key}
-                                    className={cn(
-                                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                                      x.role === "final"
-                                        ? "bg-amber-100 text-amber-800"
-                                        : "bg-slate-100 text-slate-700",
-                                    )}
-                                  >
-                                    {x.role === "final" && <Star className="h-2.5 w-2.5" />}
-                                    {x.labelGu || x.labelEn}
-                                    <span className="opacity-60">({x.totalMax})</span>
-                                  </span>
-                                ))}
-                                {computers.map((x) => (
-                                  <span
-                                    key={x.key}
-                                    className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-800"
-                                  >
-                                    <Monitor className="h-2.5 w-2.5" />
-                                    {x.labelGu || x.labelEn}
-                                    <span className="opacity-60">({x.totalMax})</span>
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Add exam modal */}
       <InfoModal
         isOpen={addOpen}
         onClose={() => !addSaving && setAddOpen(false)}
-        title={draftComputerOnly ? t("examsHub.addComputerExam") : t("examsHub.addExam")}
+        title={draftComputerOnly ? t("examsHub.addComputerExam") : t("examsHub.addExamType")}
       >
         <div className="subhub__modal-form space-y-3">
           <p className="text-sm text-slate-600">
@@ -978,45 +1323,60 @@ export default function ExamsHubPage() {
             label={t("examsHub.labelEn")}
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
-            placeholder={draftComputerOnly ? "e.g. Computer Exam 1" : "e.g. Exam 1 / Unit Test 1"}
+            placeholder={draftComputerOnly ? "e.g. Computer Exam 1" : "e.g. First Exam"}
           />
           <Input
             label={t("examsHub.labelGu")}
             value={draftNameGu}
             onChange={(e) => setDraftNameGu(e.target.value)}
-            placeholder={draftComputerOnly ? "દા.ત. કોમ્પ્યુટર પરીક્ષા 1" : "દા.ત. પરીક્ષા 1"}
+            placeholder={draftComputerOnly ? "દા.ત. કોમ્પ્યુટર પરીક્ષા 1" : "દા.ત. પ્રથમ પરીક્ષા"}
           />
+          {!draftComputerOnly && (
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={draftFinal}
+                onChange={(e) => setDraftFinal(e.target.checked)}
+              />
+              {t("examsHub.makeFinal")}
+            </label>
+          )}
           <Input
             label={t("examsHub.totalOutOf")}
             type="number"
             min={0}
             value={draftTotalMax}
-            onChange={(e) =>
-              setDraftTotalMax(Math.max(0, Number(e.target.value) || 0))
-            }
+            onChange={(e) => {
+              const total = Math.max(0, Number(e.target.value) || 0);
+              setDraftSplit(total, draftMax, total - draftMax);
+            }}
           />
           <Input
             label={t("examsHub.paperOutOf")}
             type="number"
             min={0}
             value={draftMax}
-            onChange={(e) => setDraftMax(Math.max(0, Number(e.target.value) || 0))}
+            onChange={(e) => {
+              const paper = Math.max(0, Number(e.target.value) || 0);
+              setDraftSplit(draftTotalMax, paper, draftTotalMax - paper);
+            }}
           />
           <Input
             label={t("examsHub.teacherOutOf")}
             type="number"
             min={0}
             value={draftInternalMax}
-            onChange={(e) =>
-              setDraftInternalMax(Math.max(0, Number(e.target.value) || 0))
-            }
+            onChange={(e) => {
+              const internal = Math.max(0, Number(e.target.value) || 0);
+              setDraftSplit(draftTotalMax, draftTotalMax - internal, internal);
+            }}
           />
           {draftComputerOnly && (
             <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
               {t("examsHub.computerOnlyHint")}
             </p>
           )}
-          {draftMax + draftInternalMax !== draftTotalMax && (
+          {!splitValid && (
             <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
               {t("examsHub.splitError", {
                 paper: draftMax,
@@ -1027,22 +1387,10 @@ export default function ExamsHubPage() {
             </p>
           )}
           <div className="subhub__modal-actions">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setAddOpen(false)}
-              disabled={addSaving}
-            >
+            <Button type="button" variant="outline" onClick={() => setAddOpen(false)} disabled={addSaving}>
               {t("common.cancel")}
             </Button>
-            <Button
-              type="button"
-              onClick={confirmAdd}
-              disabled={
-                addSaving ||
-                draftMax + draftInternalMax !== draftTotalMax
-              }
-            >
+            <Button type="button" onClick={confirmAdd} disabled={addSaving || !splitValid}>
               {addSaving ? <Spinner size="sm" /> : <Plus className="h-3.5 w-3.5" />}
               {draftComputerOnly ? t("examsHub.addComputerExam") : t("examsHub.addExam")}
             </Button>
@@ -1050,7 +1398,6 @@ export default function ExamsHubPage() {
         </div>
       </InfoModal>
 
-      {/* Delete exam modal */}
       <InfoModal
         isOpen={deleteKey != null}
         onClose={() => setDeleteKey(null)}

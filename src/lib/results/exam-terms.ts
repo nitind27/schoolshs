@@ -980,4 +980,84 @@ export function metaFromTemplateTerms(
   };
 }
 
+export type ExamTermTemplateInput = {
+  key?: string;
+  labelEn: string;
+  labelGu?: string;
+  maxMarks: number;
+  totalMax?: number;
+  role?: ExamTermRole;
+  internalMax?: number;
+  examDate?: string | null;
+  subjectScope?: ExamSubjectScope;
+};
+
+/**
+ * Add or update a single exam on a class without wiping the others.
+ * `startFresh` is for first create on unused starter meta.
+ */
+export function mergeExamTermIntoMeta(
+  prev: ExamTermMeta | null,
+  item: ExamTermTemplateInput,
+  options?: { startFresh?: boolean },
+): ExamTermMeta {
+  const baseTerms = options?.startFresh ? [] : prev?.terms ?? [];
+  const isFinal = item.role === "final" || item.key === "final";
+  const older = item.key
+    ? baseTerms.find((term) => term.key === item.key)
+    : undefined;
+
+  const incoming: ExamTermDef = isFinal
+    ? withStatus({
+        key: "final",
+        labelEn: item.labelEn,
+        labelGu: item.labelGu || item.labelEn,
+        fieldKey: "annual",
+        role: "final",
+        maxMarks: item.maxMarks,
+        internalMax: item.internalMax ?? 0,
+        totalMax: item.totalMax ?? item.maxMarks + (item.internalMax ?? 0),
+        subjectScope: "all",
+        published: older?.published ?? false,
+        publishedAt: older?.publishedAt ?? null,
+        locked: older?.locked ?? false,
+        examDate: item.examDate ?? older?.examDate ?? null,
+      })
+    : createComponentTerm({
+        key: item.key,
+        labelEn: item.labelEn,
+        labelGu: item.labelGu,
+        maxMarks: item.maxMarks,
+        internalMax: item.internalMax,
+        totalMax: item.totalMax,
+        existingKeys: baseTerms.map((term) => term.key),
+        subjectScope: item.subjectScope === "computer" ? "computer" : "all",
+      });
+
+  if (older && incoming.key === older.key) {
+    incoming.published = older.published;
+    incoming.publishedAt = older.publishedAt;
+    incoming.locked = older.locked;
+    incoming.examDate = item.examDate ?? older.examDate ?? incoming.examDate;
+  }
+
+  let terms = baseTerms.filter((term) => term.key !== incoming.key);
+  if (incoming.role === "final") {
+    terms = terms.map((term) =>
+      term.role === "final"
+        ? { ...term, role: "component" as const }
+        : term,
+    );
+  }
+  terms.push(incoming);
+
+  const components = terms.filter((term) => term.role === "component");
+  const final = terms.find((term) => term.role === "final");
+  return {
+    version: 2,
+    terms: final ? [...components, final] : components,
+    midExamCount: components.length,
+  };
+}
+
 export { parseTermRemarks, serializeTermRemarks };
