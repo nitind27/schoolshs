@@ -123,16 +123,17 @@ export function createFinalTerm(opts?: {
   labelEn?: string;
   labelGu?: string;
 }): ExamTermDef {
+  const maxMarks = opts?.maxMarks ?? 80;
+  const internalMax = opts?.internalMax ?? 0;
   return withStatus({
     key: "final",
     labelEn: opts?.labelEn || "Final Exam",
-    labelGu: opts?.labelGu || "વાર્ષિક / અંતિમ પરીક્ષા",
+    labelGu: opts?.labelGu || "અંતિમ પરીક્ષા",
     fieldKey: "annual",
     role: "final",
-    maxMarks: opts?.maxMarks ?? 80,
-    internalMax: opts?.internalMax ?? 20,
-    totalMax:
-      opts?.totalMax ?? (opts?.maxMarks ?? 80) + (opts?.internalMax ?? 20),
+    maxMarks,
+    internalMax,
+    totalMax: opts?.totalMax ?? maxMarks + internalMax,
   });
 }
 
@@ -316,15 +317,11 @@ export function parseExamTermMeta(raw?: string | null): ExamTermMeta {
             fieldKey: t.fieldKey || LEGACY_FIELD[t.key] || String(t.key),
             role,
             maxMarks: Math.max(0, Number(t.maxMarks) || 0),
-            internalMax: Math.max(
-              0,
-              Number(t.internalMax) || (role === "final" ? 20 : 0),
-            ),
+            internalMax: Math.max(0, Number(t.internalMax) || 0),
             totalMax: Math.max(
               0,
               Number(t.totalMax) ||
-                (Number(t.maxMarks) || 0) +
-                  (Number(t.internalMax) || (role === "final" ? 20 : 0)),
+                (Number(t.maxMarks) || 0) + (Number(t.internalMax) || 0),
             ),
             subjectScope:
               role === "final" || t.subjectScope !== "computer" ? "all" : "computer",
@@ -336,12 +333,16 @@ export function parseExamTermMeta(raw?: string | null): ExamTermMeta {
         });
 
       // Ensure exactly one final at end
-      let finals = terms.filter((t) => t.role === "final");
-      let components = terms.filter((t) => t.role === "component");
-      if (!finals.length) finals = [createFinalTerm()];
-      // Do NOT force a mid1 — a template with only a final exam is valid
-      const final = finals[finals.length - 1]!;
-      const ordered = [...components, final];
+      const finals = terms.filter((t) => t.role === "final");
+      const components = terms.filter((t) => t.role === "component");
+      // Do NOT auto-inject a final — use exactly what was saved
+      if (!finals.length && !components.length) {
+        // Truly empty — nothing was saved yet
+        return defaultExamTermMeta(2);
+      }
+      const ordered = finals.length
+        ? [...components, finals[finals.length - 1]!]
+        : components; // single-or-multi component only, no final
       return {
         version: 2,
         terms: ordered,
@@ -365,10 +366,10 @@ export function parseExamTermMeta(raw?: string | null): ExamTermMeta {
 
 export function serializeExamTermMeta(meta: ExamTermMeta): string {
   const components = meta.terms.filter((t) => t.role === "component");
-  const final = meta.terms.find((t) => t.role === "final") || createFinalTerm();
+  const final = meta.terms.find((t) => t.role === "final");
   const normalized: ExamTermMeta = {
     version: 2,
-    terms: [...components, final],
+    terms: final ? [...components, final] : components,
     midExamCount: components.length,
   };
   return JSON.stringify(normalized);
@@ -918,12 +919,18 @@ export function metaFromTemplateTerms(
 
   for (const item of items) {
     if (item.role === "final" || item.key === "final") {
-      final = createFinalTerm({
-        maxMarks: item.maxMarks,
-        internalMax: item.internalMax,
-        totalMax: item.totalMax,
+      const maxMarks = item.maxMarks;
+      const internalMax = item.internalMax ?? 0;
+      final = withStatus({
+        key: "final",
         labelEn: item.labelEn,
-        labelGu: item.labelGu,
+        labelGu: item.labelGu || item.labelEn,
+        fieldKey: "annual",
+        role: "final",
+        maxMarks,
+        internalMax,
+        totalMax: item.totalMax ?? maxMarks + internalMax,
+        subjectScope: "all",
       });
       if (item.examDate) final.examDate = item.examDate;
       continue;
@@ -944,7 +951,7 @@ export function metaFromTemplateTerms(
 
   // If no explicit final was given but we have components, promote the last
   // non-computer component to final so the term list always has a final entry.
-  if (!final) {
+  if (!final && components.length > 0) {
     const lastGeneralIdx = [...components]
       .map((c, i) => ({ c, i }))
       .filter(({ c }) => c.subjectScope !== "computer")
@@ -958,15 +965,13 @@ export function metaFromTemplateTerms(
         fieldKey: "annual",
       });
       components.splice(lastGeneralIdx.i, 1);
-    } else {
-      // Absolute fallback — should never reach here with valid input
-      final = createFinalTerm();
     }
   }
 
-  // If there are no components at all (user has only a single final exam),
-  // that is valid. Don't force-add a mid1.
-  const orderedTerms = [...components, final];
+  // Build ordered terms — components first, then final (if any)
+  const orderedTerms: ExamTermDef[] = final
+    ? [...components, final]
+    : components;
 
   return {
     version: 2,

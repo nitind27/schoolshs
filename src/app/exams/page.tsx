@@ -61,21 +61,12 @@ function defaultTemplate(): TemplateItem[] {
   return [
     {
       key: "mid1",
-      labelEn: "Mid Exam 1",
-      labelGu: "મધ્ય પરીક્ષા 1",
+      labelEn: "Exam 1",
+      labelGu: "પરીક્ષા 1",
       totalMax: 100,
-      maxMarks: 80,
-      internalMax: 20,
+      maxMarks: 100,
+      internalMax: 0,
       role: "component",
-    },
-    {
-      key: "final",
-      labelEn: "Final Exam",
-      labelGu: "અંતિમ પરીક્ષા",
-      totalMax: 100,
-      maxMarks: 80,
-      role: "final",
-      internalMax: 20,
     },
   ];
 }
@@ -147,8 +138,8 @@ export default function ExamsHubPage() {
   const [addSaving, setAddSaving] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [draftNameGu, setDraftNameGu] = useState("");
-  const [draftMax, setDraftMax] = useState(50);
-  const [draftInternalMax, setDraftInternalMax] = useState(20);
+  const [draftMax, setDraftMax] = useState(100);
+  const [draftInternalMax, setDraftInternalMax] = useState(0);
   const [draftTotalMax, setDraftTotalMax] = useState(100);
   const [draftComputerOnly, setDraftComputerOnly] = useState(false);
   const [deleteKey, setDeleteKey] = useState<string | null>(null);
@@ -210,12 +201,10 @@ export default function ExamsHubPage() {
           labelGu: item.labelGu || item.labelEn,
           totalMax:
             item.totalMax ??
-            item.maxMarks +
-              (item.internalMax ?? (item.role === "final" ? 20 : 0)),
+            item.maxMarks + (item.internalMax ?? 0),
           maxMarks: item.maxMarks,
           role: item.role === "final" ? "final" : "component",
-          internalMax:
-            item.internalMax ?? (item.role === "final" ? 20 : 0),
+          internalMax: item.internalMax ?? 0,
           subjectScope:
             item.role === "final" || item.subjectScope !== "computer"
               ? "all"
@@ -264,8 +253,8 @@ export default function ExamsHubPage() {
       setDraftName(`Exam ${n}`);
       setDraftNameGu(`પરીક્ષા ${n}`);
       setDraftTotalMax(100);
-      setDraftMax(80);
-      setDraftInternalMax(20);
+      setDraftMax(100);
+      setDraftInternalMax(0);
       setDraftComputerOnly(false);
     }
     setAddOpen(true);
