@@ -1,3 +1,5 @@
+import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
+
 /** Songadh Primary (24261004403 / 24261004404) — પ્રગતિપત્રક */
 
 export const PRAGATI_PATRAK_SCHOOL_CODES = ["24261004403", "24261004404"] as const;
@@ -404,5 +406,5 @@ export const PRAGATI_SCHOOL_BRAND = {
   trustGu: "શ્રી સાર્વજનિક એજ્યુકેશન મંડળ સંચાલિત",
   nameGu: "શ્રી સાર્વજનિક હાઈસ્કુલ ફોર્ટ-સોનગઢ",
   sectionGu: "પ્રાથમિક વિભાગ - સોનગઢ",
-  logoPath: "/shs/logo.png",
+  logoPath: SCHOOL_LOGO_URL,
 } as const;

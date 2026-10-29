@@ -4,7 +4,6 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import {
   ArrowLeft,
-  Building2,
   CheckCircle2,
   Clock3,
   Copy,
@@ -16,6 +15,7 @@ import {
   Phone,
   Send,
 } from "lucide-react";
+import { SchoolLogo } from "@/components/brand/school-logo";
 import { Spinner } from "@/components/ui/loader";
 import {
   CONTACT_LIMITS,
@@ -125,9 +125,7 @@ export default function ContactSupportPage() {
       <header className="contact-topbar">
         <div className="contact-shell contact-topbar-inner">
           <Link href="/" className="contact-brand">
-            <span className="contact-brand-mark" aria-hidden>
-              <Building2 className="h-4 w-4" />
-            </span>
+            <SchoolLogo size="sm" />
             <span className="contact-brand-text">
               <strong>{APP_NAME}</strong>
               <em>Support</em>

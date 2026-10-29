@@ -28,6 +28,10 @@ export const metadata: Metadata = {
   },
   description:
     "Codeat Education — multi-school platform for scholarship, results, accounting, certificates and role-based portals",
+  icons: {
+    icon: [{ url: "/logo/school-logo.png", type: "image/png" }],
+    apple: [{ url: "/logo/school-logo.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({

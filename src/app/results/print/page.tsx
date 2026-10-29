@@ -28,6 +28,7 @@ import {
   shouldUsePragatiPatrakResult,
 } from "@/lib/results/pragati-patrak";
 import { CERTIFICATE_PACK_BRANDS } from "@/lib/certificates/school-brand";
+import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
 import { usePragatiLayout } from "@/components/results/pragati-layout-editor";
 
 type PrintCard = ResultCardData & {
@@ -197,7 +198,7 @@ function PrintInner() {
           ? "પ્રાથમિક અને ઉચ્ચ પ્રાથમિક વિભાગ - સોનગઢ"
           : "પ્રાથમિક વિભાગ - સોનગઢ",
       diseCode: packBrand.diseCode || effectiveSchoolCode,
-      logoPath: "/shs/logo.png",
+      logoPath: SCHOOL_LOGO_URL,
     },
   }));
 

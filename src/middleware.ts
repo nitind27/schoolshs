@@ -33,6 +33,7 @@ const PUBLIC_PATHS = [
   "/api/letterhead/share",
   "/student-edit",
   "/api/student-edit-link",
+  "/logo",
 ];
 
 const ROLE_ROUTES: Record<string, UserRole[]> = {
@@ -435,6 +436,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|shs/|video/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|logo/|shs/|video/).*)",
   ],
 };

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Languages, LogOut, Sparkles, User } from "lucide-react";
+import { ChevronDown, Languages, LogOut, User } from "lucide-react";
+import { SchoolLogo } from "@/components/brand/school-logo";
 import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/i18n/locale-provider";
 import { LOCALES, type Locale } from "@/i18n/types";
@@ -146,15 +147,8 @@ export function TopNavbar({
       {/* Brand first */}
       <div className="tn-shell-left mr-auto flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
         {!showMegaMenu && (
-          <span
-            className={cn(
-              "hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white sm:inline-flex",
-              isAdmin
-                ? "bg-gradient-to-br from-sky-500 to-sky-700 shadow-sm shadow-sky-500/30"
-                : "bg-[var(--tn-ink)]",
-            )}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline-flex">
+            <SchoolLogo size="xs" />
           </span>
         )}
 

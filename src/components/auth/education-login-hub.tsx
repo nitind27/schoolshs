@@ -4,7 +4,8 @@ import { Spinner } from "@/components/ui/loader";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Lock, Mail, Building2, ArrowRight, ArrowLeft, Eye, EyeOff, Check, School } from "lucide-react";
+import { Lock, Mail, Building2, ArrowRight, ArrowLeft, Eye, EyeOff, Check } from "lucide-react";
+import { SchoolLogo } from "@/components/brand/school-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { LoginBrandBook } from "@/components/auth/login-brand-book";
 import { LoginCaptcha } from "@/components/auth/login-captcha";
@@ -545,9 +546,7 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
       <header className="auth-login-navbar">
         <div className="auth-login-navbar-inner">
           <Link href="/" className="auth-portal-logo">
-            <div className="auth-portal-logo-mark">
-              <School className="h-5 w-5" strokeWidth={1.75} />
-            </div>
+            <SchoolLogo size="md" />
             <div className="auth-login-brand-copy">
               <div className="auth-portal-logo-eyebrow">
                 {isCaPortal ? t("login.caLoginBadge") : t("loginHub.badge")}

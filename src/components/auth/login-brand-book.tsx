@@ -15,6 +15,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+import { SchoolLogo } from "@/components/brand/school-logo";
 import { useT } from "@/i18n/locale-provider";
 
 type SchoolBranding = {
@@ -221,6 +222,9 @@ export function LoginBrandBook({
 
           <div className={`auth-book-leaf is-${phase}`}>
             <article className="auth-book-face">
+              <div className="auth-book-crest">
+                <SchoolLogo size="lg" />
+              </div>
               <header className="auth-book-face-top">
                 <span className="auth-book-eyebrow">{page.eyebrow}</span>
                 <span className="auth-book-page-num">

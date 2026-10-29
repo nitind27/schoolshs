@@ -1327,6 +1327,13 @@ html.locale-gu .auth-portal h1 {
   overflow: hidden;
 }
 
+.auth-book-crest {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 0.85rem;
+  flex-shrink: 0;
+}
+
 .auth-book-face-top {
   display: flex;
   align-items: center;

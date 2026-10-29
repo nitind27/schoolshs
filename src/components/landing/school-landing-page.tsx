@@ -19,12 +19,12 @@ import {
   Building2,
   UserCheck,
   Lock,
-  School,
   Send,
   CheckCircle2,
   X,
   type LucideIcon,
 } from "lucide-react";
+import { SchoolLogo } from "@/components/brand/school-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { FooterHolidayCalendar } from "@/components/landing/footer-holiday-calendar";
 import { LandingExpertModal } from "@/components/landing/landing-expert-modal";
@@ -285,9 +285,7 @@ export function SchoolLandingPage() {
       <header className={`lp-header ${scrolled ? "is-scrolled" : ""}`}>
         <div className="lp-shell lp-header-inner">
           <Link href="/" className="lp-logo">
-            <span className="lp-brand-mark" aria-hidden>
-              <School className="h-5 w-5" />
-            </span>
+            <SchoolLogo size="md" />
             <span className="lp-logo-text">
               <span className="lp-display">{t("landing.productName")}</span>
               <span>{t("landing.productTag")}</span>
@@ -330,6 +328,9 @@ export function SchoolLandingPage() {
 
         <div className="lp-shell lp-hero-content landing-fade landing-fade--show">
           <div className="lp-hero-panel">
+            <div className="lp-hero-crest">
+              <SchoolLogo size="xl" />
+            </div>
             <p className="lp-hero-kicker">
               <span className="lp-hero-dot" />
               {t("landing.heroBadge")}
@@ -647,9 +648,7 @@ export function SchoolLandingPage() {
           <div className="lp-footer-main">
             <div className="lp-footer-brand">
               <Link href="/" className="lp-logo lp-footer-logo">
-                <span className="lp-brand-mark" aria-hidden>
-                  <School className="h-5 w-5" />
-                </span>
+                <SchoolLogo size="md" />
                 <span className="lp-logo-text">
                   <span className="lp-display">{t("landing.productName")}</span>
                   <span>{t("landing.productTag")}</span>

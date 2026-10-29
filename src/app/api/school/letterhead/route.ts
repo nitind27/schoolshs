@@ -52,7 +52,7 @@ export async function GET() {
       });
 
     // Prefer settings logo when letterhead has no custom logo
-    if ((!data.logo || data.logo === "/shs/logo.png") && school.settings?.logoPath) {
+    if ((!data.logo || data.logo === "/shs/logo.png" || data.logo === "/logo/school-logo.png") && school.settings?.logoPath) {
       data.logo = school.settings.logoPath;
     }
 

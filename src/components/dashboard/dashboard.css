@@ -3149,13 +3149,16 @@ html.locale-gu .ops-dash .dashboard-hero-greeting {
 
 .dashboard-hero-logo-wrap {
   flex-shrink: 0;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 1rem;
+  width: 3.85rem;
+  height: 3.85rem;
+  border-radius: 1.05rem;
   overflow: hidden;
-  background: rgb(255 255 255 / 0.95);
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(145deg, #d4a017, #8b1e2d, #0d6e6e) border-box;
+  border: 1.5px solid transparent;
   box-shadow:
-    0 8px 24px -12px rgb(0 0 0 / 0.45),
+    0 10px 24px -12px rgb(0 0 0 / 0.45),
     inset 0 0 0 1px rgb(255 255 255 / 0.5);
 }
 

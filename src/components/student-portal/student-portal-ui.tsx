@@ -1,5 +1,6 @@
 "use client";
 
+import { SchoolLogo } from "@/components/brand/school-logo";
 import { Spinner } from "@/components/ui/loader";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -13,7 +14,6 @@ import {
   X,
   Printer,
   User,
-  GraduationCap,
   ShieldCheck,
   CheckCircle2,
   Clock,
@@ -537,9 +537,7 @@ export function StudentDigitalIdModal({
 
           {/* School Header */}
           <div className="relative z-10 flex items-center gap-3 pb-4 border-b border-white/15">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500 text-slate-950 font-black">
-              <GraduationCap className="h-6 w-6" />
-            </div>
+            <SchoolLogo size="sm" />
             <div className="min-w-0 flex-1">
               <h4 className="text-sm font-black tracking-wide uppercase text-teal-400 truncate">
                 {schoolName}

@@ -1,3 +1,5 @@
+import { SCHOOL_LOGO_URL } from "@/lib/school-assets";
+
 /**
  * Default official letterhead payloads keyed by school code.
  * Used when a school has never saved letterheadJson yet.
@@ -58,7 +60,7 @@ export const SONGADH_PRIMARY_LETTERHEAD: LetterheadDocumentState = {
   dateYear: "\u00a0",
   pageContents: [""],
   pageCount: 1,
-  logo: "/shs/logo.png",
+  logo: SCHOOL_LOGO_URL,
   stamps: [],
 };
 
@@ -106,7 +108,7 @@ export function defaultLetterheadForSchoolCode(
     dateYear: "\u00a0",
     pageContents: [""],
     pageCount: 1,
-    logo: "/shs/logo.png",
+    logo: SCHOOL_LOGO_URL,
     stamps: [],
   };
 }

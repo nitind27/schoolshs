@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowUp,
-  BookOpen,
   Camera,
   Database,
   GraduationCap,
@@ -15,6 +14,7 @@ import {
   Smartphone,
   Users,
 } from "lucide-react";
+import { SchoolLogo } from "@/components/brand/school-logo";
 import "./privacy.css";
 
 const LAST_UPDATED = "10 August 2026";
@@ -78,9 +78,7 @@ export default function PrivacyPolicyPage() {
       <header className="privacy-topbar">
         <div className="privacy-topbar-inner">
           <Link href="/" className="privacy-brand">
-            <span className="privacy-brand-mark" aria-hidden>
-              <BookOpen className="h-4 w-4" />
-            </span>
+            <SchoolLogo size="sm" />
             <span>
               <strong>{APP_NAME}</strong>
               <em>Privacy Policy</em>

@@ -39,6 +39,7 @@ import {
   UserX,
   Images,
 } from "lucide-react";
+import { SchoolLogo } from "@/components/brand/school-logo";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import {
@@ -545,15 +546,7 @@ export function Sidebar() {
             className="flex min-w-0 items-center gap-3"
             title={user?.schoolName || t("landing.productName")}
           >
-            <div
-              className="shrink-0 rounded-xl p-2.5 flex items-center justify-center"
-              style={{
-                background: "var(--sidebar-mark)",
-                border: "1px solid var(--sidebar-mark-line)",
-              }}
-            >
-              <GraduationCap className="h-5 w-5 text-white" />
-            </div>
+            <SchoolLogo size="sm" />
             <div className="shell-brand-text min-w-0">
               <h1 className="truncate text-sm font-bold text-[#F9FAFB] leading-tight">
                 {user?.schoolName || t("landing.productName")}

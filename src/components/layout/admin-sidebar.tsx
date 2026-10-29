@@ -21,6 +21,7 @@ import {
   KeyRound,
   type LucideIcon,
 } from "lucide-react";
+import { SchoolLogo } from "@/components/brand/school-logo";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/locale-provider";
 import { TopNavbar } from "@/components/layout/top-navbar";
@@ -206,7 +207,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             title={t("nav.superAdmin")}
           >
             <div className="admin-brand__mark">
-              <Shield className="h-5 w-5" strokeWidth={2.25} />
+              <SchoolLogo size="sm" />
             </div>
             <div className="admin-brand__text shell-brand-text">
               <p className="admin-brand__kicker">{t("admin.shellKicker")}</p>

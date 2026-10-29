@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, Menu, X, ChevronRight } from "lucide-react";
+import { Menu, X, ChevronRight } from "lucide-react";
+import { SchoolLogo } from "@/components/brand/school-logo";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { TopNavbar } from "@/components/layout/top-navbar";
@@ -76,7 +77,7 @@ export function PortalSidebar({
   navItems,
   navEntries,
   homeHref,
-  roleIcon: RoleIcon,
+  roleIcon: _RoleIcon,
   footerExtra,
 }: {
   title: string;
@@ -147,16 +148,7 @@ export function PortalSidebar({
           style={{ borderColor: "rgba(255,255,255,.08)" }}
         >
           <Link href={homeHref} className="flex min-w-0 items-center gap-3 group" title={title}>
-            <div
-              className="shrink-0 rounded-xl p-2.5 flex items-center justify-center"
-              style={{ background: `${colors.accent}22`, border: `1px solid ${colors.accent}44` }}
-            >
-              {RoleIcon ? (
-                <RoleIcon className="h-5 w-5 text-white" />
-              ) : (
-                <GraduationCap className="h-5 w-5 text-white" />
-              )}
-            </div>
+            <SchoolLogo size="sm" />
             <div className="shell-brand-text min-w-0">
               <h1 className="truncate text-sm font-bold text-white leading-tight">{title}</h1>
               <p className={cn("truncate text-xs leading-tight mt-0.5", colors.text)}>{subtitle}</p>

@@ -103,7 +103,7 @@ function SongadhSeal() {
   return (
     <img
       className="pp-seal"
-      src="/logo/result/result.png"
+      src="/logo/school-logo.png"
       alt=""
     />
   );

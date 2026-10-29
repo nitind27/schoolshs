@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Search } from "lucide-react";
+import { SchoolLogo } from "@/components/brand/school-logo";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
@@ -161,10 +162,13 @@ export function StudentEditPortal({ initialCode = "" }: { initialCode?: string }
   return (
     <main className="min-h-screen bg-[#eef3f8] px-3 py-6 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-teal-800">Codeat Education</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("editLink.portalTitle")}</h1>
-          <p className="text-sm text-slate-500">{className || t("editLink.portalSubtitle")}</p>
+        <header className="mb-4 flex items-center gap-3">
+          <SchoolLogo size="md" />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-teal-800">Codeat Education</p>
+            <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("editLink.portalTitle")}</h1>
+            <p className="text-sm text-slate-500">{className || t("editLink.portalSubtitle")}</p>
+          </div>
         </header>
 
         {message ? (
