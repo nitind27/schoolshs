@@ -29,8 +29,13 @@ export const metadata: Metadata = {
   description:
     "Codeat Education — multi-school platform for scholarship, results, accounting, certificates and role-based portals",
   icons: {
-    icon: [{ url: "/logo/school-logo.png", type: "image/png" }],
-    apple: [{ url: "/logo/school-logo.png", type: "image/png" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48", type: "image/x-icon" },
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
+      { url: "/logo/favicon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
 };
 
