@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { AuthError, requireSchoolAuth } from "@/lib/auth";
 import { ensureClassExam } from "@/lib/class-subjects";
 import { prisma } from "@/lib/db";
@@ -6,9 +6,46 @@ import { compareRollNumbers } from "@/lib/attendance";
 import { isEarlierDivision, sectionCode, type ExamSeatSeries } from "@/lib/exam-seat-series";
 import { parseExamTermMeta } from "@/lib/results/exam-terms";
 import { assertTeacherHomeroomAccess } from "@/lib/teacher-attendance";
+import { mobileJson, mobileOptions } from "@/lib/mobile-api";
 
 const ROLES = ["school_admin", "clerk", "teacher"] as const;
 const SEAT_PATTERN = /^[A-Z0-9][A-Z0-9/_-]{0,39}$/;
+
+export const dynamic = "force-dynamic";
+
+export async function OPTIONS(request: NextRequest) {
+  return mobileOptions(request.headers.get("origin"));
+}
+
+function readTermKey(source: { get?: (key: string) => string | null } | Record<string, unknown>): string {
+  const pick = (key: string) => {
+    if (typeof (source as { get?: (k: string) => string | null }).get === "function") {
+      return String((source as { get: (k: string) => string | null }).get(key) || "").trim();
+    }
+    const value = (source as Record<string, unknown>)[key];
+    return String(value ?? "").trim();
+  };
+  return pick("termKey") || pick("term") || pick("examTerm") || "";
+}
+
+function resolveTermKey(
+  terms: Array<{ key: string }>,
+  requested: string,
+  assignmentCounts: Map<string, number>,
+): string {
+  if (requested && terms.some((term) => term.key === requested)) return requested;
+  let best = "";
+  let bestCount = 0;
+  for (const term of terms) {
+    const count = assignmentCounts.get(term.key) || 0;
+    if (count > bestCount) {
+      best = term.key;
+      bestCount = count;
+    }
+  }
+  if (best) return best;
+  return terms.find((term) => term.key !== "final")?.key || terms[0]?.key || "";
+}
 
 async function seatSeriesForClass(
   schoolId: string,
@@ -54,12 +91,33 @@ async function getClassForSession(
 }
 
 export async function GET(request: NextRequest) {
+  const origin = request.headers.get("origin");
   try {
     const session = await requireSchoolAuth([...ROLES]);
-    const classId = request.nextUrl.searchParams.get("classId");
-    const termKey = request.nextUrl.searchParams.get("termKey");
-    const academicYear =
-      request.nextUrl.searchParams.get("academicYear") || undefined;
+    const params = request.nextUrl.searchParams;
+    let classId = params.get("classId") || "";
+    const examIdParam = params.get("examId") || "";
+    const requestedTerm = readTermKey(params);
+    const academicYear = params.get("academicYear") || undefined;
+
+    if (!classId && examIdParam) {
+      const examRow = await prisma.exam.findFirst({
+        where: { id: examIdParam, schoolId: session.schoolId },
+        select: { standard: true, section: true, academicYear: true },
+      });
+      if (examRow) {
+        const matched = await prisma.schoolClass.findFirst({
+          where: {
+            schoolId: session.schoolId,
+            standard: examRow.standard || undefined,
+            section: examRow.section || undefined,
+            academicYear: examRow.academicYear,
+          },
+          select: { id: true },
+        });
+        if (matched) classId = matched.id;
+      }
+    }
 
     const classes = await prisma.schoolClass.findMany({
       where: {
@@ -86,7 +144,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!classId) {
-      return NextResponse.json({ classes, terms: [], students: [] });
+      return mobileJson({ classes, terms: [], students: [], examId: examIdParam || null }, undefined, origin);
     }
     if (!classes.some((item) => item.id === classId)) {
       throw new AuthError("Class not found or access denied", 404);
@@ -102,22 +160,6 @@ export async function GET(request: NextRequest) {
       examDate: term.examDate,
       published: term.published,
     }));
-
-    if (!termKey) {
-      return NextResponse.json({
-        classes,
-        examId: exam.id,
-        terms,
-        students: [],
-        seatSeries,
-      });
-    }
-    if (!terms.some((term) => term.key === termKey)) {
-      return NextResponse.json(
-        { error: "Selected exam is not configured for this class" },
-        { status: 400 },
-      );
-    }
 
     const [students, assignments] = await Promise.all([
       prisma.student.findMany({
@@ -147,18 +189,55 @@ export async function GET(request: NextRequest) {
         },
       }),
       prisma.examSeatAssignment.findMany({
-        where: { schoolId: session.schoolId, examId: exam.id, termKey, classId },
-        select: { studentId: true, seatNumber: true, isPublished: true },
+        where: { schoolId: session.schoolId, examId: exam.id, classId },
+        select: {
+          studentId: true,
+          seatNumber: true,
+          isPublished: true,
+          termKey: true,
+        },
       }),
     ]);
+
+    const assignmentCounts = new Map<string, number>();
+    for (const item of assignments) {
+      assignmentCounts.set(item.termKey, (assignmentCounts.get(item.termKey) || 0) + 1);
+    }
+    const termKey = resolveTermKey(terms, requestedTerm, assignmentCounts);
+    if (requestedTerm && terms.length && !terms.some((term) => term.key === requestedTerm)) {
+      return mobileJson(
+        { error: "Selected exam is not configured for this class" },
+        { status: 400 },
+        origin,
+      );
+    }
+
+    const publishedForTerm = assignments.filter(
+      (item) => (!termKey || item.termKey === termKey) && item.isPublished,
+    ).length;
+    const assignedForTerm = assignments.filter((item) => !termKey || item.termKey === termKey).length;
     const seatByStudent = new Map(
-      assignments.map((item) => [item.studentId, item.seatNumber]),
+      assignments
+        .filter((item) => !termKey || item.termKey === termKey)
+        .map((item) => [item.studentId, item.seatNumber]),
     );
-    const publishedCount = assignments.filter((item) => item.isPublished).length;
+    const seatsByStudent = new Map<string, Array<{ termKey: string; seatNumber: string; isPublished: boolean }>>();
+    for (const item of assignments) {
+      const list = seatsByStudent.get(item.studentId) || [];
+      list.push({
+        termKey: item.termKey,
+        seatNumber: item.seatNumber,
+        isPublished: item.isPublished,
+      });
+      seatsByStudent.set(item.studentId, list);
+    }
+
     const rows = students
       .map((student) => ({
         ...student,
         seatNumber: seatByStudent.get(student.id) || "",
+        termKey: termKey || null,
+        seats: seatsByStudent.get(student.id) || [],
       }))
       .sort(
         (a, b) =>
@@ -167,52 +246,95 @@ export async function GET(request: NextRequest) {
           a.firstName.localeCompare(b.firstName, undefined, { sensitivity: "base" }),
       );
 
-    return NextResponse.json({
-      classes,
-      examId: exam.id,
-      terms,
-      seatSeries,
-      isPublished: assignments.length > 0 && publishedCount === assignments.length,
-      publishedCount,
-      assignedCount: assignments.length,
-      students: rows,
-    });
+    return mobileJson(
+      {
+        classes,
+        examId: exam.id,
+        termKey: termKey || null,
+        terms,
+        seatSeries,
+        isPublished: assignedForTerm > 0 && publishedForTerm === assignedForTerm,
+        publishedCount: publishedForTerm,
+        assignedCount: assignedForTerm,
+        students: rows,
+      },
+      undefined,
+      origin,
+    );
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return mobileJson({ error: error.message }, { status: error.status }, origin);
     }
     console.error("GET /api/exam-seat-numbers:", error);
-    return NextResponse.json(
+    return mobileJson(
       { error: "Failed to load exam seat numbers" },
       { status: 500 },
+      origin,
     );
   }
 }
 
 export async function PATCH(request: NextRequest) {
+  const origin = request.headers.get("origin");
   try {
     const session = await requireSchoolAuth([...ROLES]);
     const body = await request.json();
-    const classId = String(body.classId || "").trim();
-    const termKey = String(body.termKey || "").trim();
+    let classId = String(body.classId || "").trim();
+    const examIdParam = String(body.examId || "").trim();
     const action = String(body.action || "save").trim();
 
-    if (!classId || !termKey) {
-      return NextResponse.json(
+    if (!classId && examIdParam) {
+      const examRow = await prisma.exam.findFirst({
+        where: { id: examIdParam, schoolId: session.schoolId },
+        select: { standard: true, section: true, academicYear: true },
+      });
+      if (examRow) {
+        const matched = await prisma.schoolClass.findFirst({
+          where: {
+            schoolId: session.schoolId,
+            standard: examRow.standard || undefined,
+            section: examRow.section || undefined,
+            academicYear: examRow.academicYear,
+          },
+          select: { id: true },
+        });
+        if (matched) classId = matched.id;
+      }
+    }
+
+    if (!classId) {
+      return mobileJson(
         { error: "Class and exam are required" },
         { status: 400 },
+        origin,
       );
     }
 
     const schoolClass = await getClassForSession(session, classId);
     const { exam } = await ensureClassExam(session.schoolId, schoolClass);
-    const termExists = parseExamTermMeta(exam.termMeta).terms.some(
-      (term) => term.key === termKey,
-    );
+    const terms = parseExamTermMeta(exam.termMeta).terms;
+    const existingAssignments = await prisma.examSeatAssignment.findMany({
+      where: { schoolId: session.schoolId, examId: exam.id, classId },
+      select: { termKey: true },
+    });
+    const assignmentCounts = new Map<string, number>();
+    for (const item of existingAssignments) {
+      assignmentCounts.set(item.termKey, (assignmentCounts.get(item.termKey) || 0) + 1);
+    }
+    const termKey = resolveTermKey(terms, readTermKey(body), assignmentCounts);
+    if (!termKey) {
+      return mobileJson(
+        { error: "Create an exam for this class first" },
+        { status: 400 },
+        origin,
+      );
+    }
+    const termExists = terms.some((term) => term.key === termKey);
     if (!termExists) {
-      return NextResponse.json(
+      return mobileJson(
         { error: "Selected exam is not configured for this class" },
         { status: 400 },
+        origin,
       );
     }
 
@@ -228,9 +350,10 @@ export async function PATCH(request: NextRequest) {
           },
         });
         if (!assigned) {
-          return NextResponse.json(
+          return mobileJson(
             { error: "Assign seat numbers before publishing to students" },
             { status: 400 },
+            origin,
           );
         }
       }
@@ -246,11 +369,17 @@ export async function PATCH(request: NextRequest) {
           publishedAt: isPublished ? new Date() : null,
         },
       });
-      return NextResponse.json({
-        success: true,
-        updated: result.count,
-        isPublished,
-      });
+      return mobileJson(
+        {
+          success: true,
+          updated: result.count,
+          isPublished,
+          examId: exam.id,
+          termKey,
+        },
+        undefined,
+        origin,
+      );
     }
 
     const updates = (Array.isArray(body.updates) ? body.updates : []) as Array<{
@@ -259,9 +388,10 @@ export async function PATCH(request: NextRequest) {
     }>;
 
     if (!updates.length) {
-      return NextResponse.json(
+      return mobileJson(
         { error: "Class, exam and student seat numbers are required" },
         { status: 400 },
+        origin,
       );
     }
 
@@ -270,18 +400,19 @@ export async function PATCH(request: NextRequest) {
       seatNumber: String(item.seatNumber || "").trim().toUpperCase(),
     }));
     if (normalized.some((item) => !item.studentId)) {
-      return NextResponse.json({ error: "Invalid student" }, { status: 400 });
+      return mobileJson({ error: "Invalid student" }, { status: 400 }, origin);
     }
     const invalid = normalized.find(
       (item) => item.seatNumber && !SEAT_PATTERN.test(item.seatNumber),
     );
     if (invalid) {
-      return NextResponse.json(
+      return mobileJson(
         {
           error:
             "Seat numbers may contain only letters, numbers, hyphen, slash or underscore (maximum 40 characters)",
         },
         { status: 400 },
+        origin,
       );
     }
 
@@ -295,9 +426,10 @@ export async function PATCH(request: NextRequest) {
       select: { id: true },
     });
     if (currentStudents.length !== new Set(normalized.map((x) => x.studentId)).size) {
-      return NextResponse.json(
+      return mobileJson(
         { error: "Some students are not in the selected class" },
         { status: 400 },
+        origin,
       );
     }
 
@@ -305,9 +437,10 @@ export async function PATCH(request: NextRequest) {
       .map((item) => item.seatNumber.toLowerCase())
       .filter(Boolean);
     if (new Set(nonEmpty).size !== nonEmpty.length) {
-      return NextResponse.json(
+      return mobileJson(
         { error: "Seat numbers must be unique for the selected exam" },
         { status: 400 },
+        origin,
       );
     }
 
@@ -350,21 +483,27 @@ export async function PATCH(request: NextRequest) {
       updated++;
     }
 
-    return NextResponse.json({ success: true, updated, isPublished: false });
+    return mobileJson(
+      { success: true, updated, isPublished: false, examId: exam.id, termKey },
+      undefined,
+      origin,
+    );
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return mobileJson({ error: error.message }, { status: error.status }, origin);
     }
     if ((error as { code?: string }).code === "P2002") {
-      return NextResponse.json(
+      return mobileJson(
         { error: "Seat numbers must be unique for the selected exam" },
         { status: 400 },
+        origin,
       );
     }
     console.error("PATCH /api/exam-seat-numbers:", error);
-    return NextResponse.json(
+    return mobileJson(
       { error: "Failed to save exam seat numbers" },
       { status: 500 },
+      origin,
     );
   }
 }

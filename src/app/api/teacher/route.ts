@@ -125,19 +125,54 @@ export async function GET(request: NextRequest) {
     let boys = 0;
     let girls = 0;
     let totalStudents = 0;
-    for (const cls of scopedClasses) {
-      for (const s of cls.students) {
+    const studentIds = scopedClasses.flatMap((cls) => cls.students.map((s) => s.id));
+    const seatRows = studentIds.length
+      ? await prisma.examSeatAssignment.findMany({
+          where: { schoolId: session.schoolId, studentId: { in: studentIds } },
+          select: {
+            studentId: true,
+            examId: true,
+            termKey: true,
+            classId: true,
+            seatNumber: true,
+            isPublished: true,
+          },
+          orderBy: { updatedAt: "desc" },
+        })
+      : [];
+    const seatsByStudent = new Map<string, typeof seatRows>();
+    for (const seat of seatRows) {
+      const list = seatsByStudent.get(seat.studentId) || [];
+      list.push(seat);
+      seatsByStudent.set(seat.studentId, list);
+    }
+
+    const classesWithSeats = scopedClasses.map((cls) => ({
+      ...cls,
+      students: cls.students.map((s) => {
         totalStudents++;
         const g = (s.gender || "").toLowerCase();
         if (g.startsWith("m") || g.includes("boy")) boys++;
         else if (g.startsWith("f") || g.includes("girl")) girls++;
-      }
-    }
+        const examSeats = seatsByStudent.get(s.id) || [];
+        const primary =
+          examSeats.find((item) => item.classId === cls.id && item.isPublished) ||
+          examSeats.find((item) => item.classId === cls.id) ||
+          examSeats[0] ||
+          null;
+        return {
+          ...s,
+          seatNumber: primary?.seatNumber || "",
+          examSeatNumber: primary?.seatNumber || "",
+          examSeats,
+        };
+      }),
+    }));
 
     return mobileJson(
       {
         ...scopePayload(scope),
-        classes: scopedClasses,
+        classes: classesWithSeats,
         stats: {
           totalStudents,
           totalClasses: scopedClasses.length,

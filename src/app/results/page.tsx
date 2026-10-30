@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, ChevronRight, Users, Award, ClipboardCheck, FileSpreadsheet, Printer } from "lucide-react";
+import { BookOpen, ChevronRight, Users, Award, ClipboardCheck, FileSpreadsheet, Printer, Filter } from "lucide-react";
 import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { useT } from "@/i18n/locale-provider";
 
@@ -70,6 +70,14 @@ export default function ResultsPage() {
       accent: "bg-amber-50 text-amber-800 border-amber-200",
       iconBg: "bg-amber-600",
     },
+    {
+      href: "/results/pass-fail",
+      icon: Filter,
+      title: t("results.hubPassFail"),
+      desc: t("results.hubPassFailDesc"),
+      accent: "bg-emerald-50 text-emerald-800 border-emerald-200",
+      iconBg: "bg-emerald-600",
+    },
   ];
 
   return (
@@ -88,7 +96,7 @@ export default function ResultsPage() {
         />
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {tools.map((tool) => (
           <Link key={tool.href} href={tool.href}>
             <Card className={`h-full border hover:shadow-md transition-all ${tool.accent}`}>

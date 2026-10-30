@@ -359,6 +359,10 @@ model SchoolSettings {
    */
   examTemplate         String? @db.Text
   /**
+   * Pass percent, pass marks (out of 100), auto grade bands (JSON)
+   */
+  examRulesJson        String? @db.Text
+  /**
    * School SJED portal login — ek baar save, sab students ke liye same session
    */
   dgSjedUsername       String?

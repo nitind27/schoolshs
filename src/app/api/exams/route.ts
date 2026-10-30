@@ -112,6 +112,9 @@ export async function GET(request: NextRequest) {
           internalMax: t.internalMax,
           role: t.role,
           subjectScope: t.subjectScope === "computer" ? "computer" : "all",
+          createdById: t.createdById ?? null,
+          createdByName: t.createdByName ?? null,
+          createdAt: t.createdAt ?? null,
         })),
         terms: {
           mid1: generalComps[0]?.maxMarks ?? 50,
@@ -161,7 +164,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (action === "apply_exam") {
-      return applySingleExam(session.schoolId, body);
+      return applySingleExam(session, body);
     }
 
     if (!Array.isArray(body.templateTerms) || !body.templateTerms.length) {
@@ -234,6 +237,9 @@ export async function PUT(request: NextRequest) {
           publishedAt: older?.publishedAt ?? null,
           locked: older?.locked ?? false,
           examDate: term.examDate ?? older?.examDate ?? null,
+          createdById: older?.createdById ?? term.createdById ?? session.userId,
+          createdByName: older?.createdByName ?? term.createdByName ?? session.name,
+          createdAt: older?.createdAt ?? term.createdAt ?? new Date().toISOString(),
         };
       });
 
@@ -281,12 +287,14 @@ function hasInvalidMarksSplit(term: {
 }
 
 async function applySingleExam(
-  schoolId: string,
+  session: { schoolId: string; userId: string; name: string },
   body: {
     classIds?: unknown;
     examTerm?: ExamTermTemplateInput;
   },
 ) {
+  const schoolId = session.schoolId;
+  const createdBy = { id: session.userId, name: session.name };
   const classIds: string[] = Array.isArray(body.classIds) ? body.classIds : [];
   if (!classIds.length) {
     return NextResponse.json({ error: "Select at least one class" }, { status: 400 });
@@ -345,7 +353,10 @@ async function applySingleExam(
       );
       if (!existing) return true;
       const prev = parseExamTermMeta(existing.termMeta);
-      const next = mergeExamTermIntoMeta(prev, normalized, { startFresh: false });
+      const next = mergeExamTermIntoMeta(prev, normalized, {
+        startFresh: false,
+        createdBy,
+      });
       return !next.terms.some((term) => term.subjectScope !== "computer");
     });
     if (blocked.length) {
@@ -363,7 +374,7 @@ async function applySingleExam(
   const catalog = settings?.examTemplate
     ? parseExamTermMeta(settings.examTemplate)
     : { version: 2 as const, terms: [], midExamCount: 0 };
-  const nextCatalog = mergeExamTermIntoMeta(catalog, normalized);
+  const nextCatalog = mergeExamTermIntoMeta(catalog, normalized, { createdBy });
   await saveSchoolExamTemplate(schoolId, serializeExamTermMeta(nextCatalog));
 
   let applied = 0;
@@ -374,7 +385,7 @@ async function applySingleExam(
     const { exam } = await ensureClassExam(schoolId, schoolClass);
     const prev = parseExamTermMeta(exam.termMeta);
     const startFresh = !existing;
-    const next = mergeExamTermIntoMeta(prev, normalized, { startFresh });
+    const next = mergeExamTermIntoMeta(prev, normalized, { startFresh, createdBy });
 
     await prisma.exam.update({
       where: { id: exam.id },

@@ -23,6 +23,20 @@ export default function StudentResultsPage() {
 
   const reportCards = (student.reportCards as Record<string, unknown>[]) || [];
   const examResults = (student.examResults as Record<string, unknown>[]) || [];
+  const examSummary =
+    (student.examSummary as Array<{
+      examId: string;
+      termKey: string;
+      termLabelEn?: string;
+      termLabelGu?: string;
+      academicYear?: string;
+      seatNumber?: string;
+      obtained?: number;
+      max?: number;
+      percent?: number;
+      grade?: string;
+      result?: string;
+    }>) || [];
 
   return (
     <div className="space-y-6 max-w-5xl pb-10">
@@ -63,7 +77,55 @@ export default function StudentResultsPage() {
         </section>
       )}
 
-      {/* Report Cards List */}
+      {examSummary.length > 0 && (
+        <StudentSection
+          title={t("studentPortal.examSummaryTitle")}
+          description={t("studentPortal.examSummaryDesc")}
+          icon={Award}
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            {examSummary.map((item) => {
+              const isFail = item.result === "fail";
+              const isPass = item.result === "pass";
+              return (
+                <div
+                  key={`${item.examId}-${item.termKey}`}
+                  className="rounded-2xl border border-slate-200 bg-white p-4"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {item.termLabelGu || item.termLabelEn}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">{item.academicYear}</p>
+                    </div>
+                    <span
+                      className={
+                        isPass
+                          ? "rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800"
+                          : isFail
+                            ? "rounded-full bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-800"
+                            : "rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600"
+                      }
+                    >
+                      {isPass ? t("examResults.pass") : isFail ? t("examResults.fail") : t("examResults.pending")}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-lg font-black text-slate-900">
+                    {item.obtained}/{item.max} · {item.percent}% · {item.grade}
+                  </p>
+                  {item.seatNumber ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {t("studentPortal.seatNo")}: {item.seatNumber}
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </StudentSection>
+      )}
+
       {reportCards.length > 0 ? (
         <div className="space-y-4">
           {reportCards.map((rc) => {
@@ -143,7 +205,7 @@ export default function StudentResultsPage() {
             );
           })}
         </div>
-      ) : (
+      ) : examSummary.length === 0 ? (
         <StudentEmptyState
           icon={Award}
           title={t("results.notPublished") || "No Published Results"}
@@ -152,7 +214,7 @@ export default function StudentResultsPage() {
             "Report cards will appear here once term exams are evaluated and published by your class teacher."
           }
         />
-      )}
+      ) : null}
 
       {/* Subject-Wise Marks Breakdown Table */}
       {examResults.length > 0 && (

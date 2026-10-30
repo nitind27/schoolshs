@@ -90,6 +90,8 @@ export type StudentPortalData = Record<string, unknown> & {
   reportCards?: unknown[];
   examResults?: unknown[];
   examSeatAssignments?: unknown[];
+  examSummary?: unknown[];
+  seatNumber?: string | null;
 };
 
 type StudentCtx = {

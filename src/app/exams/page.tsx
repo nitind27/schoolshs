@@ -45,6 +45,7 @@ type TemplateItem = {
   role: ExamTermRole;
   internalMax?: number;
   subjectScope?: ExamSubjectScope;
+  createdByName?: string | null;
 };
 
 type ClassExamRow = {
@@ -693,6 +694,11 @@ export default function ExamsHubPage() {
       icon={<BookOpenCheck className="h-5 w-5" />}
       actions={
         <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+          <Link href="/results/pass-fail" className="w-full sm:w-auto">
+            <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto">
+              {t("examsHub.passFail")}
+            </Button>
+          </Link>
           <Link href="/exam-seat-numbers" className="w-full sm:w-auto">
             <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto">
               <Armchair className="h-3.5 w-3.5" />
@@ -897,6 +903,9 @@ export default function ExamsHubPage() {
                                   {term.role === "final" && <Star className="h-2.5 w-2.5" />}
                                   {term.labelGu || term.labelEn}
                                   <span className="opacity-70">({term.totalMax})</span>
+                                  {term.createdByName ? (
+                                    <span className="opacity-70">· {term.createdByName}</span>
+                                  ) : null}
                                 </span>
                               ))}
                               {computers.map((term) => (
@@ -906,6 +915,13 @@ export default function ExamsHubPage() {
                                   <span className="opacity-70">({term.totalMax})</span>
                                 </span>
                               ))}
+                              <Link
+                                href={`/results/pass-fail?classId=${row.id}`}
+                                className="examhub-chip examhub-chip--exam"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {t("examsHub.passFail")}
+                              </Link>
                             </>
                           )}
                         </div>

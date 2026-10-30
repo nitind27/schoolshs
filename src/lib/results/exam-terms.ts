@@ -36,6 +36,9 @@ export interface ExamTermDef {
   publishedAt: string | null;
   locked: boolean;
   examDate: string | null;
+  createdById?: string | null;
+  createdByName?: string | null;
+  createdAt?: string | null;
 }
 
 export interface ExamTermMeta {
@@ -78,7 +81,16 @@ function withStatus(
     "published" | "publishedAt" | "locked" | "examDate"
   > &
     Partial<
-      Pick<ExamTermDef, "published" | "publishedAt" | "locked" | "examDate">
+      Pick<
+        ExamTermDef,
+        | "published"
+        | "publishedAt"
+        | "locked"
+        | "examDate"
+        | "createdById"
+        | "createdByName"
+        | "createdAt"
+      >
     >,
 ): ExamTermDef {
   return {
@@ -86,6 +98,9 @@ function withStatus(
     publishedAt: null,
     locked: false,
     examDate: null,
+    createdById: partial.createdById ?? null,
+    createdByName: partial.createdByName ?? null,
+    createdAt: partial.createdAt ?? null,
     ...partial,
   };
 }
@@ -329,6 +344,9 @@ export function parseExamTermMeta(raw?: string | null): ExamTermMeta {
             publishedAt: t.publishedAt ?? null,
             locked: !!t.locked,
             examDate: t.examDate ?? null,
+            createdById: t.createdById ?? null,
+            createdByName: t.createdByName ?? null,
+            createdAt: t.createdAt ?? null,
           });
         });
 
@@ -999,7 +1017,10 @@ export type ExamTermTemplateInput = {
 export function mergeExamTermIntoMeta(
   prev: ExamTermMeta | null,
   item: ExamTermTemplateInput,
-  options?: { startFresh?: boolean },
+  options?: {
+    startFresh?: boolean;
+    createdBy?: { id: string; name: string } | null;
+  },
 ): ExamTermMeta {
   const baseTerms = options?.startFresh ? [] : prev?.terms ?? [];
   const isFinal = item.role === "final" || item.key === "final";
@@ -1039,6 +1060,14 @@ export function mergeExamTermIntoMeta(
     incoming.publishedAt = older.publishedAt;
     incoming.locked = older.locked;
     incoming.examDate = item.examDate ?? older.examDate ?? incoming.examDate;
+    incoming.createdById = older.createdById ?? incoming.createdById ?? null;
+    incoming.createdByName = older.createdByName ?? incoming.createdByName ?? null;
+    incoming.createdAt = older.createdAt ?? incoming.createdAt ?? null;
+  }
+  if (!incoming.createdById && options?.createdBy) {
+    incoming.createdById = options.createdBy.id;
+    incoming.createdByName = options.createdBy.name;
+    incoming.createdAt = new Date().toISOString();
   }
 
   let terms = baseTerms.filter((term) => term.key !== incoming.key);

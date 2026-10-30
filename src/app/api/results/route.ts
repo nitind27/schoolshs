@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
 import { requireSchoolFeature } from "@/lib/school-feature-access";
-import { calculateGrade } from "@/lib/accounting";
+import { gradeFromPercent } from "@/lib/results/exam-rules";
+import { loadSchoolExamRules } from "@/lib/results/exam-stats";
 import {
   ANNUAL_RESULT_SUBJECTS,
   resultSessionName,
@@ -137,6 +138,7 @@ export async function POST(request: NextRequest) {
     const session = await requireSchoolAuth(["school_admin", "teacher", "clerk"]);
     await requireSchoolFeature(session.schoolId, "results");
     const body = await request.json();
+    const examRules = await loadSchoolExamRules(session.schoolId);
 
     if (body.action === "create_session") {
       const { academicYear, standard, section, reopeningDate } = body;
@@ -244,14 +246,14 @@ export async function POST(request: NextRequest) {
             marksObtained: obtained,
             achievementMarks: achievement,
             graceMarks: grace,
-            grade: calculateGrade((finalMarks / max) * 100),
+            grade: gradeFromPercent((finalMarks / max) * 100, examRules),
             isAbsent: m.isAbsent || false,
           },
           update: {
             marksObtained: obtained,
             achievementMarks: achievement,
             graceMarks: grace,
-            grade: calculateGrade((finalMarks / max) * 100),
+            grade: gradeFromPercent((finalMarks / max) * 100, examRules),
             isAbsent: m.isAbsent || false,
           },
         });
@@ -274,6 +276,7 @@ export async function POST(request: NextRequest) {
           maxMarks: r.subject.maxMarks,
           isAbsent: r.isAbsent,
         })),
+        examRules,
       );
 
       const existing = await prisma.reportCard.findFirst({ where: { studentId, examId } });
@@ -290,7 +293,7 @@ export async function POST(request: NextRequest) {
         totalMarks: totals.totalFinal,
         percentage: totals.percentage,
         grade: totals.grade,
-        result: computeResultStatus(totals.percentage, totals.totalGrace),
+        result: computeResultStatus(totals.percentage, totals.totalGrace, examRules),
         isPublished: exam.isPublished,
       };
       if (existing) await prisma.reportCard.update({ where: { id: existing.id }, data: rcData });
@@ -407,14 +410,14 @@ export async function POST(request: NextRequest) {
             marksObtained: obtained,
             achievementMarks: achievement,
             graceMarks: grace,
-            grade: calculateGrade((finalMarks / max) * 100),
+            grade: gradeFromPercent((finalMarks / max) * 100, examRules),
             isAbsent: m.isAbsent || false,
           },
           update: {
             marksObtained: obtained,
             achievementMarks: achievement,
             graceMarks: grace,
-            grade: calculateGrade((finalMarks / max) * 100),
+            grade: gradeFromPercent((finalMarks / max) * 100, examRules),
             isAbsent: m.isAbsent || false,
           },
         });
@@ -496,6 +499,7 @@ export async function POST(request: NextRequest) {
             maxMarks: r.subject.maxMarks,
             isAbsent: r.isAbsent,
           })),
+          examRules,
         );
         summaryRows.push({
           studentId,
@@ -506,7 +510,7 @@ export async function POST(request: NextRequest) {
             totalMarks: totals.totalFinal,
             percentage: totals.percentage,
             grade: totals.grade,
-            result: computeResultStatus(totals.percentage, totals.totalGrace),
+            result: computeResultStatus(totals.percentage, totals.totalGrace, examRules),
           },
         });
       }

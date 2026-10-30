@@ -34,6 +34,8 @@ import {
 } from "@/lib/teacher-scope";
 import { assertSupervisorClassAccess } from "@/lib/supervisor-scope";
 import { describeMarkChange, logMarkEdits, studentAuditLabel } from "@/lib/change-log";
+import { summarizeTermMarks } from "@/lib/results/exam-rules";
+import { loadSchoolExamRules } from "@/lib/results/exam-stats";
 
 function termStatsForExam(
   meta: ExamTermMeta,
@@ -95,6 +97,7 @@ export async function GET(request: NextRequest) {
     const { exam, sheetConfig } = await ensureClassExam(session.schoolId, schoolClass);
     const meta = parseExamTermMeta(exam.termMeta);
     const results = await prisma.examResult.findMany({ where: { examId: exam.id } });
+    const examRules = await loadSchoolExamRules(session.schoolId);
 
     const termStats = termStatsForExam(
       meta,
@@ -117,6 +120,7 @@ export async function GET(request: NextRequest) {
         },
         exam: { id: exam.id, isPublished: exam.isPublished },
         termMeta: meta,
+        rules: examRules,
         termStats,
         subjects: filterByTeacherSubjects(sheetConfig.subjects, allowedCodes),
         editableSubjectCodes: allowedCodes,
@@ -149,10 +153,20 @@ export async function GET(request: NextRequest) {
       ),
       allowedCodes,
     );
-    const visibleStudents = students.map((st) => ({
-      ...st,
-      subjectMarks: filterByTeacherSubjects(st.subjectMarks, allowedCodes),
-    }));
+    const visibleStudents = students.map((st) => {
+      const summary = summarizeTermMarks(st.subjectMarks, examRules);
+      return {
+        ...st,
+        subjectMarks: filterByTeacherSubjects(st.subjectMarks, allowedCodes),
+        obtained: summary.obtained,
+        max: summary.max,
+        percent: summary.percent,
+        percentage: summary.percent,
+        grade: summary.grade,
+        result: summary.result,
+        resultStatus: summary.result,
+      };
+    });
 
     return NextResponse.json({
       class: {
@@ -166,6 +180,7 @@ export async function GET(request: NextRequest) {
       exam: { id: exam.id, isPublished: exam.isPublished },
       term,
       termMeta: meta,
+      rules: examRules,
       subjects: visibleSubjects,
       students: visibleStudents,
       completion,

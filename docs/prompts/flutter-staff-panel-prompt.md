@@ -396,8 +396,26 @@ PATCH /api/roll-numbers
 
 ```
 GET /api/exam-seat-numbers?classId={id}&examId={id}
+GET /api/exam-seat-numbers?classId={id}&examId={id}&termKey={mid1}
 PATCH /api/exam-seat-numbers
-{ "classId", "examId", "updates": [{ "studentId", "seatNumber" }] }
+{ "classId", "examId", "termKey?", "updates": [{ "studentId", "seatNumber" }] }
+
+Each student row includes `seatNumber` (primary exam) plus `seats: [{ termKey, seatNumber, isPublished }]`.
+`termKey` is optional: if omitted the API returns students with the assigned seats for that class exam.
+GET /api/teacher also returns `seatNumber` and `examSeats` on each student.
+
+Pass / fail / auto grade (same rules as web):
+
+GET /api/exams/rules
+PUT /api/exams/rules
+{ "passPercent": 33, "passMarks": 33, "grades": [{ "grade": "A1", "minPercent": 91 }] }
+
+GET /api/exams/stats?classId={id}&examId={id}&term={mid1}&category=SC&result=pass
+GET /api/results/term-marks?classId={id}&term={mid1}
+  each student includes obtained, max, percent, grade, result (pass|fail|pending)
+
+Student app:
+GET /api/student-portal → student.examSummary[] and student.seatNumber
 ```
 
 - Class + exam selectors.
@@ -575,9 +593,12 @@ Response:
 | GET/PUT | `/api/attendance?classId&month&year` | Attendance |
 | GET | `/api/timetable/my?academicYear=` | Timetable |
 | GET/PATCH | `/api/roll-numbers?classId=` | Roll numbers |
-| GET/PATCH | `/api/exam-seat-numbers?classId&examId=` | Exam seats |
+| GET/PATCH | `/api/exam-seat-numbers?classId&examId=` | Exam seats (`seatNumber` + `seats[]`) |
+| GET | `/api/exams/rules` | Pass marks + auto grade bands |
+| PUT | `/api/exams/rules` | Save pass / grade rules (admin/clerk) |
+| GET | `/api/exams/stats?classId&term=&category=&result=` | Pass/fail counts + student rows |
 | GET | `/api/results/class-overview?academicYear=` | Results hub |
-| GET/POST | `/api/results/term-marks?classId&term=` | Term marks |
+| GET/POST | `/api/results/term-marks?classId&term=` | Term marks (`result`, `grade`, `percent`) |
 | GET/POST | `/api/results/marks-sheet?classId=` | Marks sheet |
 | GET | `/api/results/print?...` | Print/PDF |
 | GET/PATCH | `/api/board-records/*` | Board records |

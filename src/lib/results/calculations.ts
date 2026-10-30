@@ -1,5 +1,10 @@
-import { ANNUAL_RESULT_TOTAL_MARKS, RESULT_PASS_PERCENTAGE } from "./config";
-import { calculateGrade } from "@/lib/accounting";
+import { ANNUAL_RESULT_TOTAL_MARKS } from "./config";
+import {
+  DEFAULT_EXAM_RULES,
+  gradeFromPercent,
+  isPassingPercent,
+  type ExamRules,
+} from "./exam-rules";
 
 export type SubjectMarkInput = {
   marksObtained: number;
@@ -14,7 +19,10 @@ export function subjectFinalMarks(m: SubjectMarkInput): number {
   return (m.marksObtained || 0) + (m.achievementMarks || 0) + (m.graceMarks || 0);
 }
 
-export function computeStudentTotals(marks: SubjectMarkInput[]) {
+export function computeStudentTotals(
+  marks: SubjectMarkInput[],
+  rules: ExamRules = DEFAULT_EXAM_RULES,
+) {
   const totalObtained = marks.reduce((s, m) => s + (m.isAbsent ? 0 : m.marksObtained || 0), 0);
   const totalAchievement = marks.reduce((s, m) => s + (m.achievementMarks || 0), 0);
   const totalGrace = marks.reduce((s, m) => s + (m.graceMarks || 0), 0);
@@ -28,12 +36,16 @@ export function computeStudentTotals(marks: SubjectMarkInput[]) {
     totalFinal,
     maxMarks,
     percentage,
-    grade: calculateGrade(percentage),
+    grade: gradeFromPercent(percentage, rules),
   };
 }
 
-export function computeResultStatus(percentage: number, totalGrace: number): string {
-  if (percentage < RESULT_PASS_PERCENTAGE) return "નાપાસ થાય છે";
+export function computeResultStatus(
+  percentage: number,
+  totalGrace: number,
+  rules: ExamRules = DEFAULT_EXAM_RULES,
+): string {
+  if (!isPassingPercent(percentage, rules)) return "નાપાસ થાય છે";
   if (totalGrace > 0) return "ઉપર ચઢાવવામાં આવે છે";
   return "પાસ થાય છે";
 }

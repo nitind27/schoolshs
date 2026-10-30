@@ -84,6 +84,12 @@ export function TeacherLayout({ children }: { children: React.ReactNode }) {
       group: t("teacherNav.groupAcademics"),
     },
     {
+      href: "/results/pass-fail",
+      label: t("teacherNav.passFail"),
+      icon: Award,
+      group: t("teacherNav.groupAcademics"),
+    },
+    {
       href: "/teacher/board-records",
       label: t("teacherNav.boardRecords"),
       icon: FileText,
