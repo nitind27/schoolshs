@@ -11,6 +11,7 @@ import {
 import { parseTermRemarks } from "@/lib/results/marks-sheet-config";
 import { summarizeTermMarks } from "@/lib/results/exam-rules";
 import { loadSchoolExamRules } from "@/lib/results/exam-stats";
+import { formatBoardSeatNumber } from "@/lib/exam-seat-series";
 
 export const dynamic = "force-dynamic";
 
@@ -146,6 +147,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const boardSeatNumber = formatBoardSeatNumber(
+      student.schoolClass?.standard || student.standard,
+      student,
+    );
+
     return mobileJson(
       {
         student: {
@@ -153,6 +159,8 @@ export async function GET(request: NextRequest) {
           examSeatAssignments,
           examSummary,
           seatNumber: examSeatAssignments[0]?.seatNumber || "",
+          examSeatNumber: examSeatAssignments[0]?.seatNumber || "",
+          boardSeatNumber,
         },
         examSummary,
         rules,

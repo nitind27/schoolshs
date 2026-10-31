@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
 import { getTeacherScope } from "@/lib/teacher-scope";
 import { mobileJson, mobileOptions } from "@/lib/mobile-api";
+import { formatBoardSeatNumber } from "@/lib/exam-seat-series";
 
 export const dynamic = "force-dynamic";
 
@@ -160,10 +161,13 @@ export async function GET(request: NextRequest) {
           examSeats.find((item) => item.classId === cls.id) ||
           examSeats[0] ||
           null;
+        const examSeatNumber = primary?.seatNumber || "";
+        const boardSeatNumber = formatBoardSeatNumber(cls.standard, s);
         return {
           ...s,
-          seatNumber: primary?.seatNumber || "",
-          examSeatNumber: primary?.seatNumber || "",
+          seatNumber: examSeatNumber,
+          examSeatNumber,
+          boardSeatNumber,
           examSeats,
         };
       }),

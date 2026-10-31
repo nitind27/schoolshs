@@ -119,3 +119,21 @@ export function assignSectionSeatNumbers(
 
   return seats;
 }
+
+/** GSEB SSC/HSC seat — never mix this with school exam seats. */
+export function formatBoardSeatNumber(
+  standard: string | null | undefined,
+  student: {
+    sscSeatPrefix?: string | null;
+    sscSeatNumber?: string | null;
+    hscSeatPrefix?: string | null;
+    hscSeatNumber?: string | null;
+  },
+): string {
+  const std = String(standard || "").replace(/\D/g, "");
+  const hsc = [student.hscSeatPrefix, student.hscSeatNumber].filter(Boolean).join("");
+  const ssc = [student.sscSeatPrefix, student.sscSeatNumber].filter(Boolean).join("");
+  if (std === "12") return hsc;
+  if (std === "10") return ssc;
+  return hsc || ssc;
+}
