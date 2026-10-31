@@ -1,0 +1,611 @@
+================================================================================
+SHS — 30 Oct 2026
+Exam Pass/Fail + Auto Grade + Seat Number APIs
+CURL + SAMPLE RESPONSES + FLUTTER / APP PROMPT
+================================================================================
+
+Replace:
+  BASE   = live site, e.g. https://your-school-domain.com
+  TOKEN  = Bearer token from POST /api/auth/mobile/login
+  CLASS  = classId
+  EXAM   = examId (class Annual exam id)
+  TERM   = term key: mid1 | mid2 | final | custom key from terms[]
+  STUDENT_TOKEN = student Bearer token
+
+All staff APIs (teacher / clerk / school_admin):
+  Header: Authorization: Bearer TOKEN
+  Header: Accept: application/json
+  Header: Content-Type: application/json   (for PUT / PATCH)
+
+CORS: OPTIONS is enabled on these routes.
+
+Default school rule (until web saves new ones):
+  passMarks = 33 (out of 100)
+  passPercent = 33
+  grades: A1 91+ / A2 81+ / B1 71+ / B2 61+ / C1 51+ / C2 41+ / D 33+ / E 0+
+  result: pass | fail | pending
+  pending = no marks entered yet
+  pass/fail uses school passPercent (same on web + app)
+
+Category filter values:
+  SC | ST | OBC | SEBC | EWS | Open | Minority | NTDNT
+
+Web page (same data):
+  /results/pass-fail
+  /exams  (created-by name on exam chips)
+
+
+================================================================================
+1) PASS MARKS + AUTO GRADE RULES
+================================================================================
+
+----- CURL: GET rules -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/exams/rules"
+
+----- RESPONSE: GET /api/exams/rules -----
+{
+  "rules": {
+    "passPercent": 33,
+    "passMarks": 33,
+    "grades": [
+      { "grade": "A1", "minPercent": 91, "labelEn": "A1", "labelGu": "A1" },
+      { "grade": "A2", "minPercent": 81, "labelEn": "A2", "labelGu": "A2" },
+      { "grade": "B1", "minPercent": 71, "labelEn": "B1", "labelGu": "B1" },
+      { "grade": "B2", "minPercent": 61, "labelEn": "B2", "labelGu": "B2" },
+      { "grade": "C1", "minPercent": 51, "labelEn": "C1", "labelGu": "C1" },
+      { "grade": "C2", "minPercent": 41, "labelEn": "C2", "labelGu": "C2" },
+      { "grade": "D",  "minPercent": 33, "labelEn": "D",  "labelGu": "D" },
+      { "grade": "E",  "minPercent": 0,  "labelEn": "E",  "labelGu": "E" }
+    ]
+  },
+  "canEdit": false
+}
+
+Notes:
+  canEdit = true only for school_admin / clerk (teacher is read-only).
+  App: always show grade from API, do not hardcode A+/A/B.
+
+
+----- CURL: PUT rules (admin / clerk only) -----
+curl -sS -X PUT -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" ^
+  -H "Accept: application/json" ^
+  "BASE/api/exams/rules" ^
+  -d "{\"passPercent\":35,\"passMarks\":35,\"grades\":[{\"grade\":\"A1\",\"minPercent\":91},{\"grade\":\"A2\",\"minPercent\":81},{\"grade\":\"B1\",\"minPercent\":71},{\"grade\":\"B2\",\"minPercent\":61},{\"grade\":\"C1\",\"minPercent\":51},{\"grade\":\"C2\",\"minPercent\":41},{\"grade\":\"D\",\"minPercent\":35},{\"grade\":\"E\",\"minPercent\":0}]}"
+
+----- RESPONSE: PUT /api/exams/rules -----
+{
+  "success": true,
+  "rules": {
+    "passPercent": 35,
+    "passMarks": 35,
+    "grades": [ "...same as saved..." ]
+  }
+}
+
+Teacher PUT → 403.
+
+
+================================================================================
+2) PASS / FAIL STATS (class + exam + category filter)
+================================================================================
+
+Query aliases for exam term:
+  term  OR  termKey  OR  examTerm
+
+Query aliases for exam:
+  classId  OR  examId (resolves class from exam)
+
+Optional filters:
+  academicYear=2026-27
+  category=SC
+  result=pass|fail|pending
+  gender=male|female|other
+
+
+----- CURL: all classes overview -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/exams/stats?academicYear=2026-27"
+
+----- RESPONSE: GET /api/exams/stats (no classId) -----
+{
+  "academicYear": "2026-27",
+  "rules": { "passPercent": 33, "passMarks": 33, "grades": [] },
+  "counts": { "total": 240, "passed": 180, "failed": 20, "pending": 40, "passPercent": 90 },
+  "byCategory": {
+    "SC": { "total": 40, "passed": 30, "failed": 4, "pending": 6 },
+    "ST": { "total": 20, "passed": 14, "failed": 2, "pending": 4 },
+    "OBC": { "total": 80, "passed": 60, "failed": 8, "pending": 12 },
+    "Open": { "total": 50, "passed": 40, "failed": 2, "pending": 8 }
+  },
+  "classes": [
+    {
+      "classId": "cls_10a",
+      "className": "Class 10 A",
+      "standard": "10",
+      "section": "A",
+      "academicYear": "2026-27",
+      "studentCount": 45,
+      "examId": "exam_10a",
+      "isPublished": false,
+      "terms": [
+        {
+          "key": "mid1",
+          "labelEn": "First Exam",
+          "labelGu": "પ્રથમ પરીક્ષા",
+          "role": "component",
+          "createdByName": "Nitin Patel",
+          "createdById": "user_1",
+          "createdAt": "2026-10-30T12:00:00.000Z",
+          "counts": { "total": 45, "passed": 32, "failed": 8, "pending": 5, "passPercent": 80 },
+          "byCategory": {
+            "SC": { "total": 8, "passed": 5, "failed": 2, "pending": 1 }
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+----- CURL: one class + one exam -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/exams/stats?classId=CLASS&term=TERM"
+
+----- CURL: same using examId (Flutter style) -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/exams/stats?classId=CLASS&examId=EXAM&term=mid1"
+
+----- CURL: only SC students who failed -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/exams/stats?classId=CLASS&term=mid1&category=SC&result=fail"
+
+----- RESPONSE: GET /api/exams/stats?classId&term -----
+{
+  "class": {
+    "id": "cls_10a",
+    "name": "Class 10 A",
+    "standard": "10",
+    "section": "A",
+    "stream": "General",
+    "academicYear": "2026-27",
+    "studentCount": 45
+  },
+  "exam": { "id": "exam_10a", "isPublished": false },
+  "rules": { "passPercent": 33, "passMarks": 33, "grades": [] },
+  "term": {
+    "key": "mid1",
+    "labelEn": "First Exam",
+    "labelGu": "પ્રથમ પરીક્ષા",
+    "role": "component",
+    "subjectScope": "all",
+    "published": false,
+    "examDate": null,
+    "createdById": "user_1",
+    "createdByName": "Nitin Patel",
+    "createdAt": "2026-10-30T12:00:00.000Z",
+    "totalMax": 100
+  },
+  "counts": { "total": 45, "passed": 32, "failed": 8, "pending": 5, "passPercent": 80 },
+  "byCategory": {
+    "SC": { "total": 8, "passed": 5, "failed": 2, "pending": 1 },
+    "ST": { "total": 4, "passed": 3, "failed": 1, "pending": 0 },
+    "OBC": { "total": 20, "passed": 16, "failed": 3, "pending": 1 },
+    "Open": { "total": 13, "passed": 8, "failed": 2, "pending": 3 }
+  },
+  "students": [
+    {
+      "studentId": "stu_1",
+      "rollNumber": "1",
+      "grNumber": "1234",
+      "firstName": "Rahul",
+      "middleName": "K",
+      "surname": "Patel",
+      "nameEn": "Rahul K Patel",
+      "nameGu": "રાહુલ કે પટેલ",
+      "category": "SC",
+      "gender": "Male",
+      "seatNumber": "10A-1",
+      "obtained": 412,
+      "max": 500,
+      "percent": 82.4,
+      "grade": "A2",
+      "result": "pass",
+      "filled": 5,
+      "totalSubjects": 5
+    }
+  ],
+  "terms": [
+    {
+      "term": { "key": "mid1", "labelEn": "First Exam", "createdByName": "Nitin Patel" },
+      "counts": { "total": 45, "passed": 32, "failed": 8, "pending": 5, "passPercent": 80 },
+      "byCategory": {},
+      "students": []
+    }
+  ]
+}
+
+UI mapping:
+  term.createdByName     → "Created by …"
+  counts.passed/failed   → summary cards
+  byCategory             → category table
+  students[].result      → Pass / Fail / Pending chip
+  students[].grade       → auto grade
+  students[].seatNumber  → exam seat
+
+
+================================================================================
+3) TERM MARKS — direct pass/fail on each student (already used by app)
+================================================================================
+
+----- CURL -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/results/term-marks?classId=CLASS&term=mid1"
+
+----- RESPONSE extra fields on each student (NEW) -----
+{
+  "exam": { "id": "exam_10a", "isPublished": false },
+  "term": { "key": "mid1", "labelEn": "First Exam" },
+  "rules": { "passPercent": 33, "passMarks": 33, "grades": [] },
+  "students": [
+    {
+      "studentId": "stu_1",
+      "firstName": "Rahul",
+      "surname": "Patel",
+      "rollNumber": "1",
+      "obtained": 412,
+      "max": 500,
+      "percent": 82.4,
+      "percentage": 82.4,
+      "grade": "A2",
+      "result": "pass",
+      "resultStatus": "pass",
+      "subjectMarks": []
+    }
+  ]
+}
+
+App marks grid: show result + grade + percent on each student row.
+Do not recompute locally — use API fields.
+
+
+================================================================================
+4) EXAM SEAT NUMBERS (FIX — now returns students without termKey)
+================================================================================
+
+BUG THAT WAS FIXED:
+  Old: GET ?classId=&examId=  without termKey → students: []
+  New: same URL returns students with seatNumber filled
+
+termKey aliases: termKey | term | examTerm
+If omitted, API picks the exam that already has seats, else first exam.
+
+----- CURL: Flutter style (classId + examId, no termKey) -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/exam-seat-numbers?classId=CLASS&examId=EXAM"
+
+----- CURL: with term -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/exam-seat-numbers?classId=CLASS&examId=EXAM&termKey=mid1"
+
+----- RESPONSE: GET /api/exam-seat-numbers -----
+{
+  "classes": [
+    { "id": "cls_10a", "name": "Class 10 A", "standard": "10", "section": "A", "academicYear": "2026-27" }
+  ],
+  "examId": "exam_10a",
+  "termKey": "mid1",
+  "terms": [
+    { "key": "mid1", "labelEn": "First Exam", "labelGu": "પ્રથમ પરીક્ષા", "examDate": null, "published": false }
+  ],
+  "seatSeries": { "section": "A", "offset": 0, "priorStudents": 0 },
+  "isPublished": false,
+  "publishedCount": 0,
+  "assignedCount": 45,
+  "students": [
+    {
+      "id": "stu_1",
+      "firstName": "Rahul",
+      "middleName": "K",
+      "surname": "Patel",
+      "firstNameGu": "રાહુલ",
+      "grNumber": "1234",
+      "rollNumber": "1",
+      "gender": "Male",
+      "seatNumber": "10A-1",
+      "termKey": "mid1",
+      "seats": [
+        { "termKey": "mid1", "seatNumber": "10A-1", "isPublished": false }
+      ]
+    }
+  ]
+}
+
+READ: students[].seatNumber   ← this is what the app must show
+ALSO: students[].seats[]      ← all exams for that student
+
+
+----- CURL: save seats (termKey optional) -----
+curl -sS -X PATCH -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" ^
+  "BASE/api/exam-seat-numbers" ^
+  -d "{\"classId\":\"CLASS\",\"examId\":\"EXAM\",\"termKey\":\"mid1\",\"updates\":[{\"studentId\":\"stu_1\",\"seatNumber\":\"10A-1\"}]}"
+
+----- RESPONSE: PATCH -----
+{
+  "success": true,
+  "updated": 1,
+  "isPublished": false,
+  "examId": "exam_10a",
+  "termKey": "mid1"
+}
+
+
+----- CURL: publish seats -----
+curl -sS -X PATCH -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" ^
+  "BASE/api/exam-seat-numbers" ^
+  -d "{\"classId\":\"CLASS\",\"examId\":\"EXAM\",\"termKey\":\"mid1\",\"action\":\"publish\"}"
+
+
+================================================================================
+5) TEACHER PAYLOAD — seats on each student
+================================================================================
+
+----- CURL -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/teacher"
+
+----- RESPONSE extra fields on each student (NEW) -----
+{
+  "classes": [
+    {
+      "id": "cls_10a",
+      "name": "Class 10 A",
+      "students": [
+        {
+          "id": "stu_1",
+          "firstName": "Rahul",
+          "surname": "Patel",
+          "rollNumber": "1",
+          "category": "SC",
+          "seatNumber": "10A-1",
+          "examSeatNumber": "10A-1",
+          "examSeats": [
+            {
+              "studentId": "stu_1",
+              "examId": "exam_10a",
+              "termKey": "mid1",
+              "classId": "cls_10a",
+              "seatNumber": "10A-1",
+              "isPublished": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+
+================================================================================
+6) STUDENT APP — pass/fail + seat
+================================================================================
+
+----- CURL -----
+curl -sS -H "Authorization: Bearer STUDENT_TOKEN" -H "Accept: application/json" ^
+  "BASE/api/student-portal"
+
+----- RESPONSE extra fields (NEW) -----
+{
+  "rules": { "passPercent": 33, "passMarks": 33, "grades": [] },
+  "examSummary": [
+    {
+      "examId": "exam_10a",
+      "examName": "વાર્ષિક પરીક્ષા — ધોરણ 10 (2026-27)",
+      "academicYear": "2026-27",
+      "termKey": "mid1",
+      "termLabelEn": "First Exam",
+      "termLabelGu": "પ્રથમ પરીક્ષા",
+      "examDate": null,
+      "seatNumber": "10A-1",
+      "obtained": 412,
+      "max": 500,
+      "percent": 82.4,
+      "percentage": 82.4,
+      "grade": "A2",
+      "result": "pass",
+      "resultStatus": "pass",
+      "pass": true,
+      "fail": false
+    }
+  ],
+  "student": {
+    "seatNumber": "10A-1",
+    "examSummary": [ "...same array..." ],
+    "examSeatAssignments": [
+      {
+        "id": "seat_1",
+        "seatNumber": "10A-1",
+        "termKey": "mid1",
+        "termLabelEn": "First Exam",
+        "termLabelGu": "પ્રથમ પરીક્ષા",
+        "examId": "exam_10a",
+        "academicYear": "2026-27",
+        "className": "Class 10 A",
+        "standard": "10",
+        "section": "A"
+      }
+    ]
+  }
+}
+
+Student only sees published exam results and published seats.
+
+
+================================================================================
+7) ERROR RESPONSES (same shape)
+================================================================================
+
+401 { "error": "Unauthorized" }
+403 { "error": "Forbidden" }          (teacher PUT /api/exams/rules)
+404 { "error": "Class not found" }
+400 { "error": "Selected exam is not configured for this class" }
+400 { "error": "Seat numbers must be unique for the selected exam" }
+
+
+================================================================================
+8) FLUTTER / APP PROMPT  (copy from here)
+================================================================================
+
+You are updating an EXISTING Flutter school app (Teacher staff panel + Student panel)
+against the live SHS Scholarship Portal APIs. Do NOT rebuild the app. Do NOT invent
+endpoints. Wire the screens below to the APIs exactly as documented in this file.
+
+Auth (already exists):
+  POST /api/auth/mobile/login
+  Header on every later call: Authorization: Bearer <token>
+  Content-Type: application/json
+  Accept: application/json
+
+============================================================
+A. TEACHER — Exam Seat Numbers (BUG FIX)
+============================================================
+
+Screen: Exam Seat Numbers (homeroom class).
+
+OLD BUG: GET /api/exam-seat-numbers?classId=&examId= returned students: []
+because the app did not send termKey. SERVER IS NOW FIXED.
+
+Use:
+  GET /api/exam-seat-numbers?classId={classId}&examId={examId}
+  Optional: &termKey={mid1|final|...}
+
+Must render:
+  student.seatNumber          // primary field — this was empty before
+  student.seats[]             // all terms if you show a term picker
+
+If terms[] has more than one exam, show a term dropdown and reload with termKey.
+If terms[] is empty, show "Create exam on web first".
+
+Save:
+  PATCH /api/exam-seat-numbers
+  body: { "classId", "examId", "termKey?", "updates": [{ "studentId", "seatNumber" }] }
+
+Publish:
+  PATCH body: { "classId", "examId", "termKey", "action": "publish" }
+
+Also: GET /api/teacher now includes student.seatNumber and student.examSeats.
+If the dedicated seat API fails, fall back to those fields. Never show blank
+when seatNumber is a non-empty string.
+
+============================================================
+B. TEACHER — Pass / Fail screen (NEW)
+============================================================
+
+Add a screen: Pass / Fail
+  Route suggestion: /teacher/pass-fail
+  Put it under Academics next to Results.
+
+1) On open, call:
+   GET /api/exams/rules
+   GET /api/exams/stats?academicYear={year}
+
+2) Show school rules at top (read-only for teacher):
+   "Pass: {passMarks}/100  ({passPercent}%)"
+   Grade table from rules.grades (minPercent → grade).
+   Do NOT let teacher PUT rules. If canEdit=false, hide Save.
+
+3) Class cards from stats.classes[]:
+   each term shows passed / failed / pending
+   createdByName → "Created by {name}"
+
+4) On class tap:
+   GET /api/exams/stats?classId={id}&term={termKey}
+
+   Filters (chips / dropdowns):
+     Exam (terms)
+     Category: All, SC, ST, OBC, SEBC, EWS, Open, Minority, NTDNT
+     Result: All, Pass, Fail, Pending
+   Reload with:
+     &category=SC&result=fail
+
+5) Summary cards: Total, Pass, Fail, Pass %
+   Category table from byCategory
+   Student list:
+     roll, nameGu/nameEn, category, seatNumber, obtained/max, percent, grade,
+     result chip (green pass / red fail / grey pending)
+
+6) On the existing Term Marks grid, each student already has:
+     obtained, max, percent, grade, result
+   Show a Pass/Fail chip + grade on the row. Do not calculate locally.
+
+EN labels: Pass, Fail, Pending, Grade, Seat no., Created by
+GU labels: પાસ, નાપાસ, બાકી, ગ્રેડ, બેઠક નં., … એ બનાવી
+
+============================================================
+C. STUDENT APP — Pass / Fail + Seat (NEW)
+============================================================
+
+GET /api/student-portal
+
+Show on My Results (top, before report cards):
+  student.examSummary[]  OR root examSummary[]
+  Each card:
+    termLabelGu / termLabelEn
+    result chip from result (pass|fail|pending)
+    "{obtained}/{max} · {percent}% · {grade}"
+    seatNumber if not empty
+
+Also show student.seatNumber / examSeatAssignments on the seat screen.
+Student only gets published data. If examSummary is empty, keep the
+existing "not published yet" empty state.
+
+============================================================
+D. RULES (do not break)
+============================================================
+
+- Same pass percent / grade bands as web. Never hardcode 33 or A+/A/B.
+- result is only: pass | fail | pending
+- Seat API no longer requires termKey. Still send it when the user picks an exam.
+- Teacher cannot change pass marks (web admin / clerk does that).
+- Handle 401 (re-login), empty students, and missing examId.
+- Pull-to-refresh on Pass/Fail and Seat screens.
+- EN + GU.
+
+============================================================
+E. ACCEPTANCE
+============================================================
+
+Teacher seats:
+  [ ] GET ?classId&examId= without termKey shows seatNumber, not empty list
+  [ ] Saving seats still works
+  [ ] GET /api/teacher students have seatNumber
+
+Teacher pass/fail:
+  [ ] Class list with pass/fail counts
+  [ ] Created by name visible
+  [ ] Category filter works
+  [ ] Pass/Fail/Pending filter works
+  [ ] Student row shows percent + auto grade + pass/fail
+  [ ] Term marks grid shows pass/fail chip
+
+Student:
+  [ ] Results screen shows pass/fail + grade without opening a PDF
+  [ ] Seat number shows when published
+
+============================================================
+F. QUICK API MAP
+============================================================
+
+GET    /api/exams/rules
+PUT    /api/exams/rules                          (admin/clerk)
+GET    /api/exams/stats?academicYear=
+GET    /api/exams/stats?classId=&term=&category=&result=
+GET    /api/results/term-marks?classId=&term=    (result, grade, percent)
+GET    /api/exam-seat-numbers?classId=&examId=
+PATCH  /api/exam-seat-numbers
+GET    /api/teacher                              (seatNumber, examSeats)
+GET    /api/student-portal                       (examSummary, seatNumber)
+
+================================================================================
+END
+================================================================================

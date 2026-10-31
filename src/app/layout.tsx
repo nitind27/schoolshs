@@ -1,25 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Sans_Gujarati } from "next/font/google";
+import { appFontVariables, geistSans, notoGujarati } from "@/lib/fonts";
 import "./globals.css";
 import { AppShell } from "@/components/layout/app-shell";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const notoGujarati = Noto_Sans_Gujarati({
-  variable: "--font-noto-gujarati",
-  subsets: ["gujarati"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  display: "swap",
-  preload: true,
-});
 
 export const metadata: Metadata = {
   title: {
@@ -45,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="gu" className={`${geistSans.variable} ${geistMono.variable} ${notoGujarati.variable} h-full antialiased`}>
+    <html lang="gu" className={`${appFontVariables} h-full antialiased`}>
       <body className={`${geistSans.className} ${notoGujarati.className} min-h-full`}>
         <script
           dangerouslySetInnerHTML={{

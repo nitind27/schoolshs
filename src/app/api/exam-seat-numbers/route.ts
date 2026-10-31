@@ -34,8 +34,16 @@ function resolveTermKey(
   assignmentCounts: Map<string, number>,
 ): string {
   if (requested && terms.some((term) => term.key === requested)) return requested;
+  if (requested && assignmentCounts.has(requested)) return requested;
   let best = "";
   let bestCount = 0;
+  for (const [key, count] of assignmentCounts) {
+    if (count > bestCount) {
+      best = key;
+      bestCount = count;
+    }
+  }
+  if (best) return best;
   for (const term of terms) {
     const count = assignmentCounts.get(term.key) || 0;
     if (count > bestCount) {
@@ -44,7 +52,69 @@ function resolveTermKey(
     }
   }
   if (best) return best;
-  return terms.find((term) => term.key !== "final")?.key || terms[0]?.key || "";
+  return terms.find((term) => term.key !== "final")?.key || terms[0]?.key || requested || "";
+}
+
+async function resolveExamForSeats(
+  schoolId: string,
+  schoolClass: {
+    id: string;
+    standard: string;
+    section: string;
+    stream: string;
+    name: string;
+    academicYear: string;
+  },
+  examIdParam: string,
+) {
+  if (examIdParam) {
+    const byId = await prisma.exam.findFirst({
+      where: { id: examIdParam, schoolId },
+      select: { id: true, termMeta: true, isPublished: true },
+    });
+    if (byId) {
+      const assigned = await prisma.examSeatAssignment.count({
+        where: { examId: byId.id },
+      });
+      if (assigned > 0) return byId;
+    }
+  }
+
+  const exams = await prisma.exam.findMany({
+    where: {
+      schoolId,
+      standard: schoolClass.standard,
+      section: schoolClass.section,
+      academicYear: schoolClass.academicYear,
+      examType: "Annual",
+    },
+    select: { id: true, termMeta: true, isPublished: true },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  if (exams.length) {
+    const counts = await prisma.examSeatAssignment.groupBy({
+      by: ["examId"],
+      where: {
+        schoolId,
+        examId: { in: exams.map((item) => item.id) },
+      },
+      _count: true,
+    });
+    const ranked = [...exams].sort((a, b) => {
+      const aCount = counts.find((row) => row.examId === a.id)?._count || 0;
+      const bCount = counts.find((row) => row.examId === b.id)?._count || 0;
+      return bCount - aCount;
+    });
+    return ranked[0]!;
+  }
+
+  const created = await ensureClassExam(schoolId, schoolClass);
+  return {
+    id: created.exam.id,
+    termMeta: created.exam.termMeta,
+    isPublished: created.exam.isPublished,
+  };
 }
 
 async function seatSeriesForClass(
@@ -152,7 +222,7 @@ export async function GET(request: NextRequest) {
 
     const schoolClass = await getClassForSession(session, classId);
     const seatSeries = await seatSeriesForClass(session.schoolId, schoolClass);
-    const { exam } = await ensureClassExam(session.schoolId, schoolClass);
+    const exam = await resolveExamForSeats(session.schoolId, schoolClass, examIdParam);
     const terms = parseExamTermMeta(exam.termMeta).terms.map((term) => ({
       key: term.key,
       labelEn: term.labelEn,
@@ -160,51 +230,72 @@ export async function GET(request: NextRequest) {
       examDate: term.examDate,
       published: term.published,
     }));
+    const termFromExamId =
+      terms.some((term) => term.key === examIdParam) ? examIdParam : "";
 
-    const [students, assignments] = await Promise.all([
-      prisma.student.findMany({
-        where: {
-          schoolId: session.schoolId,
-          classId,
-          status: { not: "archived" },
-        },
-        orderBy: [
-          { rollNumber: "asc" },
-          { surname: "asc" },
-          { firstName: "asc" },
+    const students = await prisma.student.findMany({
+      where: {
+        schoolId: session.schoolId,
+        classId,
+        status: { not: "archived" },
+      },
+      orderBy: [
+        { rollNumber: "asc" },
+        { surname: "asc" },
+        { firstName: "asc" },
+      ],
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        surname: true,
+        firstNameGu: true,
+        middleNameGu: true,
+        surnameGu: true,
+        fatherName: true,
+        fatherNameGu: true,
+        grNumber: true,
+        rollNumber: true,
+        gender: true,
+      },
+    });
+    const studentIds = students.map((item) => item.id);
+    const assignments = await prisma.examSeatAssignment.findMany({
+      where: {
+        schoolId: session.schoolId,
+        OR: [
+          { classId },
+          { examId: exam.id },
+          ...(studentIds.length ? [{ studentId: { in: studentIds } }] : []),
         ],
-        select: {
-          id: true,
-          firstName: true,
-          middleName: true,
-          surname: true,
-          firstNameGu: true,
-          middleNameGu: true,
-          surnameGu: true,
-          fatherName: true,
-          fatherNameGu: true,
-          grNumber: true,
-          rollNumber: true,
-          gender: true,
-        },
-      }),
-      prisma.examSeatAssignment.findMany({
-        where: { schoolId: session.schoolId, examId: exam.id, classId },
-        select: {
-          studentId: true,
-          seatNumber: true,
-          isPublished: true,
-          termKey: true,
-        },
-      }),
-    ]);
+      },
+      select: {
+        studentId: true,
+        seatNumber: true,
+        isPublished: true,
+        termKey: true,
+        examId: true,
+        classId: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
 
     const assignmentCounts = new Map<string, number>();
     for (const item of assignments) {
       assignmentCounts.set(item.termKey, (assignmentCounts.get(item.termKey) || 0) + 1);
     }
-    const termKey = resolveTermKey(terms, requestedTerm, assignmentCounts);
-    if (requestedTerm && terms.length && !terms.some((term) => term.key === requestedTerm)) {
+    const termKey = resolveTermKey(
+      terms,
+      requestedTerm || termFromExamId,
+      assignmentCounts,
+    );
+    if (
+      requestedTerm &&
+      terms.length &&
+      !terms.some((term) => term.key === requestedTerm) &&
+      !assignmentCounts.has(requestedTerm)
+    ) {
       return mobileJson(
         { error: "Selected exam is not configured for this class" },
         { status: 400 },
@@ -216,29 +307,40 @@ export async function GET(request: NextRequest) {
       (item) => (!termKey || item.termKey === termKey) && item.isPublished,
     ).length;
     const assignedForTerm = assignments.filter((item) => !termKey || item.termKey === termKey).length;
-    const seatByStudent = new Map(
-      assignments
-        .filter((item) => !termKey || item.termKey === termKey)
-        .map((item) => [item.studentId, item.seatNumber]),
-    );
-    const seatsByStudent = new Map<string, Array<{ termKey: string; seatNumber: string; isPublished: boolean }>>();
+    const seatsByStudent = new Map<
+      string,
+      Array<{ termKey: string; seatNumber: string; isPublished: boolean; examId: string }>
+    >();
     for (const item of assignments) {
       const list = seatsByStudent.get(item.studentId) || [];
-      list.push({
-        termKey: item.termKey,
-        seatNumber: item.seatNumber,
-        isPublished: item.isPublished,
-      });
+      if (!list.some((row) => row.termKey === item.termKey && row.seatNumber === item.seatNumber)) {
+        list.push({
+          termKey: item.termKey,
+          seatNumber: item.seatNumber,
+          isPublished: item.isPublished,
+          examId: item.examId,
+        });
+      }
       seatsByStudent.set(item.studentId, list);
     }
 
     const rows = students
-      .map((student) => ({
-        ...student,
-        seatNumber: seatByStudent.get(student.id) || "",
-        termKey: termKey || null,
-        seats: seatsByStudent.get(student.id) || [],
-      }))
+      .map((student) => {
+        const seats = seatsByStudent.get(student.id) || [];
+        const primary =
+          seats.find((item) => termKey && item.termKey === termKey) ||
+          seats.find((item) => item.isPublished) ||
+          seats[0] ||
+          null;
+        const seatNumber = primary?.seatNumber || "";
+        return {
+          ...student,
+          seatNumber,
+          examSeatNumber: seatNumber,
+          termKey: primary?.termKey || termKey || null,
+          seats,
+        };
+      })
       .sort(
         (a, b) =>
           compareRollNumbers(a.rollNumber, b.rollNumber) ||
@@ -246,6 +348,7 @@ export async function GET(request: NextRequest) {
           a.firstName.localeCompare(b.firstName, undefined, { sensitivity: "base" }),
       );
 
+    const filled = rows.filter((row) => row.seatNumber);
     return mobileJson(
       {
         classes,
@@ -255,8 +358,9 @@ export async function GET(request: NextRequest) {
         seatSeries,
         isPublished: assignedForTerm > 0 && publishedForTerm === assignedForTerm,
         publishedCount: publishedForTerm,
-        assignedCount: assignedForTerm,
+        assignedCount: filled.length,
         students: rows,
+        seatNumbers: Object.fromEntries(filled.map((row) => [row.id, row.seatNumber])),
       },
       undefined,
       origin,
@@ -311,10 +415,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     const schoolClass = await getClassForSession(session, classId);
-    const { exam } = await ensureClassExam(session.schoolId, schoolClass);
+    const exam = await resolveExamForSeats(session.schoolId, schoolClass, examIdParam);
     const terms = parseExamTermMeta(exam.termMeta).terms;
     const existingAssignments = await prisma.examSeatAssignment.findMany({
-      where: { schoolId: session.schoolId, examId: exam.id, classId },
+      where: {
+        schoolId: session.schoolId,
+        OR: [{ examId: exam.id }, { classId }],
+      },
       select: { termKey: true },
     });
     const assignmentCounts = new Map<string, number>();
