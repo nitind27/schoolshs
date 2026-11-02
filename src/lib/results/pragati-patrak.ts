@@ -180,6 +180,10 @@ export function combineTheoryInternal(
   return (paper || 0) + (teacher || 0);
 }
 
+/** 24261004404 written / internal split on a 100-mark term. */
+export const UPPER_PRIMARY_PAPER_MAX = 80;
+export const UPPER_PRIMARY_INTERNAL_MAX = 20;
+
 export type PragatiSubjectRow = {
   key: string;
   name: string;
@@ -189,6 +193,12 @@ export type PragatiSubjectRow = {
   sem1Obtained: number | null;
   sem2Obtained: number | null;
   annualObtained: number | null;
+  sem1Theory: number | null;
+  sem1Internal: number | null;
+  sem2Theory: number | null;
+  sem2Internal: number | null;
+  annualTheory: number | null;
+  annualInternal: number | null;
   sem1Grade: string;
   sem2Grade: string;
   annualGrade: string;
@@ -316,6 +326,10 @@ function computeSubjectRow(
   let sem1 = split1 ?? cleanMark(input?.first);
   let sem2 = split2 ?? cleanMark(input?.second);
   const fallback = cleanMark(input?.obtained);
+  let sem1Theory = cleanMark(input?.theory1);
+  let sem1Internal = cleanMark(input?.internal1);
+  let sem2Theory = cleanMark(input?.theory2);
+  let sem2Internal = cleanMark(input?.internal2);
 
   // If only annual/total stored, put it in year-end; leave terms empty
   let annual: number | null = null;
@@ -331,9 +345,25 @@ function computeSubjectRow(
   }
 
   // Clamp marks that don't apply. A dash subject must not add into the year total.
-  if (sem1Max == null) sem1 = null;
-  if (sem2Max == null) sem2 = null;
+  if (sem1Max == null) {
+    sem1 = null;
+    sem1Theory = null;
+    sem1Internal = null;
+  }
+  if (sem2Max == null) {
+    sem2 = null;
+    sem2Theory = null;
+    sem2Internal = null;
+  }
   if (annualMax == null) annual = null;
+
+  const annualTheory = addSplitParts(sem1Theory, sem2Theory, sem1Max != null, sem2Max != null);
+  const annualInternal = addSplitParts(
+    sem1Internal,
+    sem2Internal,
+    sem1Max != null,
+    sem2Max != null,
+  );
 
   const g1 = pragatiGradeFromPercent(pragatiPercent(sem1, sem1Max));
   const g2 = pragatiGradeFromPercent(pragatiPercent(sem2, sem2Max));
@@ -349,10 +379,29 @@ function computeSubjectRow(
     sem1Obtained: sem1,
     sem2Obtained: sem2,
     annualObtained: annual,
+    sem1Theory,
+    sem1Internal,
+    sem2Theory,
+    sem2Internal,
+    annualTheory: annualMax == null ? null : annualTheory,
+    annualInternal: annualMax == null ? null : annualInternal,
     sem1Grade: g1,
     sem2Grade: g2,
     annualGrade: gA,
   };
+}
+
+function addSplitParts(
+  a: number | null,
+  b: number | null,
+  aApplies: boolean,
+  bApplies: boolean,
+): number | null {
+  if (!aApplies && !bApplies) return null;
+  if (!aApplies) return b;
+  if (!bApplies) return a;
+  if (a == null && b == null) return null;
+  return (a || 0) + (b || 0);
 }
 
 export function sumPragatiColumn(
@@ -394,6 +443,61 @@ export function sumPragatiColumn(
     max,
     percentage,
     grade: pragatiGradeFromPercent(percentage),
+  };
+}
+
+export type PragatiSplitTotals = PragatiColumnTotals & {
+  paper: number;
+  internal: number;
+  paperMax: number;
+  internalMax: number;
+};
+
+export function sumPragatiSplitColumn(
+  rows: PragatiSubjectRow[],
+  which: "sem1" | "sem2" | "annual",
+): PragatiSplitTotals {
+  const base = sumPragatiColumn(rows, which);
+  let paper = 0;
+  let internal = 0;
+  let paperMax = 0;
+  let internalMax = 0;
+  let has = false;
+
+  for (const r of rows) {
+    const applies =
+      which === "sem1" ? r.sem1Max != null : which === "sem2" ? r.sem2Max != null : r.annualMax != null;
+    if (!applies) continue;
+    const t =
+      which === "sem1" ? r.sem1Theory : which === "sem2" ? r.sem2Theory : r.annualTheory;
+    const i =
+      which === "sem1" ? r.sem1Internal : which === "sem2" ? r.sem2Internal : r.annualInternal;
+    if (which === "annual") {
+      if (r.sem1Max != null) {
+        paperMax += UPPER_PRIMARY_PAPER_MAX;
+        internalMax += UPPER_PRIMARY_INTERNAL_MAX;
+      }
+      if (r.sem2Max != null) {
+        paperMax += UPPER_PRIMARY_PAPER_MAX;
+        internalMax += UPPER_PRIMARY_INTERNAL_MAX;
+      }
+    } else {
+      paperMax += UPPER_PRIMARY_PAPER_MAX;
+      internalMax += UPPER_PRIMARY_INTERNAL_MAX;
+    }
+    if (t != null || i != null) {
+      paper += t || 0;
+      internal += i || 0;
+      has = true;
+    }
+  }
+
+  return {
+    ...base,
+    paper: has ? paper : 0,
+    internal: has ? internal : 0,
+    paperMax,
+    internalMax,
   };
 }
 

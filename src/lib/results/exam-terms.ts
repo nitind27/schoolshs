@@ -621,12 +621,13 @@ export function readTermScore(
   termData: MarksSheetTermData,
   annualMarks?: number | null,
 ): number | null {
-  if (term.role === "final" || term.fieldKey === "annual") {
-    return annualMarks ?? null;
-  }
   const fromScores =
     termData.scores?.[term.key] ?? termData.scores?.[term.fieldKey] ?? null;
   if (fromScores != null && fromScores !== undefined) return Number(fromScores);
+
+  if (term.role === "final" || term.fieldKey === "annual") {
+    return annualMarks ?? null;
+  }
 
   if (term.fieldKey === "first") return termData.first ?? null;
   if (term.fieldKey === "second") return termData.second ?? null;

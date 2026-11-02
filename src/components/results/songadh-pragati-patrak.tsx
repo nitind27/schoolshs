@@ -9,6 +9,7 @@ import {
   buildPragatiSubjectRows,
   pragatiResultLabel,
   sumPragatiColumn,
+  sumPragatiSplitColumn,
   type PragatiSubjectInput,
   type PragatiSubjectRow,
 } from "@/lib/results/pragati-patrak";
@@ -191,6 +192,66 @@ function RemarksBlock({
   );
 }
 
+function TermHeadings({ split }: { split?: boolean }) {
+  if (split) {
+    return (
+      <>
+        <th className="pp-th-max">
+          લેખિત
+          <br />
+          80
+        </th>
+        <th className="pp-th-max">
+          આંતરિક
+          <br />
+          20
+        </th>
+        <th className="pp-th-obt">
+          કુલ
+          <br />
+          100
+        </th>
+        <th className="pp-th-grd">ગ્રેડ</th>
+      </>
+    );
+  }
+  return (
+    <>
+      <th className="pp-th-max">
+        કુલ
+        <br />
+        ગુણ
+      </th>
+      <th colSpan={2} className="pp-th-obt">
+        મેળવેલ ગુણ - ગ્રેડ
+      </th>
+    </>
+  );
+}
+
+function SplitMarkCells({
+  applies,
+  theory,
+  internal,
+  total,
+  grade,
+}: {
+  applies: boolean;
+  theory: number | null;
+  internal: number | null;
+  total: number | null;
+  grade: string;
+}) {
+  return (
+    <>
+      <td className="pp-cell-obt">{markOnly(theory, applies)}</td>
+      <td className="pp-cell-obt">{markOnly(internal, applies)}</td>
+      <td className="pp-cell-obt pp-cell-total">{markOnly(total, applies)}</td>
+      <td className="pp-cell-grd">{gradeOnly(grade, applies)}</td>
+    </>
+  );
+}
+
 function MarksTable({
   rows,
   splitScheme,
@@ -198,66 +259,71 @@ function MarksTable({
   rows: PragatiSubjectRow[];
   splitScheme?: boolean;
 }) {
-  const t1 = sumPragatiColumn(rows, "sem1");
-  const t2 = sumPragatiColumn(rows, "sem2");
-  const ty = sumPragatiColumn(rows, "annual");
+  const t1 = splitScheme ? sumPragatiSplitColumn(rows, "sem1") : sumPragatiColumn(rows, "sem1");
+  const t2 = splitScheme ? sumPragatiSplitColumn(rows, "sem2") : sumPragatiColumn(rows, "sem2");
+  const ty = splitScheme ? sumPragatiSplitColumn(rows, "annual") : sumPragatiColumn(rows, "annual");
+  const span = splitScheme ? 4 : 3;
 
   return (
-    <table className="pp-table">
-      <colgroup>
-        <col className="pp-col-subject" />
-        <col className="pp-col-max" />
-        <col className="pp-col-obt" />
-        <col className="pp-col-grd" />
-        <col className="pp-col-max" />
-        <col className="pp-col-obt" />
-        <col className="pp-col-grd" />
-        <col className="pp-col-max" />
-        <col className="pp-col-obt" />
-        <col className="pp-col-grd" />
-      </colgroup>
+    <table className={`pp-table${splitScheme ? " pp-table--split" : ""}`}>
+      {!splitScheme ? (
+        <colgroup>
+          <col className="pp-col-subject" />
+          <col className="pp-col-max" />
+          <col className="pp-col-obt" />
+          <col className="pp-col-grd" />
+          <col className="pp-col-max" />
+          <col className="pp-col-obt" />
+          <col className="pp-col-grd" />
+          <col className="pp-col-max" />
+          <col className="pp-col-obt" />
+          <col className="pp-col-grd" />
+        </colgroup>
+      ) : null}
       <thead>
         <tr>
           <th className="pp-col-detail">વિગત</th>
-          <th colSpan={3}>
+          <th colSpan={span}>
             પ્રથમ સત્ર
-            {splitScheme ? <span className="pp-scheme">આંતરિક 20 + લેખિત 80 = 100</span> : null}
+            {splitScheme ? <span className="pp-scheme">લેખિત 80 + આંતરિક 20 = 100</span> : null}
           </th>
-          <th colSpan={3}>
+          <th colSpan={span}>
             દ્વિતીય સત્ર
             {splitScheme ? <span className="pp-scheme">લેખિત 80 + આંતરિક 20 = 100</span> : null}
           </th>
-          <th colSpan={3}>
+          <th colSpan={span}>
             વર્ષાન્તે
-            {splitScheme ? <span className="pp-scheme">લેખિત 160 + આંતરિક 40 = 200</span> : null}
+            {splitScheme ? (
+              <span className="pp-scheme">લેખિત 160 + આંતરિક 40 = 200</span>
+            ) : null}
           </th>
         </tr>
         <tr>
           <th className="pp-col-detail">વિષય</th>
-          <th className="pp-th-max">
-            કુલ
-            <br />
-            ગુણ
-          </th>
-          <th colSpan={2} className="pp-th-obt">
-            મેળવેલ ગુણ - ગ્રેડ
-          </th>
-          <th className="pp-th-max">
-            કુલ
-            <br />
-            ગુણ
-          </th>
-          <th colSpan={2} className="pp-th-obt">
-            મેળવેલ ગુણ - ગ્રેડ
-          </th>
-          <th className="pp-th-max">
-            કુલ
-            <br />
-            ગુણ
-          </th>
-          <th colSpan={2} className="pp-th-obt">
-            મેળવેલ ગુણ - ગ્રેડ
-          </th>
+          <TermHeadings split={splitScheme} />
+          <TermHeadings split={splitScheme} />
+          {splitScheme ? (
+            <>
+              <th className="pp-th-max">
+                લેખિત
+                <br />
+                160
+              </th>
+              <th className="pp-th-max">
+                આંતરિક
+                <br />
+                40
+              </th>
+              <th className="pp-th-obt">
+                કુલ
+                <br />
+                200
+              </th>
+              <th className="pp-th-grd">ગ્રેડ</th>
+            </>
+          ) : (
+            <TermHeadings />
+          )}
         </tr>
       </thead>
       <tbody>
@@ -268,47 +334,111 @@ function MarksTable({
           return (
             <tr key={r.key}>
               <td className="pp-left">{r.name}</td>
-              <td>{dashOr(r.sem1Max, s1)}</td>
-              <td className="pp-cell-obt">{markOnly(r.sem1Obtained, s1)}</td>
-              <td className="pp-cell-grd">{gradeOnly(r.sem1Grade, s1)}</td>
-              <td>{dashOr(r.sem2Max, s2)}</td>
-              <td className="pp-cell-obt">{markOnly(r.sem2Obtained, s2)}</td>
-              <td className="pp-cell-grd">{gradeOnly(r.sem2Grade, s2)}</td>
-              <td>{dashOr(r.annualMax, sy)}</td>
-              <td className="pp-cell-obt">{markOnly(r.annualObtained, sy)}</td>
-              <td className="pp-cell-grd">{gradeOnly(r.annualGrade, sy)}</td>
+              {splitScheme ? (
+                <>
+                  <SplitMarkCells
+                    applies={s1}
+                    theory={r.sem1Theory}
+                    internal={r.sem1Internal}
+                    total={r.sem1Obtained}
+                    grade={r.sem1Grade}
+                  />
+                  <SplitMarkCells
+                    applies={s2}
+                    theory={r.sem2Theory}
+                    internal={r.sem2Internal}
+                    total={r.sem2Obtained}
+                    grade={r.sem2Grade}
+                  />
+                  <SplitMarkCells
+                    applies={sy}
+                    theory={r.annualTheory}
+                    internal={r.annualInternal}
+                    total={r.annualObtained}
+                    grade={r.annualGrade}
+                  />
+                </>
+              ) : (
+                <>
+                  <td>{dashOr(r.sem1Max, s1)}</td>
+                  <td className="pp-cell-obt">{markOnly(r.sem1Obtained, s1)}</td>
+                  <td className="pp-cell-grd">{gradeOnly(r.sem1Grade, s1)}</td>
+                  <td>{dashOr(r.sem2Max, s2)}</td>
+                  <td className="pp-cell-obt">{markOnly(r.sem2Obtained, s2)}</td>
+                  <td className="pp-cell-grd">{gradeOnly(r.sem2Grade, s2)}</td>
+                  <td>{dashOr(r.annualMax, sy)}</td>
+                  <td className="pp-cell-obt">{markOnly(r.annualObtained, sy)}</td>
+                  <td className="pp-cell-grd">{gradeOnly(r.annualGrade, sy)}</td>
+                </>
+              )}
             </tr>
           );
         })}
-        <tr className="pp-sum">
-          <td className="pp-left">મેળવેલ ગુણ</td>
-          <td colSpan={3}>
-            {t1.percentage != null || t1.obtained ? toGuDigits(t1.obtained) : ""}
-          </td>
-          <td colSpan={3}>
-            {t2.percentage != null || t2.obtained ? toGuDigits(t2.obtained) : ""}
-          </td>
-          <td colSpan={3}>
-            {ty.percentage != null || ty.obtained ? toGuDigits(ty.obtained) : ""}
-          </td>
-        </tr>
-        <tr className="pp-sum">
-          <td className="pp-left">કુલ ગુણ</td>
-          <td colSpan={3}>{t1.max ? toGuDigits(t1.max) : ""}</td>
-          <td colSpan={3}>{t2.max ? toGuDigits(t2.max) : ""}</td>
-          <td colSpan={3}>{ty.max ? toGuDigits(ty.max) : ""}</td>
-        </tr>
+        {splitScheme ? (
+          <>
+            <tr className="pp-sum">
+              <td className="pp-left">મેળવેલ ગુણ</td>
+              {(["sem1", "sem2", "annual"] as const).map((which) => {
+                const tot = which === "sem1" ? t1 : which === "sem2" ? t2 : ty;
+                const split = tot as ReturnType<typeof sumPragatiSplitColumn>;
+                const show = tot.percentage != null || tot.obtained;
+                return (
+                  <td key={which} colSpan={4}>
+                    {show
+                      ? `${toGuDigits(split.paper)} + ${toGuDigits(split.internal)} = ${toGuDigits(tot.obtained)}`
+                      : ""}
+                  </td>
+                );
+              })}
+            </tr>
+            <tr className="pp-sum">
+              <td className="pp-left">કુલ ગુણ</td>
+              {(["sem1", "sem2", "annual"] as const).map((which) => {
+                const tot = which === "sem1" ? t1 : which === "sem2" ? t2 : ty;
+                const split = tot as ReturnType<typeof sumPragatiSplitColumn>;
+                return (
+                  <td key={which} colSpan={4}>
+                    {tot.max
+                      ? `${toGuDigits(split.paperMax)} + ${toGuDigits(split.internalMax)} = ${toGuDigits(tot.max)}`
+                      : ""}
+                  </td>
+                );
+              })}
+            </tr>
+          </>
+        ) : (
+          <>
+            <tr className="pp-sum">
+              <td className="pp-left">મેળવેલ ગુણ</td>
+              <td colSpan={3}>
+                {t1.percentage != null || t1.obtained ? toGuDigits(t1.obtained) : ""}
+              </td>
+              <td colSpan={3}>
+                {t2.percentage != null || t2.obtained ? toGuDigits(t2.obtained) : ""}
+              </td>
+              <td colSpan={3}>
+                {ty.percentage != null || ty.obtained ? toGuDigits(ty.obtained) : ""}
+              </td>
+            </tr>
+            <tr className="pp-sum">
+              <td className="pp-left">કુલ ગુણ</td>
+              <td colSpan={3}>{t1.max ? toGuDigits(t1.max) : ""}</td>
+              <td colSpan={3}>{t2.max ? toGuDigits(t2.max) : ""}</td>
+              <td colSpan={3}>{ty.max ? toGuDigits(ty.max) : ""}</td>
+            </tr>
+          </>
+        )}
         <tr className="pp-sum">
           <td className="pp-left">ટકા (%)</td>
-          <td colSpan={3}>
+          <td colSpan={span}>
             {fmtPct(t1.percentage)}
             {t1.grade ? ` (${t1.grade})` : ""}
           </td>
-          <td colSpan={3}>
+          <td colSpan={span}>
             {fmtPct(t2.percentage)}
             {t2.grade ? ` (${t2.grade})` : ""}
           </td>
-          <td colSpan={3}>
+          <td colSpan={span}>
             {fmtPct(ty.percentage)}
             {ty.grade ? ` (${ty.grade})` : ""}
           </td>
@@ -369,7 +499,7 @@ export function SongadhPragatiPatrakCard({ data }: { data: PragatiPatrakCardData
   const year = data.exam.academicYear || "";
 
   return (
-    <div className="pp-sheet annual-result-card">
+    <div className={`pp-sheet annual-result-card${splitScheme ? " pp-sheet--upper" : ""}`}>
       {/* Use div (not header/aside) — CertificatePrintShell hides aside/header in print */}
       <div className="pp-header">
         <div className="pp-header-badge">પ્રગતિપત્રક</div>

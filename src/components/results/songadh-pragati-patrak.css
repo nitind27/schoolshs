@@ -24,6 +24,29 @@
   overflow: hidden;
 }
 
+/* 24261004404 — white card, maroon text unchanged */
+.pp-sheet.pp-sheet--upper {
+  --pp-paper: #ffffff;
+  --pp-remarks-w: 50mm;
+}
+
+.pp-sheet.pp-sheet--upper .pp-header,
+.pp-sheet.pp-sheet--upper .pp-legend,
+.pp-sheet.pp-sheet--upper .pp-table,
+.pp-sheet.pp-sheet--upper .pp-remarks,
+.pp-sheet.pp-sheet--upper .pp-remarks-block,
+.pp-sheet.pp-sheet--upper .pp-student {
+  background: #ffffff;
+}
+
+.pp-sheet.pp-sheet--upper .pp-header-badge {
+  box-shadow: 0 0 0 0.7pt #ffffff;
+}
+
+.pp-sheet.pp-sheet--upper .pp-sum td {
+  background: rgba(107, 15, 15, 0.06);
+}
+
 /* ── Header ── */
 .pp-header {
   position: relative;
@@ -321,6 +344,37 @@
 
 .pp-col-detail {
   font-size: 11px !important;
+}
+
+.pp-table--split {
+  font-size: 9.5px;
+  table-layout: auto;
+}
+
+.pp-table--split th,
+.pp-table--split td {
+  padding: 0.25mm 0.12mm;
+  font-size: 9.5px;
+}
+
+.pp-table--split .pp-left {
+  font-size: 9.5px;
+  padding-left: 0.5mm !important;
+}
+
+.pp-table--split .pp-th-max,
+.pp-table--split .pp-th-obt,
+.pp-table--split .pp-th-grd {
+  font-size: 7.6px !important;
+  line-height: 1.05;
+}
+
+.pp-table--split .pp-cell-total {
+  font-weight: 900;
+}
+
+.pp-table--split .pp-scheme {
+  font-size: 6.8px;
 }
 
 .pp-left {
@@ -671,6 +725,16 @@
     print-color-adjust: exact;
     color: #fff !important;
     background: #6b0f0f !important;
+  }
+
+  .pp-sheet.pp-sheet--upper,
+  .pp-sheet.pp-sheet--upper .pp-header,
+  .pp-sheet.pp-sheet--upper .pp-legend,
+  .pp-sheet.pp-sheet--upper .pp-table,
+  .pp-sheet.pp-sheet--upper .pp-remarks,
+  .pp-sheet.pp-sheet--upper .pp-remarks-block,
+  .pp-sheet.pp-sheet--upper .pp-student {
+    background: #ffffff !important;
   }
 
   .pp-sheet:last-child {
