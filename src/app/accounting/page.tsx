@@ -880,8 +880,9 @@ export default function AccountingPage() {
                 {data?.recentVouchers?.length ? (
                   <div className="space-y-2">
                     {data.recentVouchers.map((v) => (
-                      <div
+                      <Link
                         key={v.id}
+                        href={`/accounting/vouchers/${v.id}`}
                         className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3.5 py-3 transition-colors hover:bg-slate-100"
                       >
                         <div className="min-w-0">
@@ -902,7 +903,7 @@ export default function AccountingPage() {
                             }
                           />
                         </div>
-                      </div>
+                      </Link>
                     ))}
                     <Link href="/accounting/vouchers">
                       <Button variant="outline" size="sm" className="mt-2 w-full">
