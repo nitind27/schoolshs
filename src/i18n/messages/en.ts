@@ -487,10 +487,10 @@ const en = {
   examsHub: {
     title: "Exams",
     subtitle: "Pick a class, create First / Mid / Final, then set marks",
-    introTitle: "Create exams class-wise",
-    intro1: "Select one or more classes",
-    intro2: "Create exam — only the types you added (First / Mid / Final) appear",
-    intro3: "Then set out-of, paper and internal marks",
+    introTitle: "Simple 3 steps",
+    intro1: "Select class(es)",
+    intro2: "Create subject exam (First / Mid / Final) — e.g. out of 100",
+    intro3: "Optionally add Computer — its total is separate (e.g. out of 50)",
     tabClasses: "1. Classes",
     tabTypes: "2. Exam types",
     tabTemplate: "2. Exam types",
@@ -586,29 +586,32 @@ const en = {
     paperTeacherTotal:
       "Paper {{paper}} + Teacher/Internal {{internal}} = {{total}} out of",
     reload: "Reload",
-    computerOnly: "This exam is for Computer only",
+    computerOnly: "Computer only",
     computerOnlyHint:
-      "Marks for this exam are Computer only. Exam 1 / 2 / 3 keep the other subjects.",
-    computerExam: "Computer exam",
+      "Simple: subject exams = other subjects · Computer exam = Computer only, separate total.",
+    computerExam: "Computer",
     computerBadge: "Computer",
-    autoTotalComputer:
-      "Computer exam out-of: {{total}} — fills the Computer column on the result card",
-    computerResultHint:
-      "Result card stays the same. Computer marks from this exam fill the Computer row.",
-    subjectExamsTitle: "Subject exams",
-    subjectExamsDesc:
-      "Exam 1, 2, 3… and Final. Out-of marks here stay on every subject except Computer.",
-    computerExamsTitle: "Computer exams",
+    autoTotalComputer: "Computer separate total: {{total}} — goes to Computer column on result",
+    computerResultHint: "Result / marks sheet shows this total in the Computer column.",
+    subjectExamsTitle: "1) Subject exams",
+    subjectExamsDesc: "Gujarati, English… all subjects except Computer.",
+    computerExamsTitle: "2) Computer (separate total)",
     computerExamsDesc:
-      "Set Computer separately. Add one Computer exam for each result term (1st / 2nd).",
-    addComputerExam: "Add Computer exam",
+      "Add Computer on classes that already have subject exams. Keep its total separate (e.g. 50).",
+    addComputerExam: "Add Computer",
     addComputerHint:
-      "Only Computer marks are entered here. Other subjects stay on Exam 1 / 2 / 3.",
-    computerEmpty: "No Computer exam yet. Add one for each result term you need.",
+      "Just enter the Computer total. Result uses that out-of for the Computer column.",
+    computerEmpty: "No Computer yet — add with the button below.",
     computerWizardHint:
-      "Computer is separate from subject exams. Pick one here or add a new Computer exam, then set its own paper / internal / total.",
-    computerMarksHint:
-      "Set Computer marks separately — paper, teacher/internal, and total for this Computer exam only.",
+      "If the class already has a subject exam, add Computer here. Its total stays separate.",
+    computerMarksHint: "Computer total (out of) — separate from subject 100.",
+    computerTotalLabel: "Computer total marks (out of)",
+    computerEasyTitle: "How Computer works",
+    computerEasy1: "Select class(es)",
+    computerEasy2: "Tap “Add Computer”",
+    computerEasy3: "Enter total (e.g. 50) → Create — shows in Computer column on result",
+    computerCreateBtn: "Add Computer (separate total)",
+    computerNeedSubjectFirst: "Create a subject exam (First/Mid) first, then add Computer.",
     marksDisplayTitle: "How to show marks on result",
     marksDisplayHint:
       "Choose for this exam: show paper + internal separately, only the combined total, or paper only.",
