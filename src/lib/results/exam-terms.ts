@@ -39,7 +39,12 @@ export interface ExamTermDef {
   internalMax?: number;
   /** How paper/internal show on marks entry and result print */
   marksDisplay?: MarksDisplayMode;
-  /** Default all subjects. `computer` limits marks entry to Computer only. */
+  /**
+   * If > 0, this exam ALSO includes Computer with this separate out-of
+   * (e.g. subjects /100, Computer /50 on the same Exam 1).
+   */
+  computerOutOf?: number;
+  /** Default all subjects. `computer` limits marks entry to Computer only (legacy). */
   subjectScope?: ExamSubjectScope;
   published: boolean;
   publishedAt: string | null;
@@ -168,6 +173,7 @@ export function createComponentTerm(opts: {
   internalMax?: number;
   totalMax?: number;
   marksDisplay?: MarksDisplayMode;
+  computerOutOf?: number;
   existingKeys?: string[];
   subjectScope?: ExamSubjectScope;
 }): ExamTermDef {
@@ -185,6 +191,7 @@ export function createComponentTerm(opts: {
     internalMax,
     totalMax: opts.totalMax ?? (opts.maxMarks ?? 50) + internalMax,
     marksDisplay: normalizeMarksDisplay(opts.marksDisplay, internalMax),
+    computerOutOf: Math.max(0, Number(opts.computerOutOf) || 0) || undefined,
     subjectScope: opts.subjectScope === "computer" ? "computer" : "all",
   });
 }
@@ -194,6 +201,7 @@ export function createFinalTerm(opts?: {
   internalMax?: number;
   totalMax?: number;
   marksDisplay?: MarksDisplayMode;
+  computerOutOf?: number;
   labelEn?: string;
   labelGu?: string;
 }): ExamTermDef {
@@ -209,6 +217,7 @@ export function createFinalTerm(opts?: {
     internalMax,
     totalMax: opts?.totalMax ?? maxMarks + internalMax,
     marksDisplay: normalizeMarksDisplay(opts?.marksDisplay, internalMax),
+    computerOutOf: Math.max(0, Number(opts?.computerOutOf) || 0) || undefined,
   });
 }
 
@@ -404,6 +413,7 @@ export function parseExamTermMeta(raw?: string | null): ExamTermMeta {
                 (Number(t.maxMarks) || 0) + internalMax,
             ),
             marksDisplay: normalizeMarksDisplay(t.marksDisplay, internalMax),
+            computerOutOf: Math.max(0, Number(t.computerOutOf) || 0) || undefined,
             subjectScope:
               role === "final" || t.subjectScope !== "computer" ? "all" : "computer",
             published: !!t.published,
@@ -489,7 +499,16 @@ export function isComputerTerm(term: ExamTermDef): boolean {
 export function isComputerSubject(code?: string | null, name?: string | null): boolean {
   const c = String(code || "").trim().toUpperCase();
   if (c === "COMP" || c === "ICT") return true;
-  return /computer|કોમ્પ્યુટર|કોમ્પ્યુટર|ict/i.test(String(name || ""));
+  return /computer|કોમ્પ્યુટર|કમ્પ્યુટર|ict/i.test(String(name || ""));
+}
+
+/** Computer out-of attached on a normal exam (preferred model). */
+export function termComputerOutOf(term: Pick<ExamTermDef, "computerOutOf">): number {
+  return Math.max(0, Number(term.computerOutOf) || 0);
+}
+
+export function termIncludesComputer(term: Pick<ExamTermDef, "computerOutOf">): boolean {
+  return termComputerOutOf(term) > 0;
 }
 
 export function generalTerms(meta: ExamTermMeta): ExamTermDef[] {
@@ -504,6 +523,14 @@ export function hasComputerExams(meta: ExamTermMeta): boolean {
   return computerTerms(meta).length > 0;
 }
 
+/** Any exam carries Computer (new computerOutOf OR legacy computer-only term). */
+export function hasAnyComputerMarks(meta: ExamTermMeta): boolean {
+  return (
+    hasComputerExams(meta) ||
+    meta.terms.some((term) => termIncludesComputer(term))
+  );
+}
+
 export function termAllowsSubject(
   term: ExamTermDef,
   meta: ExamTermMeta,
@@ -511,8 +538,17 @@ export function termAllowsSubject(
   name?: string | null,
 ): boolean {
   const computer = isComputerSubject(code, name);
+  // Legacy: separate computer-only exam → only COMP
   if (isComputerTerm(term)) return computer;
-  if (hasComputerExams(meta)) return !computer;
+
+  const anyComputer = hasAnyComputerMarks(meta);
+  if (!anyComputer) return true;
+
+  if (computer) {
+    // COMP only on exams that opted in with computerOutOf
+    // (legacy computer-only terms handled above)
+    return termIncludesComputer(term);
+  }
   return true;
 }
 
@@ -550,6 +586,11 @@ export function totalTermMaxFromMeta(meta: ExamTermMeta): number {
 
 export function computerTermMaxFromMeta(meta: ExamTermMeta): number {
   let total = 0;
+  // Preferred: Computer out-of attached on each subject exam
+  for (const term of generalTerms(meta)) {
+    total += termComputerOutOf(term);
+  }
+  // Legacy: separate computer-only exams
   for (const term of computerTerms(meta)) {
     total += Math.max(
       0,
@@ -711,6 +752,10 @@ export function applyTermMetaToSheetConfig(
   const fin = finalTerm(meta);
   const comps = componentTerms(meta).filter((term) => !isComputerTerm(term));
   const compsComputer = computerTerms(meta);
+  const anyComputerAttached =
+    comps.some((t) => termIncludesComputer(t)) ||
+    termIncludesComputer(fin) ||
+    compsComputer.length > 0;
 
   const configuredRows = comps.flatMap((t, idx) => {
     // Keep classic kinds for first 3 so old sheets stay familiar
@@ -718,7 +763,7 @@ export function applyTermMetaToSheetConfig(
       idx === 0 ? "first" : idx === 1 ? "second" : idx === 2 ? "third" : "term";
     return sheetRowsForTerm(t, {
       classicKind: classicKind as MarksSheetExamRowDef["kind"],
-      subjectScope: compsComputer.length ? "all" : undefined,
+      subjectScope: anyComputerAttached ? "all" : undefined,
     });
   });
 
@@ -734,7 +779,7 @@ export function applyTermMetaToSheetConfig(
             kind: "annual",
             termKey: fin.key,
             scoreType: "paper",
-            ...(compsComputer.length ? { subjectScope: "all" as const } : {}),
+            ...(anyComputerAttached ? { subjectScope: "all" as const } : {}),
           },
         ]
       : [
@@ -748,7 +793,7 @@ export function applyTermMetaToSheetConfig(
             kind: "annual",
             termKey: fin.key,
             scoreType: "paper",
-            ...(compsComputer.length ? { subjectScope: "all" as const } : {}),
+            ...(anyComputerAttached ? { subjectScope: "all" as const } : {}),
           },
         ];
   if (termShowsInternalSplit(fin)) {
@@ -759,18 +804,34 @@ export function applyTermMetaToSheetConfig(
       kind: "internal",
       termKey: fin.key,
       scoreType: "internal",
-      ...(compsComputer.length ? { subjectScope: "all" as const } : {}),
+      ...(anyComputerAttached ? { subjectScope: "all" as const } : {}),
     });
   }
 
-  // Computer exams on the SAME sheet — own out-of, COMP column only
-  const computerRows = compsComputer.flatMap((t, idx) =>
-    sheetRowsForTerm(t, {
-      classicKind: "term",
-      subjectScope: "computer",
-      keyPrefix: compsComputer.length > 1 ? `comp${idx + 1}_` : "comp_",
-    }),
-  );
+  // Computer on same sheet: one row per exam that has computerOutOf (preferred)
+  const attachedComputerRows: MarksSheetExamRowDef[] = [...comps, fin]
+    .filter((t) => termIncludesComputer(t))
+    .map((t) => ({
+      key: `comp_${t.key}`,
+      label: `કોમ્પ્યુટર — ${t.labelGu || t.labelEn}`,
+      maxMarks: termComputerOutOf(t),
+      kind: "term" as const,
+      termKey: t.key,
+      scoreType: "paper" as const,
+      subjectScope: "computer" as const,
+    }));
+
+  // Legacy separate computer-only exams
+  const computerRows = [
+    ...attachedComputerRows,
+    ...compsComputer.flatMap((t, idx) =>
+      sheetRowsForTerm(t, {
+        classicKind: "term",
+        subjectScope: "computer",
+        keyPrefix: compsComputer.length > 1 ? `comp${idx + 1}_` : "comp_",
+      }),
+    ),
+  ];
 
   const examRows: MarksSheetExamRowDef[] = [
     { key: "max", label: "પરીક્ષા", maxMarks: null, kind: "max" },
@@ -1071,6 +1132,27 @@ export function buildStudentTermRows(
       );
       const internalValue = readTermInternalScore(term, termData);
 
+      const isComp = isComputerSubject(def.code, def.name);
+      const computerOut = termComputerOutOf(term);
+      // Computer on this exam uses its own out-of (not paper/internal split)
+      if (isComp && computerOut > 0 && def.type === "numeric") {
+        return {
+          subjectCode: def.code,
+          subjectName: def.name,
+          subjectType: def.type,
+          examSubjectId: examSub?.id ?? null,
+          termValue,
+          externalValue: termValue,
+          internalValue: null,
+          internal: null,
+          internalMax: 0,
+          paperMax: computerOut,
+          marksDisplay: "paper" as const,
+          isComputer: true,
+          letterGrade: null,
+        };
+      }
+
       const display = resolveMarksDisplay(term);
       const internalMax = resolveTermInternalMax(term);
       const showInternal =
@@ -1107,6 +1189,7 @@ export function buildStudentTermRows(
         internalMax: showInternal ? internalMax : 0,
         paperMax,
         marksDisplay: display,
+        isComputer: false,
         letterGrade: def.type === "grade" ? termData.letterGrade : null,
       };
     });
@@ -1142,6 +1225,7 @@ export function metaFromTemplateTerms(
     role?: ExamTermRole;
     internalMax?: number;
     marksDisplay?: MarksDisplayMode;
+    computerOutOf?: number;
     examDate?: string | null;
     subjectScope?: ExamSubjectScope;
   }>,
@@ -1163,6 +1247,7 @@ export function metaFromTemplateTerms(
         internalMax,
         totalMax: item.totalMax ?? maxMarks + internalMax,
         marksDisplay: normalizeMarksDisplay(item.marksDisplay, internalMax),
+        computerOutOf: Math.max(0, Number(item.computerOutOf) || 0) || undefined,
         subjectScope: "all",
       });
       if (item.examDate) final.examDate = item.examDate;
@@ -1176,6 +1261,7 @@ export function metaFromTemplateTerms(
       internalMax: item.internalMax,
       totalMax: item.totalMax,
       marksDisplay: item.marksDisplay,
+      computerOutOf: item.computerOutOf,
       existingKeys: components.map((c) => c.key),
       subjectScope: item.subjectScope === "computer" ? "computer" : "all",
     });
@@ -1223,6 +1309,7 @@ export type ExamTermTemplateInput = {
   role?: ExamTermRole;
   internalMax?: number;
   marksDisplay?: MarksDisplayMode;
+  computerOutOf?: number;
   examDate?: string | null;
   subjectScope?: ExamSubjectScope;
 };
@@ -1250,6 +1337,11 @@ export function mergeExamTermIntoMeta(
     internalMax,
   );
 
+  const computerOutOf =
+    item.computerOutOf !== undefined
+      ? Math.max(0, Number(item.computerOutOf) || 0) || undefined
+      : older?.computerOutOf;
+
   const incoming: ExamTermDef = isFinal
     ? withStatus({
         key: "final",
@@ -1261,6 +1353,7 @@ export function mergeExamTermIntoMeta(
         internalMax,
         totalMax: item.totalMax ?? item.maxMarks + internalMax,
         marksDisplay,
+        computerOutOf,
         subjectScope: "all",
         published: older?.published ?? false,
         publishedAt: older?.publishedAt ?? null,
@@ -1275,6 +1368,7 @@ export function mergeExamTermIntoMeta(
         internalMax: item.internalMax,
         totalMax: item.totalMax,
         marksDisplay,
+        computerOutOf,
         existingKeys: baseTerms.map((term) => term.key),
         subjectScope: item.subjectScope === "computer" ? "computer" : "all",
       });
@@ -1287,6 +1381,9 @@ export function mergeExamTermIntoMeta(
     incoming.createdById = older.createdById ?? incoming.createdById ?? null;
     incoming.createdByName = older.createdByName ?? incoming.createdByName ?? null;
     incoming.createdAt = older.createdAt ?? incoming.createdAt ?? null;
+    if (item.computerOutOf === undefined && older.computerOutOf) {
+      incoming.computerOutOf = older.computerOutOf;
+    }
   }
   if (!incoming.createdById && options?.createdBy) {
     incoming.createdById = options.createdBy.id;

@@ -320,6 +320,10 @@ async function applySingleExam(
     examTerm.marksDisplay === "paper"
       ? examTerm.marksDisplay
       : undefined;
+  const computerOutOf =
+    examTerm.computerOutOf != null
+      ? Math.max(0, Number(examTerm.computerOutOf) || 0)
+      : undefined;
   const normalized: ExamTermTemplateInput = {
     key: examTerm.key,
     labelEn: String(examTerm.labelEn).trim(),
@@ -328,6 +332,7 @@ async function applySingleExam(
     internalMax,
     totalMax: Math.max(0, Number(examTerm.totalMax) || 0),
     marksDisplay: marksDisplayRaw ?? (internalMax > 0 ? "split" : "paper"),
+    computerOutOf: computerOutOf || undefined,
     role: examTerm.role === "final" ? "final" : "component",
     subjectScope: examTerm.subjectScope === "computer" ? "computer" : "all",
   };
