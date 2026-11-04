@@ -173,6 +173,27 @@ export default function TermMarksPage() {
     return Math.round(num);
   };
 
+  /** True when marks are below 0 or above allowed max. */
+  const isOutOfMax = (value: number | null | undefined, max: number): boolean => {
+    if (value == null || !Number.isFinite(value)) return false;
+    return value < 0 || value > max;
+  };
+
+  const outOfMaxCount = useMemo(() => {
+    if (!data) return 0;
+    const paperMax = data.term.maxMarks;
+    const internalMax = data.term.internalMax ?? 0;
+    let n = 0;
+    for (const st of rows) {
+      for (const sub of st.subjectMarks) {
+        if (sub.subjectType !== "numeric") continue;
+        if (isOutOfMax(sub.termValue, paperMax)) n++;
+        if (internalMax > 0 && isOutOfMax(sub.internalValue ?? null, internalMax)) n++;
+      }
+    }
+    return n;
+  }, [rows, data]);
+
   const updateCell = (
     studentIdx: number,
     subjectCode: string,
@@ -283,6 +304,13 @@ export default function TermMarksPage() {
 
   const save = async () => {
     if (!data?.exam?.id || !classId) return;
+    if (outOfMaxCount > 0) {
+      setMessage({
+        type: "err",
+        text: `Out of max: ${outOfMaxCount} red box(es) — fix marks before save`,
+      });
+      return;
+    }
     setSaving(true);
     setMessage(null);
     const res = await fetch("/api/results/term-marks", {
@@ -363,7 +391,12 @@ export default function TermMarksPage() {
               </Link>
             )}
           {data?.editable && (
-            <Button onClick={save} disabled={saving} size="lg" className="gap-2">
+            <Button
+              onClick={save}
+              disabled={saving || outOfMaxCount > 0}
+              size="lg"
+              className="gap-2"
+            >
               {saving ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
               {saving ? t("results.save") + "..." : t("results.save")}
             </Button>
@@ -463,6 +496,11 @@ export default function TermMarksPage() {
               <p className="text-xs text-slate-500 mt-1">
                 Enter ↓ · Shift+Enter ↑ · Tab → · Shift+Tab ← · Arrow keys move cells
               </p>
+              {outOfMaxCount > 0 && (
+                <p className="text-xs text-red-600 font-medium mt-1">
+                  {outOfMaxCount} cell(s) over max marks — red boxes must be fixed
+                </p>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -495,7 +533,13 @@ export default function TermMarksPage() {
                         <td className="p-2 sticky left-[104px] bg-white font-medium whitespace-nowrap font-gujarati">
                           {studentFullNameGu(st)}
                         </td>
-                        {st.subjectMarks.filter((s) => s.subjectType === "numeric").map((sub, colIdx) => (
+                        {st.subjectMarks.filter((s) => s.subjectType === "numeric").map((sub, colIdx) => {
+                          const paperInvalid = isOutOfMax(sub.termValue, data.term.maxMarks);
+                          const internalInvalid = isOutOfMax(
+                            sub.internalValue ?? null,
+                            data.term.internalMax ?? 0,
+                          );
+                          return (
                           <td key={sub.subjectCode} className="p-1 text-center">
                             <div className="flex flex-col gap-1 items-center">
                               <input
@@ -505,12 +549,23 @@ export default function TermMarksPage() {
                                 step={1}
                                 disabled={!data.editable}
                                 data-marks-cell={`${i}-${colIdx}-paper`}
+                                aria-invalid={paperInvalid}
+                                title={
+                                  paperInvalid
+                                    ? `Max ${data.term.maxMarks}`
+                                    : undefined
+                                }
                                 value={sub.termValue ?? ""}
                                 onChange={(e) => updateCell(i, sub.subjectCode, "termValue", e.target.value)}
                                 onBlur={(e) => updateCell(i, sub.subjectCode, "termValue", e.target.value)}
                                 onFocus={(e) => e.currentTarget.select()}
                                 onKeyDown={(e) => handleMarksKeyDown(e, i, colIdx, "paper")}
-                                className="w-16 h-8 text-center text-sm border border-slate-200 rounded-md focus:border-blue-400 focus:ring-1 focus:ring-blue-200 disabled:bg-slate-50"
+                                className={cn(
+                                  "w-16 h-8 text-center text-sm rounded-md disabled:bg-slate-50",
+                                  paperInvalid
+                                    ? "border-2 border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-2 focus:ring-red-200"
+                                    : "border border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-200",
+                                )}
                               />
                               {(data.term.internalMax ?? 0) > 0 && (
                                 <input
@@ -520,18 +575,30 @@ export default function TermMarksPage() {
                                   step={1}
                                   disabled={!data.editable}
                                   data-marks-cell={`${i}-${colIdx}-internal`}
+                                  aria-invalid={internalInvalid}
+                                  title={
+                                    internalInvalid
+                                      ? `Max ${data.term.internalMax}`
+                                      : undefined
+                                  }
                                   value={sub.internalValue ?? ""}
                                   onChange={(e) => updateCell(i, sub.subjectCode, "internalValue", e.target.value)}
                                   onBlur={(e) => updateCell(i, sub.subjectCode, "internalValue", e.target.value)}
                                   onFocus={(e) => e.currentTarget.select()}
                                   onKeyDown={(e) => handleMarksKeyDown(e, i, colIdx, "internal")}
-                                  className="w-16 h-7 text-center text-xs border border-violet-200 rounded-md focus:border-violet-400 disabled:bg-slate-50"
+                                  className={cn(
+                                    "w-16 h-7 text-center text-xs rounded-md disabled:bg-slate-50",
+                                    internalInvalid
+                                      ? "border-2 border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-2 focus:ring-red-200"
+                                      : "border border-violet-200 focus:border-violet-400",
+                                  )}
                                   placeholder={t("examsHub.teacherShort")}
                                 />
                               )}
                             </div>
                           </td>
-                        ))}
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
