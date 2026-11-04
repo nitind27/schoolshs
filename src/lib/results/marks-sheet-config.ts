@@ -33,12 +33,19 @@ export type MarksSheetExamRowDef = {
   termKey?: string;
   /** Whether this dynamic row stores paper or teacher/internal marks */
   scoreType?: "paper" | "internal";
+  /**
+   * `computer` = this row is only for the Computer column (separate out-of).
+   * Default / omitted = all non-computer subjects when computer exams exist.
+   */
+  subjectScope?: "all" | "computer";
 };
 
 export type MarksSheetConfig = {
   subjects: MarksSheetSubjectDef[];
   examRows: MarksSheetExamRowDef[];
   totalTermMax: number;
+  /** Sum of Computer-only exam totals (separate from subject totalTermMax) */
+  computerTermMax?: number;
   convertedMax: number;
   achievementMax: number;
 };

@@ -1,4 +1,9 @@
-import type { MarksSheetConfig, MarksSheetSubjectDef, MarksSheetTermData } from "./marks-sheet-config";
+import type {
+  MarksSheetConfig,
+  MarksSheetExamRowDef,
+  MarksSheetSubjectDef,
+  MarksSheetTermData,
+} from "./marks-sheet-config";
 
 export type SubjectMarksInput = {
   subject: MarksSheetSubjectDef;
@@ -16,6 +21,67 @@ export type SubjectMarksInput = {
   grace: number | null;
   letterGrade: string | null;
 };
+
+function isComputerCodeOrName(code?: string | null, name?: string | null): boolean {
+  const c = String(code || "").trim().toUpperCase();
+  if (c === "COMP" || c === "ICT") return true;
+  return /computer|કોમ્પ્યુટર|કમ્પ્યુટર|ict/i.test(String(name || ""));
+}
+
+function subjectUsesComputerRows(
+  subject: MarksSheetSubjectDef,
+  config: MarksSheetConfig,
+): boolean {
+  const hasComputerRows = config.examRows.some((r) => r.subjectScope === "computer");
+  return hasComputerRows && isComputerCodeOrName(subject.code, subject.name);
+}
+
+function rowAppliesToSubject(
+  row: MarksSheetExamRowDef,
+  subject: MarksSheetSubjectDef,
+  config: MarksSheetConfig,
+): boolean {
+  const computerSub = subjectUsesComputerRows(subject, config);
+  if (row.subjectScope === "computer") return computerSub;
+  if (computerSub && (row.subjectScope === "all" || row.kind === "annual" || row.kind === "internal")) {
+    // COMP marks live only on computer exam rows when those exist
+    if (
+      row.kind === "first" ||
+      row.kind === "second" ||
+      row.kind === "third" ||
+      row.kind === "term" ||
+      row.kind === "annual" ||
+      row.kind === "internal" ||
+      row.scoreType === "internal" ||
+      row.scoreType === "paper"
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function componentRowsForSubject(
+  subject: MarksSheetSubjectDef,
+  config: MarksSheetConfig,
+): MarksSheetExamRowDef[] {
+  const computerSub = subjectUsesComputerRows(subject, config);
+  return config.examRows.filter((r) => {
+    if (r.scoreType === "internal") return false;
+    if (
+      !(
+        r.kind === "first" ||
+        r.kind === "second" ||
+        r.kind === "third" ||
+        r.kind === "term"
+      )
+    ) {
+      return false;
+    }
+    if (computerSub) return r.subjectScope === "computer";
+    return r.subjectScope !== "computer";
+  });
+}
 
 export type RowCellValue = number | string | null;
 
@@ -49,14 +115,7 @@ function rowMax(config: MarksSheetConfig, kind: string, fallback: number): numbe
 
 function sumComponentMarks(input: SubjectMarksInput, config: MarksSheetConfig): number {
   // Prefer summing from configured component rows so order/count stays correct
-  const componentRows = config.examRows.filter(
-    (r) =>
-      r.scoreType !== "internal" &&
-      (r.kind === "first" ||
-        r.kind === "second" ||
-        r.kind === "third" ||
-        r.kind === "term"),
-  );
+  const componentRows = componentRowsForSubject(input.subject, config);
   if (componentRows.length) {
     let sum = 0;
     for (const row of componentRows) {
@@ -76,12 +135,43 @@ function sumComponentMarks(input: SubjectMarksInput, config: MarksSheetConfig): 
   );
 }
 
+function sumInternalForSubject(input: SubjectMarksInput, config: MarksSheetConfig): number {
+  const computerSub = subjectUsesComputerRows(input.subject, config);
+  const internalRows = config.examRows.filter((r) => {
+    if (r.scoreType !== "internal" || !r.termKey) return false;
+    if (computerSub) return r.subjectScope === "computer";
+    return r.subjectScope !== "computer";
+  });
+  if (internalRows.length) {
+    return internalRows.reduce(
+      (sum, row) => sum + num(input.internalScores[row.termKey!]),
+      0,
+    );
+  }
+  const dynamicInternal = Object.values(input.internalScores || {}).reduce<number>(
+    (sum, value) => sum + num(value),
+    0,
+  );
+  return Object.keys(input.internalScores || {}).length > 0
+    ? dynamicInternal
+    : num(input.internal);
+}
+
 export function computeSubjectMarks(
   subject: MarksSheetSubjectDef,
   input: SubjectMarksInput,
   config: MarksSheetConfig,
 ) {
-  const totalTermMax = config.totalTermMax > 0 ? config.totalTermMax : 200;
+  const computerSub = subjectUsesComputerRows(subject, config);
+  const totalTermMax = computerSub
+    ? config.computerTermMax && config.computerTermMax > 0
+      ? config.computerTermMax
+      : config.totalTermMax > 0
+        ? config.totalTermMax
+        : 100
+    : config.totalTermMax > 0
+      ? config.totalTermMax
+      : 200;
 
   if (subject.type === "grade") {
     const grade = input.letterGrade || "";
@@ -105,42 +195,44 @@ export function computeSubjectMarks(
     return cells;
   }
 
-  const dynamicInternal = Object.values(input.internalScores || {}).reduce<number>(
-    (sum, value) => sum + num(value),
-    0,
-  );
-  // Legacy fallback when final internal was stored only in `internal`.
-  const internal =
-    Object.keys(input.internalScores || {}).length > 0
-      ? dynamicInternal
-      : num(input.internal);
-  const annual = num(input.annual);
-  const achievement = num(input.achievement);
-  const special = num(input.special);
-  const grace = num(input.grace);
+  const internal = sumInternalForSubject(input, config);
+  // Computer column does not use the general annual / achievement rows
+  const annual = computerSub ? 0 : num(input.annual);
+  const achievement = computerSub ? 0 : num(input.achievement);
+  const special = computerSub ? 0 : num(input.special);
+  const grace = computerSub ? 0 : num(input.grace);
   const components = sumComponentMarks(input, config);
 
   const denom = totalTermMax > 0 ? totalTermMax : 200;
   const total = components + internal + annual;
-  const converted = (total / denom) * 100;
+  const converted = denom > 0 ? (total / denom) * 100 : 0;
   const final = converted + achievement + special + grace;
 
   const cells: Record<string, RowCellValue> = {
     max: "",
-    first: num(input.first) || num(input.scores.mid1) || null,
-    second: num(input.second) || num(input.scores.mid2) || null,
-    third: num(input.third) || num(input.scores.mid3) || null,
-    internal: internal || null,
-    annual: annual || null,
-    total: total || null,
-    converted: converted ? fmt(converted) : null,
-    achievement: achievement || null,
-    special: special || null,
-    grace: grace || null,
-    final: final ? fmt(final) : null,
+    first: computerSub ? null : num(input.first) || num(input.scores.mid1) || null,
+    second: computerSub ? null : num(input.second) || num(input.scores.mid2) || null,
+    third: computerSub ? null : num(input.third) || num(input.scores.mid3) || null,
+    internal: computerSub ? null : internal || null,
+    annual: computerSub ? null : annual || null,
+    total: computerSub ? null : total || null,
+    converted: computerSub ? null : converted ? fmt(converted) : null,
+    achievement: computerSub ? null : achievement || null,
+    special: computerSub ? null : special || null,
+    grace: computerSub ? null : grace || null,
+    final: computerSub ? (total ? fmt(total) : null) : final ? fmt(final) : null,
+    computer_total: computerSub ? total || null : null,
   };
 
   for (const row of config.examRows) {
+    if (!rowAppliesToSubject(row, subject, config)) {
+      cells[row.key] = null;
+      continue;
+    }
+    if (row.key === "computer_total") {
+      cells[row.key] = computerSub ? total || null : null;
+      continue;
+    }
     if (row.scoreType === "internal" && row.termKey) {
       cells[row.key] = num(input.internalScores[row.termKey]) || null;
     } else if (row.kind === "term" || row.kind === "first" || row.kind === "second" || row.kind === "third") {
@@ -190,28 +282,36 @@ export function computeStudentMarksSheet(
   let totalSpecial = 0;
   let totalGrace = 0;
   let totalFinal = 0;
+  let computerTotalObtained = 0;
 
   for (const sub of subjects) {
     const cells = computeSubjectMarks(sub.subject, sub, config);
     subjectCells[sub.subject.code] = cells;
+    const computerSub = subjectUsesComputerRows(sub.subject, config);
 
     if (sub.subject.type === "numeric") {
       for (const row of componentRows) {
+        if (!rowAppliesToSubject(row, sub.subject, config)) continue;
         componentTotals[row.key] =
           (componentTotals[row.key] || 0) + num(cells[row.key] as number | null);
       }
       for (const row of internalRows) {
+        if (!rowAppliesToSubject(row, sub.subject, config)) continue;
         internalTotals[row.key] =
           (internalTotals[row.key] || 0) + num(cells[row.key] as number | null);
       }
-      totalInternal += num(sub.internal);
-      totalAnnual += num(sub.annual);
-      totalObtained += num(cells.total as number | null);
-      totalConverted += Number(cells.converted) || 0;
-      totalAchievement += num(sub.achievement);
-      totalSpecial += num(sub.special);
-      totalGrace += num(sub.grace);
-      totalFinal += Number(cells.final) || 0;
+      if (computerSub) {
+        computerTotalObtained += num(cells.computer_total as number | null);
+      } else {
+        totalInternal += num(sub.internal);
+        totalAnnual += num(sub.annual);
+        totalObtained += num(cells.total as number | null);
+        totalConverted += Number(cells.converted) || 0;
+        totalAchievement += num(sub.achievement);
+        totalSpecial += num(sub.special);
+        totalGrace += num(sub.grace);
+        totalFinal += Number(cells.final) || 0;
+      }
     }
   }
 
@@ -248,6 +348,9 @@ export function computeStudentMarksSheet(
   }
   for (const row of internalRows) {
     summaryCells[row.key] = internalTotals[row.key] || null;
+  }
+  if (config.computerTermMax && config.computerTermMax > 0) {
+    summaryCells.computer_total = computerTotalObtained || null;
   }
 
   return {

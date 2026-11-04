@@ -646,54 +646,80 @@ export function filterMarksSheetExamRowsForSchool(
   return { ...config, examRows };
 }
 
+function sheetRowsForTerm(
+  t: ExamTermDef,
+  opts: {
+    classicKind?: MarksSheetExamRowDef["kind"];
+    subjectScope?: "all" | "computer";
+    keyPrefix?: string;
+  } = {},
+): MarksSheetExamRowDef[] {
+  const classicKind = opts.classicKind || "term";
+  const subjectScope = opts.subjectScope;
+  const keyPrefix = opts.keyPrefix || "";
+  const display = resolveMarksDisplay(t);
+  const scopeTag = subjectScope ? { subjectScope } : {};
+
+  if (display === "total") {
+    return [
+      {
+        key: `${keyPrefix}${t.key}`,
+        label: t.labelGu || t.labelEn,
+        maxMarks: t.totalMax || t.maxMarks + (t.internalMax ?? 0),
+        kind: classicKind,
+        termKey: t.key,
+        scoreType: "paper" as const,
+        ...scopeTag,
+      },
+    ];
+  }
+
+  const paper: MarksSheetExamRowDef = {
+    key: `${keyPrefix}${t.key}`,
+    label:
+      display === "split"
+        ? `${t.labelGu || t.labelEn} — પેપર`
+        : t.labelGu || t.labelEn,
+    maxMarks: t.maxMarks,
+    kind: classicKind,
+    termKey: t.key,
+    scoreType: "paper",
+    ...scopeTag,
+  };
+  if (!termShowsInternalSplit(t)) return [paper];
+  return [
+    paper,
+    {
+      key: `${keyPrefix}${t.key}__internal`,
+      label: `${t.labelGu || t.labelEn} — આંતરિક`,
+      maxMarks: t.internalMax ?? 0,
+      kind: "term",
+      termKey: t.key,
+      scoreType: "internal",
+      ...scopeTag,
+    },
+  ];
+}
+
 /** Rebuild marks-sheet rows from configured exams */
 export function applyTermMetaToSheetConfig(
   config: MarksSheetConfig,
   meta: ExamTermMeta,
 ): MarksSheetConfig {
   const total = totalTermMaxFromMeta(meta);
+  const computerTotal = computerTermMaxFromMeta(meta);
   const fin = finalTerm(meta);
   const comps = componentTerms(meta).filter((term) => !isComputerTerm(term));
+  const compsComputer = computerTerms(meta);
 
   const configuredRows = comps.flatMap((t, idx) => {
     // Keep classic kinds for first 3 so old sheets stay familiar
     const classicKind =
       idx === 0 ? "first" : idx === 1 ? "second" : idx === 2 ? "third" : "term";
-    const display = resolveMarksDisplay(t);
-    if (display === "total") {
-      return [
-        {
-          key: t.key,
-          label: t.labelGu || t.labelEn,
-          maxMarks:
-            t.totalMax || t.maxMarks + (t.internalMax ?? 0),
-          kind: classicKind as MarksSheetExamRowDef["kind"],
-          termKey: t.key,
-          scoreType: "paper" as const,
-        },
-      ];
-    }
-    const paper: MarksSheetExamRowDef = {
-      key: t.key,
-      label:
-        display === "split"
-          ? `${t.labelGu || t.labelEn} — પેપર`
-          : t.labelGu || t.labelEn,
-      maxMarks: t.maxMarks,
-      kind: classicKind as MarksSheetExamRowDef["kind"],
-      termKey: t.key,
-      scoreType: "paper",
-    };
-    if (!termShowsInternalSplit(t)) return [paper];
-    const internal: MarksSheetExamRowDef = {
-      key: `${t.key}__internal`,
-      label: `${t.labelGu || t.labelEn} — આંતરિક`,
-      maxMarks: t.internalMax ?? 0,
-      kind: "term",
-      termKey: t.key,
-      scoreType: "internal",
-    };
-    return [paper, internal];
+    return sheetRowsForTerm(t, {
+      classicKind: classicKind as MarksSheetExamRowDef["kind"],
+      subjectScope: compsComputer.length ? "all" : undefined,
+    });
   });
 
   const finalLabel = fin.labelGu || fin.labelEn || "વાર્ષિક";
@@ -708,6 +734,7 @@ export function applyTermMetaToSheetConfig(
             kind: "annual",
             termKey: fin.key,
             scoreType: "paper",
+            ...(compsComputer.length ? { subjectScope: "all" as const } : {}),
           },
         ]
       : [
@@ -721,6 +748,7 @@ export function applyTermMetaToSheetConfig(
             kind: "annual",
             termKey: fin.key,
             scoreType: "paper",
+            ...(compsComputer.length ? { subjectScope: "all" as const } : {}),
           },
         ];
   if (termShowsInternalSplit(fin)) {
@@ -731,18 +759,45 @@ export function applyTermMetaToSheetConfig(
       kind: "internal",
       termKey: fin.key,
       scoreType: "internal",
+      ...(compsComputer.length ? { subjectScope: "all" as const } : {}),
     });
   }
+
+  // Computer exams on the SAME sheet — own out-of, COMP column only
+  const computerRows = compsComputer.flatMap((t, idx) =>
+    sheetRowsForTerm(t, {
+      classicKind: "term",
+      subjectScope: "computer",
+      keyPrefix: compsComputer.length > 1 ? `comp${idx + 1}_` : "comp_",
+    }),
+  );
 
   const examRows: MarksSheetExamRowDef[] = [
     { key: "max", label: "પરીક્ષા", maxMarks: null, kind: "max" },
     ...configuredRows,
     ...finalRows,
+    ...computerRows,
     { key: "total", label: "કુલ પ્રાપ્ત ગુણ", maxMarks: total, kind: "total" },
+    ...(computerTotal > 0
+      ? [
+          {
+            key: "computer_total",
+            label: "કોમ્પ્યુટર કુલ",
+            maxMarks: computerTotal,
+            kind: "total" as const,
+            subjectScope: "computer" as const,
+          },
+        ]
+      : []),
     ...resultRows(config),
   ];
 
-  return { ...config, examRows, totalTermMax: total };
+  return {
+    ...config,
+    examRows,
+    totalTermMax: total,
+    computerTermMax: computerTotal || undefined,
+  };
 }
 
 export function readTermScore(

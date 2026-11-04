@@ -3,6 +3,7 @@
 import type {
   MarksSheetConfig,
   MarksSheetExamRowDef,
+  MarksSheetSubjectDef,
 } from "@/lib/results/marks-sheet-config";
 import type {
   ComputedMarksSheet,
@@ -14,6 +15,37 @@ import {
   rowPassFail,
 } from "@/lib/results/marks-sheet-calculations";
 import { studentFullNameGu } from "@/lib/student-names";
+
+function isComputerSubjectCol(sub: MarksSheetSubjectDef): boolean {
+  const c = String(sub.code || "").trim().toUpperCase();
+  if (c === "COMP" || c === "ICT") return true;
+  return /computer|કોમ્પ્યુટર|કમ્પ્યુટર|ict/i.test(String(sub.name || ""));
+}
+
+/** Cell editable only when row scope matches subject (Computer rows ↔ COMP only). */
+function cellAllowedForRow(
+  row: MarksSheetExamRowDef,
+  sub: MarksSheetSubjectDef,
+  hasComputerRows: boolean,
+): boolean {
+  const computerCol = isComputerSubjectCol(sub);
+  if (row.subjectScope === "computer") return computerCol;
+  if (
+    hasComputerRows &&
+    computerCol &&
+    (row.kind === "first" ||
+      row.kind === "second" ||
+      row.kind === "third" ||
+      row.kind === "term" ||
+      row.kind === "annual" ||
+      row.kind === "internal" ||
+      row.scoreType === "paper" ||
+      row.scoreType === "internal")
+  ) {
+    return false;
+  }
+  return true;
+}
 
 export type MarksSheetStudent = {
   id: string;
@@ -379,12 +411,17 @@ function StudentMarksBlock({
     return per ? per * numericCount : null;
   };
 
+  const hasComputerRows = config.examRows.some((r) => r.subjectScope === "computer");
+
   const renderRow = (row: MarksSheetExamRowDef) => {
     const redRow = isRedRow(row.kind);
     const rowTotal = computed.summaryCells[row.key] as number | string | null;
+    const isComputerRow = row.subjectScope === "computer";
     const rowMax =
       row.maxMarks != null
-        ? row.maxMarks * numericCount
+        ? isComputerRow
+          ? row.maxMarks
+          : row.maxMarks * numericCount
         : rowMaxTotal(row.kind);
     const rowResult = rowPassFail(
       typeof rowTotal === "number" ? rowTotal : Number(rowTotal) || null,
@@ -399,17 +436,59 @@ function StudentMarksBlock({
       row.kind === "final";
 
     return (
-      <tr key={row.key}>
-        <td style={LABEL}>{row.label}</td>
+      <tr
+        key={row.key}
+        style={
+          isComputerRow
+            ? { background: "rgba(14, 165, 233, 0.06)" }
+            : undefined
+        }
+      >
+        <td style={LABEL}>
+          {row.label}
+          {isComputerRow ? (
+            <span style={{ marginLeft: 4, fontSize: 8, color: "#0369a1" }}>
+              (કોમ્પ)
+            </span>
+          ) : null}
+        </td>
         <td style={MAX_COL}>
           {row.kind === "max" ? "ગુણ" : (row.maxMarks ?? "")}
         </td>
         {config.subjects.map((sub) => {
           const input = subjectInputs.find((s) => s.subject.code === sub.code)!;
           const cells = computed.subjectCells[sub.code];
+          const allowed = cellAllowedForRow(row, sub, hasComputerRows);
 
           if (row.kind === "max") {
-            return <td key={sub.code} style={SUBJECT_COL} />;
+            return (
+              <td key={sub.code} style={SUBJECT_COL}>
+                {hasComputerRows && isComputerSubjectCol(sub) && config.computerTermMax
+                  ? config.computerTermMax
+                  : ""}
+              </td>
+            );
+          }
+
+          if (!allowed) {
+            // Computer-only rows stay blank on other subjects; COMP stays blank on general exam rows
+            if (
+              row.subjectScope === "computer" ||
+              row.kind === "first" ||
+              row.kind === "second" ||
+              row.kind === "third" ||
+              row.kind === "term" ||
+              row.kind === "annual" ||
+              row.kind === "internal" ||
+              row.scoreType === "paper" ||
+              row.scoreType === "internal"
+            ) {
+              return (
+                <td key={sub.code} style={{ ...SUBJECT_COL, color: "#94a3b8" }}>
+                  —
+                </td>
+              );
+            }
           }
 
           if (sub.type === "grade") {
