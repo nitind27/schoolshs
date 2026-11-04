@@ -208,7 +208,7 @@ export function createFinalTerm(opts?: {
     maxMarks,
     internalMax,
     totalMax: opts?.totalMax ?? maxMarks + internalMax,
-    marksDisplay: normalizeMarksDisplay(opts.marksDisplay, internalMax),
+    marksDisplay: normalizeMarksDisplay(opts?.marksDisplay, internalMax),
   });
 }
 
