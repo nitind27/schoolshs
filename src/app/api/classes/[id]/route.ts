@@ -16,10 +16,16 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       include: {
         classTeacher: true,
         students: {
-          where: { schoolId: session.schoolId },
+          where: { schoolId: session.schoolId, status: { not: "archived" } },
           orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
         },
-        _count: { select: { students: { where: { schoolId: session.schoolId } } } },
+        _count: {
+          select: {
+            students: {
+              where: { schoolId: session.schoolId, status: { not: "archived" } },
+            },
+          },
+        },
       },
     });
     if (!schoolClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });

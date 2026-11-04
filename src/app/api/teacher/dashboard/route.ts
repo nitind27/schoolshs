@@ -79,6 +79,7 @@ export async function GET() {
           where: { schoolId, id: { in: classIds } },
           include: {
             students: {
+              where: { status: { not: "archived" } },
               select: {
                 id: true,
                 firstName: true,
@@ -96,7 +97,7 @@ export async function GET() {
               },
               orderBy: [{ rollNumber: "asc" }, { surname: "asc" }],
             },
-            _count: { select: { students: true } },
+            _count: { select: { students: { where: { status: { not: "archived" } } } } },
           },
         })
       : [];

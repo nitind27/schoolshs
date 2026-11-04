@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       where: { id: classId, schoolId: session.schoolId },
       include: {
         students: {
+          where: { status: { not: "archived" } },
           orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
         },
       },

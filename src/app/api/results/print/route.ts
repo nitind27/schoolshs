@@ -49,7 +49,7 @@ async function loadStudentsForExam(
   if (classId) {
     add(
       await prisma.student.findMany({
-        where: { schoolId, classId },
+        where: { schoolId, classId, status: { not: "archived" } },
         orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
         include: { schoolClass: true },
       }),
@@ -70,7 +70,7 @@ async function loadStudentsForExam(
   if (schoolClass) {
     add(
       await prisma.student.findMany({
-        where: { schoolId, classId: schoolClass.id },
+        where: { schoolId, classId: schoolClass.id, status: { not: "archived" } },
         orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
         include: { schoolClass: true },
       }),
@@ -82,6 +82,7 @@ async function loadStudentsForExam(
       await prisma.student.findMany({
         where: {
           schoolId,
+          status: { not: "archived" },
           standard: exam.standard,
           ...(exam.section ? { OR: [{ section: exam.section }, { section: null }, { section: "" }] } : {}),
         },
@@ -94,7 +95,7 @@ async function loadStudentsForExam(
   if (resultStudentIds.length) {
     add(
       await prisma.student.findMany({
-        where: { schoolId, id: { in: resultStudentIds } },
+        where: { schoolId, id: { in: resultStudentIds }, status: { not: "archived" } },
         include: { schoolClass: true },
       }),
     );

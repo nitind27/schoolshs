@@ -36,6 +36,7 @@ import { assertSupervisorClassAccess } from "@/lib/supervisor-scope";
 import { describeMarkChange, logMarkEdits, studentAuditLabel } from "@/lib/change-log";
 import { summarizeTermMarks } from "@/lib/results/exam-rules";
 import { loadSchoolExamRules } from "@/lib/results/exam-stats";
+import { compareRollNumbers } from "@/lib/attendance";
 
 function termStatsForExam(
   meta: ExamTermMeta,
@@ -87,12 +88,17 @@ export async function GET(request: NextRequest) {
     const schoolClass = await prisma.schoolClass.findFirst({
       where: { id: classId, schoolId: session.schoolId },
       include: {
-        students: {
-          orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
-        },
+        students: { where: { status: { not: "archived" } } },
       },
     });
     if (!schoolClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
+    // Numeric roll order: 1, 2, 10 (Prisma string sort is lexical: 1, 10, 2)
+    schoolClass.students.sort(
+      (a, b) =>
+        compareRollNumbers(a.rollNumber, b.rollNumber) ||
+        a.surname.localeCompare(b.surname) ||
+        a.firstName.localeCompare(b.firstName),
+    );
 
     const { exam, sheetConfig } = await ensureClassExam(session.schoolId, schoolClass);
     const meta = parseExamTermMeta(exam.termMeta);

@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
       include: {
         classTeacher: { select: { firstName: true, lastName: true } },
         students: {
+          where: { status: { not: "archived" } },
           orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
         },
       },

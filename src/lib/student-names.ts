@@ -1,4 +1,8 @@
 import { transliterateToGujarati } from "@/lib/gujarati/transliterate-core";
+import {
+  normalizeNamePartEn,
+  normalizeNamePartGu,
+} from "@/lib/student-name-normalize";
 
 export type StudentNameLike = {
   firstName?: string | null;
@@ -32,9 +36,9 @@ function isWeakPart(value: string | null | undefined): boolean {
 }
 
 function pickGu(gu: string | null | undefined, en: string | null | undefined): string {
-  const g = gu?.trim();
+  const g = normalizeNamePartGu(gu);
   if (g && !isWeakPart(g)) return g;
-  const e = en?.trim();
+  const e = normalizeNamePartEn(en);
   return e && !isWeakPart(e) ? e : "";
 }
 
@@ -42,11 +46,11 @@ function gujaratiNamePart(
   gu: string | null | undefined,
   fallback: string | null | undefined,
 ): string {
-  const storedGujarati = gu?.trim();
+  const storedGujarati = normalizeNamePartGu(gu);
   if (storedGujarati && !isWeakPart(storedGujarati)) return storedGujarati;
-  const en = fallback?.trim();
+  const en = normalizeNamePartEn(fallback);
   if (!en || isWeakPart(en)) return "";
-  return transliterateToGujarati(en);
+  return normalizeNamePartGu(transliterateToGujarati(en));
 }
 
 /** Middle for display — use father name when middle is empty (First Father Surname). */
@@ -96,7 +100,7 @@ export function studentDisplayAadhaarName(s: StudentNameLike): string {
 export function studentFullNameEn(s: StudentNameLike): string {
   const { middleEn } = resolveMiddleParts(s);
   return [s.firstName, middleEn, s.surname]
-    .map((p) => String(p || "").trim())
+    .map((p) => normalizeNamePartEn(p))
     .filter((p) => p && !isWeakPart(p))
     .join(" ");
 }

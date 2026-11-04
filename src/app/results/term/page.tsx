@@ -15,8 +15,10 @@ import {
   Printer,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
-import { FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
+import { compareRollNumbers } from "@/lib/attendance";
 import type { ExamTermKey } from "@/lib/results/exam-terms";
+import { studentFullNameGu } from "@/lib/student-names";
 import { cn } from "@/lib/utils";
 
 type SubjectMark = {
@@ -34,9 +36,18 @@ type StudentRow = {
   firstName: string;
   middleName?: string | null;
   surname: string;
+  firstNameGu?: string | null;
+  middleNameGu?: string | null;
+  surnameGu?: string | null;
+  fatherName?: string | null;
+  fatherNameGu?: string | null;
   rollNumber?: string | null;
   subjectMarks: SubjectMark[];
 };
+
+function sortStudentsByRoll(list: StudentRow[]): StudentRow[] {
+  return [...list].sort((a, b) => compareRollNumbers(a.rollNumber, b.rollNumber));
+}
 
 const GRADE_OPTIONS = ["A", "B", "C", "D", "E", ""];
 
@@ -112,7 +123,7 @@ export default function TermMarksPage() {
           return;
         }
         setData(d);
-        setRows(JSON.parse(JSON.stringify(d.students)));
+        setRows(sortStudentsByRoll(JSON.parse(JSON.stringify(d.students || []))));
       })
       .catch(() => setMessage({ type: "err", text: t("examTerms.loadError") }))
       .finally(() => setLoading(false));
@@ -356,8 +367,8 @@ export default function TermMarksPage() {
                       <tr key={st.studentId} className="border-b hover:bg-blue-50/30">
                         <td className="p-2 sticky left-0 bg-white text-slate-400">{i + 1}</td>
                         <td className="p-2 sticky left-12 bg-white font-mono text-xs">{st.rollNumber || "—"}</td>
-                        <td className="p-2 sticky left-[104px] bg-white font-medium whitespace-nowrap">
-                          {st.firstName} {st.surname}
+                        <td className="p-2 sticky left-[104px] bg-white font-medium whitespace-nowrap font-gujarati">
+                          {studentFullNameGu(st)}
                         </td>
                         {st.subjectMarks.filter((s) => s.subjectType === "numeric").map((sub) => (
                           <td key={sub.subjectCode} className="p-1 text-center">

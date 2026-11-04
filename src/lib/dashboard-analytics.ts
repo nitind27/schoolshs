@@ -34,7 +34,13 @@ export function buildStudentWhere(
   }
   if (filters.standard) where.standard = filters.standard;
   if (filters.section) where.section = filters.section;
-  if (filters.status) where.status = filters.status;
+  // Deactivated (archived) students only appear on the inactive students page —
+  // never in dashboards / stats unless status=archived is requested explicitly.
+  if (filters.status) {
+    where.status = filters.status;
+  } else {
+    where.status = { not: "archived" };
+  }
   if (filters.category) where.category = filters.category;
   if (filters.gender && filters.gender !== "all") {
     where.gender = { in: genderDbMatchValues(filters.gender) };

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
 
     const students = await prisma.student.findMany({
-      where: { schoolId: session.schoolId },
+      where: { schoolId: session.schoolId, status: { not: "archived" } },
       select: {
         id: true,
         firstName: true,

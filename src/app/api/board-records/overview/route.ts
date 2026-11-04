@@ -43,6 +43,7 @@ export async function GET() {
       include: {
         classTeacher: { select: { firstName: true, lastName: true } },
         students: {
+          where: { status: { not: "archived" } },
           select: {
             id: true,
             sscSeatNumber: true,
@@ -55,6 +56,7 @@ export async function GET() {
     const alsoStudents = await prisma.student.findMany({
       where: {
         schoolId: session.schoolId,
+        status: { not: "archived" },
         classId: null,
         standard: { in: ["10", "12"] },
       },

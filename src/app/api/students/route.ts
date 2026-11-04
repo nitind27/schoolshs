@@ -27,6 +27,7 @@ import {
   supervisorClassIdFilter,
 } from "@/lib/supervisor-scope";
 import { studentListName, type StudentNameLike } from "@/lib/student-names";
+import { compareRollNumbers } from "@/lib/attendance";
 
 function studentDisplayName(s: StudentNameLike) {
   return studentListName(s) || "Student";
@@ -202,31 +203,53 @@ export async function GET(request: NextRequest) {
     } as const;
 
     const skip = (page - 1) * limit;
-    const orderBy = [
-      { standard: "asc" as const },
-      { section: "asc" as const },
-      { rollNumber: "asc" as const },
-      { surname: "asc" as const },
-      { firstName: "asc" as const },
-    ];
-    const [students, total] = await Promise.all([
+    // When a class is selected, sort by numeric roll (1,2,10) in memory —
+    // Prisma string orderBy is lexical (1,10,2).
+    const classScopedRollSort = Boolean(classId);
+    const orderBy = classScopedRollSort
+      ? ([{ surname: "asc" as const }, { firstName: "asc" as const }] as const)
+      : ([
+          { standard: "asc" as const },
+          { section: "asc" as const },
+          { rollNumber: "asc" as const },
+          { surname: "asc" as const },
+          { firstName: "asc" as const },
+        ] as const);
+
+    const [rawStudents, total] = await Promise.all([
       lite
         ? prisma.student.findMany({
             where,
-            orderBy,
-            skip,
-            take: limit,
+            orderBy: [...orderBy],
+            ...(classScopedRollSort ? {} : { skip, take: limit }),
             select: listSelect,
           })
         : prisma.student.findMany({
             where,
-            orderBy,
-            skip,
-            take: limit,
+            orderBy: [...orderBy],
+            ...(classScopedRollSort ? {} : { skip, take: limit }),
             include: { schoolClass: { select: classSelect } },
           }),
       prisma.student.count({ where }),
     ]);
+
+    const students = classScopedRollSort
+      ? [...rawStudents]
+          .sort(
+            (a, b) =>
+              compareRollNumbers(
+                (a as { rollNumber?: string | null }).rollNumber,
+                (b as { rollNumber?: string | null }).rollNumber,
+              ) ||
+              String((a as { surname?: string }).surname || "").localeCompare(
+                String((b as { surname?: string }).surname || ""),
+              ) ||
+              String((a as { firstName?: string }).firstName || "").localeCompare(
+                String((b as { firstName?: string }).firstName || ""),
+              ),
+          )
+          .slice(skip, skip + limit)
+      : rawStudents;
 
     let summary:
       | {

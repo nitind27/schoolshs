@@ -12,6 +12,10 @@ import {
 } from "@/lib/student-academic-rules";
 import { calcAgeYears } from "@/lib/student-age";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
+import {
+  normalizeNamePartEn,
+  normalizeNamePartGu,
+} from "@/lib/student-name-normalize";
 
 export type StudentInput = Omit<Student, "id" | "createdAt" | "updatedAt" | "submissionDate" | "validationErrors">;
 
@@ -197,29 +201,34 @@ export function parseNumber(value: unknown): number {
 }
 
 export function normalizeStudentRow(row: Record<string, unknown>): Partial<StudentInput> {
+  const en = (v: unknown) => normalizeNamePartEn(String(v || "")) || "";
+  const guOrNull = (v: unknown) => {
+    const g = normalizeNamePartGu(String(v || ""));
+    return g || null;
+  };
   return {
-    firstName: String(row.firstName || "").trim(),
-    middleName: String(row.middleName || "").trim() || null,
-    surname: String(row.surname || "").trim(),
-    firstNameGu: String(row.firstNameGu || "").trim() || null,
-    middleNameGu: String(row.middleNameGu || "").trim() || null,
-    surnameGu: String(row.surnameGu || "").trim() || null,
-    aadhaarName: String(row.aadhaarName || "").trim(),
-    aadhaarNameGu: String(row.aadhaarNameGu || "").trim() || null,
+    firstName: en(row.firstName),
+    middleName: en(row.middleName) || null,
+    surname: en(row.surname),
+    firstNameGu: guOrNull(row.firstNameGu),
+    middleNameGu: guOrNull(row.middleNameGu),
+    surnameGu: guOrNull(row.surnameGu),
+    aadhaarName: en(row.aadhaarName),
+    aadhaarNameGu: guOrNull(row.aadhaarNameGu),
     dateOfBirth: parseImportDate(row.dateOfBirth),
     gender: String(row.gender || "").trim(),
     aadhaarNumber: String(row.aadhaarNumber || "").replace(/\s/g, "").trim(),
     rationCardNumber: String(row.rationCardNumber || "").trim() || null,
     mobileNumber: String(row.mobileNumber || "").replace(/\s/g, "").trim(),
     email: String(row.email || "").trim() || null,
-    motherName: String(row.motherName || "").trim(),
-    fatherName: String(row.fatherName || "").trim(),
-    motherNameGu: String(row.motherNameGu || "").trim() || null,
-    fatherNameGu: String(row.fatherNameGu || "").trim() || null,
+    motherName: en(row.motherName),
+    fatherName: en(row.fatherName),
+    motherNameGu: guOrNull(row.motherNameGu),
+    fatherNameGu: guOrNull(row.fatherNameGu),
     motherAadhaarNumber: String(row.motherAadhaarNumber || "").replace(/\s/g, "").trim() || null,
     fatherAadhaarNumber: String(row.fatherAadhaarNumber || "").replace(/\s/g, "").trim() || null,
-    guardianName: String(row.guardianName || "").trim() || null,
-    guardianNameGu: String(row.guardianNameGu || "").trim() || null,
+    guardianName: en(row.guardianName) || null,
+    guardianNameGu: guOrNull(row.guardianNameGu),
     category: normalizeCategory(String(row.category || "").trim()) || String(row.category || "").trim(),
     caste: String(row.caste || "").trim() || null,
     religion: String(row.religion || "").trim(),

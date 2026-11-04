@@ -15,7 +15,7 @@ async function religionPayload(schoolId: string) {
       select: { name: true },
     }),
     prisma.student.findMany({
-      where: { schoolId },
+      where: { schoolId, status: { not: "archived" } },
       select: { religion: true },
       distinct: ["religion"],
     }),

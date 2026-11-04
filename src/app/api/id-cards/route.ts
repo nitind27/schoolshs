@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
     const idsParam = searchParams.get("ids");
     const processPhotos = searchParams.get("processPhotos") === "true";
 
-    const where: Record<string, unknown> = { schoolId: session.schoolId };
+    const where: Record<string, unknown> = {
+      schoolId: session.schoolId,
+      status: { not: "archived" },
+    };
     if (studentId) {
       where.id = studentId;
     } else if (idsParam) {

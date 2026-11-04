@@ -12,6 +12,7 @@ import {
   serializeExamTermMeta,
   parseExamTermMeta,
   applyTermMetaToSheetConfig,
+  filterMarksSheetExamRowsForSchool,
   upperPrimaryResultTermMeta,
   isReplaceableUpperPrimaryMeta,
 } from "@/lib/results/exam-terms";
@@ -436,7 +437,11 @@ export async function ensureClassExam(
   if (!exam) throw new Error("Failed to ensure class exam");
 
   const meta = parseExamTermMeta(exam.termMeta);
-  const sheetWithTerms = applyTermMetaToSheetConfig(sheetConfig, meta);
+  const schoolCode = (school?.code || school?.udiseCode || "").trim() || null;
+  const sheetWithTerms = filterMarksSheetExamRowsForSchool(
+    applyTermMetaToSheetConfig(sheetConfig, meta),
+    { schoolCode, standard: schoolClass.standard },
+  );
 
   return { exam, sheetConfig: sheetWithTerms };
 }

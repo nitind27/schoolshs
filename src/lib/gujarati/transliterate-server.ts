@@ -1,7 +1,12 @@
 import "server-only";
 
-import { bilingualNamePair } from "@/lib/gujarati/transliterate-core";
+import { bilingualNamePair, isGujaratiScript } from "@/lib/gujarati/transliterate-core";
 import { translateEnglishNameParts } from "@/lib/gujarati/google-translate";
+import {
+  normalizeNamePartEn,
+  normalizeNamePartGu,
+  normalizeStudentNameFields,
+} from "@/lib/student-name-normalize";
 
 export { isGujaratiScript, transliterateToGujarati, bilingualNamePair } from "@/lib/gujarati/transliterate-core";
 
@@ -19,20 +24,37 @@ type NameRecord = Record<string, unknown>;
 
 async function englishToGujaratiName(en: string): Promise<string> {
   const google = await translateEnglishNameParts(en);
-  if (google) return google;
-  return bilingualNamePair(en).gu;
+  if (google && isPureGujaratiName(google)) return normalizeNamePartGu(google);
+  // Avoid local bhashaime fallback for DB writes — it can emit Latin junk into Gu fields.
+  const local = bilingualNamePair(en).gu;
+  return isPureGujaratiName(local) ? normalizeNamePartGu(local) : "";
+}
+
+const LATIN_RE = /[A-Za-z]/;
+
+function isPureGujaratiName(value: string): boolean {
+  const gu = value.trim();
+  if (!gu) return false;
+  if (!isGujaratiScript(gu)) return false;
+  if (LATIN_RE.test(gu)) return false;
+  return true;
 }
 
 async function fillGuNamePairs<T extends NameRecord>(
   row: T,
   pairs: readonly (readonly [string, string])[],
 ): Promise<T> {
-  const out: NameRecord = { ...row };
+  const normalized = normalizeStudentNameFields(row as T & Record<string, unknown>);
+  const out: NameRecord = { ...normalized };
   for (const [enKey, guKey] of pairs) {
-    const en = String(out[enKey] ?? "").trim();
+    const en = normalizeNamePartEn(String(out[enKey] ?? ""));
+    out[enKey] = en || out[enKey];
     const gu = String(out[guKey] ?? "").trim();
-    if (en && !gu) {
+    // Fill empty Gu, or replace English / mixed-script junk wrongly stored in Gu fields
+    if (en && !isPureGujaratiName(gu)) {
       out[guKey] = await englishToGujaratiName(en);
+    } else if (gu) {
+      out[guKey] = normalizeNamePartGu(gu);
     }
   }
   return out as T;

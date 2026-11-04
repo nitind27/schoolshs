@@ -88,6 +88,7 @@ export async function GET(request: NextRequest) {
       const students = await prisma.student.findMany({
         where: {
           schoolId: session.schoolId,
+          status: { not: "archived" },
           standard: exam.standard || undefined,
           ...(exam.section ? { section: exam.section } : {}),
           ...(supervisorClasses

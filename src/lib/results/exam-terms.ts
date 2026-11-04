@@ -551,6 +551,35 @@ function resultRows(config: MarksSheetConfig): MarksSheetExamRowDef[] {
   ];
 }
 
+/** Songadh HS — school code used for std-specific marks-sheet layout. */
+export const SONGADH_HS_SCHOOL_CODE = "24261004405";
+
+/**
+ * School 24261004405 · Std 12 only:
+ * show પ્રથમ પરીક્ષા — પેપર + વાર્ષિક/અંતિમ — પેપર (and header).
+ * Hide internal / total / converted / achievement / special / grace / obtained.
+ * Other standards / schools keep the full sheet.
+ */
+export function filterMarksSheetExamRowsForSchool(
+  config: MarksSheetConfig,
+  opts: { schoolCode?: string | null; standard?: string | null },
+): MarksSheetConfig {
+  const code = String(opts.schoolCode || "").trim();
+  const std = String(opts.standard || "")
+    .trim()
+    .replace(/^0+/, "");
+  if (code !== SONGADH_HS_SCHOOL_CODE || std !== "12") return config;
+
+  const examRows = config.examRows.filter((row) => {
+    if (row.kind === "max") return true;
+    if (row.kind === "first" && row.scoreType !== "internal") return true;
+    if (row.kind === "annual" && row.scoreType !== "internal") return true;
+    return false;
+  });
+
+  return { ...config, examRows };
+}
+
 /** Rebuild marks-sheet rows from configured exams */
 export function applyTermMetaToSheetConfig(
   config: MarksSheetConfig,
@@ -847,6 +876,8 @@ export function buildStudentTermRows(
     firstNameGu?: string | null;
     middleNameGu?: string | null;
     surnameGu?: string | null;
+    fatherName?: string | null;
+    fatherNameGu?: string | null;
     rollNumber?: string | null;
     grNumber?: string | null;
     dateOfBirth?: string | null;
@@ -909,6 +940,8 @@ export function buildStudentTermRows(
       firstNameGu: st.firstNameGu,
       middleNameGu: st.middleNameGu,
       surnameGu: st.surnameGu,
+      fatherName: st.fatherName,
+      fatherNameGu: st.fatherNameGu,
       rollNumber: st.rollNumber,
       grNumber: st.grNumber,
       dateOfBirth: st.dateOfBirth,

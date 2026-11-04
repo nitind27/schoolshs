@@ -8,7 +8,7 @@ export async function GET() {
   try {
     const session = await requireSchoolAuth(["school_admin", "clerk", "teacher"]);
     const rows = await prisma.student.findMany({
-      where: { schoolId: session.schoolId, caste: { not: null } },
+      where: { schoolId: session.schoolId, status: { not: "archived" }, caste: { not: null } },
       select: { caste: true },
       distinct: ["caste"],
     });

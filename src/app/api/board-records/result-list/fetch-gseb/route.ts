@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
     const students = await prisma.student.findMany({
       where: {
         schoolId: session.schoolId,
+        status: { not: "archived" },
         OR: [
           { classId },
           { classId: null, standard: cls.standard, section: cls.section },
@@ -165,6 +166,7 @@ export async function POST(request: NextRequest) {
     const refreshed = await prisma.student.findMany({
       where: {
         schoolId: session.schoolId,
+        status: { not: "archived" },
         OR: [
           { classId },
           { classId: null, standard: cls.standard, section: cls.section },

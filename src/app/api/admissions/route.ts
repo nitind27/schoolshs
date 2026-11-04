@@ -18,6 +18,7 @@ function buildWhere(
   const where: Record<string, unknown> = {
     schoolId,
     admissionStatus: params.status,
+    status: { not: "archived" },
   };
 
   if (params.classId) {

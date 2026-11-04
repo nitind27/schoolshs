@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
     const students = await prisma.student.findMany({
       where: {
         schoolId: session.schoolId,
+        status: { not: "archived" },
         OR: [
           { classId },
           { classId: null, standard: cls.standard, section: cls.section },
