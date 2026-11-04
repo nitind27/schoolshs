@@ -249,13 +249,16 @@ export function HigherSecondaryMidResultCards({
 }: {
   data: HigherSecondaryTermPrintData;
 }) {
+  const mode = resolveDisplayMode(data.term);
   const perSubjectMax =
-    Number(data.term.totalMax) ||
-    Number(data.term.maxMarks || 0) + Number(data.term.internalMax || 0);
+    mode === "paper"
+      ? Number(data.term.maxMarks || 0)
+      : Number(data.term.totalMax) ||
+        Number(data.term.maxMarks || 0) + Number(data.term.internalMax || 0);
   const ranked = data.students
     .map((student) => ({
       id: student.studentId,
-      ...studentSummary(student, perSubjectMax),
+      ...studentSummary(student, perSubjectMax, mode),
     }))
     .filter((student) => student.complete)
     .sort((a, b) => b.total - a.total);
