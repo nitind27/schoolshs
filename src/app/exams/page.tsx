@@ -17,7 +17,13 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { makeTermKey, type ExamSubjectScope, type ExamTermRole } from "@/lib/results/exam-terms";
+import {
+  makeTermKey,
+  normalizeMarksDisplay,
+  type ExamSubjectScope,
+  type ExamTermRole,
+  type MarksDisplayMode,
+} from "@/lib/results/exam-terms";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +50,7 @@ type TemplateItem = {
   maxMarks: number;
   role: ExamTermRole;
   internalMax?: number;
+  marksDisplay?: MarksDisplayMode;
   subjectScope?: ExamSubjectScope;
   createdByName?: string | null;
 };
@@ -76,6 +83,7 @@ function upperPrimaryTemplate(): TemplateItem[] {
       totalMax: 100,
       maxMarks: 80,
       internalMax: 20,
+      marksDisplay: "split",
       role: "component",
     },
     {
@@ -85,6 +93,7 @@ function upperPrimaryTemplate(): TemplateItem[] {
       totalMax: 100,
       maxMarks: 80,
       internalMax: 20,
+      marksDisplay: "split",
       role: "final",
     },
   ];
@@ -116,17 +125,30 @@ function isLegacyUpperPrimaryTemplate(items: TemplateItem[]) {
 }
 
 function mapTemplateItems(source: TemplateItem[]): TemplateItem[] {
-  return source.map((item) => ({
-    key: item.key,
-    labelEn: item.labelEn,
-    labelGu: item.labelGu || item.labelEn,
-    totalMax: item.totalMax ?? item.maxMarks + (item.internalMax ?? 0),
-    maxMarks: item.maxMarks,
-    role: item.role === "final" ? "final" : "component",
-    internalMax: item.internalMax ?? 0,
-    subjectScope:
-      item.role === "final" || item.subjectScope !== "computer" ? "all" : "computer",
-  }));
+  return source.map((item) => {
+    const internalMax = item.internalMax ?? 0;
+    return {
+      key: item.key,
+      labelEn: item.labelEn,
+      labelGu: item.labelGu || item.labelEn,
+      totalMax: item.totalMax ?? item.maxMarks + internalMax,
+      maxMarks: item.maxMarks,
+      role: item.role === "final" ? "final" : "component",
+      internalMax,
+      marksDisplay: normalizeMarksDisplay(item.marksDisplay, internalMax),
+      subjectScope:
+        item.role === "final" || item.subjectScope !== "computer" ? "all" : "computer",
+    };
+  });
+}
+
+function marksDisplayLabel(
+  mode: MarksDisplayMode,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+) {
+  if (mode === "total") return t("examsHub.marksDisplayTotal");
+  if (mode === "paper") return t("examsHub.marksDisplayPaper");
+  return t("examsHub.marksDisplaySplit");
 }
 
 function isComputerItem(item: TemplateItem) {
@@ -162,6 +184,7 @@ export default function ExamsHubPage() {
   const [draftTotalMax, setDraftTotalMax] = useState(100);
   const [draftComputerOnly, setDraftComputerOnly] = useState(false);
   const [draftFinal, setDraftFinal] = useState(false);
+  const [draftMarksDisplay, setDraftMarksDisplay] = useState<MarksDisplayMode>("split");
   const [deleteKey, setDeleteKey] = useState<string | null>(null);
 
   const totalOutOf = useMemo(() => {
@@ -293,7 +316,24 @@ export default function ExamsHubPage() {
     setDraftNameGu("");
     setDraftComputerOnly(false);
     setDraftFinal(false);
+    setDraftMarksDisplay("split");
     setDraftSplit(100, 80, 20);
+  };
+
+  const applyMarksDisplay = (mode: MarksDisplayMode) => {
+    setDraftMarksDisplay(mode);
+    if (mode === "paper") {
+      setDraftSplit(draftTotalMax || draftMax, draftTotalMax || draftMax, 0);
+    } else if (mode === "total" && draftInternalMax <= 0) {
+      // Keep a usable paper/internal split under the hood for total display
+      const total = draftTotalMax || 100;
+      const paper = Math.round(total * 0.8);
+      setDraftSplit(total, paper, total - paper);
+    } else if (mode === "split" && draftInternalMax <= 0) {
+      const total = draftTotalMax || 100;
+      const paper = Math.round(total * 0.8);
+      setDraftSplit(total, paper, total - paper);
+    }
   };
 
   const openCreate = (classIds?: string[]) => {
@@ -316,14 +356,11 @@ export default function ExamsHubPage() {
   const openAdd = (computer = false) => {
     if (computer) {
       const n = computerCount + 1;
-      const source = generalItems.find((item) => item.role === "component") || generalItems[0];
       setDraftName(`Computer Exam ${n}`);
       setDraftNameGu(`કોમ્પ્યુટર પરીક્ષા ${n}`);
-      setDraftSplit(
-        source?.totalMax ?? 100,
-        source?.maxMarks ?? 80,
-        source?.internalMax ?? 20,
-      );
+      // Computer marks are independent of subject exams
+      setDraftSplit(100, 50, 50);
+      setDraftMarksDisplay("split");
       setDraftComputerOnly(true);
       setDraftFinal(false);
     } else {
@@ -331,6 +368,7 @@ export default function ExamsHubPage() {
       setDraftName(`Exam ${n}`);
       setDraftNameGu(`પરીક્ષા ${n}`);
       setDraftSplit(100, 80, 20);
+      setDraftMarksDisplay("split");
       setDraftComputerOnly(false);
       setDraftFinal(false);
     }
@@ -358,6 +396,7 @@ export default function ExamsHubPage() {
       totalMax: Math.max(0, Number(draftTotalMax) || 0),
       maxMarks: Math.max(0, Number(draftMax) || 0),
       internalMax: Math.max(0, Number(draftInternalMax) || 0),
+      marksDisplay: normalizeMarksDisplay(draftMarksDisplay, draftInternalMax),
       role: draftFinal ? "final" : "component",
       subjectScope: draftComputerOnly ? "computer" : "all",
     };
@@ -380,6 +419,7 @@ export default function ExamsHubPage() {
       setDraftNameGu(item.labelGu);
       setDraftComputerOnly(Boolean(item.subjectScope === "computer"));
       setDraftFinal(item.role === "final");
+      setDraftMarksDisplay(item.marksDisplay || "split");
       setDraftSplit(item.totalMax, item.maxMarks, item.internalMax ?? 0);
       setWizardStep("marks");
       setCreateOpen(true);
@@ -393,18 +433,32 @@ export default function ExamsHubPage() {
     setDraftNameGu(item.labelGu);
     setDraftComputerOnly(isComputerItem(item));
     setDraftFinal(item.role === "final");
+    setDraftMarksDisplay(
+      normalizeMarksDisplay(item.marksDisplay, item.internalMax ?? 0),
+    );
     setDraftSplit(item.totalMax, item.maxMarks, item.internalMax ?? 0);
     setWizardStep("marks");
   };
 
-  const startNewTypeInWizard = () => {
+  const startNewTypeInWizard = (computer = false) => {
     setAddingType(true);
     setPickedKey(null);
-    setDraftName("");
-    setDraftNameGu("");
-    setDraftComputerOnly(false);
     setDraftFinal(false);
-    setDraftSplit(100, 80, 20);
+    if (computer) {
+      const n = computerCount + 1;
+      setDraftName(`Computer Exam ${n}`);
+      setDraftNameGu(`કોમ્પ્યુટર પરીક્ષા ${n}`);
+      setDraftComputerOnly(true);
+      setDraftMarksDisplay("split");
+      // Computer marks set separately (default 50 paper + 50 internal = 100)
+      setDraftSplit(100, 50, 50);
+    } else {
+      setDraftName("");
+      setDraftNameGu("");
+      setDraftComputerOnly(false);
+      setDraftMarksDisplay("split");
+      setDraftSplit(100, 80, 20);
+    }
     setWizardStep("type");
   };
 
@@ -422,6 +476,7 @@ export default function ExamsHubPage() {
       totalMax: draftTotalMax,
       maxMarks: draftMax,
       internalMax: draftInternalMax,
+      marksDisplay: normalizeMarksDisplay(draftMarksDisplay, draftInternalMax),
       role: draftFinal ? "final" : "component",
       subjectScope: draftComputerOnly ? "computer" : "all",
     };
@@ -540,6 +595,7 @@ export default function ExamsHubPage() {
             totalMax: draftTotalMax,
             maxMarks: draftMax,
             internalMax: draftInternalMax,
+            marksDisplay: normalizeMarksDisplay(draftMarksDisplay, draftInternalMax),
             role: draftFinal ? "final" : item.role,
             subjectScope: draftComputerOnly ? "computer" : item.subjectScope,
           },
@@ -636,6 +692,49 @@ export default function ExamsHubPage() {
             onChange={(e) => updateItem(item.key, { labelGu: e.target.value })}
           />
         </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-slate-600">{t("examsHub.marksDisplayTitle")}</p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {(["split", "total", "paper"] as MarksDisplayMode[]).map((mode) => {
+              const on =
+                normalizeMarksDisplay(item.marksDisplay, item.internalMax ?? 0) === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  className={cn(
+                    "rounded-lg border px-2.5 py-2 text-left text-xs transition",
+                    on
+                      ? "border-blue-400 bg-blue-50 text-blue-950 ring-1 ring-blue-300"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
+                  )}
+                  onClick={() => {
+                    const patch: Partial<TemplateItem> = { marksDisplay: mode };
+                    if (mode === "paper") {
+                      patch.internalMax = 0;
+                      patch.maxMarks = item.totalMax;
+                    } else if ((item.internalMax ?? 0) <= 0) {
+                      const total = item.totalMax || 100;
+                      patch.maxMarks = Math.round(total * 0.8);
+                      patch.internalMax = total - (patch.maxMarks || 0);
+                      patch.totalMax = total;
+                    }
+                    updateItem(item.key, patch);
+                  }}
+                >
+                  <strong className="block">{marksDisplayLabel(mode, t)}</strong>
+                  <span className="mt-0.5 block text-[10px] opacity-80">
+                    {mode === "split"
+                      ? t("examsHub.marksDisplaySplitHint")
+                      : mode === "total"
+                        ? t("examsHub.marksDisplayTotalHint")
+                        : t("examsHub.marksDisplayPaperHint")}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <Input
             label={t("examsHub.totalOutOf")}
@@ -662,6 +761,7 @@ export default function ExamsHubPage() {
             type="number"
             min={0}
             value={item.internalMax ?? 0}
+            disabled={normalizeMarksDisplay(item.marksDisplay, item.internalMax ?? 0) === "paper"}
             onChange={(e) =>
               updateItem(item.key, {
                 internalMax: Math.max(0, Number(e.target.value) || 0),
@@ -1121,88 +1221,184 @@ export default function ExamsHubPage() {
                   <p>{t("examsHub.emptyTypes")}</p>
                 </div>
               ) : (
-                <div className="examhub-types">
-                  {template.map((item) => {
-                    const computer = isComputerItem(item);
-                    return (
-                      <button
-                        key={item.key}
-                        type="button"
-                        className={cn(
-                          "examhub-type",
-                          item.role === "final" && "examhub-type--final",
-                          computer && "examhub-type--comp",
-                          pickedKey === item.key && "examhub-type--on",
-                        )}
-                        onClick={() => pickExamType(item)}
-                      >
-                        <span className="examhub-type__icon">
-                          {computer ? (
-                            <Monitor className="h-4 w-4" />
-                          ) : item.role === "final" ? (
-                            <Star className="h-4 w-4" />
-                          ) : (
-                            <BookOpenCheck className="h-4 w-4" />
-                          )}
-                        </span>
-                        <span className="examhub-type__copy">
-                          <strong>{item.labelGu || item.labelEn}</strong>
-                          <span>{item.labelEn}</span>
-                          <span className="examhub-type__marks">
-                            {t("examsHub.paperTeacherTotal", {
-                              paper: item.maxMarks,
-                              internal: item.internalMax ?? 0,
-                              total: item.totalMax,
-                            })}
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })}
+                <div className="space-y-4">
+                  {generalItems.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {t("examsHub.subjectExamsTitle")}
+                      </p>
+                      <div className="examhub-types">
+                        {generalItems.map((item) => (
+                          <button
+                            key={item.key}
+                            type="button"
+                            className={cn(
+                              "examhub-type",
+                              item.role === "final" && "examhub-type--final",
+                              pickedKey === item.key && "examhub-type--on",
+                            )}
+                            onClick={() => pickExamType(item)}
+                          >
+                            <span className="examhub-type__icon">
+                              {item.role === "final" ? (
+                                <Star className="h-4 w-4" />
+                              ) : (
+                                <BookOpenCheck className="h-4 w-4" />
+                              )}
+                            </span>
+                            <span className="examhub-type__copy">
+                              <strong>{item.labelGu || item.labelEn}</strong>
+                              <span>{item.labelEn}</span>
+                              <span className="examhub-type__marks">
+                                {t("examsHub.paperTeacherTotal", {
+                                  paper: item.maxMarks,
+                                  internal: item.internalMax ?? 0,
+                                  total: item.totalMax,
+                                })}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 rounded-xl border border-sky-200 bg-sky-50/50 p-3">
+                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-sky-900">
+                      <Monitor className="h-3.5 w-3.5" />
+                      {t("examsHub.computerExamsTitle")}
+                    </p>
+                    <p className="text-[11px] text-sky-900/80">{t("examsHub.computerWizardHint")}</p>
+                    {computerItems.length > 0 ? (
+                      <div className="examhub-types">
+                        {computerItems.map((item) => (
+                          <button
+                            key={item.key}
+                            type="button"
+                            className={cn(
+                              "examhub-type examhub-type--comp",
+                              pickedKey === item.key && "examhub-type--on",
+                            )}
+                            onClick={() => pickExamType(item)}
+                          >
+                            <span className="examhub-type__icon">
+                              <Monitor className="h-4 w-4" />
+                            </span>
+                            <span className="examhub-type__copy">
+                              <strong>{item.labelGu || item.labelEn}</strong>
+                              <span>{item.labelEn}</span>
+                              <span className="examhub-type__marks">
+                                {t("examsHub.paperTeacherTotal", {
+                                  paper: item.maxMarks,
+                                  internal: item.internalMax ?? 0,
+                                  total: item.totalMax,
+                                })}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      !addingType && (
+                        <p className="rounded-lg border border-dashed border-sky-200 bg-white/80 px-3 py-2 text-center text-xs text-sky-900/80">
+                          {t("examsHub.computerEmpty")}
+                        </p>
+                      )
+                    )}
+                  </div>
                 </div>
               )}
 
               {addingType ? (
-                <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
-                  <p className="text-sm text-slate-600">{t("examsHub.newTypeHint")}</p>
+                <div
+                  className={cn(
+                    "space-y-3 rounded-xl border bg-white p-3",
+                    draftComputerOnly ? "border-sky-300" : "border-slate-200",
+                  )}
+                >
+                  <p className="text-sm text-slate-600">
+                    {draftComputerOnly
+                      ? t("examsHub.addComputerHint")
+                      : t("examsHub.newTypeHint")}
+                  </p>
+                  {draftComputerOnly && (
+                    <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                      {t("examsHub.computerOnlyHint")}
+                    </p>
+                  )}
                   <Input
                     label={t("examsHub.labelEn")}
                     value={draftName}
                     onChange={(e) => setDraftName(e.target.value)}
-                    placeholder="e.g. First Exam"
+                    placeholder={
+                      draftComputerOnly ? "e.g. Computer Exam 1" : "e.g. First Exam"
+                    }
                   />
                   <Input
                     label={t("examsHub.labelGu")}
                     value={draftNameGu}
                     onChange={(e) => setDraftNameGu(e.target.value)}
-                    placeholder="દા.ત. પ્રથમ પરીક્ષા"
+                    placeholder={
+                      draftComputerOnly
+                        ? "દા.ત. કોમ્પ્યુટર પરીક્ષા 1"
+                        : "દા.ત. પ્રથમ પરીક્ષા"
+                    }
                   />
-                  <label className="flex items-center gap-2 text-sm text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={draftFinal}
-                      onChange={(e) => {
-                        setDraftFinal(e.target.checked);
-                        if (e.target.checked) setDraftComputerOnly(false);
-                      }}
-                    />
-                    {t("examsHub.makeFinal")}
-                  </label>
+                  {!draftComputerOnly && (
+                    <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={draftFinal}
+                        onChange={(e) => {
+                          setDraftFinal(e.target.checked);
+                          if (e.target.checked) setDraftComputerOnly(false);
+                        }}
+                      />
+                      {t("examsHub.makeFinal")}
+                    </label>
+                  )}
                   <label className="flex items-center gap-2 text-sm text-slate-700">
                     <input
                       type="checkbox"
                       checked={draftComputerOnly}
                       disabled={draftFinal}
-                      onChange={(e) => setDraftComputerOnly(e.target.checked)}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        setDraftComputerOnly(on);
+                        if (on) {
+                          setDraftFinal(false);
+                          if (!draftName.trim()) {
+                            const n = computerCount + 1;
+                            setDraftName(`Computer Exam ${n}`);
+                            setDraftNameGu(`કોમ્પ્યુટર પરીક્ષા ${n}`);
+                          }
+                          setDraftSplit(100, 50, 50);
+                        }
+                      }}
                     />
+                    <Monitor className="h-3.5 w-3.5 text-sky-700" />
                     {t("examsHub.computerType")}
                   </label>
                 </div>
               ) : (
-                <button type="button" className="examhub-add-type" onClick={startNewTypeInWizard}>
-                  <Plus className="mr-1 inline h-4 w-4" />
-                  {t("examsHub.addExamType")}
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    className="examhub-add-type flex-1"
+                    onClick={() => startNewTypeInWizard(false)}
+                  >
+                    <Plus className="mr-1 inline h-4 w-4" />
+                    {t("examsHub.addExamType")}
+                  </button>
+                  <button
+                    type="button"
+                    className="examhub-add-type flex-1 border-sky-300 bg-sky-50 text-sky-950 hover:bg-sky-100"
+                    onClick={() => startNewTypeInWizard(true)}
+                  >
+                    <Monitor className="mr-1 inline h-4 w-4" />
+                    {t("examsHub.addComputerExam")}
+                  </button>
+                </div>
               )}
 
               <div className="subhub__modal-actions">
@@ -1225,15 +1421,67 @@ export default function ExamsHubPage() {
           {wizardStep === "marks" && (
             <div className="examhub-marks">
               <div>
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900">
                   {draftNameGu || draftName || pickedItem?.labelGu || pickedItem?.labelEn}
+                  {draftComputerOnly && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">
+                      <Monitor className="h-3 w-3" />
+                      {t("examsHub.computerBadge")}
+                    </span>
+                  )}
                 </p>
-                <p className="mt-0.5 text-xs text-slate-500">{t("examsHub.marksStepHint")}</p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {draftComputerOnly
+                    ? t("examsHub.computerMarksHint")
+                    : t("examsHub.marksStepHint")}
+                </p>
               </div>
+
+              {draftComputerOnly && (
+                <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                  {t("examsHub.computerOnlyHint")}
+                </p>
+              )}
 
               {alreadyOnCount > 0 && (
                 <p className="examhub-ok">{t("examsHub.updatingExisting")}</p>
               )}
+
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-900">
+                  {t("examsHub.marksDisplayTitle")}
+                </p>
+                <p className="text-xs text-slate-500">{t("examsHub.marksDisplayHint")}</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {(["split", "total", "paper"] as MarksDisplayMode[]).map((mode) => {
+                    const on = draftMarksDisplay === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        className={cn(
+                          "rounded-xl border px-3 py-2.5 text-left text-xs transition",
+                          on
+                            ? "border-blue-400 bg-blue-50 text-blue-950 ring-1 ring-blue-300"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
+                        )}
+                        onClick={() => applyMarksDisplay(mode)}
+                      >
+                        <strong className="block text-sm">
+                          {marksDisplayLabel(mode, t)}
+                        </strong>
+                        <span className="mt-1 block text-[11px] leading-snug opacity-80">
+                          {mode === "split"
+                            ? t("examsHub.marksDisplaySplitHint")
+                            : mode === "total"
+                              ? t("examsHub.marksDisplayTotalHint")
+                              : t("examsHub.marksDisplayPaperHint")}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <Input
                 label={t("examsHub.totalOutOf")}
@@ -1242,26 +1490,32 @@ export default function ExamsHubPage() {
                 value={draftTotalMax}
                 onChange={(e) => {
                   const total = Math.max(0, Number(e.target.value) || 0);
-                  setDraftSplit(total, draftMax, total - draftMax);
+                  if (draftMarksDisplay === "paper") {
+                    setDraftSplit(total, total, 0);
+                  } else {
+                    setDraftSplit(total, draftMax, total - draftMax);
+                  }
                 }}
               />
 
-              <div
-                className="examhub-split"
-                aria-hidden="true"
-              >
-                <div className="examhub-split__paper" style={{ width: `${Math.max(paperPct, 8)}%` }}>
-                  {t("examsHub.paperShare", { marks: draftMax })}
+              {draftMarksDisplay !== "paper" && (
+                <div className="examhub-split" aria-hidden="true">
+                  <div
+                    className="examhub-split__paper"
+                    style={{ width: `${Math.max(paperPct, 8)}%` }}
+                  >
+                    {t("examsHub.paperShare", { marks: draftMax })}
+                  </div>
+                  <div
+                    className="examhub-split__internal"
+                    style={{ width: `${Math.max(100 - paperPct, 8)}%` }}
+                  >
+                    {t("examsHub.internalShare", { marks: draftInternalMax })}
+                  </div>
                 </div>
-                <div
-                  className="examhub-split__internal"
-                  style={{ width: `${Math.max(100 - paperPct, 8)}%` }}
-                >
-                  {t("examsHub.internalShare", { marks: draftInternalMax })}
-                </div>
-              </div>
+              )}
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              {draftMarksDisplay === "paper" ? (
                 <Input
                   label={t("examsHub.paperOutOf")}
                   type="number"
@@ -1269,20 +1523,41 @@ export default function ExamsHubPage() {
                   value={draftMax}
                   onChange={(e) => {
                     const paper = Math.max(0, Number(e.target.value) || 0);
-                    setDraftSplit(draftTotalMax, paper, draftTotalMax - paper);
+                    setDraftSplit(paper, paper, 0);
                   }}
                 />
-                <Input
-                  label={t("examsHub.teacherOutOf")}
-                  type="number"
-                  min={0}
-                  value={draftInternalMax}
-                  onChange={(e) => {
-                    const internal = Math.max(0, Number(e.target.value) || 0);
-                    setDraftSplit(draftTotalMax, draftTotalMax - internal, internal);
-                  }}
-                />
-              </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input
+                    label={t("examsHub.paperOutOf")}
+                    type="number"
+                    min={0}
+                    value={draftMax}
+                    onChange={(e) => {
+                      const paper = Math.max(0, Number(e.target.value) || 0);
+                      setDraftSplit(draftTotalMax, paper, draftTotalMax - paper);
+                    }}
+                  />
+                  <Input
+                    label={t("examsHub.teacherOutOf")}
+                    type="number"
+                    min={0}
+                    value={draftInternalMax}
+                    onChange={(e) => {
+                      const internal = Math.max(0, Number(e.target.value) || 0);
+                      setDraftSplit(draftTotalMax, draftTotalMax - internal, internal);
+                    }}
+                  />
+                </div>
+              )}
+
+              {draftMarksDisplay === "total" && (
+                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                  {t("examsHub.marksDisplayTotalPreview", {
+                    total: draftTotalMax,
+                  })}
+                </p>
+              )}
 
               {splitValid ? (
                 <p className="examhub-ok">
@@ -1357,6 +1632,31 @@ export default function ExamsHubPage() {
               {t("examsHub.makeFinal")}
             </label>
           )}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-slate-600">
+              {t("examsHub.marksDisplayTitle")}
+            </p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {(["split", "total", "paper"] as MarksDisplayMode[]).map((mode) => {
+                const on = draftMarksDisplay === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={cn(
+                      "rounded-lg border px-2 py-2 text-left text-[11px] transition",
+                      on
+                        ? "border-blue-400 bg-blue-50 text-blue-950"
+                        : "border-slate-200 bg-white text-slate-700",
+                    )}
+                    onClick={() => applyMarksDisplay(mode)}
+                  >
+                    <strong className="block">{marksDisplayLabel(mode, t)}</strong>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <Input
             label={t("examsHub.totalOutOf")}
             type="number"
@@ -1364,7 +1664,8 @@ export default function ExamsHubPage() {
             value={draftTotalMax}
             onChange={(e) => {
               const total = Math.max(0, Number(e.target.value) || 0);
-              setDraftSplit(total, draftMax, total - draftMax);
+              if (draftMarksDisplay === "paper") setDraftSplit(total, total, 0);
+              else setDraftSplit(total, draftMax, total - draftMax);
             }}
           />
           <Input
@@ -1374,19 +1675,22 @@ export default function ExamsHubPage() {
             value={draftMax}
             onChange={(e) => {
               const paper = Math.max(0, Number(e.target.value) || 0);
-              setDraftSplit(draftTotalMax, paper, draftTotalMax - paper);
+              if (draftMarksDisplay === "paper") setDraftSplit(paper, paper, 0);
+              else setDraftSplit(draftTotalMax, paper, draftTotalMax - paper);
             }}
           />
-          <Input
-            label={t("examsHub.teacherOutOf")}
-            type="number"
-            min={0}
-            value={draftInternalMax}
-            onChange={(e) => {
-              const internal = Math.max(0, Number(e.target.value) || 0);
-              setDraftSplit(draftTotalMax, draftTotalMax - internal, internal);
-            }}
-          />
+          {draftMarksDisplay !== "paper" && (
+            <Input
+              label={t("examsHub.teacherOutOf")}
+              type="number"
+              min={0}
+              value={draftInternalMax}
+              onChange={(e) => {
+                const internal = Math.max(0, Number(e.target.value) || 0);
+                setDraftSplit(draftTotalMax, draftTotalMax - internal, internal);
+              }}
+            />
+          )}
           {draftComputerOnly && (
             <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
               {t("examsHub.computerOnlyHint")}

@@ -17,7 +17,7 @@ import {
 import { useT } from "@/i18n/locale-provider";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { compareRollNumbers } from "@/lib/attendance";
-import type { ExamTermKey } from "@/lib/results/exam-terms";
+import type { ExamTermKey, MarksDisplayMode } from "@/lib/results/exam-terms";
 import { studentFullNameGu } from "@/lib/student-names";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +28,9 @@ type SubjectMark = {
   examSubjectId: string | null;
   termValue: number | null;
   internalValue?: number | null;
+  paperMax?: number;
+  internalMax?: number;
+  marksDisplay?: MarksDisplayMode;
   letterGrade?: string | null;
 };
 
@@ -78,6 +81,8 @@ export default function TermMarksPage() {
       role: "component" | "final";
       maxMarks: number;
       internalMax?: number;
+      totalMax?: number;
+      marksDisplay?: MarksDisplayMode;
       published: boolean;
       locked: boolean;
     };
@@ -143,7 +148,25 @@ export default function TermMarksPage() {
     return rows[0].subjectMarks.filter((s) => s.subjectType === "numeric");
   }, [rows]);
 
-  const hasInternal = (data?.term.internalMax ?? 0) > 0;
+  const marksDisplay: MarksDisplayMode =
+    data?.term.marksDisplay === "total" ||
+    data?.term.marksDisplay === "paper" ||
+    data?.term.marksDisplay === "split"
+      ? data.term.marksDisplay
+      : (data?.term.internalMax ?? 0) > 0
+        ? "split"
+        : "paper";
+  const hasInternal =
+    marksDisplay === "split" && (data?.term.internalMax ?? 0) > 0;
+  const entryAsTotal = marksDisplay === "total";
+  const paperOutOf = entryAsTotal
+    ? Math.max(
+        0,
+        Number(data?.term.totalMax) ||
+          (Number(data?.term.maxMarks) || 0) +
+            (Number(data?.term.internalMax) || 0),
+      )
+    : (data?.term.maxMarks ?? 0);
 
   /** Focus a marks input by student row / subject col / paper|internal. */
   const focusMarksCell = useCallback(
@@ -181,18 +204,17 @@ export default function TermMarksPage() {
 
   const outOfMaxCount = useMemo(() => {
     if (!data) return 0;
-    const paperMax = data.term.maxMarks;
-    const internalMax = data.term.internalMax ?? 0;
+    const internalMax = hasInternal ? data.term.internalMax ?? 0 : 0;
     let n = 0;
     for (const st of rows) {
       for (const sub of st.subjectMarks) {
         if (sub.subjectType !== "numeric") continue;
-        if (isOutOfMax(sub.termValue, paperMax)) n++;
+        if (isOutOfMax(sub.termValue, paperOutOf)) n++;
         if (internalMax > 0 && isOutOfMax(sub.internalValue ?? null, internalMax)) n++;
       }
     }
     return n;
-  }, [rows, data]);
+  }, [rows, data, paperOutOf, hasInternal]);
 
   const updateCell = (
     studentIdx: number,
@@ -479,15 +501,21 @@ export default function TermMarksPage() {
             <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
               {data.completion.complete}/{data.completion.total} {t("examTerms.complete")}
             </span>
-            {(data.term.internalMax ?? 0) > 0 && (
+            {hasInternal ? (
               <span className="text-slate-500">
                 {t("examsHub.paperTeacherTotal", {
                   paper: data.term.maxMarks,
                   internal: data.term.internalMax ?? 0,
-                  total: data.term.maxMarks + (data.term.internalMax ?? 0),
+                  total:
+                    data.term.totalMax ??
+                    data.term.maxMarks + (data.term.internalMax ?? 0),
                 })}
               </span>
-            )}
+            ) : entryAsTotal ? (
+              <span className="text-slate-500">
+                {t("examsHub.marksDisplayTotalPreview", { total: paperOutOf })}
+              </span>
+            ) : null}
           </div>
 
           <Card>
@@ -513,13 +541,21 @@ export default function TermMarksPage() {
                       {numericSubjects.map((s) => (
                         <th key={s.subjectCode} className="p-2 text-center min-w-[72px] text-xs font-medium text-slate-600">
                           <div>{s.subjectName}</div>
-                          <div className="text-[10px] text-blue-500 font-normal">
-                            {t("examsHub.paperShort")} /{data.term.maxMarks}
-                          </div>
-                          {(data.term.internalMax ?? 0) > 0 && (
-                            <div className="text-[10px] text-violet-500">
-                              {t("examsHub.teacherShort")} /{data.term.internalMax}
+                          {entryAsTotal ? (
+                            <div className="text-[10px] text-emerald-600 font-normal">
+                              /{paperOutOf}
                             </div>
+                          ) : (
+                            <>
+                              <div className="text-[10px] text-blue-500 font-normal">
+                                {t("examsHub.paperShort")} /{data.term.maxMarks}
+                              </div>
+                              {hasInternal && (
+                                <div className="text-[10px] text-violet-500">
+                                  {t("examsHub.teacherShort")} /{data.term.internalMax}
+                                </div>
+                              )}
+                            </>
                           )}
                         </th>
                       ))}
@@ -534,7 +570,7 @@ export default function TermMarksPage() {
                           {studentFullNameGu(st)}
                         </td>
                         {st.subjectMarks.filter((s) => s.subjectType === "numeric").map((sub, colIdx) => {
-                          const paperInvalid = isOutOfMax(sub.termValue, data.term.maxMarks);
+                          const paperInvalid = isOutOfMax(sub.termValue, paperOutOf);
                           const internalInvalid = isOutOfMax(
                             sub.internalValue ?? null,
                             data.term.internalMax ?? 0,
@@ -545,14 +581,14 @@ export default function TermMarksPage() {
                               <input
                                 type="number"
                                 min={0}
-                                max={data.term.maxMarks}
+                                max={paperOutOf}
                                 step={1}
                                 disabled={!data.editable}
                                 data-marks-cell={`${i}-${colIdx}-paper`}
                                 aria-invalid={paperInvalid}
                                 title={
                                   paperInvalid
-                                    ? `Max ${data.term.maxMarks}`
+                                    ? `Max ${paperOutOf}`
                                     : undefined
                                 }
                                 value={sub.termValue ?? ""}
@@ -567,7 +603,7 @@ export default function TermMarksPage() {
                                     : "border border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-200",
                                 )}
                               />
-                              {(data.term.internalMax ?? 0) > 0 && (
+                              {hasInternal && (
                                 <input
                                   type="number"
                                   min={0}

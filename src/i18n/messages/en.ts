@@ -605,6 +605,21 @@ const en = {
     addComputerHint:
       "Only Computer marks are entered here. Other subjects stay on Exam 1 / 2 / 3.",
     computerEmpty: "No Computer exam yet. Add one for each result term you need.",
+    computerWizardHint:
+      "Computer is separate from subject exams. Pick one here or add a new Computer exam, then set its own paper / internal / total.",
+    computerMarksHint:
+      "Set Computer marks separately — paper, teacher/internal, and total for this Computer exam only.",
+    marksDisplayTitle: "How to show marks on result",
+    marksDisplayHint:
+      "Choose for this exam: show paper + internal separately, only the combined total, or paper only.",
+    marksDisplaySplit: "Paper + Internal",
+    marksDisplaySplitHint: "Show both (e.g. 80 and 20) on entry and result.",
+    marksDisplayTotal: "Total only",
+    marksDisplayTotalHint: "Add paper + internal and show only out of total (e.g. /100).",
+    marksDisplayPaper: "Paper only",
+    marksDisplayPaperHint: "No internal marks — only paper out-of.",
+    marksDisplayTotalPreview:
+      "Result will show one mark out of {{total}} (paper + internal added).",
     passFail: "Pass / Fail",
     createdBy: "Created by {{name}}",
   },

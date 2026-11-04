@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
-import { ensureClassExam } from "@/lib/class-subjects";
+import { ensureClassExam, ensureComputerSubjectNumeric } from "@/lib/class-subjects";
 import {
   componentTerms,
   finalTerm,
@@ -224,8 +224,16 @@ export async function PUT(request: NextRequest) {
       where: { schoolId: session.schoolId, id: { in: classIds } },
     });
 
+    const hasComputerExam = base.terms.some((term) => term.subjectScope === "computer");
+    const computerTotal =
+      base.terms.find((term) => term.subjectScope === "computer")?.totalMax || 100;
+
     let applied = 0;
     for (const schoolClass of classes) {
+      if (hasComputerExam) {
+        await ensureComputerSubjectNumeric(schoolClass.id, { maxMarks: computerTotal });
+      }
+
       const { exam } = await ensureClassExam(session.schoolId, schoolClass);
       const prev = parseExamTermMeta(exam.termMeta);
 
@@ -305,13 +313,21 @@ async function applySingleExam(
     return NextResponse.json({ error: "Select an exam type" }, { status: 400 });
   }
 
+  const internalMax = Math.max(0, Number(examTerm.internalMax) || 0);
+  const marksDisplayRaw =
+    examTerm.marksDisplay === "split" ||
+    examTerm.marksDisplay === "total" ||
+    examTerm.marksDisplay === "paper"
+      ? examTerm.marksDisplay
+      : undefined;
   const normalized: ExamTermTemplateInput = {
     key: examTerm.key,
     labelEn: String(examTerm.labelEn).trim(),
     labelGu: String(examTerm.labelGu || examTerm.labelEn).trim(),
     maxMarks: Math.max(0, Number(examTerm.maxMarks) || 0),
-    internalMax: Math.max(0, Number(examTerm.internalMax) || 0),
+    internalMax,
     totalMax: Math.max(0, Number(examTerm.totalMax) || 0),
+    marksDisplay: marksDisplayRaw ?? (internalMax > 0 ? "split" : "paper"),
     role: examTerm.role === "final" ? "final" : "component",
     subjectScope: examTerm.subjectScope === "computer" ? "computer" : "all",
   };
@@ -382,6 +398,13 @@ async function applySingleExam(
     const existing = examByClass.get(
       `${schoolClass.standard}::${schoolClass.section}::${schoolClass.academicYear}`,
     );
+
+    if (normalized.subjectScope === "computer") {
+      await ensureComputerSubjectNumeric(schoolClass.id, {
+        maxMarks: normalized.totalMax || 100,
+      });
+    }
+
     const { exam } = await ensureClassExam(schoolId, schoolClass);
     const prev = parseExamTermMeta(exam.termMeta);
     const startFresh = !existing;

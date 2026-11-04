@@ -62,6 +62,8 @@ function termStatsForExam(
       role: term.role,
       maxMarks: term.maxMarks,
       internalMax: term.internalMax ?? 0,
+      totalMax: term.totalMax,
+      marksDisplay: term.marksDisplay ?? ((term.internalMax ?? 0) > 0 ? "split" : "paper"),
       published: term.published,
       locked: term.locked,
       examDate: term.examDate,
@@ -347,6 +349,14 @@ export async function POST(request: NextRequest) {
           };
 
           const internalMax = resolveTermInternalMax(term);
+          const entryMax =
+            (term.marksDisplay === "total"
+              ? Math.max(
+                  0,
+                  Number(term.totalMax) ||
+                    (Number(term.maxMarks) || 0) + (Number(term.internalMax) || 0),
+                )
+              : term.maxMarks) || 0;
           const paperRaw = pickSubjectMarkField(markSub, TERM_PAPER_MARK_KEYS);
           const internalRaw = pickSubjectMarkField(markSub, TERM_INTERNAL_MARK_KEYS);
 
@@ -354,10 +364,16 @@ export async function POST(request: NextRequest) {
             if (sub.letterGrade != null) remarks.letterGrade = sub.letterGrade || null;
           } else if (term.role === "final") {
             if (paperRaw !== undefined) {
-              const annual = clampTermMarks(term, paperRaw);
+              const annual = clampTermMarks(
+                { ...term, maxMarks: entryMax },
+                paperRaw,
+              );
               if (annual != null) marksObtained = annual;
             }
-            if (internalRaw !== undefined && internalMax > 0) {
+            if (term.marksDisplay === "total") {
+              // Combined total stored as paper; clear internal split
+              remarks = writeTermInternalScore(term, remarks, null);
+            } else if (internalRaw !== undefined && internalMax > 0) {
               const internal = clampTermMarks(
                 { ...term, maxMarks: internalMax },
                 internalRaw,
@@ -366,11 +382,13 @@ export async function POST(request: NextRequest) {
             }
           } else {
             if (paperRaw !== undefined) {
-              const val = clampTermMarks(term, paperRaw);
+              const val = clampTermMarks({ ...term, maxMarks: entryMax }, paperRaw);
               const written = writeTermScore(term, remarks, val);
               remarks = written.termData;
             }
-            if (internalRaw !== undefined && internalMax > 0) {
+            if (term.marksDisplay === "total") {
+              remarks = writeTermInternalScore(term, remarks, null);
+            } else if (internalRaw !== undefined && internalMax > 0) {
               const internal = clampTermMarks(
                 { ...term, maxMarks: internalMax },
                 internalRaw,

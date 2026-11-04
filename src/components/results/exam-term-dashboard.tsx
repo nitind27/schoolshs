@@ -25,6 +25,8 @@ export type TermStat = {
   role: "component" | "final";
   maxMarks: number;
   internalMax?: number;
+  totalMax?: number;
+  marksDisplay?: "split" | "total" | "paper";
   published: boolean;
   locked: boolean;
   examDate: string | null;
@@ -125,13 +127,21 @@ export function ExamTermDashboard({
 
                 <div className="flex items-center gap-3 text-sm text-slate-600">
                   <span>
-                    {(ts.internalMax ?? 0) > 0
-                      ? t("examsHub.paperTeacherTotal", {
-                          paper: ts.maxMarks,
-                          internal: ts.internalMax ?? 0,
-                          total: ts.maxMarks + (ts.internalMax ?? 0),
+                    {ts.marksDisplay === "total"
+                      ? t("examTerms.maxMarks", {
+                          marks:
+                            ts.totalMax ||
+                            ts.maxMarks + (ts.internalMax ?? 0),
                         })
-                      : t("examTerms.maxMarks", { marks: ts.maxMarks })}
+                      : ts.marksDisplay === "paper" || (ts.internalMax ?? 0) <= 0
+                        ? t("examTerms.maxMarks", { marks: ts.maxMarks })
+                        : t("examsHub.paperTeacherTotal", {
+                            paper: ts.maxMarks,
+                            internal: ts.internalMax ?? 0,
+                            total:
+                              ts.totalMax ||
+                              ts.maxMarks + (ts.internalMax ?? 0),
+                          })}
                   </span>
                   {ts.examDate && (
                     <span className="inline-flex items-center gap-1 text-xs">

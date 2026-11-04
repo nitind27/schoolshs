@@ -21,6 +21,7 @@ export type HigherSecondaryTermPrintData = {
     maxMarks: number;
     internalMax?: number;
     totalMax?: number;
+    marksDisplay?: "split" | "total" | "paper";
   };
   students: HigherSecondaryTermStudent[];
 };
@@ -57,17 +58,33 @@ function streamLabel(stream?: string | null): string {
   return stream || "સામાન્ય પ્રવાહ";
 }
 
-function obtainedMark(mark: HigherSecondaryTermStudent["subjectMarks"][number]): number | null {
+function obtainedMark(
+  mark: HigherSecondaryTermStudent["subjectMarks"][number],
+  mode: "split" | "total" | "paper" = "total",
+): number | null {
+  if (mode === "paper") {
+    return mark.termValue == null ? null : Number(mark.termValue);
+  }
   if (mark.termValue == null && mark.internalValue == null) return null;
   return Number(mark.termValue || 0) + Number(mark.internalValue || 0);
+}
+
+function resolveDisplayMode(
+  term: HigherSecondaryTermPrintData["term"],
+): "split" | "total" | "paper" {
+  if (term.marksDisplay === "split" || term.marksDisplay === "total" || term.marksDisplay === "paper") {
+    return term.marksDisplay;
+  }
+  return (term.internalMax ?? 0) > 0 ? "split" : "paper";
 }
 
 function studentSummary(
   student: HigherSecondaryTermStudent,
   perSubjectMax: number,
+  mode: "split" | "total" | "paper",
 ) {
   const numeric = student.subjectMarks.filter((subject) => subject.subjectType === "numeric");
-  const values = numeric.map(obtainedMark);
+  const values = numeric.map((mark) => obtainedMark(mark, mode));
   const complete = numeric.length > 0 && values.every((value) => value != null);
   const total = values.reduce<number>((sum, value) => sum + Number(value || 0), 0);
   const passed =
@@ -90,9 +107,17 @@ function MidResultCard({
   student: HigherSecondaryTermStudent;
   rank: number | null;
 }) {
-  const perSubjectMax =
-    Number(data.term.totalMax) ||
-    Number(data.term.maxMarks || 0) + Number(data.term.internalMax || 0);
+  const mode = resolveDisplayMode(data.term);
+  const showSplit = mode === "split" && (data.term.internalMax ?? 0) > 0;
+  const perSubjectMax = showSplit
+    ? Number(data.term.totalMax) ||
+      Number(data.term.maxMarks || 0) + Number(data.term.internalMax || 0)
+    : mode === "paper"
+      ? Number(data.term.maxMarks || 0)
+      : Number(data.term.totalMax) ||
+        Number(data.term.maxMarks || 0) + Number(data.term.internalMax || 0);
+  const paperMax = Number(data.term.maxMarks || 0);
+  const internalMax = Number(data.term.internalMax || 0);
   const numericSubjects = student.subjectMarks.filter(
     (subject) => subject.subjectType === "numeric",
   );
@@ -100,7 +125,7 @@ function MidResultCard({
     ...numericSubjects,
     ...Array.from({ length: Math.max(0, 7 - numericSubjects.length) }, () => null),
   ];
-  const summary = studentSummary(student, perSubjectMax);
+  const summary = studentSummary(student, perSubjectMax, mode);
 
   return (
     <article className="hs-mid-card">
@@ -136,24 +161,70 @@ function MidResultCard({
         <thead>
           <tr>
             <th>વિષય</th>
-            <th>ગુણ</th>
-            <th>મેળવેલ ગુણ</th>
+            {showSplit ? (
+              <>
+                <th>પેપર /{toGuDigits(paperMax)}</th>
+                <th>આંતરિક /{toGuDigits(internalMax)}</th>
+                <th>કુલ /{toGuDigits(perSubjectMax)}</th>
+              </>
+            ) : (
+              <>
+                <th>ગુણ</th>
+                <th>મેળવેલ ગુણ</th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
           {rows.map((subject, index) => (
             <tr key={subject?.subjectCode || `blank-${index}`}>
               <td>{subject?.subjectName || ""}</td>
-              <td>{subject ? toGuDigits(perSubjectMax) : ""}</td>
-              <td>
-                {subject ? toGuDigits(obtainedMark(subject)) : ""}
-              </td>
+              {showSplit ? (
+                <>
+                  <td>
+                    {subject
+                      ? toGuDigits(
+                          subject.termValue == null ? "" : subject.termValue,
+                        )
+                      : ""}
+                  </td>
+                  <td>
+                    {subject
+                      ? toGuDigits(
+                          subject.internalValue == null
+                            ? ""
+                            : subject.internalValue,
+                        )
+                      : ""}
+                  </td>
+                  <td>
+                    {subject ? toGuDigits(obtainedMark(subject, "total")) : ""}
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td>{subject ? toGuDigits(perSubjectMax) : ""}</td>
+                  <td>
+                    {subject ? toGuDigits(obtainedMark(subject, mode)) : ""}
+                  </td>
+                </>
+              )}
             </tr>
           ))}
           <tr className="hs-mid-total">
             <td>કુલ ગુણ</td>
-            <td>{toGuDigits(summary.max)}</td>
-            <td>{toGuDigits(summary.total)}</td>
+            {showSplit ? (
+              <>
+                <td />
+                <td />
+                <td>{toGuDigits(summary.total)}</td>
+              </>
+            ) : (
+              <>
+                <td>{toGuDigits(summary.max)}</td>
+                <td>{toGuDigits(summary.total)}</td>
+              </>
+            )}
           </tr>
         </tbody>
       </table>

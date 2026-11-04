@@ -291,6 +291,60 @@ function subjectNamesMatch(def: MarksSheetSubjectDef, name: string, code: string
   return folded.has(foldSubjectName(name)) || folded.has(foldSubjectName(code));
 }
 
+/**
+ * When a Computer-only exam is applied, ensure the class has COMP as a
+ * numeric subject so paper/internal marks can be entered separately.
+ */
+export async function ensureComputerSubjectNumeric(
+  classId: string,
+  options?: { maxMarks?: number },
+): Promise<boolean> {
+  const maxMarks = Math.max(1, Number(options?.maxMarks) || 100);
+  const existing = await listClassSubjects(classId);
+  const found =
+    existing.find((s) => s.code.toUpperCase() === "COMP") ||
+    existing.find((s) => /કોમ્પ્યુટર|કમ્પ્યુટર|computer|ict/i.test(s.name));
+
+  if (!found) {
+    const order = existing.reduce((max, s) => Math.max(max, s.sortOrder), -1) + 1;
+    await prisma.classSubject.create({
+      data: {
+        classId,
+        name: "કોમ્પ્યુટર",
+        code: "COMP",
+        shortName: "કોમ્પ",
+        type: "numeric",
+        maxMarks,
+        sortOrder: order,
+        isActive: true,
+      },
+    });
+    return true;
+  }
+
+  if (
+    found.code !== "COMP" ||
+    found.type !== "numeric" ||
+    !found.isActive ||
+    (found.maxMarks || 0) <= 0
+  ) {
+    await prisma.classSubject.update({
+      where: { id: found.id },
+      data: {
+        code: "COMP",
+        type: "numeric",
+        maxMarks: found.maxMarks > 0 ? found.maxMarks : maxMarks,
+        isActive: true,
+        name: found.name || "કોમ્પ્યુટર",
+        shortName: found.shortName || "કોમ્પ",
+      },
+    });
+    return true;
+  }
+
+  return false;
+}
+
 export async function syncExamSubjects(
   examId: string,
   configSubjects: MarksSheetSubjectDef[],

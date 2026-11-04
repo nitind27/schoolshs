@@ -13,6 +13,13 @@ export type ExamTermKey = string;
 export type ExamTermRole = "component" | "final";
 /** `computer` = this exam is only for Computer; result card still uses the same Computer column. */
 export type ExamSubjectScope = "all" | "computer";
+/**
+ * How marks appear on entry + result cards for this exam:
+ * - `split`  → paper and internal shown separately (e.g. 80 + 20)
+ * - `total`  → only combined total shown (e.g. out of 100)
+ * - `paper`  → paper only; internal hidden
+ */
+export type MarksDisplayMode = "split" | "total" | "paper";
 
 /** @deprecated Prefer counting active component terms */
 export type MidExamCount = number;
@@ -30,6 +37,8 @@ export interface ExamTermDef {
   maxMarks: number;
   /** Teacher/internal assessment out-of for this exam */
   internalMax?: number;
+  /** How paper/internal show on marks entry and result print */
+  marksDisplay?: MarksDisplayMode;
   /** Default all subjects. `computer` limits marks entry to Computer only. */
   subjectScope?: ExamSubjectScope;
   published: boolean;
@@ -39,6 +48,52 @@ export interface ExamTermDef {
   createdById?: string | null;
   createdByName?: string | null;
   createdAt?: string | null;
+}
+
+export function normalizeMarksDisplay(
+  value: unknown,
+  internalMax = 0,
+): MarksDisplayMode {
+  if (value === "split" || value === "total" || value === "paper") return value;
+  return internalMax > 0 ? "split" : "paper";
+}
+
+export function resolveMarksDisplay(term: Pick<ExamTermDef, "marksDisplay" | "internalMax">): MarksDisplayMode {
+  return normalizeMarksDisplay(term.marksDisplay, term.internalMax ?? 0);
+}
+
+/** Enter / show a separate internal marks column */
+export function termShowsInternalSplit(
+  term: Pick<ExamTermDef, "marksDisplay" | "internalMax">,
+): boolean {
+  return resolveMarksDisplay(term) === "split" && (term.internalMax ?? 0) > 0;
+}
+
+/** Result card / print shows only one combined number out of totalMax */
+export function termShowsCombinedTotal(
+  term: Pick<ExamTermDef, "marksDisplay" | "internalMax">,
+): boolean {
+  return resolveMarksDisplay(term) === "total";
+}
+
+/** Single entry field out of totalMax (combined), not paper+internal */
+export function termEntryAsTotal(
+  term: Pick<ExamTermDef, "marksDisplay" | "internalMax" | "totalMax" | "maxMarks">,
+): boolean {
+  return resolveMarksDisplay(term) === "total";
+}
+
+export function termEntryMax(
+  term: Pick<ExamTermDef, "marksDisplay" | "internalMax" | "totalMax" | "maxMarks">,
+): number {
+  if (termEntryAsTotal(term)) {
+    return Math.max(
+      0,
+      Number(term.totalMax) ||
+        (Number(term.maxMarks) || 0) + (Number(term.internalMax) || 0),
+    );
+  }
+  return Math.max(0, Number(term.maxMarks) || 0);
 }
 
 export interface ExamTermMeta {
@@ -112,12 +167,14 @@ export function createComponentTerm(opts: {
   maxMarks?: number;
   internalMax?: number;
   totalMax?: number;
+  marksDisplay?: MarksDisplayMode;
   existingKeys?: string[];
   subjectScope?: ExamSubjectScope;
 }): ExamTermDef {
   const existing = opts.existingKeys || [];
   const key = opts.key || makeTermKey(opts.labelEn, existing);
   const fieldKey = LEGACY_FIELD[key] || key;
+  const internalMax = opts.internalMax ?? 0;
   return withStatus({
     key,
     labelEn: opts.labelEn,
@@ -125,8 +182,9 @@ export function createComponentTerm(opts: {
     fieldKey,
     role: "component",
     maxMarks: opts.maxMarks ?? 50,
-    internalMax: opts.internalMax ?? 0,
-    totalMax: opts.totalMax ?? (opts.maxMarks ?? 50) + (opts.internalMax ?? 0),
+    internalMax,
+    totalMax: opts.totalMax ?? (opts.maxMarks ?? 50) + internalMax,
+    marksDisplay: normalizeMarksDisplay(opts.marksDisplay, internalMax),
     subjectScope: opts.subjectScope === "computer" ? "computer" : "all",
   });
 }
@@ -135,6 +193,7 @@ export function createFinalTerm(opts?: {
   maxMarks?: number;
   internalMax?: number;
   totalMax?: number;
+  marksDisplay?: MarksDisplayMode;
   labelEn?: string;
   labelGu?: string;
 }): ExamTermDef {
@@ -149,6 +208,7 @@ export function createFinalTerm(opts?: {
     maxMarks,
     internalMax,
     totalMax: opts?.totalMax ?? maxMarks + internalMax,
+    marksDisplay: normalizeMarksDisplay(opts.marksDisplay, internalMax),
   });
 }
 
@@ -303,6 +363,10 @@ function normalizeFromLegacyRecord(parsed: {
         locked: !!patch.locked,
         examDate: patch.examDate ?? null,
         subjectScope: patch.subjectScope === "computer" ? "computer" : "all",
+        marksDisplay: normalizeMarksDisplay(
+          patch.marksDisplay,
+          Math.max(0, Number(patch.internalMax) || 0),
+        ),
       }),
     );
   }
@@ -325,6 +389,7 @@ export function parseExamTermMeta(raw?: string | null): ExamTermMeta {
         .map((t) => {
           const role: ExamTermRole =
             t.role === "final" || t.key === "final" ? "final" : "component";
+          const internalMax = Math.max(0, Number(t.internalMax) || 0);
           return withStatus({
             key: String(t.key),
             labelEn: t.labelEn || String(t.key),
@@ -332,12 +397,13 @@ export function parseExamTermMeta(raw?: string | null): ExamTermMeta {
             fieldKey: t.fieldKey || LEGACY_FIELD[t.key] || String(t.key),
             role,
             maxMarks: Math.max(0, Number(t.maxMarks) || 0),
-            internalMax: Math.max(0, Number(t.internalMax) || 0),
+            internalMax,
             totalMax: Math.max(
               0,
               Number(t.totalMax) ||
-                (Number(t.maxMarks) || 0) + (Number(t.internalMax) || 0),
+                (Number(t.maxMarks) || 0) + internalMax,
             ),
+            marksDisplay: normalizeMarksDisplay(t.marksDisplay, internalMax),
             subjectScope:
               role === "final" || t.subjectScope !== "computer" ? "all" : "computer",
             published: !!t.published,
@@ -593,14 +659,32 @@ export function applyTermMetaToSheetConfig(
     // Keep classic kinds for first 3 so old sheets stay familiar
     const classicKind =
       idx === 0 ? "first" : idx === 1 ? "second" : idx === 2 ? "third" : "term";
+    const display = resolveMarksDisplay(t);
+    if (display === "total") {
+      return [
+        {
+          key: t.key,
+          label: t.labelGu || t.labelEn,
+          maxMarks:
+            t.totalMax || t.maxMarks + (t.internalMax ?? 0),
+          kind: classicKind as MarksSheetExamRowDef["kind"],
+          termKey: t.key,
+          scoreType: "paper" as const,
+        },
+      ];
+    }
     const paper: MarksSheetExamRowDef = {
       key: t.key,
-      label: `${t.labelGu || t.labelEn} — પેપર`,
+      label:
+        display === "split"
+          ? `${t.labelGu || t.labelEn} — પેપર`
+          : t.labelGu || t.labelEn,
       maxMarks: t.maxMarks,
       kind: classicKind as MarksSheetExamRowDef["kind"],
       termKey: t.key,
       scoreType: "paper",
     };
+    if (!termShowsInternalSplit(t)) return [paper];
     const internal: MarksSheetExamRowDef = {
       key: `${t.key}__internal`,
       label: `${t.labelGu || t.labelEn} — આંતરિક`,
@@ -609,21 +693,37 @@ export function applyTermMetaToSheetConfig(
       termKey: t.key,
       scoreType: "internal",
     };
-    return (t.internalMax ?? 0) > 0 ? [paper, internal] : [paper];
+    return [paper, internal];
   });
 
   const finalLabel = fin.labelGu || fin.labelEn || "વાર્ષિક";
-  const finalRows: MarksSheetExamRowDef[] = [
-    {
-      key: "annual",
-      label: `${finalLabel} — પેપર`,
-      maxMarks: fin.maxMarks,
-      kind: "annual",
-      termKey: fin.key,
-      scoreType: "paper",
-    },
-  ];
-  if ((fin.internalMax ?? 0) > 0) {
+  const finalDisplay = resolveMarksDisplay(fin);
+  const finalRows: MarksSheetExamRowDef[] =
+    finalDisplay === "total"
+      ? [
+          {
+            key: "annual",
+            label: finalLabel,
+            maxMarks: fin.totalMax || fin.maxMarks + (fin.internalMax ?? 0),
+            kind: "annual",
+            termKey: fin.key,
+            scoreType: "paper",
+          },
+        ]
+      : [
+          {
+            key: "annual",
+            label:
+              finalDisplay === "split"
+                ? `${finalLabel} — પેપર`
+                : finalLabel,
+            maxMarks: fin.maxMarks,
+            kind: "annual",
+            termKey: fin.key,
+            scoreType: "paper",
+          },
+        ];
+  if (termShowsInternalSplit(fin)) {
     finalRows.push({
       key: "internal",
       label: `${finalLabel} — આંતરિક`,
@@ -850,10 +950,12 @@ export function pickSubjectMarkField(
 }
 
 export function resolveTermInternalMax(term: ExamTermDef): number {
+  // Paper-only / total display: do not invent an internal column
+  if (resolveMarksDisplay(term) !== "split") return 0;
   if ((term.internalMax ?? 0) > 0) return term.internalMax ?? 0;
   const derived = Math.max(0, (term.totalMax ?? 0) - (term.maxMarks ?? 0));
   if (derived > 0) return derived;
-  return term.role === "final" ? 20 : 0;
+  return 0;
 }
 
 export function clampTermMarks(
@@ -914,22 +1016,42 @@ export function buildStudentTermRows(
       );
       const internalValue = readTermInternalScore(term, termData);
 
+      const display = resolveMarksDisplay(term);
       const internalMax = resolveTermInternalMax(term);
-      const showInternal = internalMax > 0 && def.type === "numeric";
+      const showInternal =
+        display === "split" && internalMax > 0 && def.type === "numeric";
+      const entryAsTotal = display === "total" && def.type === "numeric";
+      const paperMax = entryAsTotal
+        ? Math.max(
+            0,
+            Number(term.totalMax) ||
+              (Number(term.maxMarks) || 0) + (Number(term.internalMax) || 0),
+          )
+        : term.maxMarks;
+      // Total mode: show combined paper+internal as the single entered value
+      const displayTermValue =
+        def.type === "grade"
+          ? null
+          : entryAsTotal
+            ? termValue == null && internalValue == null
+              ? null
+              : Number(termValue || 0) + Number(internalValue || 0)
+            : termValue;
 
       return {
         subjectCode: def.code,
         subjectName: def.name,
         subjectType: def.type,
         examSubjectId: examSub?.id ?? null,
-        termValue: def.type === "grade" ? null : termValue,
+        termValue: displayTermValue,
         /** Alias for mobile clients */
-        externalValue: def.type === "grade" ? null : termValue,
+        externalValue: displayTermValue,
         internalValue: showInternal ? internalValue : null,
         /** Alias for mobile clients */
         internal: showInternal ? internalValue : null,
         internalMax: showInternal ? internalMax : 0,
-        paperMax: term.maxMarks,
+        paperMax,
+        marksDisplay: display,
         letterGrade: def.type === "grade" ? termData.letterGrade : null,
       };
     });
@@ -964,6 +1086,7 @@ export function metaFromTemplateTerms(
     totalMax?: number;
     role?: ExamTermRole;
     internalMax?: number;
+    marksDisplay?: MarksDisplayMode;
     examDate?: string | null;
     subjectScope?: ExamSubjectScope;
   }>,
@@ -984,6 +1107,7 @@ export function metaFromTemplateTerms(
         maxMarks,
         internalMax,
         totalMax: item.totalMax ?? maxMarks + internalMax,
+        marksDisplay: normalizeMarksDisplay(item.marksDisplay, internalMax),
         subjectScope: "all",
       });
       if (item.examDate) final.examDate = item.examDate;
@@ -996,6 +1120,7 @@ export function metaFromTemplateTerms(
       maxMarks: item.maxMarks,
       internalMax: item.internalMax,
       totalMax: item.totalMax,
+      marksDisplay: item.marksDisplay,
       existingKeys: components.map((c) => c.key),
       subjectScope: item.subjectScope === "computer" ? "computer" : "all",
     });
@@ -1042,6 +1167,7 @@ export type ExamTermTemplateInput = {
   totalMax?: number;
   role?: ExamTermRole;
   internalMax?: number;
+  marksDisplay?: MarksDisplayMode;
   examDate?: string | null;
   subjectScope?: ExamSubjectScope;
 };
@@ -1063,6 +1189,11 @@ export function mergeExamTermIntoMeta(
   const older = item.key
     ? baseTerms.find((term) => term.key === item.key)
     : undefined;
+  const internalMax = item.internalMax ?? 0;
+  const marksDisplay = normalizeMarksDisplay(
+    item.marksDisplay ?? older?.marksDisplay,
+    internalMax,
+  );
 
   const incoming: ExamTermDef = isFinal
     ? withStatus({
@@ -1072,8 +1203,9 @@ export function mergeExamTermIntoMeta(
         fieldKey: "annual",
         role: "final",
         maxMarks: item.maxMarks,
-        internalMax: item.internalMax ?? 0,
-        totalMax: item.totalMax ?? item.maxMarks + (item.internalMax ?? 0),
+        internalMax,
+        totalMax: item.totalMax ?? item.maxMarks + internalMax,
+        marksDisplay,
         subjectScope: "all",
         published: older?.published ?? false,
         publishedAt: older?.publishedAt ?? null,
@@ -1087,6 +1219,7 @@ export function mergeExamTermIntoMeta(
         maxMarks: item.maxMarks,
         internalMax: item.internalMax,
         totalMax: item.totalMax,
+        marksDisplay,
         existingKeys: baseTerms.map((term) => term.key),
         subjectScope: item.subjectScope === "computer" ? "computer" : "all",
       });
