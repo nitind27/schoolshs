@@ -1,17 +1,17 @@
 ﻿/* Login Portal â€” premium institutional (matches landing) */
 
 .auth-portal {
-  --auth-ink: #0c1a22;
-  --auth-ink-soft: #1a2e38;
-  --auth-accent: #0d6e6e;
-  --auth-accent-soft: #149494;
-  --auth-gold: #c9a227;
-  --auth-muted: #5a6d65;
-  --auth-line: #d4dfd9;
+  --auth-ink: #07131a;
+  --auth-ink-soft: #132833;
+  --auth-accent: #0a6b63;
+  --auth-accent-soft: #11857b;
+  --auth-gold: #b8922a;
+  --auth-muted: #5a6d72;
+  --auth-line: #d7e2df;
   --auth-paper: #ffffff;
-  --auth-canvas: #f2f6f4;
+  --auth-canvas: #edf3f1;
   --auth-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --auth-radius: 1rem;
+  --auth-radius: 1.1rem;
 
   height: 100dvh;
   max-height: 100dvh;
@@ -66,10 +66,26 @@ html.locale-gu .auth-portal h1 {
   flex-direction: column;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 70% 55% at 20% 15%, rgb(20 148 148 / 0.32), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 90% 80%, rgb(201 162 39 / 0.14), transparent 50%),
-    linear-gradient(155deg, #081418 0%, #0c1a22 42%, #0f2a30 100%);
+    radial-gradient(ellipse 80% 60% at 12% 8%, rgb(17 133 123 / 0.42), transparent 58%),
+    radial-gradient(ellipse 55% 45% at 92% 88%, rgb(184 146 42 / 0.16), transparent 52%),
+    radial-gradient(ellipse 40% 35% at 60% 40%, rgb(8 40 48 / 0.35), transparent 70%),
+    linear-gradient(158deg, #040d12 0%, #0a171e 38%, #0d252c 72%, #0a1f24 100%);
   color: #f4faf7;
+}
+
+.auth-portal-brand::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0%, rgb(255 255 255 / 0.03) 42%, transparent 58%);
+  animation: auth-brand-sheen 9s var(--auth-ease) infinite;
+}
+
+@keyframes auth-brand-sheen {
+  0%, 100% { opacity: 0.35; transform: translateX(-8%); }
+  50% { opacity: 0.7; transform: translateX(8%); }
 }
 
 @media (min-width: 1024px) {
@@ -415,22 +431,32 @@ html.locale-gu .auth-portal h1 {
   animation: auth-fade-up 0.85s var(--auth-ease) 0.16s both;
 }
 
-.auth-brand-footer-pill {
-  padding: 0.32rem 0.7rem;
-  border-radius: 9999px;
-  font-size: 0.6rem;
-  font-weight: 700;
+.auth-brand-footer-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.55rem 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  font-size: 0.72rem;
+  font-weight: 650;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(200, 220, 210, 0.9);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(196, 218, 210, 0.88);
 }
 
-.auth-brand-footer-pill.is-accent {
-  color: #f0d78c;
-  border-color: rgba(166, 124, 10, 0.35);
-  background: rgba(166, 124, 10, 0.12);
+.auth-brand-footer-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--auth-gold);
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.auth-brand-footer-pill {
+  display: none;
 }
 
 /* â”€â”€ Form panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -439,13 +465,26 @@ html.locale-gu .auth-portal h1 {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: 100dvh;
+  height: 100%;
   overflow: hidden;
   position: relative;
   background:
-    radial-gradient(ellipse 70% 45% at 80% -5%, rgb(20 148 148 / 0.08), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 0% 100%, rgb(201 162 39 / 0.05), transparent 50%),
-    linear-gradient(180deg, #eef4f1 0%, var(--auth-canvas) 40%, #eef3f1 100%);
+    radial-gradient(ellipse 65% 50% at 100% 0%, rgb(17 133 123 / 0.1), transparent 55%),
+    radial-gradient(ellipse 45% 40% at 0% 100%, rgb(184 146 42 / 0.06), transparent 50%),
+    linear-gradient(180deg, #f5f9f7 0%, var(--auth-canvas) 45%, #e8f0ed 100%);
+}
+
+.auth-portal-main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image:
+    linear-gradient(rgb(12 26 34 / 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(12 26 34 / 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 75%);
 }
 
 .auth-portal-mobile-header {
@@ -503,41 +542,66 @@ html.locale-gu .auth-portal h1 {
 
 .auth-portal-form-card {
   width: 100%;
-  max-width: 28rem;
+  max-width: 26.5rem;
   max-height: none;
   overflow: visible;
   margin-block: auto;
   position: relative;
-  background: #ffffff;
-  border: 1px solid rgb(212 223 217 / 0.95);
-  border-radius: 1.15rem;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfcfc 100%);
+  border: 1px solid rgb(210 222 217 / 0.95);
+  border-radius: 1.25rem;
   box-shadow:
-    0 24px 48px -30px rgb(12 26 34 / 0.28),
-    0 1px 0 rgb(255 255 255 / 0.95) inset;
-  padding: 1.45rem 1.5rem 1.2rem;
-  animation: auth-form-enter 0.7s var(--auth-ease);
+    0 28px 56px -32px rgb(7 19 26 / 0.32),
+    0 1px 0 rgb(255 255 255 / 0.98) inset;
+  padding: 1.55rem 1.55rem 1.25rem;
+  animation: auth-form-enter 0.75s var(--auth-ease);
+}
+
+.auth-portal-form-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 1.25rem;
+  right: 1.25rem;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, transparent, var(--auth-accent-soft), var(--auth-gold), transparent);
+  opacity: 0.75;
 }
 
 .auth-portal-form-header {
-  margin-bottom: 1rem;
+  margin-bottom: 1.15rem;
+  text-align: left;
 }
 
+.auth-portal-form-kicker {
+  margin: 0 0 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--auth-accent);
+}
+
+.auth-portal-form-header h1,
 .auth-portal-form-header h2 {
   font-family: var(--font-lp-display, inherit);
-  font-size: 1.65rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  font-size: clamp(1.55rem, 2.4vw, 1.85rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
   margin: 0;
   color: var(--auth-ink);
 }
 
 .auth-portal-form-header p {
-  margin-top: 0.35rem;
-  margin-inline: auto;
-  font-size: 0.95rem;
+  margin-top: 0.4rem;
+  margin-inline: 0;
+  font-size: 0.9rem;
   color: var(--auth-muted);
-  line-height: 1.4;
+  line-height: 1.45;
+  max-width: 28ch;
 }
 
 @media (min-width: 640px) {
@@ -571,16 +635,17 @@ html.locale-gu .auth-portal h1 {
 .auth-portal-school-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  margin-bottom: 0.85rem;
-  padding: 0.45rem 0.75rem;
-  border-radius: 9999px;
-  background: #eef7f3;
+  gap: 0.5rem;
+  margin-bottom: 0.95rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, #f2faf7 0%, #eaf6f1 100%);
   border: 1px solid #c5e4d6;
   font-size: 0.8rem;
   font-weight: 650;
   color: #145a45;
   max-width: 100%;
+  animation: auth-fade-up 0.55s var(--auth-ease) both;
 }
 
 .auth-portal-school-chip svg {
@@ -622,11 +687,11 @@ html.locale-gu .auth-portal h1 {
 .auth-portal-input {
   width: 100%;
   min-width: 0;
-  height: 2.85rem;
-  padding: 0 0.9rem 0 2.55rem;
-  border-radius: 0.75rem;
+  height: 3rem;
+  padding: 0 0.95rem 0 2.65rem;
+  border-radius: 0.85rem;
   border: 1px solid var(--auth-line);
-  background: #f7faf8;
+  background: #f5f9f7;
   font-size: 1rem;
   color: var(--auth-ink);
   transition:
@@ -830,20 +895,21 @@ html.locale-gu .auth-portal h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   width: 100%;
-  height: 3rem;
-  margin-top: 0.2rem;
+  height: 3.15rem;
+  margin-top: 0.35rem;
   border: none;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--auth-accent-soft), var(--auth-accent));
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, var(--auth-accent-soft) 0%, var(--auth-accent) 55%, #0a5a54 100%);
   color: #ffffff;
-  font-size: 1rem;
+  font-family: var(--font-lp-display, inherit);
+  font-size: 1.02rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   cursor: pointer;
   box-shadow:
-    0 16px 34px -16px rgb(26 101 80 / 0.75),
+    0 18px 36px -18px rgb(10 107 99 / 0.78),
     0 1px 0 rgb(255 255 255 / 0.22) inset;
   transition: transform 0.4s var(--auth-ease), box-shadow 0.4s var(--auth-ease), opacity 0.3s ease;
 }
@@ -1122,6 +1188,7 @@ html.locale-gu .auth-portal h1 {
 @media (prefers-reduced-motion: reduce) {
   .auth-brand-orb,
   .auth-brand-arc,
+  .auth-portal-brand::before,
   .auth-portal-form-card,
   .auth-portal-topbar,
   .auth-portal-hero,
@@ -1195,9 +1262,9 @@ html.locale-gu .auth-portal h1 {
   flex: 1;
   min-height: 0;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  padding: 0.2rem 0 0.4rem;
+  padding: 0;
   max-width: none;
   width: 100%;
 }
@@ -1205,32 +1272,43 @@ html.locale-gu .auth-portal h1 {
 .auth-book {
   width: 100%;
   max-width: 520px;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.9rem;
+  justify-content: center;
+  gap: 0.75rem;
   animation: auth-fade-up 0.85s var(--auth-ease) 0.08s both;
 }
 
 .auth-book-scene {
   width: 100%;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: calc(100% - 4.6rem);
+  display: flex;
 }
 
 .auth-book-shell {
   position: relative;
   width: 100%;
-  height: min(64dvh, 540px);
+  height: auto;
+  max-height: 100%;
+  min-height: 0;
   margin-inline: auto;
   transform: none;
-  filter: none;
+  filter: drop-shadow(0 22px 36px rgb(0 0 0 / 0.32));
 }
 
 .auth-book-cover {
   position: absolute;
   inset: 0;
-  border-radius: 0.35rem 1rem 1rem 0.35rem;
-  background: linear-gradient(145deg, #16352c 0%, #0d1f1a 55%, #122820 100%);
-  border: 1px solid rgba(148, 210, 180, 0.18);
+  border-radius: 0.35rem 1.05rem 1.05rem 0.35rem;
+  background:
+    radial-gradient(ellipse 70% 50% at 80% 10%, rgb(17 133 123 / 0.35), transparent 55%),
+    linear-gradient(145deg, #1a3d34 0%, #0d1f1a 55%, #10241e 100%);
+  border: 1px solid rgba(148, 210, 180, 0.22);
   box-shadow: 0 22px 40px -18px rgb(0 0 0 / 0.5);
   z-index: 0;
 }
@@ -1268,9 +1346,11 @@ html.locale-gu .auth-portal h1 {
 }
 
 .auth-book-leaf {
-  position: absolute;
-  inset: 0;
+  position: relative;
   z-index: 2;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
   border-radius: 0.25rem 0.85rem 0.85rem 0.25rem;
   overflow: hidden;
   background: linear-gradient(180deg, #ffffff 0%, #f3f8f5 100%);
@@ -1319,10 +1399,13 @@ html.locale-gu .auth-portal h1 {
 .auth-book-face {
   position: relative;
   z-index: 1;
-  height: 100%;
+  height: auto;
+  max-height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 1.55rem 1.2rem 1.7rem;
+  gap: 0.7rem;
+  padding: 1.2rem 1.4rem 1.05rem 1.55rem;
   color: var(--auth-ink);
   overflow: hidden;
 }
@@ -1330,8 +1413,13 @@ html.locale-gu .auth-portal h1 {
 .auth-book-crest {
   display: flex;
   justify-content: center;
-  margin: 0 0 0.85rem;
+  margin: 0;
   flex-shrink: 0;
+}
+
+.auth-book-crest .school-logo {
+  width: 3.25rem;
+  height: 3.25rem;
 }
 
 .auth-book-face-top {
@@ -1339,7 +1427,7 @@ html.locale-gu .auth-portal h1 {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.85rem;
+  margin: 0;
   flex-shrink: 0;
 }
 
@@ -1370,50 +1458,60 @@ html.locale-gu .auth-portal h1 {
 
 .auth-book-title {
   font-family: var(--font-lp-display, inherit);
-  font-size: clamp(1.65rem, 2.8vw, 2.15rem);
+  font-size: clamp(1.45rem, 2.3vw, 1.9rem);
   font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 1.15;
+  line-height: 1.18;
   color: var(--auth-ink);
   margin: 0;
   flex-shrink: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .auth-book-body {
-  margin: 0.7rem 0 0;
-  font-size: 1.02rem;
-  line-height: 1.5;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
   color: var(--auth-muted);
   flex-shrink: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .auth-book-list {
   list-style: none;
-  margin: 1.1rem 0 0;
+  margin: 0.15rem 0 0;
   padding: 0;
-  display: grid;
-  gap: 0.55rem;
-  flex: 1;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  flex: 0 0 auto;
   min-height: 0;
-  overflow: visible;
 }
 
 .auth-book-list li {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.7rem 0.8rem;
+  gap: 0.7rem;
+  padding: 0.62rem 0.75rem;
   border-radius: 0.7rem;
   background: #fff;
   border: 1px solid rgb(212 223 217 / 0.95);
   color: var(--auth-ink-soft);
+  flex: 0 0 auto;
+  min-height: 0;
 }
 
 .auth-book-list-icon {
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: 0.6rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.55rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1436,9 +1534,9 @@ html.locale-gu .auth-portal h1 {
 }
 
 .auth-book-list-text strong {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.25;
   color: var(--auth-ink);
 }
 
@@ -1452,17 +1550,19 @@ html.locale-gu .auth-portal h1 {
 }
 
 .auth-book-face-foot {
-  margin-top: auto;
-  padding-top: 0.9rem;
+  margin-top: 0.2rem;
+  padding-top: 0.7rem;
   border-top: 1px dashed rgb(26 101 80 / 0.2);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 650;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
   color: #6f877c;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   flex-shrink: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .auth-book-controls {
@@ -1539,35 +1639,64 @@ html.locale-gu .auth-portal h1 {
   to { transform: scaleX(1); }
 }
 
-@media (max-height: 760px) {
-  .auth-book-shell {
-    height: min(58dvh, 460px);
+@media (max-height: 820px) {
+  .auth-book {
+    gap: 0.55rem;
+  }
+
+  .auth-book-scene {
+    max-height: calc(100% - 4rem);
   }
 
   .auth-book-face {
-    padding: 1.2rem 1.25rem 1rem 1.4rem;
+    gap: 0.5rem;
+    padding: 0.95rem 1.15rem 0.8rem 1.3rem;
+  }
+
+  .auth-book-crest .school-logo {
+    width: 2.75rem;
+    height: 2.75rem;
   }
 
   .auth-book-title {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
   }
 
   .auth-book-body {
-    font-size: 0.95rem;
+    font-size: 0.88rem;
+  }
+
+  .auth-book-list {
+    gap: 0.4rem;
+    margin-top: 0;
+  }
+
+  .auth-book-list li {
+    padding: 0.48rem 0.65rem;
+  }
+
+  .auth-book-list-icon {
+    width: 2rem;
+    height: 2rem;
   }
 
   .auth-book-list-text strong {
-    font-size: 0.92rem;
+    font-size: 0.9rem;
+  }
+
+  .auth-book-face-foot {
+    margin-top: 0;
+    padding-top: 0.5rem;
   }
 }
 
 @media (max-height: 680px) {
-  .auth-book-shell {
-    height: min(58dvh, 400px);
-  }
-
   .auth-book-progress {
     display: none;
+  }
+
+  .auth-book-body {
+    -webkit-line-clamp: 1;
   }
 }
 
@@ -1600,12 +1729,12 @@ html.locale-gu .auth-portal h1 {
   grid-column: 1 / -1;
   grid-row: 1;
   min-width: 0;
-  border-bottom: 1px solid rgb(212 223 217 / 0.85);
+  border-bottom: 1px solid rgb(212 223 217 / 0.7);
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.98) 0%, rgb(255 255 255 / 0.92) 100%);
-  box-shadow: 0 14px 36px -28px rgb(12 26 34 / 0.45);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    linear-gradient(180deg, rgb(255 255 255 / 0.94) 0%, rgb(250 253 252 / 0.88) 100%);
+  box-shadow: 0 10px 28px -24px rgb(7 19 26 / 0.4);
+  backdrop-filter: blur(20px) saturate(1.25);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25);
 }
 
 .auth-login-navbar-inner {
@@ -1615,9 +1744,16 @@ html.locale-gu .auth-portal h1 {
   gap: 1rem;
   width: 100%;
   max-width: 90rem;
-  min-height: 4.4rem;
+  min-height: 4.15rem;
   margin-inline: auto;
-  padding: 0.55rem clamp(1rem, 3vw, 2.5rem);
+  padding: 0.45rem clamp(1rem, 3vw, 2.5rem);
+}
+
+.auth-login-navbar .auth-portal-logo-title {
+  font-family: var(--font-lp-display, inherit);
+  font-size: 1.12rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
 }
 
 .auth-login-navbar .auth-portal-logo {
@@ -1707,15 +1843,16 @@ html.locale-gu .auth-portal h1 {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding-inline: 0.9rem;
-  border-radius: 0.72rem;
-  background: var(--auth-ink);
+  padding-inline: 0.95rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--auth-accent-soft), var(--auth-accent));
   color: #fff;
   font-size: 0.78rem;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
-  transition: background 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 10px 22px -14px rgb(10 107 99 / 0.7);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .auth-login-home-link:hover {
@@ -1738,6 +1875,7 @@ html.locale-gu .auth-portal h1 {
   height: auto;
 }
 
+.auth-portal-form-header h1,
 .auth-portal-form-header h2,
 .auth-portal-form-header p,
 .auth-portal-label,
@@ -1758,18 +1896,19 @@ html.locale-gu .auth-portal h1 {
   line-height: 1.35;
 }
 
+.auth-portal-form-header h1,
 .auth-portal-form-header h2 {
   font-size: clamp(1.55rem, 2.4vw, 1.9rem);
   line-height: 1.15;
 }
 
 .auth-portal-form-header p {
-  max-width: 42ch;
+  max-width: 36ch;
   line-height: 1.55;
 }
 
 .auth-portal-form-card {
-  max-width: 31rem;
+  max-width: 28rem;
 }
 
 .auth-portal-input,
@@ -1905,6 +2044,7 @@ html.locale-gu .auth-portal h1 {
     margin-bottom: 0.9rem;
   }
 
+  .auth-portal-form-header h1,
   .auth-portal-form-header h2 {
     font-size: clamp(1.45rem, 7vw, 1.75rem);
   }

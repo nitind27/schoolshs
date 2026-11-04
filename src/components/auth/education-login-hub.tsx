@@ -593,8 +593,11 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
           </div>
 
           <div className="auth-portal-brand-footer">
-            <span className="auth-brand-footer-pill">{t("loginHub.gsebReady")}</span>
-            <span className="auth-brand-footer-pill is-accent">{t("login.secureLogin")}</span>
+            <p className="auth-brand-footer-line">
+              <span>{t("login.secureLogin")}</span>
+              <span className="auth-brand-footer-dot" aria-hidden />
+              <span>{t("loginHub.gsebReady")}</span>
+            </p>
           </div>
         </div>
       </aside>
@@ -602,6 +605,22 @@ export function EducationLoginHub({ next = "/dashboard" }: { next?: string }) {
       <main className="auth-portal-main">
         <div ref={mainScrollRef} className="auth-portal-main-scroll">
           <div className="auth-portal-form-card">
+            <header className="auth-portal-form-header">
+              <p className="auth-portal-form-kicker">
+                {isCaPortal ? t("login.caLoginBadge") : t("login.secureLogin")}
+              </p>
+              <h1>
+                {isCaPortal ? t("login.formTitleCa") : t("login.formTitle")}
+              </h1>
+              <p>
+                {isCaPortal
+                  ? t("login.formSubtitleCa")
+                  : branding
+                    ? t("login.formSubtitle")
+                    : t("login.formSubtitleNew")}
+              </p>
+            </header>
+
             {sessionRevoked && (
               <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-950">
                 {t("login.sessionRevokedBanner")}
