@@ -75,7 +75,6 @@ export const COMMON_NAME_GU: Record<string, string> = {
   savita: "સવિતા",
   savitaben: "સવિતાબેન",
   lucky: "લકી",
-  prince: "પ્રિન્સ",
   prins: "પ્રિન્સ",
   shoeb: "શોએબ",
   samuel: "સેમ્યુઅલ",
