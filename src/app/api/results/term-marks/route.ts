@@ -350,22 +350,16 @@ export async function POST(request: NextRequest) {
           };
 
           const internalMax = resolveTermInternalMax(term);
-          const isCompSub =
-            String(def.code || "").toUpperCase() === "COMP" ||
-            String(def.code || "").toUpperCase() === "ICT" ||
-            /computer|કોમ્પ્યુટર|કમ્પ્યુટર|ict/i.test(def.name || "");
-          const computerOut = Math.max(0, Number(term.computerOutOf) || 0);
+          // COMP is a normal subject — same paper/internal max as other subjects
           const entryMax =
-            isCompSub && computerOut > 0
-              ? computerOut
-              : (term.marksDisplay === "total"
-                  ? Math.max(
-                      0,
-                      Number(term.totalMax) ||
-                        (Number(term.maxMarks) || 0) +
-                          (Number(term.internalMax) || 0),
-                    )
-                  : term.maxMarks) || 0;
+            (term.marksDisplay === "total"
+              ? Math.max(
+                  0,
+                  Number(term.totalMax) ||
+                    (Number(term.maxMarks) || 0) +
+                      (Number(term.internalMax) || 0),
+                )
+              : term.maxMarks) || 0;
           const paperRaw = pickSubjectMarkField(markSub, TERM_PAPER_MARK_KEYS);
           const internalRaw = pickSubjectMarkField(markSub, TERM_INTERNAL_MARK_KEYS);
 
@@ -379,9 +373,7 @@ export async function POST(request: NextRequest) {
               );
               if (annual != null) marksObtained = annual;
             }
-            if (isCompSub && computerOut > 0) {
-              remarks = writeTermInternalScore(term, remarks, null);
-            } else if (term.marksDisplay === "total") {
+            if (term.marksDisplay === "total") {
               // Combined total stored as paper; clear internal split
               remarks = writeTermInternalScore(term, remarks, null);
             } else if (internalRaw !== undefined && internalMax > 0) {
@@ -397,9 +389,7 @@ export async function POST(request: NextRequest) {
               const written = writeTermScore(term, remarks, val);
               remarks = written.termData;
             }
-            if (isCompSub && computerOut > 0) {
-              remarks = writeTermInternalScore(term, remarks, null);
-            } else if (term.marksDisplay === "total") {
+            if (term.marksDisplay === "total") {
               remarks = writeTermInternalScore(term, remarks, null);
             } else if (internalRaw !== undefined && internalMax > 0) {
               const internal = clampTermMarks(

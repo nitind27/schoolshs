@@ -612,6 +612,10 @@ const en = {
     computerEasy3: "Enter out-of (e.g. 50) → Save — Computer column on that exam’s result",
     computerCreateBtn: "Add Computer",
     computerNeedSubjectFirst: "Create a subject exam (Exam 1 / 2) first, then add Computer.",
+    computerSubjectNoteTitle: "Computer is a subject",
+    computerSubjectNote:
+      "કોમ્પ્યુટર is not a separate exam. It appears as a subject column with the same paper + internal marks as other subjects on Exam 1 / 2 / Final.",
+    computerLegacyTitle: "Old separate Computer exams (delete if unused)",
     computerPickTitle: "Which exam should get Computer?",
     computerPickHint:
       "Select Exam 1, Exam 2, or Final. Computer marks stay separate from other subjects.",
@@ -627,7 +631,6 @@ const en = {
     computerOnExamHint: "Result shows Computer out of {{total}} for this exam.",
     computerOnExamEmpty: "0 = no Computer on this exam. Set e.g. 50 to enable.",
     computerRemove: "Remove",
-    computerLegacyTitle: "Old separate Computer exams (optional — prefer attach above)",
     marksDisplayTitle: "How to show marks on result",
     marksDisplayHint:
       "Choose for this exam: show paper + internal separately, only the combined total, or paper only.",

@@ -98,7 +98,7 @@ export const SECONDARY_MARKS_SHEET_SUBJECTS: MarksSheetSubjectDef[] = [
   { name: "સામાજિક વિજ્ઞાન", shortName: "સા.વિ", type: "numeric", code: "SS" },
   { name: "શા. શિક્ષણ", shortName: "શા.શિ", type: "grade", code: "PE" },
   { name: "ચિત્રકામ", shortName: "ચિ", type: "grade", code: "ART" },
-  { name: "કોમ્પ્યુટર", shortName: "કોમ્પ", type: "grade", code: "COMP" },
+  { name: "કોમ્પ્યુટર", shortName: "કોમ્પ", type: "numeric", code: "COMP" },
 ];
 
 /** Upper primary result extras for school 24261004404 (standards 6–8). */

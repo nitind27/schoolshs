@@ -541,14 +541,9 @@ export function termAllowsSubject(
   // Legacy: separate computer-only exam → only COMP
   if (isComputerTerm(term)) return computer;
 
-  const anyComputer = hasAnyComputerMarks(meta);
-  if (!anyComputer) return true;
-
-  if (computer) {
-    // COMP only on exams that opted in with computerOutOf
-    // (legacy computer-only terms handled above)
-    return termIncludesComputer(term);
-  }
+  // COMP is a normal subject on general exams (paper + internal like others).
+  // Only exclude COMP from general exams when a legacy computer-only term still exists.
+  if (computer && hasComputerExams(meta)) return false;
   return true;
 }
 
@@ -748,14 +743,12 @@ export function applyTermMetaToSheetConfig(
   meta: ExamTermMeta,
 ): MarksSheetConfig {
   const total = totalTermMaxFromMeta(meta);
-  const computerTotal = computerTermMaxFromMeta(meta);
   const fin = finalTerm(meta);
   const comps = componentTerms(meta).filter((term) => !isComputerTerm(term));
+  // Legacy only: old separate computer-only exams (COMP is normally a subject column)
   const compsComputer = computerTerms(meta);
-  const anyComputerAttached =
-    comps.some((t) => termIncludesComputer(t)) ||
-    termIncludesComputer(fin) ||
-    compsComputer.length > 0;
+  const legacyComputerOnly = compsComputer.length > 0;
+  const computerTotal = legacyComputerOnly ? computerTermMaxFromMeta(meta) : 0;
 
   const configuredRows = comps.flatMap((t, idx) => {
     // Keep classic kinds for first 3 so old sheets stay familiar
@@ -763,7 +756,7 @@ export function applyTermMetaToSheetConfig(
       idx === 0 ? "first" : idx === 1 ? "second" : idx === 2 ? "third" : "term";
     return sheetRowsForTerm(t, {
       classicKind: classicKind as MarksSheetExamRowDef["kind"],
-      subjectScope: anyComputerAttached ? "all" : undefined,
+      subjectScope: legacyComputerOnly ? "all" : undefined,
     });
   });
 
@@ -779,7 +772,7 @@ export function applyTermMetaToSheetConfig(
             kind: "annual",
             termKey: fin.key,
             scoreType: "paper",
-            ...(anyComputerAttached ? { subjectScope: "all" as const } : {}),
+            ...(legacyComputerOnly ? { subjectScope: "all" as const } : {}),
           },
         ]
       : [
@@ -793,7 +786,7 @@ export function applyTermMetaToSheetConfig(
             kind: "annual",
             termKey: fin.key,
             scoreType: "paper",
-            ...(anyComputerAttached ? { subjectScope: "all" as const } : {}),
+            ...(legacyComputerOnly ? { subjectScope: "all" as const } : {}),
           },
         ];
   if (termShowsInternalSplit(fin)) {
@@ -804,34 +797,18 @@ export function applyTermMetaToSheetConfig(
       kind: "internal",
       termKey: fin.key,
       scoreType: "internal",
-      ...(anyComputerAttached ? { subjectScope: "all" as const } : {}),
+      ...(legacyComputerOnly ? { subjectScope: "all" as const } : {}),
     });
   }
 
-  // Computer on same sheet: one row per exam that has computerOutOf (preferred)
-  const attachedComputerRows: MarksSheetExamRowDef[] = [...comps, fin]
-    .filter((t) => termIncludesComputer(t))
-    .map((t) => ({
-      key: `comp_${t.key}`,
-      label: `કોમ્પ્યુટર — ${t.labelGu || t.labelEn}`,
-      maxMarks: termComputerOutOf(t),
-      kind: "term" as const,
-      termKey: t.key,
-      scoreType: "paper" as const,
-      subjectScope: "computer" as const,
-    }));
-
-  // Legacy separate computer-only exams
-  const computerRows = [
-    ...attachedComputerRows,
-    ...compsComputer.flatMap((t, idx) =>
-      sheetRowsForTerm(t, {
-        classicKind: "term",
-        subjectScope: "computer",
-        keyPrefix: compsComputer.length > 1 ? `comp${idx + 1}_` : "comp_",
-      }),
-    ),
-  ];
+  // Legacy separate computer-only exams only (do not invent COMP rows from computerOutOf)
+  const computerRows = compsComputer.flatMap((t, idx) =>
+    sheetRowsForTerm(t, {
+      classicKind: "term",
+      subjectScope: "computer",
+      keyPrefix: compsComputer.length > 1 ? `comp${idx + 1}_` : "comp_",
+    }),
+  );
 
   const examRows: MarksSheetExamRowDef[] = [
     { key: "max", label: "પરીક્ષા", maxMarks: null, kind: "max" },
@@ -1132,27 +1109,6 @@ export function buildStudentTermRows(
       );
       const internalValue = readTermInternalScore(term, termData);
 
-      const isComp = isComputerSubject(def.code, def.name);
-      const computerOut = termComputerOutOf(term);
-      // Computer on this exam uses its own out-of (not paper/internal split)
-      if (isComp && computerOut > 0 && def.type === "numeric") {
-        return {
-          subjectCode: def.code,
-          subjectName: def.name,
-          subjectType: def.type,
-          examSubjectId: examSub?.id ?? null,
-          termValue,
-          externalValue: termValue,
-          internalValue: null,
-          internal: null,
-          internalMax: 0,
-          paperMax: computerOut,
-          marksDisplay: "paper" as const,
-          isComputer: true,
-          letterGrade: null,
-        };
-      }
-
       const display = resolveMarksDisplay(term);
       const internalMax = resolveTermInternalMax(term);
       const showInternal =
@@ -1189,7 +1145,7 @@ export function buildStudentTermRows(
         internalMax: showInternal ? internalMax : 0,
         paperMax,
         marksDisplay: display,
-        isComputer: false,
+        isComputer: isComputerSubject(def.code, def.name),
         letterGrade: def.type === "grade" ? termData.letterGrade : null,
       };
     });

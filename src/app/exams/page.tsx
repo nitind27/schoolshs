@@ -188,24 +188,12 @@ export default function ExamsHubPage() {
   const [draftComputerOnly, setDraftComputerOnly] = useState(false);
   const [draftFinal, setDraftFinal] = useState(false);
   const [draftMarksDisplay, setDraftMarksDisplay] = useState<MarksDisplayMode>("split");
-  /** When adding Computer: which subject exam to attach it to */
-  const [draftLinkExamKey, setDraftLinkExamKey] = useState<string | null>(null);
-  const [draftComputerOutOf, setDraftComputerOutOf] = useState(50);
   const [deleteKey, setDeleteKey] = useState<string | null>(null);
 
   const totalOutOf = useMemo(() => {
     return template.reduce((sum, item) => {
       if (isComputerItem(item)) return sum;
       return sum + Math.max(0, Number(item.totalMax) || 0);
-    }, 0);
-  }, [template]);
-
-  const computerOutOf = useMemo(() => {
-    return template.reduce((sum, item) => {
-      if (isComputerItem(item)) {
-        return sum + Math.max(0, Number(item.totalMax) || 0);
-      }
-      return sum + Math.max(0, Number(item.computerOutOf) || 0);
     }, 0);
   }, [template]);
 
@@ -324,8 +312,6 @@ export default function ExamsHubPage() {
     setDraftComputerOnly(false);
     setDraftFinal(false);
     setDraftMarksDisplay("split");
-    setDraftLinkExamKey(null);
-    setDraftComputerOutOf(50);
     setDraftSplit(100, 80, 20);
   };
 
@@ -355,88 +341,25 @@ export default function ExamsHubPage() {
     if (!template.length) {
       toast.warning(t("examsHub.needTypeFirst"));
       setTab("types");
-      openAdd(false);
+      openAdd();
       return;
     }
     resetWizard();
     setCreateOpen(true);
   };
 
-  const openAdd = (computer = false) => {
-    if (computer) {
-      if (generalItems.length === 0) {
-        toast.warning(t("examsHub.computerNeedSubjectFirst"));
-        return;
-      }
-      const host = generalItems[0]!;
-      setDraftLinkExamKey(host.key);
-      setDraftComputerOutOf(host.computerOutOf || 50);
-      setDraftName(host.labelEn);
-      setDraftNameGu(host.labelGu);
-      setDraftSplit(50, 50, 0);
-      setDraftMarksDisplay("paper");
-      setDraftComputerOnly(true);
-      setDraftFinal(false);
-    } else {
-      const n = generalComponentCount + 1;
-      setDraftName(`Exam ${n}`);
-      setDraftNameGu(`પરીક્ષા ${n}`);
-      setDraftSplit(100, 80, 20);
-      setDraftMarksDisplay("split");
-      setDraftComputerOnly(false);
-      setDraftLinkExamKey(null);
-      setDraftFinal(false);
-    }
+  const openAdd = () => {
+    const n = generalComponentCount + 1;
+    setDraftName(`Exam ${n}`);
+    setDraftNameGu(`પરીક્ષા ${n}`);
+    setDraftSplit(100, 80, 20);
+    setDraftMarksDisplay("split");
+    setDraftComputerOnly(false);
+    setDraftFinal(false);
     setAddOpen(true);
   };
 
-  /** Class-wise: attach Computer to an existing exam (Exam 1 / 2 / Final) */
-  const openCreateComputer = (classIds?: string[]) => {
-    if (classIds?.length) setSelected(new Set(classIds));
-    const nextSelected = classIds?.length ? classIds : [...selected];
-    if (!nextSelected.length) {
-      toast.error(t("examsHub.selectClassHint"));
-      return;
-    }
-    if (generalItems.length === 0) {
-      toast.warning(t("examsHub.computerNeedSubjectFirst"));
-      setTab("types");
-      openAdd(false);
-      return;
-    }
-    resetWizard();
-    setDraftComputerOnly(true);
-    setDraftLinkExamKey(generalItems[0]?.key ?? null);
-    setDraftComputerOutOf(generalItems[0]?.computerOutOf || 50);
-    setDraftName(generalItems[0]?.labelEn || "Computer");
-    setDraftNameGu(generalItems[0]?.labelGu || "કોમ્પ્યુટર");
-    setWizardStep("type");
-    setCreateOpen(true);
-  };
-
   const confirmAdd = () => {
-    // Attach Computer out-of onto an existing Exam 1 / 2 / Final
-    if (draftComputerOnly) {
-      const linkKey = draftLinkExamKey || generalItems[0]?.key;
-      const host = template.find((row) => row.key === linkKey);
-      if (!host || isComputerItem(host)) {
-        toast.error(t("examsHub.computerPickExam"));
-        return;
-      }
-      const computerTotal = Math.max(1, Number(draftComputerOutOf) || 0);
-      setAddSaving(true);
-      updateItem(host.key, { computerOutOf: computerTotal });
-      setAddOpen(false);
-      setAddSaving(false);
-      toast.success(
-        t("examsHub.computerAttachedTemplate", {
-          exam: host.labelGu || host.labelEn,
-          total: computerTotal,
-        }),
-      );
-      return;
-    }
-
     const labelEn = draftName.trim();
     if (!labelEn) {
       toast.warning(t("examsHub.addNameRequired"));
@@ -509,30 +432,15 @@ export default function ExamsHubPage() {
     setWizardStep("marks");
   };
 
-  const startNewTypeInWizard = (computer = false) => {
-    setAddingType(!computer);
+  const startNewTypeInWizard = () => {
+    setAddingType(true);
     setPickedKey(null);
     setDraftFinal(false);
-    if (computer) {
-      if (generalItems.length === 0) {
-        toast.warning(t("examsHub.computerNeedSubjectFirst"));
-        return;
-      }
-      setDraftComputerOnly(true);
-      setDraftLinkExamKey(generalItems[0]?.key ?? null);
-      setDraftComputerOutOf(generalItems[0]?.computerOutOf || 50);
-      setDraftName(generalItems[0]?.labelEn || "Computer");
-      setDraftNameGu(generalItems[0]?.labelGu || "કોમ્પ્યુટર");
-      setDraftMarksDisplay("paper");
-      setDraftSplit(50, 50, 0);
-    } else {
-      setDraftName("");
-      setDraftNameGu("");
-      setDraftComputerOnly(false);
-      setDraftLinkExamKey(null);
-      setDraftMarksDisplay("split");
-      setDraftSplit(100, 80, 20);
-    }
+    setDraftName("");
+    setDraftNameGu("");
+    setDraftComputerOnly(false);
+    setDraftMarksDisplay("split");
+    setDraftSplit(100, 80, 20);
     setWizardStep("type");
   };
 
@@ -552,7 +460,7 @@ export default function ExamsHubPage() {
       internalMax: draftInternalMax,
       marksDisplay: normalizeMarksDisplay(draftMarksDisplay, draftInternalMax),
       role: draftFinal ? "final" : "component",
-      subjectScope: draftComputerOnly ? "computer" : "all",
+      subjectScope: "all",
     };
     setTemplate((prev) => {
       const withoutFinal = draftFinal
@@ -646,68 +554,6 @@ export default function ExamsHubPage() {
       return;
     }
 
-    // Attach Computer to an existing subject exam (Exam 1 / 2 / Final)
-    if (draftComputerOnly) {
-      const linkKey = draftLinkExamKey || pickedKey;
-      const host = template.find((row) => row.key === linkKey);
-      if (!host || isComputerItem(host)) {
-        toast.error(t("examsHub.computerPickExam"));
-        return;
-      }
-      const computerTotal = Math.max(1, Number(draftComputerOutOf) || 0);
-      setSaving(true);
-      try {
-        const nextHost = { ...host, computerOutOf: computerTotal };
-        const nextTemplate = template.map((row) =>
-          row.key === host.key ? nextHost : row,
-        );
-        setTemplate(nextTemplate);
-        // Persist template so reload keeps computerOutOf
-        const saveRes = await fetch("/api/exams", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "save_template",
-            templateTerms: nextTemplate,
-          }),
-        });
-        const saveData = await saveRes.json();
-        if (!saveRes.ok) throw new Error(saveData.error || "Failed");
-
-        const res = await fetch("/api/exams", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "apply_exam",
-            classIds: [...selected],
-            examTerm: {
-              ...nextHost,
-              subjectScope: "all",
-            },
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed");
-        toast.push({
-          title: t("examsHub.computerAttached", {
-            exam: host.labelGu || host.labelEn,
-            total: computerTotal,
-            count: data.applied,
-          }),
-          variant: "success",
-          duration: 3600,
-        });
-        setCreateOpen(false);
-        resetWizard();
-        await load();
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : t("examsHub.applyFailed"));
-      } finally {
-        setSaving(false);
-      }
-      return;
-    }
-
     const item = template.find((row) => row.key === pickedKey);
     if (!item) {
       toast.error(t("examsHub.needTypeFirst"));
@@ -733,7 +579,8 @@ export default function ExamsHubPage() {
             maxMarks: draftMax,
             internalMax: draftInternalMax,
             marksDisplay: normalizeMarksDisplay(draftMarksDisplay, draftInternalMax),
-            computerOutOf: item.computerOutOf,
+            // COMP is a subject column — no separate computerOutOf on the exam
+            computerOutOf: 0,
             role: draftFinal ? "final" : item.role,
             subjectScope: "all",
           },
@@ -917,46 +764,6 @@ export default function ExamsHubPage() {
             })}
           </p>
         )}
-        {!isComputer && (
-          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2">
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-sky-950">
-              <Monitor className="h-3.5 w-3.5" />
-              {t("examsHub.computerOnThisExam")}
-            </p>
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="min-w-[140px] flex-1">
-                <Input
-                  label={t("examsHub.computerTotalLabel")}
-                  type="number"
-                  min={0}
-                  value={item.computerOutOf ?? 0}
-                  onChange={(e) => {
-                    const n = Math.max(0, Number(e.target.value) || 0);
-                    updateItem(item.key, {
-                      computerOutOf: n > 0 ? n : undefined,
-                    });
-                  }}
-                />
-              </div>
-              {(item.computerOutOf ?? 0) > 0 ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mb-0.5"
-                  onClick={() => updateItem(item.key, { computerOutOf: 0 })}
-                >
-                  {t("examsHub.computerRemove")}
-                </Button>
-              ) : null}
-            </div>
-            <p className="text-[11px] text-sky-900/80">
-              {(item.computerOutOf ?? 0) > 0
-                ? t("examsHub.computerOnExamHint", { total: item.computerOutOf ?? 0 })
-                : t("examsHub.computerOnExamEmpty")}
-            </p>
-          </div>
-        )}
       </div>
     );
   };
@@ -1009,16 +816,9 @@ export default function ExamsHubPage() {
             <li>{t("examsHub.intro2")}</li>
             <li>{t("examsHub.intro3")}</li>
           </ol>
-          <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm text-sky-950">
-            <p className="font-semibold flex items-center gap-1.5">
-              <Monitor className="h-4 w-4" />
-              {t("examsHub.computerEasyTitle")}
-            </p>
-            <ol className="mt-1 list-decimal pl-5 text-xs text-sky-900/90 space-y-0.5">
-              <li>{t("examsHub.computerEasy1")}</li>
-              <li>{t("examsHub.computerEasy2")}</li>
-              <li>{t("examsHub.computerEasy3")}</li>
-            </ol>
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800">
+            <p className="font-semibold">{t("examsHub.computerSubjectNoteTitle")}</p>
+            <p className="mt-1 text-xs text-slate-600">{t("examsHub.computerSubjectNote")}</p>
           </div>
         </div>
 
@@ -1246,16 +1046,6 @@ export default function ExamsHubPage() {
                     <Plus className="h-3.5 w-3.5" />
                     {t("examsHub.createExam")}
                   </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="border-sky-300 bg-sky-50 text-sky-950 hover:bg-sky-100"
-                    onClick={() => openCreateComputer()}
-                  >
-                    <Monitor className="h-3.5 w-3.5" />
-                    {t("examsHub.computerCreateBtn")}
-                  </Button>
                 </div>
               </div>
             )}
@@ -1280,13 +1070,9 @@ export default function ExamsHubPage() {
                   {templateSaving ? <Spinner size="sm" /> : <Save className="h-3.5 w-3.5" />}
                   {templateSaving ? t("common.saving") : t("examsHub.saveTemplate")}
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => openAdd(false)}>
+                <Button type="button" variant="outline" size="sm" onClick={() => openAdd()}>
                   <Plus className="h-3.5 w-3.5" />
                   {t("examsHub.addExam")}
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => openAdd(true)}>
-                  <Monitor className="h-3.5 w-3.5" />
-                  {t("examsHub.addComputerExam")}
                 </Button>
               </div>
             </div>
@@ -1321,7 +1107,7 @@ export default function ExamsHubPage() {
                 type="button"
                 variant="outline"
                 className="w-full border-dashed"
-                onClick={() => openAdd(false)}
+                onClick={() => openAdd()}
               >
                 <Plus className="h-4 w-4" />
                 {t("examsHub.addExam")}
@@ -1337,64 +1123,20 @@ export default function ExamsHubPage() {
                     {t("examsHub.templateCount", { count: generalComponentCount })} ·{" "}
                     {t("examsHub.autoTotalHint")}
                   </p>
-                  {computerOutOf > 0 && (
-                    <p className="text-xs mt-1 text-sky-900">
-                      {t("examsHub.autoTotalComputer", { total: computerOutOf })}
-                    </p>
-                  )}
                 </div>
               )}
 
-              <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-3 sm:p-4 space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <h3 className="flex items-center gap-2 text-sm font-semibold text-sky-950">
-                      <Monitor className="h-4 w-4" />
-                      {t("examsHub.computerExamsTitle")}
-                    </h3>
-                    <p className="mt-0.5 text-xs text-sky-900/80">
-                      {t("examsHub.computerExamsDesc")}
-                    </p>
-                  </div>
-                  <Button type="button" variant="outline" size="sm" onClick={() => openAdd(true)}>
-                    <Plus className="h-3.5 w-3.5" />
-                    {t("examsHub.addComputerExam")}
-                  </Button>
-                </div>
-                {generalItems.some((x) => (x.computerOutOf ?? 0) > 0) ? (
-                  <ul className="space-y-1.5 text-sm text-sky-950">
-                    {generalItems
-                      .filter((x) => (x.computerOutOf ?? 0) > 0)
-                      .map((x) => (
-                        <li
-                          key={x.key}
-                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sky-200 bg-white/80 px-3 py-2"
-                        >
-                          <span className="font-medium">
-                            {x.labelGu || x.labelEn}
-                          </span>
-                          <span className="text-xs font-semibold text-sky-800">
-                            {t("examsHub.computerAlready", { total: x.computerOutOf ?? 0 })}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-                ) : (
-                  <p className="rounded-lg border border-dashed border-sky-200 bg-white/70 px-3 py-4 text-center text-sm text-sky-900/80">
-                    {t("examsHub.computerEmpty")}
+              {computerItems.length > 0 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 sm:p-4 space-y-3">
+                  <p className="text-xs font-semibold text-amber-900">
+                    {t("examsHub.computerLegacyTitle")}
                   </p>
-                )}
-                {computerItems.length > 0 && (
-                  <div className="space-y-2 border-t border-sky-200 pt-3">
-                    <p className="text-xs font-semibold text-amber-800">
-                      {t("examsHub.computerLegacyTitle")}
-                    </p>
-                    {computerItems.map((item, idx) =>
-                      renderExamCard(item, `${t("examsHub.computerExam")} ${idx + 1}`, true),
-                    )}
-                  </div>
-                )}
-              </div>
+                  <p className="text-xs text-amber-800/90">{t("examsHub.computerSubjectNote")}</p>
+                  {computerItems.map((item, idx) =>
+                    renderExamCard(item, `${t("examsHub.computerExam")} ${idx + 1}`, true),
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1432,76 +1174,7 @@ export default function ExamsHubPage() {
             {selectedClasses.length > 6 && <em>+{selectedClasses.length - 6}</em>}
           </div>
 
-          {wizardStep === "type" && draftComputerOnly && (
-            <>
-              <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 space-y-2">
-                <p className="flex items-center gap-1.5 text-sm font-semibold text-sky-950">
-                  <Monitor className="h-4 w-4" />
-                  {t("examsHub.computerPickTitle")}
-                </p>
-                <p className="text-xs text-sky-900/80">{t("examsHub.computerPickHint")}</p>
-              </div>
-              {generalItems.length === 0 ? (
-                <div className="examhub-empty">
-                  <p>{t("examsHub.computerNeedSubjectFirst")}</p>
-                </div>
-              ) : (
-                <div className="examhub-types">
-                  {generalItems.map((item) => {
-                    const on = draftLinkExamKey === item.key;
-                    return (
-                      <button
-                        key={item.key}
-                        type="button"
-                        className={cn(
-                          "examhub-type",
-                          item.role === "final" && "examhub-type--final",
-                          on && "examhub-type--on",
-                        )}
-                        onClick={() => {
-                          setDraftLinkExamKey(item.key);
-                          setDraftName(item.labelEn);
-                          setDraftNameGu(item.labelGu);
-                          setDraftComputerOutOf(item.computerOutOf || 50);
-                        }}
-                      >
-                        <span className="examhub-type__icon">
-                          {item.role === "final" ? (
-                            <Star className="h-4 w-4" />
-                          ) : (
-                            <BookOpenCheck className="h-4 w-4" />
-                          )}
-                        </span>
-                        <span className="examhub-type__copy">
-                          <strong>{item.labelGu || item.labelEn}</strong>
-                          <span>
-                            {t("examsHub.subjectOutOf", { total: item.totalMax })}
-                            {item.computerOutOf
-                              ? ` · ${t("examsHub.computerAlready", { total: item.computerOutOf })}`
-                              : ""}
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="subhub__modal-actions">
-                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  type="button"
-                  disabled={!draftLinkExamKey}
-                  onClick={() => setWizardStep("marks")}
-                >
-                  {t("common.next")}
-                </Button>
-              </div>
-            </>
-          )}
-
-          {wizardStep === "type" && !draftComputerOnly && (
+          {wizardStep === "type" && (
             <>
               <div>
                 <p className="text-sm font-semibold text-slate-900">{t("examsHub.pickExamType")}</p>
@@ -1547,9 +1220,6 @@ export default function ExamsHubPage() {
                                   internal: item.internalMax ?? 0,
                                   total: item.totalMax,
                                 })}
-                                {item.computerOutOf
-                                  ? ` · કોમ્પ /${item.computerOutOf}`
-                                  : ""}
                               </span>
                             </span>
                           </button>
@@ -1561,39 +1231,19 @@ export default function ExamsHubPage() {
               )}
 
               {addingType ? (
-                <div
-                  className={cn(
-                    "space-y-3 rounded-xl border bg-white p-3",
-                    draftComputerOnly ? "border-sky-300" : "border-slate-200",
-                  )}
-                >
-                  <p className="text-sm text-slate-600">
-                    {draftComputerOnly
-                      ? t("examsHub.addComputerHint")
-                      : t("examsHub.newTypeHint")}
-                  </p>
-                  {draftComputerOnly && (
-                    <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
-                      {t("examsHub.computerOnlyHint")}
-                    </p>
-                  )}
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-sm text-slate-600">{t("examsHub.newTypeHint")}</p>
                   <Input
                     label={t("examsHub.labelEn")}
                     value={draftName}
                     onChange={(e) => setDraftName(e.target.value)}
-                    placeholder={
-                      draftComputerOnly ? "e.g. Computer Exam 1" : "e.g. First Exam"
-                    }
+                    placeholder="e.g. First Exam"
                   />
                   <Input
                     label={t("examsHub.labelGu")}
                     value={draftNameGu}
                     onChange={(e) => setDraftNameGu(e.target.value)}
-                    placeholder={
-                      draftComputerOnly
-                        ? "દા.ત. કોમ્પ્યુટર પરીક્ષા 1"
-                        : "દા.ત. પ્રથમ પરીક્ષા"
-                    }
+                    placeholder="દા.ત. પ્રથમ પરીક્ષા"
                   />
                   <label className="flex items-center gap-2 text-sm text-slate-700">
                     <input
@@ -1605,24 +1255,14 @@ export default function ExamsHubPage() {
                   </label>
                 </div>
               ) : (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    className="examhub-add-type flex-1"
-                    onClick={() => startNewTypeInWizard(false)}
-                  >
-                    <Plus className="mr-1 inline h-4 w-4" />
-                    {t("examsHub.addExamType")}
-                  </button>
-                  <button
-                    type="button"
-                    className="examhub-add-type flex-1 border-sky-300 bg-sky-50 text-sky-950 hover:bg-sky-100"
-                    onClick={() => startNewTypeInWizard(true)}
-                  >
-                    <Monitor className="mr-1 inline h-4 w-4" />
-                    {t("examsHub.addComputerExam")}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="examhub-add-type w-full"
+                  onClick={() => startNewTypeInWizard()}
+                >
+                  <Plus className="mr-1 inline h-4 w-4" />
+                  {t("examsHub.addExamType")}
+                </button>
               )}
 
               <div className="subhub__modal-actions">
@@ -1647,56 +1287,15 @@ export default function ExamsHubPage() {
               <div>
                 <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900">
                   {draftNameGu || draftName || pickedItem?.labelGu || pickedItem?.labelEn}
-                  {draftComputerOnly && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">
-                      <Monitor className="h-3 w-3" />
-                      {t("examsHub.computerBadge")}
-                    </span>
-                  )}
                 </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {draftComputerOnly
-                    ? t("examsHub.computerMarksHint")
-                    : t("examsHub.marksStepHint")}
-                </p>
+                <p className="mt-0.5 text-xs text-slate-500">{t("examsHub.marksStepHint")}</p>
               </div>
-
-              {draftComputerOnly && (
-                <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
-                  {t("examsHub.computerPickHint")}
-                </p>
-              )}
 
               {alreadyOnCount > 0 && (
                 <p className="examhub-ok">{t("examsHub.updatingExisting")}</p>
               )}
 
-              {draftComputerOnly ? (
-                <>
-                  <p className="text-sm text-slate-700">
-                    {t("examsHub.computerForExam", {
-                      exam:
-                        generalItems.find((x) => x.key === draftLinkExamKey)?.labelGu ||
-                        generalItems.find((x) => x.key === draftLinkExamKey)?.labelEn ||
-                        "—",
-                    })}
-                  </p>
-                  <Input
-                    label={t("examsHub.computerTotalLabel")}
-                    type="number"
-                    min={1}
-                    value={draftComputerOutOf}
-                    onChange={(e) => {
-                      setDraftComputerOutOf(Math.max(0, Number(e.target.value) || 0));
-                    }}
-                  />
-                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
-                    {t("examsHub.computerResultHint")}{" "}
-                    <strong>/{draftComputerOutOf || 0}</strong>
-                  </p>
-                </>
-              ) : (
-                <>
+              <>
                   <div className="space-y-2">
                     <p className="text-sm font-semibold text-slate-900">
                       {t("examsHub.marksDisplayTitle")}
@@ -1827,8 +1426,7 @@ export default function ExamsHubPage() {
                       })}
                     </p>
                   )}
-                </>
-              )}
+              </>
 
               <div className="subhub__modal-actions">
                 <Button
@@ -1842,17 +1440,10 @@ export default function ExamsHubPage() {
                 <Button
                   type="button"
                   onClick={() => void createExam()}
-                  disabled={
-                    saving ||
-                    (draftComputerOnly
-                      ? !draftLinkExamKey || draftComputerOutOf <= 0
-                      : !splitValid || !pickedKey)
-                  }
+                  disabled={saving || !splitValid || !pickedKey}
                 >
                   {saving ? <Spinner size="sm" /> : <Plus className="h-3.5 w-3.5" />}
-                  {draftComputerOnly
-                    ? t("examsHub.computerSaveBtn")
-                    : t("examsHub.createAndApply")}
+                  {t("examsHub.createAndApply")}
                 </Button>
               </div>
             </div>
@@ -1863,148 +1454,88 @@ export default function ExamsHubPage() {
       <InfoModal
         isOpen={addOpen}
         onClose={() => !addSaving && setAddOpen(false)}
-        title={draftComputerOnly ? t("examsHub.addComputerExam") : t("examsHub.addExamType")}
+        title={t("examsHub.addExamType")}
       >
         <div className="subhub__modal-form space-y-3">
-          <p className="text-sm text-slate-600">
-            {draftComputerOnly ? t("examsHub.addComputerHint") : t("examsHub.addExamHint")}
-          </p>
-          {!draftComputerOnly && (
-            <>
-              <Input
-                label={t("examsHub.labelEn")}
-                value={draftName}
-                onChange={(e) => setDraftName(e.target.value)}
-                placeholder="e.g. First Exam"
-              />
-              <Input
-                label={t("examsHub.labelGu")}
-                value={draftNameGu}
-                onChange={(e) => setDraftNameGu(e.target.value)}
-                placeholder="દા.ત. પ્રથમ પરીક્ષા"
-              />
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={draftFinal}
-                  onChange={(e) => setDraftFinal(e.target.checked)}
-                />
-                {t("examsHub.makeFinal")}
-              </label>
-            </>
-          )}
-          {draftComputerOnly ? (
-            <>
-              <p className="text-xs font-semibold text-slate-600">
-                {t("examsHub.computerPickTitle")}
-              </p>
-              <div className="grid gap-2">
-                {generalItems.map((item) => {
-                  const on = draftLinkExamKey === item.key;
-                  return (
-                    <button
-                      key={item.key}
-                      type="button"
-                      className={cn(
-                        "rounded-lg border px-3 py-2 text-left text-sm transition",
-                        on
-                          ? "border-sky-400 bg-sky-50 text-sky-950 ring-1 ring-sky-300"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
-                      )}
-                      onClick={() => {
-                        setDraftLinkExamKey(item.key);
-                        setDraftName(item.labelEn);
-                        setDraftNameGu(item.labelGu);
-                        setDraftComputerOutOf(item.computerOutOf || 50);
-                      }}
-                    >
-                      <strong className="block">{item.labelGu || item.labelEn}</strong>
-                      <span className="text-xs text-slate-500">
-                        {t("examsHub.subjectOutOf", { total: item.totalMax })}
-                        {item.computerOutOf
-                          ? ` · ${t("examsHub.computerAlready", { total: item.computerOutOf })}`
-                          : ""}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <Input
-                label={t("examsHub.computerTotalLabel")}
-                type="number"
-                min={1}
-                value={draftComputerOutOf}
-                onChange={(e) => {
-                  setDraftComputerOutOf(Math.max(0, Number(e.target.value) || 0));
-                }}
-              />
-              <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
-                {t("examsHub.computerResultHint")}{" "}
-                <strong>/{draftComputerOutOf || 0}</strong>
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-slate-600">
-                  {t("examsHub.marksDisplayTitle")}
-                </p>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {(["split", "total", "paper"] as MarksDisplayMode[]).map((mode) => {
-                    const on = draftMarksDisplay === mode;
-                    return (
-                      <button
-                        key={mode}
-                        type="button"
-                        className={cn(
-                          "rounded-lg border px-2 py-2 text-left text-[11px] transition",
-                          on
-                            ? "border-blue-400 bg-blue-50 text-blue-950"
-                            : "border-slate-200 bg-white text-slate-700",
-                        )}
-                        onClick={() => applyMarksDisplay(mode)}
-                      >
-                        <strong className="block">{marksDisplayLabel(mode, t)}</strong>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <Input
-                label={t("examsHub.totalOutOf")}
-                type="number"
-                min={0}
-                value={draftTotalMax}
-                onChange={(e) => {
-                  const total = Math.max(0, Number(e.target.value) || 0);
-                  if (draftMarksDisplay === "paper") setDraftSplit(total, total, 0);
-                  else setDraftSplit(total, draftMax, total - draftMax);
-                }}
-              />
-              <Input
-                label={t("examsHub.paperOutOf")}
-                type="number"
-                min={0}
-                value={draftMax}
-                onChange={(e) => {
-                  const paper = Math.max(0, Number(e.target.value) || 0);
-                  if (draftMarksDisplay === "paper") setDraftSplit(paper, paper, 0);
-                  else setDraftSplit(draftTotalMax, paper, draftTotalMax - paper);
-                }}
-              />
-              {draftMarksDisplay !== "paper" && (
-                <Input
-                  label={t("examsHub.teacherOutOf")}
-                  type="number"
-                  min={0}
-                  value={draftInternalMax}
-                  onChange={(e) => {
-                    const internal = Math.max(0, Number(e.target.value) || 0);
-                    setDraftSplit(draftTotalMax, draftTotalMax - internal, internal);
-                  }}
-                />
-              )}
-            </>
+          <p className="text-sm text-slate-600">{t("examsHub.addExamHint")}</p>
+          <Input
+            label={t("examsHub.labelEn")}
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            placeholder="e.g. First Exam"
+          />
+          <Input
+            label={t("examsHub.labelGu")}
+            value={draftNameGu}
+            onChange={(e) => setDraftNameGu(e.target.value)}
+            placeholder="દા.ત. પ્રથમ પરીક્ષા"
+          />
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={draftFinal}
+              onChange={(e) => setDraftFinal(e.target.checked)}
+            />
+            {t("examsHub.makeFinal")}
+          </label>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-slate-600">
+              {t("examsHub.marksDisplayTitle")}
+            </p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {(["split", "total", "paper"] as MarksDisplayMode[]).map((mode) => {
+                const on = draftMarksDisplay === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={cn(
+                      "rounded-lg border px-2 py-2 text-left text-[11px] transition",
+                      on
+                        ? "border-blue-400 bg-blue-50 text-blue-950"
+                        : "border-slate-200 bg-white text-slate-700",
+                    )}
+                    onClick={() => applyMarksDisplay(mode)}
+                  >
+                    <strong className="block">{marksDisplayLabel(mode, t)}</strong>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <Input
+            label={t("examsHub.totalOutOf")}
+            type="number"
+            min={0}
+            value={draftTotalMax}
+            onChange={(e) => {
+              const total = Math.max(0, Number(e.target.value) || 0);
+              if (draftMarksDisplay === "paper") setDraftSplit(total, total, 0);
+              else setDraftSplit(total, draftMax, total - draftMax);
+            }}
+          />
+          <Input
+            label={t("examsHub.paperOutOf")}
+            type="number"
+            min={0}
+            value={draftMax}
+            onChange={(e) => {
+              const paper = Math.max(0, Number(e.target.value) || 0);
+              if (draftMarksDisplay === "paper") setDraftSplit(paper, paper, 0);
+              else setDraftSplit(draftTotalMax, paper, draftTotalMax - paper);
+            }}
+          />
+          {draftMarksDisplay !== "paper" && (
+            <Input
+              label={t("examsHub.teacherOutOf")}
+              type="number"
+              min={0}
+              value={draftInternalMax}
+              onChange={(e) => {
+                const internal = Math.max(0, Number(e.target.value) || 0);
+                setDraftSplit(draftTotalMax, draftTotalMax - internal, internal);
+              }}
+            />
           )}
           {!splitValid && (
             <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
@@ -2020,18 +1551,9 @@ export default function ExamsHubPage() {
             <Button type="button" variant="outline" onClick={() => setAddOpen(false)} disabled={addSaving}>
               {t("common.cancel")}
             </Button>
-            <Button
-              type="button"
-              onClick={confirmAdd}
-              disabled={
-                addSaving ||
-                (draftComputerOnly
-                  ? !draftLinkExamKey || draftComputerOutOf <= 0
-                  : !splitValid)
-              }
-            >
+            <Button type="button" onClick={confirmAdd} disabled={addSaving || !splitValid}>
               {addSaving ? <Spinner size="sm" /> : <Plus className="h-3.5 w-3.5" />}
-              {draftComputerOnly ? t("examsHub.computerSaveBtn") : t("examsHub.addExam")}
+              {t("examsHub.addExam")}
             </Button>
           </div>
         </div>

@@ -411,6 +411,9 @@ export async function ensureClassExam(
   schoolClass: SchoolClassRef,
   options?: { reopeningDate?: string | null },
 ) {
+  // COMP is a normal numeric subject (paper + internal), not a separate exam
+  await ensureComputerSubjectNumeric(schoolClass.id);
+
   const sheetConfig = await getClassMarksSheetConfig(
     schoolClass.id,
     schoolClass.standard,

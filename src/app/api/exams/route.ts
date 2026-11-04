@@ -224,15 +224,12 @@ export async function PUT(request: NextRequest) {
       where: { schoolId: session.schoolId, id: { in: classIds } },
     });
 
-    const hasComputerExam = base.terms.some((term) => term.subjectScope === "computer");
-    const computerTotal =
-      base.terms.find((term) => term.subjectScope === "computer")?.totalMax || 100;
-
     let applied = 0;
     for (const schoolClass of classes) {
-      if (hasComputerExam) {
-        await ensureComputerSubjectNumeric(schoolClass.id, { maxMarks: computerTotal });
-      }
+      // COMP is a normal numeric subject (paper + internal) on the marks sheet
+      await ensureComputerSubjectNumeric(schoolClass.id, {
+        maxMarks: totalTermMaxFromMeta(base) || 100,
+      });
 
       const { exam } = await ensureClassExam(session.schoolId, schoolClass);
       const prev = parseExamTermMeta(exam.termMeta);
@@ -404,11 +401,10 @@ async function applySingleExam(
       `${schoolClass.standard}::${schoolClass.section}::${schoolClass.academicYear}`,
     );
 
-    if (normalized.subjectScope === "computer") {
-      await ensureComputerSubjectNumeric(schoolClass.id, {
-        maxMarks: normalized.totalMax || 100,
-      });
-    }
+    // COMP is a normal numeric subject on every class exam sheet
+    await ensureComputerSubjectNumeric(schoolClass.id, {
+      maxMarks: normalized.totalMax || 100,
+    });
 
     const { exam } = await ensureClassExam(schoolId, schoolClass);
     const prev = parseExamTermMeta(exam.termMeta);

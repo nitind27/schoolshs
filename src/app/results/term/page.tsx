@@ -213,11 +213,7 @@ export default function TermMarksPage() {
         if (sub.subjectType !== "numeric") continue;
         const subMax = sub.paperMax ?? paperOutOf;
         if (isOutOfMax(sub.termValue, subMax)) n++;
-        if (
-          !sub.isComputer &&
-          internalMax > 0 &&
-          isOutOfMax(sub.internalValue ?? null, internalMax)
-        ) {
+        if (internalMax > 0 && isOutOfMax(sub.internalValue ?? null, internalMax)) {
           n++;
         }
       }
@@ -525,11 +521,6 @@ export default function TermMarksPage() {
                 {t("examsHub.marksDisplayTotalPreview", { total: paperOutOf })}
               </span>
             ) : null}
-            {(data.term.computerOutOf ?? 0) > 0 && (
-              <span className="bg-sky-100 text-sky-900 px-3 py-1 rounded-full">
-                {t("examsHub.computerAlready", { total: data.term.computerOutOf ?? 0 })}
-              </span>
-            )}
           </div>
 
           <Card>
@@ -554,18 +545,17 @@ export default function TermMarksPage() {
                       <th className="p-2 text-left sticky left-[104px] bg-slate-50 z-10 min-w-[140px]">{t("results.student")}</th>
                       {numericSubjects.map((s) => {
                         const subMax = s.paperMax ?? paperOutOf;
-                        const subIsComp = Boolean(s.isComputer);
                         return (
                         <th key={s.subjectCode} className="p-2 text-center min-w-[72px] text-xs font-medium text-slate-600">
-                          <div className={subIsComp ? "text-sky-800" : undefined}>{s.subjectName}</div>
-                          {subIsComp || entryAsTotal ? (
-                            <div className={cn("text-[10px] font-normal", subIsComp ? "text-sky-600" : "text-emerald-600")}>
+                          <div>{s.subjectName}</div>
+                          {entryAsTotal ? (
+                            <div className="text-[10px] font-normal text-emerald-600">
                               /{subMax}
                             </div>
                           ) : (
                             <>
                               <div className="text-[10px] text-blue-500 font-normal">
-                                {t("examsHub.paperShort")} /{data.term.maxMarks}
+                                {t("examsHub.paperShort")} /{subMax}
                               </div>
                               {hasInternal && (
                                 <div className="text-[10px] text-violet-500">
@@ -589,8 +579,6 @@ export default function TermMarksPage() {
                         </td>
                         {st.subjectMarks.filter((s) => s.subjectType === "numeric").map((sub, colIdx) => {
                           const subMax = sub.paperMax ?? paperOutOf;
-                          const subIsComp = Boolean(sub.isComputer);
-                          const showInternalCol = hasInternal && !subIsComp;
                           const paperInvalid = isOutOfMax(sub.termValue, subMax);
                           const internalInvalid = isOutOfMax(
                             sub.internalValue ?? null,
@@ -621,12 +609,10 @@ export default function TermMarksPage() {
                                   "w-16 h-8 text-center text-sm rounded-md disabled:bg-slate-50",
                                   paperInvalid
                                     ? "border-2 border-red-500 bg-red-50 text-red-700 focus:border-red-600 focus:ring-2 focus:ring-red-200"
-                                    : subIsComp
-                                      ? "border border-sky-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-200"
-                                      : "border border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-200",
+                                    : "border border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-200",
                                 )}
                               />
-                              {showInternalCol && (
+                              {hasInternal && (
                                 <input
                                   type="number"
                                   min={0}
