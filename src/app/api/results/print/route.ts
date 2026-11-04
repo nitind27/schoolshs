@@ -18,6 +18,7 @@ import {
   type ExamTermDef,
 } from "@/lib/results/exam-terms";
 import type { Student } from "@/generated/prisma/client";
+import { compareRollNumbers } from "@/lib/attendance";
 
 async function loadStudentsForExam(
   schoolId: string,
@@ -101,12 +102,12 @@ async function loadStudentsForExam(
     );
   }
 
-  return students.sort((a, b) => {
-    const ra = a.rollNumber || "";
-    const rb = b.rollNumber || "";
-    if (ra !== rb) return ra.localeCompare(rb, undefined, { numeric: true });
-    return `${a.surname} ${a.firstName}`.localeCompare(`${b.surname} ${b.firstName}`);
-  });
+  return students.sort(
+    (a, b) =>
+      compareRollNumbers(a.rollNumber, b.rollNumber) ||
+      a.surname.localeCompare(b.surname) ||
+      a.firstName.localeCompare(b.firstName),
+  );
 }
 
 function splitSemesterMarks(

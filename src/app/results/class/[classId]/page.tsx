@@ -15,11 +15,20 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGE_SIZE, paginateSlice } from "@/lib/pagination";
 import { useSchoolFeatures } from "@/components/school/use-school-features";
 import { shouldUsePrimaryExamReport } from "@/lib/results/songadh-exam-report";
+import { compareRollNumbers } from "@/lib/attendance";
+import { studentFullNameGu } from "@/lib/student-names";
 
 type StudentRow = {
   id: string;
   firstName: string;
+  middleName?: string | null;
   surname: string;
+  firstNameGu?: string | null;
+  middleNameGu?: string | null;
+  surnameGu?: string | null;
+  fatherName?: string | null;
+  fatherNameGu?: string | null;
+  nameGu?: string | null;
   rollNumber?: string | null;
   marksStatus: "pending" | "partial" | "complete";
   marksFilled: number;
@@ -169,16 +178,26 @@ export default function ResultsClassPage() {
     load();
   };
 
-  const students = data?.students ?? [];
+  const students = useMemo(() => {
+    const list = data?.students ?? [];
+    return [...list].sort(
+      (a, b) =>
+        compareRollNumbers(a.rollNumber, b.rollNumber) ||
+        a.surname.localeCompare(b.surname) ||
+        a.firstName.localeCompare(b.firstName),
+    );
+  }, [data?.students]);
 
   const filteredStudents = useMemo(() => {
     const q = search.trim().toLowerCase();
     return students.filter((st) => {
       if (status && st.marksStatus !== status) return false;
       if (!q) return true;
+      const gu = (st.nameGu || studentFullNameGu(st)).toLowerCase();
       return (
         st.firstName.toLowerCase().includes(q) ||
         st.surname.toLowerCase().includes(q) ||
+        gu.includes(q) ||
         (st.rollNumber || "").toLowerCase().includes(q)
       );
     });
@@ -344,7 +363,9 @@ export default function ResultsClassPage() {
                   <tr key={st.id} className="border-b hover:bg-blue-50/40 transition-colors">
                     <td className="p-3 text-slate-400">{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td className="p-3 font-mono">{st.rollNumber || "—"}</td>
-                    <td className="p-3 font-medium">{st.firstName} {st.surname}</td>
+                    <td className="p-3 font-medium font-gujarati">
+                      {st.nameGu || studentFullNameGu(st)}
+                    </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         <StatusIcon status={st.marksStatus} />

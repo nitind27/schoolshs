@@ -12,9 +12,23 @@ import { ArrowLeft, Save, Send, Printer, Trophy } from "lucide-react";
 import { SCHOOL_STANDARDS, FINANCIAL_YEARS, DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { ANNUAL_RESULT_SUBJECTS } from "@/lib/results/config";
 import { useT } from "@/i18n/locale-provider";
+import { compareRollNumbers } from "@/lib/attendance";
+import { studentFullNameGu } from "@/lib/student-names";
 
 type Subject = { id: string; name: string; maxMarks: number };
-type Student = { id: string; rollNumber?: string; firstName: string; surname: string; section?: string };
+type Student = {
+  id: string;
+  rollNumber?: string | null;
+  firstName: string;
+  middleName?: string | null;
+  surname: string;
+  firstNameGu?: string | null;
+  middleNameGu?: string | null;
+  surnameGu?: string | null;
+  fatherName?: string | null;
+  fatherNameGu?: string | null;
+  section?: string;
+};
 type MarkKey = string;
 
 function ResultsEntryInner() {
@@ -41,7 +55,15 @@ function ResultsEntryInner() {
       .then((r) => r.json())
       .then((d) => {
         setExam(d.exam);
-        setStudents(d.students || []);
+        const list = (d.students || []) as Student[];
+        setStudents(
+          [...list].sort(
+            (a, b) =>
+              compareRollNumbers(a.rollNumber, b.rollNumber) ||
+              a.surname.localeCompare(b.surname) ||
+              a.firstName.localeCompare(b.firstName),
+          ),
+        );
         setReportCards(d.reportCards || []);
         if (d.exam?.reopeningDate) setForm((f) => ({ ...f, reopeningDate: d.exam.reopeningDate as string }));
         const m: Record<MarkKey, number> = {};
@@ -229,7 +251,9 @@ function ResultsEntryInner() {
                   return (
                     <tr key={rc.id as string} className="border-b">
                       <td className="p-3 font-bold text-amber-600">#{rc.rank as number}</td>
-                      <td className="p-3">{st?.firstName} {st?.surname}</td>
+                      <td className="p-3 font-gujarati">
+                        {st ? studentFullNameGu(st) : "—"}
+                      </td>
                       <td className="p-3 text-right font-semibold">{rc.totalMarks as number}</td>
                       <td className="p-3 text-right">{(rc.percentage as number)?.toFixed(1)}%</td>
                       <td className="p-3">{rc.grade as string}</td>
@@ -273,7 +297,9 @@ function ResultsEntryInner() {
               {students.map((st) => (
                 <tr key={st.id} className="border-b hover:bg-slate-50/50">
                   <td className="p-2 sticky left-0 bg-white">{st.rollNumber || "—"}</td>
-                  <td className="p-2 sticky left-10 bg-white font-medium whitespace-nowrap">{st.firstName} {st.surname}</td>
+                  <td className="p-2 sticky left-10 bg-white font-medium whitespace-nowrap font-gujarati">
+                    {studentFullNameGu(st)}
+                  </td>
                   {subjects.map((sub) => (
                     <Fragment key={sub.id}>
                       <td className="p-1 border-l">

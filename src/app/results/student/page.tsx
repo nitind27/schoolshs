@@ -12,6 +12,7 @@ import { ArrowLeft, Save, Printer, Award, User } from "lucide-react";
 import { ANNUAL_RESULT_TOTAL_MARKS } from "@/lib/results/config";
 import { computeStudentTotals } from "@/lib/results/calculations";
 import { useT } from "@/i18n/locale-provider";
+import { studentFullNameGu } from "@/lib/student-names";
 
 type Subject = { id: string; name: string; maxMarks: number };
 type SubjectMark = {
@@ -164,7 +165,18 @@ function StudentResultInner() {
     return <PageLoader />;
   }
 
-  const fullName = student ? `${student.firstName} ${student.surname}` : "";
+  const fullName = student
+    ? studentFullNameGu({
+        firstName: student.firstName as string | undefined,
+        middleName: student.middleName as string | undefined,
+        surname: student.surname as string | undefined,
+        firstNameGu: student.firstNameGu as string | undefined,
+        middleNameGu: student.middleNameGu as string | undefined,
+        surnameGu: student.surnameGu as string | undefined,
+        fatherName: student.fatherName as string | undefined,
+        fatherNameGu: student.fatherNameGu as string | undefined,
+      })
+    : "";
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -207,7 +219,7 @@ function StudentResultInner() {
             <User className="h-6 w-6 text-blue-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold">{fullName}</h2>
+            <h2 className="text-lg font-bold font-gujarati">{fullName}</h2>
             <p className="text-sm text-slate-600">
               {t("results.roll")}: {student?.rollNumber as string || "—"} •
               {t("results.classLabel", { standard: classInfo?.standard as string })}-{classInfo?.section as string}

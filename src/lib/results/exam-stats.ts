@@ -6,6 +6,7 @@ import { CATEGORIES } from "@/lib/constants";
 import { studentFullNameEn, studentFullNameGu } from "@/lib/student-names";
 import { ensureClassExam } from "@/lib/class-subjects";
 import { buildStudentTermRows, parseExamTermMeta, type ExamTermDef } from "@/lib/results/exam-terms";
+import { compareRollNumbers } from "@/lib/attendance";
 import {
   emptyCategoryBucket,
   parseExamRules,
@@ -147,13 +148,19 @@ export async function buildClassExamStats(options: {
     include: {
       students: {
         where: { status: { not: "archived" } },
-        orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
       },
     },
   });
   if (!schoolClass) {
     throw new AuthError("Class not found", 404);
   }
+
+  schoolClass.students.sort(
+    (a, b) =>
+      compareRollNumbers(a.rollNumber, b.rollNumber) ||
+      a.surname.localeCompare(b.surname) ||
+      a.firstName.localeCompare(b.firstName),
+  );
 
   const rules = options.rules ?? (await loadSchoolExamRules(options.schoolId));
   const { exam, sheetConfig } = await ensureClassExam(options.schoolId, schoolClass);

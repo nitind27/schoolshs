@@ -18,6 +18,7 @@ import {
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
 import { getSupervisorClassIds } from "@/lib/supervisor-scope";
 import { describeMarkChange, logMarkEdits, studentAuditLabel } from "@/lib/change-log";
+import { compareRollNumbers } from "@/lib/attendance";
 
 export async function GET(request: NextRequest) {
   try {
@@ -95,9 +96,15 @@ export async function GET(request: NextRequest) {
             ? { classId: { in: supervisorClasses.map((cls) => cls.id) } }
             : {}),
         },
-        orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
         include: { schoolClass: true },
       });
+
+      students.sort(
+        (a, b) =>
+          compareRollNumbers(a.rollNumber, b.rollNumber) ||
+          a.surname.localeCompare(b.surname) ||
+          a.firstName.localeCompare(b.firstName),
+      );
 
       if (supervisorClasses) {
         const allowed = new Set(supervisorClasses.map((cls) => cls.id));

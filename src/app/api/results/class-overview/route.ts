@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireSchoolAuth, AuthError } from "@/lib/auth";
 import { ensureClassExam, getClassMarksSheetConfig, syncExamSubjects } from "@/lib/class-subjects";
-import { computeStudentTotals, subjectFinalMarks } from "@/lib/results/calculations";
+import { computeStudentTotals } from "@/lib/results/calculations";
 import { getTeacherScope, assertTeacherMarksAccess } from "@/lib/teacher-scope";
 import { DEFAULT_ACADEMIC_YEAR } from "@/lib/constants";
+import { compareRollNumbers } from "@/lib/attendance";
+import { studentFullNameGu } from "@/lib/student-names";
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,11 +89,17 @@ export async function GET(request: NextRequest) {
         classTeacher: { select: { firstName: true, lastName: true } },
         students: {
           where: { status: { not: "archived" } },
-          orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
         },
       },
     });
     if (!schoolClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
+
+    schoolClass.students.sort(
+      (a, b) =>
+        compareRollNumbers(a.rollNumber, b.rollNumber) ||
+        a.surname.localeCompare(b.surname) ||
+        a.firstName.localeCompare(b.firstName),
+    );
 
     let exam = await prisma.exam.findFirst({
       where: {
@@ -151,6 +159,12 @@ export async function GET(request: NextRequest) {
         firstName: st.firstName,
         middleName: st.middleName,
         surname: st.surname,
+        firstNameGu: st.firstNameGu,
+        middleNameGu: st.middleNameGu,
+        surnameGu: st.surnameGu,
+        fatherName: st.fatherName,
+        fatherNameGu: st.fatherNameGu,
+        nameGu: studentFullNameGu(st),
         rollNumber: st.rollNumber,
         grNumber: st.grNumber,
         section: st.section,

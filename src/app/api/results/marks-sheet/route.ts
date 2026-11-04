@@ -23,6 +23,8 @@ import {
 } from "@/lib/teacher-scope";
 import { assertSupervisorClassAccess } from "@/lib/supervisor-scope";
 import { describeMarkChange, logMarkEdits, studentAuditLabel } from "@/lib/change-log";
+import { compareRollNumbers } from "@/lib/attendance";
+import { studentFullNameGu } from "@/lib/student-names";
 
 function matchSubject(
   def: MarksSheetSubjectDef,
@@ -50,11 +52,17 @@ export async function GET(request: NextRequest) {
       include: {
         students: {
           where: { status: { not: "archived" } },
-          orderBy: [{ rollNumber: "asc" }, { surname: "asc" }, { firstName: "asc" }],
         },
       },
     });
     if (!schoolClass) return NextResponse.json({ error: "Class not found" }, { status: 404 });
+
+    schoolClass.students.sort(
+      (a, b) =>
+        compareRollNumbers(a.rollNumber, b.rollNumber) ||
+        a.surname.localeCompare(b.surname) ||
+        a.firstName.localeCompare(b.firstName),
+    );
 
     const { exam, sheetConfig } = await ensureClassExam(session.schoolId, schoolClass);
     const examSubjects = exam.subjects;
@@ -93,6 +101,12 @@ export async function GET(request: NextRequest) {
         firstName: st.firstName,
         middleName: st.middleName,
         surname: st.surname,
+        firstNameGu: st.firstNameGu,
+        middleNameGu: st.middleNameGu,
+        surnameGu: st.surnameGu,
+        fatherName: st.fatherName,
+        fatherNameGu: st.fatherNameGu,
+        nameGu: studentFullNameGu(st),
         rollNumber: st.rollNumber,
         grNumber: st.grNumber,
         dateOfBirth: st.dateOfBirth,
