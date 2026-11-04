@@ -1,7 +1,7 @@
 "use client";
 
 import { Spinner, PageLoader } from "@/components/ui/loader";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -143,16 +143,134 @@ export default function TermMarksPage() {
     return rows[0].subjectMarks.filter((s) => s.subjectType === "numeric");
   }, [rows]);
 
-  const updateCell = (studentIdx: number, subjectCode: string, field: "termValue" | "internalValue", value: string) => {
+  const hasInternal = (data?.term.internalMax ?? 0) > 0;
+
+  /** Focus a marks input by student row / subject col / paper|internal. */
+  const focusMarksCell = useCallback(
+    (row: number, col: number, field: "paper" | "internal") => {
+      const maxRow = rows.length - 1;
+      const maxCol = numericSubjects.length - 1;
+      if (maxRow < 0 || maxCol < 0) return;
+      const r = Math.max(0, Math.min(maxRow, row));
+      let c = Math.max(0, Math.min(maxCol, col));
+      let f: "paper" | "internal" = field;
+      if (f === "internal" && !hasInternal) f = "paper";
+      const el = document.querySelector<HTMLInputElement>(
+        `input[data-marks-cell="${r}-${c}-${f}"]`,
+      );
+      if (!el || el.disabled) return;
+      el.focus();
+      el.select();
+    },
+    [rows.length, numericSubjects.length, hasInternal],
+  );
+
+  /** Round to nearest whole mark (15.5 → 16). Empty stays empty. */
+  const roundMark = (value: string | number | null | undefined): number | null => {
+    if (value === "" || value == null) return null;
+    const num = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(num)) return null;
+    return Math.round(num);
+  };
+
+  const updateCell = (
+    studentIdx: number,
+    subjectCode: string,
+    field: "termValue" | "internalValue",
+    value: string,
+  ) => {
     setRows((prev) => {
       const next = JSON.parse(JSON.stringify(prev)) as StudentRow[];
       const sub = next[studentIdx].subjectMarks.find((s) => s.subjectCode === subjectCode);
       if (!sub) return prev;
-      const num = value === "" ? null : Number(value);
-      sub[field] = num;
+      if (value === "") {
+        sub[field] = null;
+        return next;
+      }
+      sub[field] = roundMark(value);
       return next;
     });
   };
+
+  const handleMarksKeyDown = useCallback(
+    (
+      e: KeyboardEvent<HTMLInputElement>,
+      row: number,
+      col: number,
+      field: "paper" | "internal",
+    ) => {
+      const maxRow = rows.length - 1;
+      const maxCol = numericSubjects.length - 1;
+      const input = e.currentTarget;
+      const key = e.key;
+
+      const moveVertical = (delta: number) => {
+        e.preventDefault();
+        focusMarksCell(row + delta, col, field);
+      };
+
+      const moveHorizontal = (delta: number) => {
+        e.preventDefault();
+        // Walk paper → internal → next subject paper (row-major)
+        type Slot = { r: number; c: number; f: "paper" | "internal" };
+        const slots: Slot[] = [];
+        for (let r = 0; r <= maxRow; r++) {
+          for (let c = 0; c <= maxCol; c++) {
+            slots.push({ r, c, f: "paper" });
+            if (hasInternal) slots.push({ r, c, f: "internal" });
+          }
+        }
+        const idx = slots.findIndex((s) => s.r === row && s.c === col && s.f === field);
+        if (idx < 0) return;
+        const next = slots[idx + delta];
+        if (next) focusMarksCell(next.r, next.c, next.f);
+      };
+
+      if (key === "Enter") {
+        const code = numericSubjects[col]?.subjectCode;
+        if (code) {
+          updateCell(
+            row,
+            code,
+            field === "paper" ? "termValue" : "internalValue",
+            input.value,
+          );
+        }
+        moveVertical(e.shiftKey ? -1 : 1);
+        return;
+      }
+      if (key === "Tab") {
+        moveHorizontal(e.shiftKey ? -1 : 1);
+        return;
+      }
+      if (key === "ArrowDown") {
+        moveVertical(1);
+        return;
+      }
+      if (key === "ArrowUp") {
+        moveVertical(-1);
+        return;
+      }
+
+      // number inputs often report null selection — treat as navigable
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const noCaret = start == null || end == null;
+      const fullySelected = noCaret || (start === 0 && end === input.value.length);
+      if (key === "ArrowRight") {
+        if (fullySelected || start === input.value.length) {
+          moveHorizontal(1);
+        }
+        return;
+      }
+      if (key === "ArrowLeft") {
+        if (fullySelected || start === 0) {
+          moveHorizontal(-1);
+        }
+      }
+    },
+    [rows.length, numericSubjects, hasInternal, focusMarksCell],
+  );
 
   const updateGrade = (studentIdx: number, subjectCode: string, value: string) => {
     setRows((prev) => {
@@ -177,7 +295,11 @@ export default function TermMarksPage() {
         term,
         students: rows.map((st) => ({
           studentId: st.studentId,
-          subjectMarks: st.subjectMarks,
+          subjectMarks: st.subjectMarks.map((sub) => ({
+            ...sub,
+            termValue: roundMark(sub.termValue),
+            internalValue: roundMark(sub.internalValue ?? null),
+          })),
         })),
       }),
     });
@@ -338,6 +460,9 @@ export default function TermMarksPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">{t("examTerms.gridTitle")}</CardTitle>
+              <p className="text-xs text-slate-500 mt-1">
+                Enter ↓ · Shift+Enter ↑ · Tab → · Shift+Tab ← · Arrow keys move cells
+              </p>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -370,17 +495,21 @@ export default function TermMarksPage() {
                         <td className="p-2 sticky left-[104px] bg-white font-medium whitespace-nowrap font-gujarati">
                           {studentFullNameGu(st)}
                         </td>
-                        {st.subjectMarks.filter((s) => s.subjectType === "numeric").map((sub) => (
+                        {st.subjectMarks.filter((s) => s.subjectType === "numeric").map((sub, colIdx) => (
                           <td key={sub.subjectCode} className="p-1 text-center">
                             <div className="flex flex-col gap-1 items-center">
                               <input
                                 type="number"
                                 min={0}
                                 max={data.term.maxMarks}
-                                step={0.5}
+                                step={1}
                                 disabled={!data.editable}
+                                data-marks-cell={`${i}-${colIdx}-paper`}
                                 value={sub.termValue ?? ""}
                                 onChange={(e) => updateCell(i, sub.subjectCode, "termValue", e.target.value)}
+                                onBlur={(e) => updateCell(i, sub.subjectCode, "termValue", e.target.value)}
+                                onFocus={(e) => e.currentTarget.select()}
+                                onKeyDown={(e) => handleMarksKeyDown(e, i, colIdx, "paper")}
                                 className="w-16 h-8 text-center text-sm border border-slate-200 rounded-md focus:border-blue-400 focus:ring-1 focus:ring-blue-200 disabled:bg-slate-50"
                               />
                               {(data.term.internalMax ?? 0) > 0 && (
@@ -388,10 +517,14 @@ export default function TermMarksPage() {
                                   type="number"
                                   min={0}
                                   max={data.term.internalMax ?? 20}
-                                  step={0.5}
+                                  step={1}
                                   disabled={!data.editable}
+                                  data-marks-cell={`${i}-${colIdx}-internal`}
                                   value={sub.internalValue ?? ""}
                                   onChange={(e) => updateCell(i, sub.subjectCode, "internalValue", e.target.value)}
+                                  onBlur={(e) => updateCell(i, sub.subjectCode, "internalValue", e.target.value)}
+                                  onFocus={(e) => e.currentTarget.select()}
+                                  onKeyDown={(e) => handleMarksKeyDown(e, i, colIdx, "internal")}
                                   className="w-16 h-7 text-center text-xs border border-violet-200 rounded-md focus:border-violet-400 disabled:bg-slate-50"
                                   placeholder={t("examsHub.teacherShort")}
                                 />

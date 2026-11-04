@@ -861,7 +861,9 @@ export function clampTermMarks(
   value: number | null,
 ): number | null {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
-  return Math.min(Math.max(0, value), term.maxMarks);
+  // Whole marks only — 15.5 → 16
+  const rounded = Math.round(value);
+  return Math.min(Math.max(0, rounded), term.maxMarks);
 }
 
 export function buildStudentTermRows(

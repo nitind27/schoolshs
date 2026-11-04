@@ -275,6 +275,7 @@ function StudentFooter({
   percentage: number | null;
   rank: number | null;
 }) {
+  const isFail = String(result || "").trim() === "નાપાસ";
   return (
     <table
       className="marks-sheet-footer-table"
@@ -298,7 +299,9 @@ function StudentFooter({
               fontWeight: 600,
             }}
           >
-            ટકાવારી :- {percentage != null ? Number(percentage).toFixed(2) : ""}
+            {isFail
+              ? null
+              : `ટકાવારી :- ${percentage != null ? Number(percentage).toFixed(2) : ""}`}
           </td>
           <td
             style={{
@@ -308,7 +311,7 @@ function StudentFooter({
               fontWeight: 600,
             }}
           >
-            રેંક :- {rank ?? ""}
+            {isFail ? null : `રેંક :- ${rank ?? ""}`}
           </td>
         </tr>
       </tbody>
