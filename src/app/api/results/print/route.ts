@@ -13,6 +13,7 @@ import {
   isComputerSubject,
   isComputerTerm,
   parseExamTermMeta,
+  readTermAbsent,
   readTermInternalScore,
   readTermScore,
   type ExamTermDef,
@@ -142,6 +143,8 @@ function splitSemesterMarks(
     internal2,
     first: combineTheoryInternal(theory1, internal1),
     second: combineTheoryInternal(theory2, internal2),
+    absent1: firstExam ? readTermAbsent(firstExam, term) : false,
+    absent2: second ? readTermAbsent(second, term) : false,
   };
 }
 
@@ -297,6 +300,8 @@ export async function GET(request: NextRequest) {
           internal1: split?.internal1 ?? null,
           theory2: split?.theory2 ?? null,
           internal2: split?.internal2 ?? null,
+          absent1: split?.absent1 ?? false,
+          absent2: split?.absent2 ?? false,
           formative,
           internal,
           isAbsent: r?.isAbsent ?? false,

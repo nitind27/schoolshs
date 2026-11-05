@@ -8,6 +8,7 @@ export type GunPatrakStudent = {
   studentId: string;
   examNo: string;
   marks: number | null;
+  absent?: boolean;
 };
 
 export type GunPatrakCell = {
@@ -35,7 +36,7 @@ export function buildGunPatrakPages(students: GunPatrakStudent[]): GunPatrakCell
       if (row) {
         page.push({
           examNo: row.examNo || String(idx + 1),
-          marks: formatGunPatrakMarks(row.marks),
+          marks: row.absent ? "AB" : formatGunPatrakMarks(row.marks),
           filled: true,
         });
       } else {

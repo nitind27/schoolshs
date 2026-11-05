@@ -38,6 +38,7 @@ function ResultsEntryInner() {
   const [exam, setExam] = useState<Record<string, unknown> | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [marks, setMarks] = useState<Record<MarkKey, number>>({});
+  const [absent, setAbsent] = useState<Record<MarkKey, boolean>>({});
   const [achievement, setAchievement] = useState<Record<MarkKey, number>>({});
   const [grace, setGrace] = useState<Record<MarkKey, number>>({});
   const [meta, setMeta] = useState<Record<string, { passNumber?: string; attendancePresent?: number; attendanceTotal?: number }>>({});
@@ -69,15 +70,18 @@ function ResultsEntryInner() {
         const m: Record<MarkKey, number> = {};
         const a: Record<MarkKey, number> = {};
         const g: Record<MarkKey, number> = {};
+        const ab: Record<MarkKey, boolean> = {};
         for (const r of d.exam?.results || []) {
           const key = `${r.studentId}-${r.subjectId}`;
           m[key] = r.marksObtained;
           a[key] = r.achievementMarks || 0;
           g[key] = r.graceMarks || 0;
+          if (r.isAbsent) ab[key] = true;
         }
         setMarks(m);
         setAchievement(a);
         setGrace(g);
+        setAbsent(ab);
         const metaMap: typeof meta = {};
         for (const rc of d.reportCards || []) {
           metaMap[rc.studentId as string] = {
@@ -108,14 +112,15 @@ function ResultsEntryInner() {
     for (const st of students) {
       for (const sub of subjects) {
         const key = `${st.id}-${sub.id}`;
-        if (marks[key] !== undefined || achievement[key] || grace[key]) {
+        if (marks[key] !== undefined || achievement[key] || grace[key] || absent[key]) {
           payload.push({
             studentId: st.id,
             subjectId: sub.id,
-            marksObtained: marks[key] ?? 0,
-            achievementMarks: achievement[key] ?? 0,
-            graceMarks: grace[key] ?? 0,
+            marksObtained: absent[key] ? 0 : marks[key] ?? 0,
+            achievementMarks: absent[key] ? 0 : achievement[key] ?? 0,
+            graceMarks: absent[key] ? 0 : grace[key] ?? 0,
             maxMarks: sub.maxMarks,
+            isAbsent: Boolean(absent[key]),
           });
         }
       }
@@ -303,7 +308,38 @@ function ResultsEntryInner() {
                   {subjects.map((sub) => (
                     <Fragment key={sub.id}>
                       <td className="p-1 border-l">
-                        <Input type="number" min={0} max={sub.maxMarks} className="w-14 text-center h-8 text-xs" value={marks[`${st.id}-${sub.id}`] ?? ""} onChange={(e) => setMarks({ ...marks, [`${st.id}-${sub.id}`]: Number(e.target.value) })} />
+                        <Input
+                          type="number"
+                          min={0}
+                          max={sub.maxMarks}
+                          disabled={Boolean(absent[`${st.id}-${sub.id}`])}
+                          placeholder={absent[`${st.id}-${sub.id}`] ? "AB" : undefined}
+                          className="w-14 text-center h-8 text-xs"
+                          value={absent[`${st.id}-${sub.id}`] ? "" : marks[`${st.id}-${sub.id}`] ?? ""}
+                          onChange={(e) => {
+                            const key = `${st.id}-${sub.id}`;
+                            setAbsent((prev) => ({ ...prev, [key]: false }));
+                            setMarks({ ...marks, [key]: Number(e.target.value) });
+                          }}
+                        />
+                        <label className="mt-1 flex items-center justify-center gap-1 text-[10px] font-bold text-amber-700">
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 accent-amber-600"
+                            checked={Boolean(absent[`${st.id}-${sub.id}`])}
+                            onChange={(e) => {
+                              const key = `${st.id}-${sub.id}`;
+                              const checked = e.target.checked;
+                              setAbsent((prev) => ({ ...prev, [key]: checked }));
+                              if (checked) {
+                                setMarks((prev) => ({ ...prev, [key]: 0 }));
+                                setAchievement((prev) => ({ ...prev, [key]: 0 }));
+                                setGrace((prev) => ({ ...prev, [key]: 0 }));
+                              }
+                            }}
+                          />
+                          AB
+                        </label>
                       </td>
                       <td className="p-1">
                         <Input type="number" min={0} className="w-12 text-center h-8 text-xs" value={achievement[`${st.id}-${sub.id}`] ?? ""} onChange={(e) => setAchievement({ ...achievement, [`${st.id}-${sub.id}`]: Number(e.target.value) })} />

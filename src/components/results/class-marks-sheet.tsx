@@ -135,6 +135,10 @@ function displayValue(v: string | number | null | undefined) {
   return String(v);
 }
 
+function termMarkedAbsent(input: SubjectMarksInput | undefined, keys: string[]) {
+  return keys.some((key) => input?.absent?.[key]);
+}
+
 function VerticalLabel({
   children,
   height = 76,
@@ -532,6 +536,13 @@ function StudentMarksBlock({
 
           if (row.scoreType === "internal" && row.termKey) {
             const scoreKey = row.termKey;
+            if (termMarkedAbsent(input, [scoreKey])) {
+              return (
+                <td key={sub.code} style={{ ...SUBJECT_COL, color: "#b45309", fontWeight: 700 }}>
+                  AB
+                </td>
+              );
+            }
             const current =
               input.internalScores?.[scoreKey] ??
               (scoreKey === "final" ? input.internal : null);
@@ -569,6 +580,13 @@ function StudentMarksBlock({
                 row.kind === "third"))
           ) {
             const scoreKey = row.termKey || row.key;
+            if (termMarkedAbsent(input, [scoreKey])) {
+              return (
+                <td key={sub.code} style={{ ...SUBJECT_COL, color: "#b45309", fontWeight: 700 }}>
+                  AB
+                </td>
+              );
+            }
             const current =
               (input.scores && input.scores[scoreKey] != null
                 ? input.scores[scoreKey]
@@ -606,6 +624,25 @@ function StudentMarksBlock({
           }
 
           if (field) {
+            const absentKeys =
+              field === "annual"
+                ? ["final", "annual"]
+                : field === "first"
+                  ? ["mid1", "first"]
+                  : field === "second"
+                    ? ["mid2", "second"]
+                    : field === "third"
+                      ? ["mid3", "third"]
+                      : field === "internal"
+                        ? ["final"]
+                        : [];
+            if (absentKeys.length && termMarkedAbsent(input, absentKeys)) {
+              return (
+                <td key={sub.code} style={{ ...SUBJECT_COL, color: "#b45309", fontWeight: 700 }}>
+                  AB
+                </td>
+              );
+            }
             return (
               <td key={sub.code} style={SUBJECT_COL}>
                 {editable ? (

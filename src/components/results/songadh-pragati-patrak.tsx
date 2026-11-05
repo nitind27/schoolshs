@@ -235,13 +235,25 @@ function SplitMarkCells({
   internal,
   total,
   grade,
+  absent = false,
 }: {
   applies: boolean;
   theory: number | null;
   internal: number | null;
   total: number | null;
   grade: string;
+  absent?: boolean;
 }) {
+  if (applies && absent) {
+    return (
+      <>
+        <td className="pp-cell-obt">AB</td>
+        <td className="pp-cell-obt">AB</td>
+        <td className="pp-cell-obt pp-cell-total">AB</td>
+        <td className="pp-cell-grd">AB</td>
+      </>
+    );
+  }
   return (
     <>
       <td className="pp-cell-obt">{markOnly(theory, applies)}</td>
@@ -342,6 +354,7 @@ function MarksTable({
                     internal={r.sem1Internal}
                     total={r.sem1Obtained}
                     grade={r.sem1Grade}
+                    absent={r.sem1Absent}
                   />
                   <SplitMarkCells
                     applies={s2}
@@ -349,6 +362,7 @@ function MarksTable({
                     internal={r.sem2Internal}
                     total={r.sem2Obtained}
                     grade={r.sem2Grade}
+                    absent={r.sem2Absent}
                   />
                   <SplitMarkCells
                     applies={sy}
@@ -361,11 +375,11 @@ function MarksTable({
               ) : (
                 <>
                   <td>{dashOr(r.sem1Max, s1)}</td>
-                  <td className="pp-cell-obt">{markOnly(r.sem1Obtained, s1)}</td>
-                  <td className="pp-cell-grd">{gradeOnly(r.sem1Grade, s1)}</td>
+                  <td className="pp-cell-obt">{r.sem1Absent ? "AB" : markOnly(r.sem1Obtained, s1)}</td>
+                  <td className="pp-cell-grd">{r.sem1Absent ? "AB" : gradeOnly(r.sem1Grade, s1)}</td>
                   <td>{dashOr(r.sem2Max, s2)}</td>
-                  <td className="pp-cell-obt">{markOnly(r.sem2Obtained, s2)}</td>
-                  <td className="pp-cell-grd">{gradeOnly(r.sem2Grade, s2)}</td>
+                  <td className="pp-cell-obt">{r.sem2Absent ? "AB" : markOnly(r.sem2Obtained, s2)}</td>
+                  <td className="pp-cell-grd">{r.sem2Absent ? "AB" : gradeOnly(r.sem2Grade, s2)}</td>
                   <td>{dashOr(r.annualMax, sy)}</td>
                   <td className="pp-cell-obt">{markOnly(r.annualObtained, sy)}</td>
                   <td className="pp-cell-grd">{gradeOnly(r.annualGrade, sy)}</td>
@@ -472,6 +486,8 @@ export function SongadhPragatiPatrakCard({ data }: { data: PragatiPatrakCardData
       theory2?: number | null;
       internal1?: number | null;
       internal2?: number | null;
+      absent1?: boolean;
+      absent2?: boolean;
     };
     return {
       name: s.name,
@@ -482,6 +498,8 @@ export function SongadhPragatiPatrakCard({ data }: { data: PragatiPatrakCardData
       theory2: splitScheme ? (extra.theory2 ?? null) : null,
       internal1: splitScheme ? (extra.internal1 ?? null) : null,
       internal2: splitScheme ? (extra.internal2 ?? null) : null,
+      absent1: Boolean(extra.absent1),
+      absent2: Boolean(extra.absent2),
       obtained: s.finalMarks ?? s.marksObtained,
       letterGrade: extra.letterGrade ?? null,
     };

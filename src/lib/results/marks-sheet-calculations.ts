@@ -20,6 +20,8 @@ export type SubjectMarksInput = {
   special: number | null;
   grace: number | null;
   letterGrade: string | null;
+  /** Term keys marked absent in marks entry */
+  absent?: Record<string, boolean>;
 };
 
 function isComputerCodeOrName(code?: string | null, name?: string | null): boolean {
@@ -91,9 +93,10 @@ export type ComputedMarksSheet = {
   footer: { result: string; percentage: number | null; rank: number | null };
 };
 
-function num(v: number | null | undefined): number {
-  if (v == null || Number.isNaN(v)) return 0;
-  return Number(v);
+function num(v: number | string | null | undefined): number {
+  if (v == null || v === "") return 0;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function fmt(n: number, digits = 2): string {
@@ -208,13 +211,24 @@ export function computeSubjectMarks(
   const converted = denom > 0 ? (total / denom) * 100 : 0;
   const final = converted + achievement + special + grace;
 
+  const absentCell = (keys: string[], value: number | null): RowCellValue =>
+    keys.some((key) => input.absent?.[key]) ? "AB" : value;
+
   const cells: Record<string, RowCellValue> = {
     max: "",
-    first: computerSub ? null : num(input.first) || num(input.scores.mid1) || null,
-    second: computerSub ? null : num(input.second) || num(input.scores.mid2) || null,
-    third: computerSub ? null : num(input.third) || num(input.scores.mid3) || null,
-    internal: computerSub ? null : internal || null,
-    annual: computerSub ? null : annual || null,
+    first: computerSub
+      ? null
+      : absentCell(["mid1", "first"], num(input.first) || num(input.scores.mid1) || null),
+    second: computerSub
+      ? null
+      : absentCell(["mid2", "second"], num(input.second) || num(input.scores.mid2) || null),
+    third: computerSub
+      ? null
+      : absentCell(["mid3", "third"], num(input.third) || num(input.scores.mid3) || null),
+    internal: computerSub ? null : input.absent?.final ? "AB" : internal || null,
+    annual: computerSub
+      ? null
+      : absentCell(["final", "annual"], annual || null),
     total: computerSub ? null : total || null,
     converted: computerSub ? null : converted ? fmt(converted) : null,
     achievement: computerSub ? null : achievement || null,
@@ -234,15 +248,26 @@ export function computeSubjectMarks(
       continue;
     }
     if (row.scoreType === "internal" && row.termKey) {
-      cells[row.key] = num(input.internalScores[row.termKey]) || null;
+      cells[row.key] = input.absent?.[row.termKey]
+        ? "AB"
+        : num(input.internalScores[row.termKey]) || null;
     } else if (row.kind === "term" || row.kind === "first" || row.kind === "second" || row.kind === "third") {
       const key = row.termKey || row.key;
+      if (input.absent?.[key]) {
+        cells[row.key] = "AB";
+        continue;
+      }
       const v =
         input.scores[key] ??
         (row.kind === "first" ? input.first : null) ??
         (row.kind === "second" ? input.second : null) ??
         (row.kind === "third" ? input.third : null);
       cells[row.key] = num(v) || null;
+    } else if (
+      (row.kind === "annual" || row.key === "annual") &&
+      (input.absent?.final || input.absent?.annual)
+    ) {
+      cells[row.key] = "AB";
     }
   }
 
@@ -395,6 +420,7 @@ export function buildSubjectInput(
     special: term.special ?? null,
     grace,
     letterGrade: term.letterGrade ?? null,
+    absent: term.absent || {},
   };
 }
 

@@ -4094,6 +4094,9 @@ const en = {
     selectExam: "Select Exam",
     selectClassFirst: "Select a class to load students",
     gridTitle: "Student Marks Grid",
+    absent: "Absent",
+    absentShort: "AB",
+    absentHint: "Tick AB when the student was absent for that subject. Marks stay blank and are saved as absent.",
     internal: "Internal",
     finalHint: "Annual max {{annual}} + Internal max {{internal}} per subject",
     publishedReadonly:

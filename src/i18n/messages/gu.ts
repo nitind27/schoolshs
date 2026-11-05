@@ -4051,6 +4051,9 @@ const gu: Messages = {
     selectExam: "પરીક્ષા પસંદ કરો",
     selectClassFirst: "વિદ્યાર્થી લોડ કરવા વર્ગ પસંદ કરો",
     gridTitle: "વિદ્યાર્થી ગુણ ગ્રિડ",
+    absent: "ગેરહાજર",
+    absentShort: "AB",
+    absentHint: "વિદ્યાર્થી તે વિષયમાં ગેરહાજર હોય તો AB ચેક કરો. ગુણ ખાલી રહેશે અને ગેરહાજર તરીકે સેવ થશે.",
     internal: "આંતરિક",
     finalHint: "વાર્ષિક મહત્તમ {{annual}} + આંતરિક મહત્તમ {{internal}} દર વિષય",
     publishedReadonly:

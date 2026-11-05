@@ -45,6 +45,7 @@ type StudentMark = {
     subjectName: string;
     termValue: number | null;
     internalValue?: number | null;
+    isAbsent?: boolean;
   }>;
 };
 
@@ -164,7 +165,8 @@ function GunPatrakInner() {
           return {
             studentId: st.studentId,
             examNo: gunPatrakExamNo(seats[st.studentId], st.rollNumber, index + 1),
-            marks: paper != null ? paper : internal,
+            marks: mark?.isAbsent ? null : paper != null ? paper : internal,
+            absent: Boolean(mark?.isAbsent),
           };
         }),
       );

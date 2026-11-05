@@ -213,6 +213,15 @@ export function getMarksSheetConfig(standard: string, stream?: string | null, sc
   return buildConfig(SECONDARY_MARKS_SHEET_SUBJECTS);
 }
 
+function cleanAbsentMap(value: unknown): Record<string, boolean> {
+  if (!value || typeof value !== "object") return {};
+  const out: Record<string, boolean> = {};
+  for (const [key, flag] of Object.entries(value as Record<string, unknown>)) {
+    if (flag === true) out[key] = true;
+  }
+  return out;
+}
+
 /** Stored in ExamResult.remarks as JSON */
 export type MarksSheetTermData = {
   first?: number | null;
@@ -222,6 +231,8 @@ export type MarksSheetTermData = {
   scores?: Record<string, number | null>;
   /** Teacher/internal scores keyed by term key */
   internalScores?: Record<string, number | null>;
+  /** Term keys (mid1, final, …) where the student was absent */
+  absent?: Record<string, boolean>;
   internal?: number | null;
   special?: number | null;
   letterGrade?: string | null;
@@ -240,6 +251,7 @@ export function parseTermRemarks(remarks?: string | null): MarksSheetTermData {
         parsed.internalScores && typeof parsed.internalScores === "object"
           ? parsed.internalScores
           : {},
+      absent: cleanAbsentMap(parsed.absent),
       internal: parsed.internal ?? null,
       special: parsed.special ?? null,
       letterGrade: parsed.letterGrade ?? null,
@@ -256,6 +268,7 @@ export function serializeTermRemarks(data: MarksSheetTermData): string {
     third: data.third ?? null,
     scores: data.scores || {},
     internalScores: data.internalScores || {},
+    absent: cleanAbsentMap(data.absent),
     internal: data.internal ?? null,
     special: data.special ?? null,
     letterGrade: data.letterGrade ?? null,

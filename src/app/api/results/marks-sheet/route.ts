@@ -23,6 +23,7 @@ import {
 } from "@/lib/teacher-scope";
 import { assertSupervisorClassAccess } from "@/lib/supervisor-scope";
 import { describeMarkChange, logMarkEdits, studentAuditLabel } from "@/lib/change-log";
+import { mergeSheetAbsent } from "@/lib/results/exam-terms";
 import { compareRollNumbers } from "@/lib/attendance";
 import { studentFullNameGu } from "@/lib/student-names";
 
@@ -234,6 +235,8 @@ export async function POST(request: NextRequest) {
         const examSub = matchSubject(def, examSubjects);
         if (!examSub) continue;
 
+        const before = beforeByKey.get(`${st.studentId}:${examSub.id}`);
+        const previousRemarks = parseTermRemarks(before?.remarks);
         const remarks = serializeTermRemarks({
           first: sub.first,
           second: sub.second,
@@ -243,8 +246,15 @@ export async function POST(request: NextRequest) {
           internal: sub.internal,
           special: sub.special,
           letterGrade: sub.letterGrade,
+          absent: mergeSheetAbsent(previousRemarks.absent, {
+            absent: sub.absent,
+            first: sub.first,
+            second: sub.second,
+            third: sub.third,
+            annual: sub.annual,
+            scores: sub.scores || {},
+          }),
         });
-        const before = beforeByKey.get(`${st.studentId}:${examSub.id}`);
         const line = describeMarkChange(def.name, before ? {
           marksObtained: before.marksObtained,
           isAbsent: before.isAbsent,

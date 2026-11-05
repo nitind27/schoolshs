@@ -119,6 +119,7 @@ export type TermMarkLike = {
   internalValue?: number | null;
   paperMax?: number | null;
   internalMax?: number | null;
+  isAbsent?: boolean;
 };
 
 export type TermResultSummary = {
@@ -144,6 +145,10 @@ export function summarizeTermMarks(
     const paperMax = Math.max(0, Number(item.paperMax) || 0);
     const internalMax = Math.max(0, Number(item.internalMax) || 0);
     max += paperMax + internalMax;
+    if (item.isAbsent) {
+      filled += 1;
+      continue;
+    }
     const paperDone = item.termValue != null && item.termValue !== undefined;
     const internalDone = internalMax <= 0 || (item.internalValue != null && item.internalValue !== undefined);
     if (paperDone && internalDone) filled += 1;

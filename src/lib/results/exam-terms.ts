@@ -913,6 +913,73 @@ export function writeTermInternalScore(
   return next;
 }
 
+/** True when this exam term was saved as absent for the subject. */
+export function readTermAbsent(
+  term: ExamTermDef,
+  termData: MarksSheetTermData,
+): boolean {
+  const map = termData.absent || {};
+  if (map[term.key] === true) return true;
+  if (term.fieldKey && map[term.fieldKey] === true) return true;
+  return false;
+}
+
+export function writeTermAbsent(
+  term: ExamTermDef,
+  termData: MarksSheetTermData,
+  absent: boolean,
+): MarksSheetTermData {
+  const nextMap: Record<string, boolean> = { ...(termData.absent || {}) };
+  const keys = [term.key, term.fieldKey].filter((key): key is string => Boolean(key));
+  for (const key of keys) {
+    if (absent) nextMap[key] = true;
+    else delete nextMap[key];
+  }
+  return { ...termData, absent: nextMap };
+}
+
+/**
+ * Keep absent flags already stored in remarks when the class marks sheet is saved.
+ * A newly typed mark above 0 clears absent for that term. Zero stays absent until
+ * the marks-entry AB box is unchecked.
+ */
+export function mergeSheetAbsent(
+  previous: Record<string, boolean> | undefined,
+  incoming: {
+    absent?: Record<string, boolean> | null;
+    first?: number | null;
+    second?: number | null;
+    third?: number | null;
+    annual?: number | null;
+    scores?: Record<string, number | null> | null;
+  },
+): Record<string, boolean> {
+  const next: Record<string, boolean> = { ...(previous || {}) };
+  if (incoming.absent && typeof incoming.absent === "object") {
+    for (const [key, flag] of Object.entries(incoming.absent)) {
+      if (flag) next[key] = true;
+      else delete next[key];
+    }
+  }
+  const clearIfEntered = (key: string, value: unknown) => {
+    if (value == null || value === "") return;
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) delete next[key];
+  };
+  clearIfEntered("mid1", incoming.first);
+  clearIfEntered("first", incoming.first);
+  clearIfEntered("mid2", incoming.second);
+  clearIfEntered("second", incoming.second);
+  clearIfEntered("mid3", incoming.third);
+  clearIfEntered("third", incoming.third);
+  clearIfEntered("final", incoming.annual);
+  clearIfEntered("annual", incoming.annual);
+  for (const [key, value] of Object.entries(incoming.scores || {})) {
+    clearIfEntered(key, value);
+  }
+  return next;
+}
+
 /** @deprecated use writeTermScore */
 export function setTermMarksValue(
   term: ExamTermDef,
@@ -953,6 +1020,7 @@ export function computeTermCompletion(
       subjectType: "numeric" | "grade";
       termValue: number | null;
       internalValue?: number | null;
+      isAbsent?: boolean;
     }>;
   }>,
 ): {
@@ -981,6 +1049,7 @@ export function computeTermCompletion(
       continue;
     }
     const filled = numeric.filter((s) => {
+      if (s.isAbsent) return true;
       const paperDone = s.termValue != null;
       const internalDone =
         (term.internalMax ?? 0) <= 0 || s.internalValue != null;
@@ -1102,12 +1171,13 @@ export function buildStudentTermRows(
           )
         : null;
       const termData = parseTermRemarks(result?.remarks);
-      const termValue = readTermScore(
-        term,
-        termData,
-        result?.marksObtained ?? null,
-      );
-      const internalValue = readTermInternalScore(term, termData);
+      const isAbsent = readTermAbsent(term, termData);
+      const termValue = isAbsent
+        ? null
+        : readTermScore(term, termData, result?.marksObtained ?? null);
+      const internalValue = isAbsent
+        ? null
+        : readTermInternalScore(term, termData);
 
       const display = resolveMarksDisplay(term);
       const internalMax = resolveTermInternalMax(term);
@@ -1147,6 +1217,7 @@ export function buildStudentTermRows(
         marksDisplay: display,
         isComputer: isComputerSubject(def.code, def.name),
         letterGrade: def.type === "grade" ? termData.letterGrade : null,
+        isAbsent,
       };
     });
 

@@ -22,6 +22,8 @@ import {
   TERM_INTERNAL_MARK_KEYS,
   TERM_PAPER_MARK_KEYS,
   termAllowsSubject,
+  readTermAbsent,
+  writeTermAbsent,
   writeTermInternalScore,
   writeTermScore,
   type ExamTermKey,
@@ -362,10 +364,27 @@ export async function POST(request: NextRequest) {
               : term.maxMarks) || 0;
           const paperRaw = pickSubjectMarkField(markSub, TERM_PAPER_MARK_KEYS);
           const internalRaw = pickSubjectMarkField(markSub, TERM_INTERNAL_MARK_KEYS);
+          const absentProvided =
+            Object.prototype.hasOwnProperty.call(markSub, "isAbsent") ||
+            Object.prototype.hasOwnProperty.call(markSub, "absent");
+          let isAbsent = absentProvided
+            ? Boolean(markSub.isAbsent ?? markSub.absent)
+            : readTermAbsent(term, remarks);
+          if (!absentProvided && (paperRaw != null || internalRaw != null)) {
+            isAbsent = false;
+          }
+          const beforeAbsent = readTermAbsent(term, termData);
 
-          if (def.type === "grade") {
+          if (def.type !== "grade" && isAbsent) {
+            const cleared = writeTermScore(term, remarks, null);
+            remarks = cleared.termData;
+            if (term.role === "final") marksObtained = 0;
+            remarks = writeTermInternalScore(term, remarks, null);
+            remarks = writeTermAbsent(term, remarks, true);
+          } else if (def.type === "grade") {
             if (sub.letterGrade != null) remarks.letterGrade = sub.letterGrade || null;
           } else if (term.role === "final") {
+            remarks = writeTermAbsent(term, remarks, false);
             if (paperRaw !== undefined) {
               const annual = clampTermMarks(
                 { ...term, maxMarks: entryMax },
@@ -384,6 +403,7 @@ export async function POST(request: NextRequest) {
               remarks = writeTermInternalScore(term, remarks, internal);
             }
           } else {
+            remarks = writeTermAbsent(term, remarks, false);
             if (paperRaw !== undefined) {
               const val = clampTermMarks({ ...term, maxMarks: entryMax }, paperRaw);
               const written = writeTermScore(term, remarks, val);
@@ -399,6 +419,8 @@ export async function POST(request: NextRequest) {
               remarks = writeTermInternalScore(term, remarks, internal);
             }
           }
+
+          const rowAbsent = term.role === "final" ? isAbsent : existing?.isAbsent ?? false;
 
           await prisma.examResult.upsert({
             where: {
@@ -417,13 +439,24 @@ export async function POST(request: NextRequest) {
               graceMarks: existing?.graceMarks ?? 0,
               remarks: serializeTermRemarks(remarks),
               grade: existing?.grade ?? null,
+              isAbsent: rowAbsent,
             },
             update: {
               marksObtained,
               remarks: serializeTermRemarks(remarks),
+              isAbsent: rowAbsent,
             },
           });
-          const line = describeMarkChange(
+          if (beforeAbsent !== isAbsent && def.type !== "grade") {
+            markEdits.push({
+              studentId: st.studentId,
+              studentLabel: "",
+              line: `${examSub.name}: ${beforeAbsent ? "Absent" : "Present"} → ${isAbsent ? "Absent" : "Present"}`,
+            });
+          }
+          const line = beforeAbsent !== isAbsent && def.type !== "grade"
+            ? null
+            : describeMarkChange(
             examSub.name,
             existing
               ? {
@@ -436,7 +469,7 @@ export async function POST(request: NextRequest) {
               : null,
             {
               marksObtained,
-              isAbsent: false,
+              isAbsent: rowAbsent,
               graceMarks: existing?.graceMarks ?? 0,
               achievementMarks: existing?.achievementMarks ?? 0,
               remarks: serializeTermRemarks(remarks),

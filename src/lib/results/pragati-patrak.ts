@@ -163,6 +163,8 @@ export type PragatiSubjectInput = {
   /** Internal / આંતરિક out of 20 */
   internal1?: number | null;
   internal2?: number | null;
+  absent1?: boolean;
+  absent2?: boolean;
   /** Fallback when term marks missing */
   obtained?: number | null;
   letterGrade?: string | null;
@@ -202,6 +204,8 @@ export type PragatiSubjectRow = {
   sem1Grade: string;
   sem2Grade: string;
   annualGrade: string;
+  sem1Absent: boolean;
+  sem2Absent: boolean;
 };
 
 export type PragatiColumnTotals = {
@@ -357,6 +361,24 @@ function computeSubjectRow(
   }
   if (annualMax == null) annual = null;
 
+  const absent1 = Boolean(input?.absent1) && sem1Max != null;
+  const absent2 = Boolean(input?.absent2) && sem2Max != null;
+  if (absent1) {
+    sem1 = 0;
+    sem1Theory = 0;
+    sem1Internal = 0;
+  }
+  if (absent2) {
+    sem2 = 0;
+    sem2Theory = 0;
+    sem2Internal = 0;
+  }
+  if (absent1 || absent2) {
+    if (sem1Max == null) annual = sem2;
+    else if (sem2Max == null) annual = sem1;
+    else annual = (sem1 || 0) + (sem2 || 0);
+  }
+
   const annualTheory = addSplitParts(sem1Theory, sem2Theory, sem1Max != null, sem2Max != null);
   const annualInternal = addSplitParts(
     sem1Internal,
@@ -387,6 +409,8 @@ function computeSubjectRow(
     annualInternal: annualMax == null ? null : annualInternal,
     sem1Grade: g1,
     sem2Grade: g2,
+    sem1Absent: absent1,
+    sem2Absent: absent2,
     annualGrade: gA,
   };
 }

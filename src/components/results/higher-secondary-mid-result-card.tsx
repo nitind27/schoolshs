@@ -43,6 +43,7 @@ type HigherSecondaryTermStudent = {
     subjectType: "numeric" | "grade";
     termValue: number | null;
     internalValue?: number | null;
+    isAbsent?: boolean;
   }>;
 };
 
@@ -58,10 +59,17 @@ function streamLabel(stream?: string | null): string {
   return stream || "સામાન્ય પ્રવાહ";
 }
 
+function markIsAbsent(
+  mark: { isAbsent?: boolean } | null | undefined,
+): boolean {
+  return Boolean(mark?.isAbsent);
+}
+
 function obtainedMark(
   mark: HigherSecondaryTermStudent["subjectMarks"][number],
   mode: "split" | "total" | "paper" = "total",
 ): number | null {
+  if (markIsAbsent(mark)) return 0;
   if (mode === "paper") {
     return mark.termValue == null ? null : Number(mark.termValue);
   }
@@ -183,29 +191,41 @@ function MidResultCard({
                 <>
                   <td>
                     {subject
-                      ? toGuDigits(
-                          subject.termValue == null ? "" : subject.termValue,
-                        )
+                      ? markIsAbsent(subject)
+                        ? "AB"
+                        : toGuDigits(
+                            subject.termValue == null ? "" : subject.termValue,
+                          )
                       : ""}
                   </td>
                   <td>
                     {subject
-                      ? toGuDigits(
-                          subject.internalValue == null
-                            ? ""
-                            : subject.internalValue,
-                        )
+                      ? markIsAbsent(subject)
+                        ? "AB"
+                        : toGuDigits(
+                            subject.internalValue == null
+                              ? ""
+                              : subject.internalValue,
+                          )
                       : ""}
                   </td>
                   <td>
-                    {subject ? toGuDigits(obtainedMark(subject, "total")) : ""}
+                    {subject
+                      ? markIsAbsent(subject)
+                        ? "AB"
+                        : toGuDigits(obtainedMark(subject, "total"))
+                      : ""}
                   </td>
                 </>
               ) : (
                 <>
                   <td>{subject ? toGuDigits(perSubjectMax) : ""}</td>
                   <td>
-                    {subject ? toGuDigits(obtainedMark(subject, mode)) : ""}
+                    {subject
+                      ? markIsAbsent(subject)
+                        ? "AB"
+                        : toGuDigits(obtainedMark(subject, mode))
+                      : ""}
                   </td>
                 </>
               )}

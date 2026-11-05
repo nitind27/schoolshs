@@ -33,6 +33,7 @@ type SubjectMark = {
   marksDisplay?: MarksDisplayMode;
   isComputer?: boolean;
   letterGrade?: string | null;
+  isAbsent?: boolean;
 };
 
 type StudentRow = {
@@ -183,9 +184,10 @@ export default function TermMarksPage() {
       const el = document.querySelector<HTMLInputElement>(
         `input[data-marks-cell="${r}-${c}-${f}"]`,
       );
-      if (!el || el.disabled) return;
+      if (!el || el.disabled) return false;
       el.focus();
       el.select();
+      return true;
     },
     [rows.length, numericSubjects.length, hasInternal],
   );
@@ -210,7 +212,7 @@ export default function TermMarksPage() {
     let n = 0;
     for (const st of rows) {
       for (const sub of st.subjectMarks) {
-        if (sub.subjectType !== "numeric") continue;
+        if (sub.subjectType !== "numeric" || sub.isAbsent) continue;
         const subMax = sub.paperMax ?? paperOutOf;
         if (isOutOfMax(sub.termValue, subMax)) n++;
         if (internalMax > 0 && isOutOfMax(sub.internalValue ?? null, internalMax)) {
@@ -235,6 +237,7 @@ export default function TermMarksPage() {
         sub[field] = null;
         return next;
       }
+      sub.isAbsent = false;
       sub[field] = roundMark(value);
       return next;
     });
@@ -254,7 +257,11 @@ export default function TermMarksPage() {
 
       const moveVertical = (delta: number) => {
         e.preventDefault();
-        focusMarksCell(row + delta, col, field);
+        let next = row + delta;
+        while (next >= 0 && next <= maxRow) {
+          if (focusMarksCell(next, col, field)) return;
+          next += delta;
+        }
       };
 
       const moveHorizontal = (delta: number) => {
@@ -270,8 +277,10 @@ export default function TermMarksPage() {
         }
         const idx = slots.findIndex((s) => s.r === row && s.c === col && s.f === field);
         if (idx < 0) return;
-        const next = slots[idx + delta];
-        if (next) focusMarksCell(next.r, next.c, next.f);
+        for (let step = idx + delta; step >= 0 && step < slots.length; step += delta) {
+          const next = slots[step];
+          if (focusMarksCell(next.r, next.c, next.f)) return;
+        }
       };
 
       if (key === "Enter") {
@@ -320,6 +329,20 @@ export default function TermMarksPage() {
     [rows.length, numericSubjects, hasInternal, focusMarksCell],
   );
 
+  const setAbsent = (studentIdx: number, subjectCode: string, absent: boolean) => {
+    setRows((prev) => {
+      const next = JSON.parse(JSON.stringify(prev)) as StudentRow[];
+      const sub = next[studentIdx].subjectMarks.find((s) => s.subjectCode === subjectCode);
+      if (!sub) return prev;
+      sub.isAbsent = absent;
+      if (absent) {
+        sub.termValue = null;
+        sub.internalValue = null;
+      }
+      return next;
+    });
+  };
+
   const updateGrade = (studentIdx: number, subjectCode: string, value: string) => {
     setRows((prev) => {
       const next = JSON.parse(JSON.stringify(prev)) as StudentRow[];
@@ -352,8 +375,9 @@ export default function TermMarksPage() {
           studentId: st.studentId,
           subjectMarks: st.subjectMarks.map((sub) => ({
             ...sub,
-            termValue: roundMark(sub.termValue),
-            internalValue: roundMark(sub.internalValue ?? null),
+            termValue: sub.isAbsent ? null : roundMark(sub.termValue),
+            internalValue: sub.isAbsent ? null : roundMark(sub.internalValue ?? null),
+            isAbsent: Boolean(sub.isAbsent),
           })),
         })),
       }),
@@ -529,6 +553,7 @@ export default function TermMarksPage() {
               <p className="text-xs text-slate-500 mt-1">
                 Enter ↓ · Shift+Enter ↑ · Tab → · Shift+Tab ← · Arrow keys move cells
               </p>
+              <p className="text-xs text-amber-700 mt-1">{t("examTerms.absentHint")}</p>
               {outOfMaxCount > 0 && (
                 <p className="text-xs text-red-600 font-medium mt-1">
                   {outOfMaxCount} cell(s) over max marks — red boxes must be fixed
@@ -546,7 +571,7 @@ export default function TermMarksPage() {
                       {numericSubjects.map((s) => {
                         const subMax = s.paperMax ?? paperOutOf;
                         return (
-                        <th key={s.subjectCode} className="p-2 text-center min-w-[72px] text-xs font-medium text-slate-600">
+                        <th key={s.subjectCode} className="p-2 text-center min-w-[88px] text-xs font-medium text-slate-600">
                           <div>{s.subjectName}</div>
                           {entryAsTotal ? (
                             <div className="text-[10px] font-normal text-emerald-600">
@@ -585,14 +610,14 @@ export default function TermMarksPage() {
                             data.term.internalMax ?? 0,
                           );
                           return (
-                          <td key={sub.subjectCode} className="p-1 text-center">
+                          <td key={sub.subjectCode} className={cn("p-1 text-center align-top", sub.isAbsent && "bg-amber-50")}>
                             <div className="flex flex-col gap-1 items-center">
                               <input
                                 type="number"
                                 min={0}
                                 max={subMax}
                                 step={1}
-                                disabled={!data.editable}
+                                disabled={!data.editable || Boolean(sub.isAbsent)}
                                 data-marks-cell={`${i}-${colIdx}-paper`}
                                 aria-invalid={paperInvalid}
                                 title={
@@ -600,6 +625,7 @@ export default function TermMarksPage() {
                                     ? `Max ${subMax}`
                                     : undefined
                                 }
+                                placeholder={sub.isAbsent ? t("examTerms.absentShort") : undefined}
                                 value={sub.termValue ?? ""}
                                 onChange={(e) => updateCell(i, sub.subjectCode, "termValue", e.target.value)}
                                 onBlur={(e) => updateCell(i, sub.subjectCode, "termValue", e.target.value)}
@@ -618,7 +644,7 @@ export default function TermMarksPage() {
                                   min={0}
                                   max={data.term.internalMax ?? 20}
                                   step={1}
-                                  disabled={!data.editable}
+                                  disabled={!data.editable || Boolean(sub.isAbsent)}
                                   data-marks-cell={`${i}-${colIdx}-internal`}
                                   aria-invalid={internalInvalid}
                                   title={
@@ -640,6 +666,24 @@ export default function TermMarksPage() {
                                   placeholder={t("examsHub.teacherShort")}
                                 />
                               )}
+                              <label
+                                className={cn(
+                                  "inline-flex items-center gap-1 text-[10px] font-bold leading-none select-none",
+                                  sub.isAbsent ? "text-amber-700" : "text-slate-400",
+                                  !data.editable && "opacity-60",
+                                )}
+                                title={t("examTerms.absent")}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-3.5 w-3.5 accent-amber-600"
+                                  checked={Boolean(sub.isAbsent)}
+                                  disabled={!data.editable}
+                                  aria-label={t("examTerms.absent")}
+                                  onChange={(e) => setAbsent(i, sub.subjectCode, e.target.checked)}
+                                />
+                                {t("examTerms.absentShort")}
+                              </label>
                             </div>
                           </td>
                           );
