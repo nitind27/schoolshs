@@ -867,6 +867,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 8px;
             margin-bottom: 15px;
             color: white;
         }
@@ -1979,6 +1980,10 @@
             display: block;
         }
 
+        .panel-back {
+            display: none;
+        }
+
         .logo-panel-header {
             display: flex;
             justify-content: space-between;
@@ -2139,6 +2144,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 8px;
             margin-bottom: 15px;
             color: white;
         }
@@ -3168,21 +3174,40 @@
                 z-index: 3;
                 align-items: center;
                 justify-content: space-between;
-                gap: 12px;
-                padding: 12px 14px;
+                gap: 8px;
+                padding: 10px 12px;
                 background: #fff;
                 border-bottom: 1px solid #e4ebf1;
             }
 
+            html.embedded .studio-back {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                min-height: 44px;
+                padding: 0 14px;
+                border: 1px solid #d5dee8;
+                border-radius: 999px;
+                background: #f4f7fb;
+                color: var(--lh-ink);
+                font-family: "Noto Sans Gujarati", var(--ui-font);
+                font-size: 14px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
             html.embedded .studio-sheet-title {
-                font-family: var(--ui-font);
+                flex: 1;
+                min-width: 0;
+                text-align: center;
+                font-family: "Noto Sans Gujarati", var(--ui-font);
                 font-size: 15px;
                 font-weight: 700;
                 color: var(--lh-ink);
             }
 
             html.embedded .studio-done {
-                min-height: 40px;
+                min-height: 44px;
                 padding: 0 16px;
                 border: none;
                 border-radius: 999px;
@@ -3321,13 +3346,133 @@
                 bottom: 78px;
             }
 
+            html.embedded .share-toast {
+                bottom: calc(78px + env(safe-area-inset-bottom));
+                max-width: calc(100vw - 24px);
+                font-family: "Noto Sans Gujarati", var(--ui-font);
+                font-size: 13px;
+            }
+
+            html.embedded .share-menu {
+                left: 0 !important;
+                right: 0 !important;
+                top: auto !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                min-width: 0;
+                max-height: 82dvh;
+                overflow: auto;
+                border-radius: 18px 18px 0 0;
+                padding: 8px 8px calc(12px + env(safe-area-inset-bottom));
+            }
+
+            html.embedded .share-menu button,
+            html.embedded .share-page {
+                min-height: 48px;
+                font-size: 15px;
+            }
+
             html.embedded .logo-panel,
             html.embedded .stamp-panel,
             html.embedded .ocr-panel,
-            html.embedded .template-panel {
-                width: min(100vw - 16px, 440px);
-                max-height: min(84dvh, 720px);
-                border-radius: 16px;
+            html.embedded .template-panel,
+            html.embedded .lh-table-panel {
+                position: fixed;
+                inset: 0;
+                top: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                max-width: none;
+                height: 100%;
+                max-height: none;
+                margin: 0;
+                transform: none;
+                border-radius: 0;
+                z-index: 460;
+                padding: 12px 14px calc(20px + env(safe-area-inset-bottom));
+            }
+
+            html.embedded .panel-back {
+                display: inline-flex;
+                align-items: center;
+                min-height: 44px;
+                padding: 0 12px;
+                border: 1px solid rgba(255, 255, 255, 0.28);
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.12);
+                color: #fff;
+                font-family: "Noto Sans Gujarati", var(--ui-font);
+                font-size: 14px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
+            html.embedded .lh-table-panel .panel-back,
+            html.embedded .template-panel .panel-back {
+                border-color: #d5dee8;
+                background: #f4f7fb;
+                color: var(--lh-ink);
+            }
+
+            html.embedded .logo-panel-header h3,
+            html.embedded .stamp-panel-header h3,
+            html.embedded .ocr-panel-header h3,
+            html.embedded .lh-table-head > div {
+                flex: 1;
+                min-width: 0;
+            }
+
+            html.embedded .logo-panel-header,
+            html.embedded .stamp-panel-header,
+            html.embedded .ocr-panel-header,
+            html.embedded .lh-table-head {
+                position: sticky;
+                top: -12px;
+                z-index: 2;
+                gap: 8px;
+                padding-bottom: 8px;
+            }
+
+            html.embedded .logo-panel-close,
+            html.embedded .stamp-panel-close,
+            html.embedded .ocr-panel-close,
+            html.embedded .lh-table-close {
+                width: 44px;
+                height: 44px;
+                flex: 0 0 44px;
+                font-size: 18px;
+            }
+
+            html.embedded .stamp-option {
+                min-width: 132px;
+            }
+
+            html.embedded .stamp-upload-btn,
+            html.embedded .logo-panel-actions .app-tool-btn,
+            html.embedded .ocr-extract-btn {
+                min-height: 44px;
+                font-size: 14px;
+            }
+
+            html.embedded .lh-grid-picker button {
+                height: 28px;
+            }
+
+            html.embedded .lh-table-add,
+            html.embedded .lh-table-manage button,
+            html.embedded .lh-size-scope button {
+                min-height: 44px;
+                font-size: 13px;
+            }
+
+            html.embedded .template-card {
+                min-height: 88px;
+                padding: 16px 12px;
+            }
+
+            html.embedded .template-card-title {
+                font-size: 13px;
             }
         }
 
@@ -3453,8 +3598,9 @@
     <div class="editor-sticky-bar">
     <div class="app-chrome">
         <div class="studio-sheet-bar">
-            <span class="studio-sheet-title">Editor</span>
-            <button type="button" class="studio-done" onclick="toggleStudio(false)">Done</button>
+            <button type="button" class="studio-back" onclick="toggleStudio(false)">← <span class="ui-back">Back</span></button>
+            <span class="studio-sheet-title" id="studioSheetTitle">Editor</span>
+            <button type="button" class="studio-done" id="studioDoneBtn" onclick="toggleStudio(false)">Done</button>
         </div>
         <div class="app-header">
             <div class="app-brand">
@@ -3661,6 +3807,7 @@
 
     <aside class="lh-table-panel" id="tablePanel" hidden>
         <div class="lh-table-head">
+            <button type="button" class="panel-back" onclick="toggleTablePanel(false)">← <span class="ui-back">Back</span></button>
             <div>
                 <h3>Table</h3>
                 <p id="tablePageLabel">Page 1</p>
@@ -3952,6 +4099,7 @@
     <!-- Logo Gallery Panel -->
     <div class="logo-panel" id="logoPanel">
         <div class="logo-panel-header">
+            <button type="button" class="panel-back" onclick="toggleLogoPanel(false)">← <span class="ui-back">Back</span></button>
             <h3>🏫 School Logo Gallery</h3>
             <button type="button" class="logo-panel-close" onclick="toggleLogoPanel(false)">✕</button>
         </div>
@@ -3967,6 +4115,7 @@
     <!-- Stamp Selection Panel -->
     <div class="stamp-panel" id="stampPanel">
         <div class="stamp-panel-header">
+            <button type="button" class="panel-back" onclick="toggleStampPanel()">← <span class="ui-back">Back</span></button>
             <h3>🔏 Select Stamp</h3>
             <button class="stamp-panel-close" onclick="toggleStampPanel()">✕</button>
         </div>
@@ -3982,7 +4131,7 @@
         </div>
         <div class="stamp-school-section">
             <div class="stamp-school-head">
-                <span>🏫 School stamps <small>(school code પ્રમાણે કાયમી સેવ)</small></span>
+                <span>🏫 School stamps <small id="stampSchoolNote"></small></span>
                 <button type="button" class="stamp-upload-btn" id="stampUploadBtn" onclick="triggerStampUpload()">⬆ Upload stamp</button>
                 <input type="file" id="stampUploadInput" accept="image/png,image/jpeg,image/webp" hidden onchange="uploadSchoolStamp(event)">
             </div>
@@ -3990,16 +4139,13 @@
                 <p class="stamp-school-empty">Loading…</p>
             </div>
         </div>
-        <div class="stamp-instructions">
-            💡 <strong>Tip:</strong> Stamp par click / tap karo — wo letter par (neeche right side) lag jayega.<br>
-            Phir stamp ko pakad kar kahin bhi khiskao, blue dot se chhota-bada karo, ✕ se hatao.<br>
-            Transparent PNG stamp best — white background will blend automatically.
-        </div>
+        <div class="stamp-instructions" id="stampTip"></div>
     </div>
 
     <!-- OCR Panel - Image to Text -->
     <div class="ocr-panel" id="ocrPanel">
         <div class="ocr-panel-header">
+            <button type="button" class="panel-back" onclick="toggleOCRPanel()">← <span class="ui-back">Back</span></button>
             <h3>📷 Image to Text (OCR)</h3>
             <button class="ocr-panel-close" onclick="toggleOCRPanel()">✕</button>
         </div>
@@ -4047,6 +4193,7 @@
     <!-- Letter Templates Panel -->
     <div class="template-panel ocr-panel" id="templatePanel">
         <div class="ocr-panel-header">
+            <button type="button" class="panel-back" onclick="toggleTemplatePanel()">← <span class="ui-back">Back</span></button>
             <h3>📋 Letter Templates</h3>
             <button class="ocr-panel-close" onclick="toggleTemplatePanel()">✕</button>
         </div>
@@ -4335,8 +4482,9 @@
             const stampOpen = document.getElementById('stampPanel')?.classList.contains('active');
             const ocrOpen = document.getElementById('ocrPanel')?.classList.contains('active');
             const templateOpen = document.getElementById('templatePanel')?.classList.contains('active');
+            const logoOpen = document.getElementById('logoPanel')?.classList.contains('active');
             if (backdrop) {
-                backdrop.classList.toggle('active', Boolean(stampOpen || ocrOpen || templateOpen));
+                backdrop.classList.toggle('active', Boolean(stampOpen || ocrOpen || templateOpen || logoOpen));
             }
         }
 
@@ -4414,6 +4562,43 @@
             }
         };
 
+        const UI_COPY = {
+            en: {
+                back: 'Back',
+                done: 'Done',
+                editor: 'Editor',
+                stampTip: 'Tap a stamp to place it on the lower right of the letter. Drag to move it, use the blue dot to resize, and ✕ to remove. A transparent PNG works best.',
+                stampSaved: 'saved for this school',
+                needPage: 'Select at least one page',
+                pdfMaking: 'Creating PDF · {{pages}}',
+                pdfDownloaded: 'PDF downloaded · {{pages}}. Attach this file in WhatsApp.',
+                pdfFail: 'Could not create the PDF',
+                linkMaking: 'Creating link…',
+                linkCopied: 'Link copied · {{pages}}',
+                linkFail: 'Could not copy the link',
+                linkMismatch: 'The link has {{count}} pages. {{pages}} was selected.',
+                shareFail: 'Could not open the share menu',
+                printFail: 'Print did not open. Use PDF, then print that file.'
+            },
+            gu: {
+                back: 'પાછા',
+                done: 'થઈ ગયું',
+                editor: 'એડિટર',
+                stampTip: 'સ્ટેમ્પ પર ટેપ કરો — પત્રની નીચે જમણી બાજુ લાગશે. ખેંચીને ખસેડો, વાદળી બિંદુથી સાઇઝ બદલો, ✕ થી હટાવો. પારદર્શક PNG શ્રેષ્ઠ છે.',
+                stampSaved: 'આ શાળા માટે સાચવેલ',
+                needPage: 'ઓછામાં ઓછું એક પાનું પસંદ કરો',
+                pdfMaking: 'PDF બની રહ્યું છે · {{pages}}',
+                pdfDownloaded: 'PDF ડાઉનલોડ થયું · {{pages}}. WhatsApp માં આ ફાઇલ જોડો.',
+                pdfFail: 'PDF બની શક્યું નહીં',
+                linkMaking: 'લિંક બની રહી છે…',
+                linkCopied: 'લિંક કૉપી થઈ · {{pages}}',
+                linkFail: 'લિંક કૉપી થઈ નહીં',
+                linkMismatch: 'લિંકમાં {{count}} પાનાં છે. {{pages}} પસંદ હતું.',
+                shareFail: 'શેર મેનૂ ખુલ્યું નહીં',
+                printFail: 'પ્રિન્ટ ખુલ્યું નહીં. PDF લઈને તેમાંથી પ્રિન્ટ કરો.'
+            }
+        };
+
         function tableLocale() {
             try {
                 const explicit = localStorage.getItem('shs_locale_explicit') === '1';
@@ -4421,6 +4606,34 @@
                 if (explicit && (stored === 'en' || stored === 'gu')) return stored;
             } catch (err) { /* keep Gujarati */ }
             return 'gu';
+        }
+
+        function uiMsg(key, params) {
+            const pack = UI_COPY[tableLocale()] || UI_COPY.gu;
+            let text = pack[key] || UI_COPY.en[key] || '';
+            if (params) {
+                Object.keys(params).forEach(function(name) {
+                    text = text.split('{{' + name + '}}').join(String(params[name]));
+                });
+            }
+            return text;
+        }
+
+        function applyChromeCopy() {
+            const gu = tableLocale() === 'gu';
+            document.documentElement.classList.toggle('locale-gu', gu);
+            document.documentElement.classList.toggle('locale-en', !gu);
+            document.querySelectorAll('.ui-back').forEach(function(el) {
+                el.textContent = uiMsg('back');
+            });
+            const done = document.getElementById('studioDoneBtn');
+            if (done) done.textContent = uiMsg('done');
+            const title = document.getElementById('studioSheetTitle');
+            if (title) title.textContent = uiMsg('editor');
+            const tip = document.getElementById('stampTip');
+            if (tip) tip.textContent = uiMsg('stampTip');
+            const note = document.getElementById('stampSchoolNote');
+            if (note) note.textContent = '(' + uiMsg('stampSaved') + ')';
         }
 
         function tableMsg(key, params) {
@@ -4451,6 +4664,7 @@
             if (borderTitle) borderTitle.textContent = tableMsg('borderTitle');
             if (activeLetterPage) setActiveLetterPage(activeLetterPage);
             paintGridPicker();
+            applyChromeCopy();
         }
 
         function clampGridCount(value, fallback, max) {
@@ -6182,6 +6396,14 @@
             const menu = document.getElementById('shareMenu');
             const btn = shareAnchor();
             if (!menu || !btn || menu.hidden) return;
+            if (window.innerWidth <= 760) {
+                menu.style.left = '0';
+                menu.style.right = '0';
+                menu.style.top = 'auto';
+                menu.style.bottom = '0';
+                menu.style.width = '100%';
+                return;
+            }
             const rect = btn.getBoundingClientRect();
             const width = menu.offsetWidth || 260;
             const height = menu.offsetHeight || 280;
@@ -6407,16 +6629,16 @@
             const json = await response.json();
             if (!response.ok || !json.url) throw new Error(json.error || 'Could not create link');
             if (Number(json.pageCount) !== unique.length) {
-                throw new Error('Link me ' + json.pageCount + ' page chale gaye. ' + sharePageLabel(unique) + ' select tha.');
+                throw new Error(uiMsg('linkMismatch', { count: json.pageCount, pages: sharePageLabel(unique) }));
             }
             return json.url;
         }
 
         async function shareViaWhatsApp() {
             const pages = selectedSharePages();
-            if (!pages) { showShareToast('Select at least one page'); return; }
+            if (!pages) { showShareToast(uiMsg('needPage')); return; }
             closeShareMenu();
-            showShareToast('PDF ban raha hai · ' + sharePageLabel(pages));
+            showShareToast(uiMsg('pdfMaking', { pages: sharePageLabel(pages) }));
             try {
                 const blob = await pdfBlobForPages(pages);
                 if (!blob || blob.size < 800) throw new Error('pdf');
@@ -6426,30 +6648,30 @@
                     return;
                 }
                 downloadBlob(blob, file.name);
-                showShareToast('PDF downloaded · ' + sharePageLabel(pages) + ' — WhatsApp me ye file attach karo');
+                showShareToast(uiMsg('pdfDownloaded', { pages: sharePageLabel(pages) }));
             } catch (err) {
                 if (err && err.name === 'AbortError') return;
-                showShareToast('Could not create the PDF');
+                showShareToast(uiMsg('pdfFail'));
             }
         }
 
         async function copyShareLink() {
             const pages = selectedSharePages();
-            if (!pages) { showShareToast('Select at least one page'); return; }
+            if (!pages) { showShareToast(uiMsg('needPage')); return; }
             closeShareMenu();
-            showShareToast('Creating link…');
+            showShareToast(uiMsg('linkMaking'));
             try {
                 const url = await createShareUrl(pages);
                 await copyText(url);
-                showShareToast('Link copy ho gaya · ' + sharePageLabel(pages));
+                showShareToast(uiMsg('linkCopied', { pages: sharePageLabel(pages) }));
             } catch (err) {
-                showShareToast(err && err.message ? err.message : 'Could not copy link');
+                showShareToast(err && err.message ? err.message : uiMsg('linkFail'));
             }
         }
 
         async function shareWithSystemMenu() {
             const pages = selectedSharePages();
-            if (!pages) { showShareToast('Select at least one page'); return; }
+            if (!pages) { showShareToast(uiMsg('needPage')); return; }
             closeShareMenu();
             try {
                 const url = await createShareUrl(pages);
@@ -6459,16 +6681,16 @@
                     return;
                 }
                 await copyText(url);
-                showShareToast('Link copy ho gaya · ' + sharePageLabel(pages));
+                showShareToast(uiMsg('linkCopied', { pages: sharePageLabel(pages) }));
             } catch (err) {
                 if (err && err.name === 'AbortError') return;
-                showShareToast('Could not open share menu');
+                showShareToast(uiMsg('shareFail'));
             }
         }
 
         function shareAndPrint() {
             const pages = selectedSharePages();
-            if (!pages) { showShareToast('Select at least one page'); return; }
+            if (!pages) { showShareToast(uiMsg('needPage')); return; }
             closeShareMenu();
             markPagesForPrint(pages);
             printDocument();
@@ -6489,10 +6711,11 @@
         }, true);
 
         function printDocument() {
-            if (window.innerWidth <= 900) {
-                void printOnSmallScreen();
-                return;
-            }
+            if (document.documentElement.classList.contains('studio-open')) toggleStudio(false);
+            closeFloatingPanels();
+            const table = document.getElementById('tablePanel');
+            if (table) table.hidden = true;
+            closeShareMenu();
             document.body.classList.add('is-printing');
             const restore = () => {
                 document.body.classList.remove('is-printing');
@@ -6500,46 +6723,12 @@
                 window.removeEventListener('afterprint', restore);
             };
             window.addEventListener('afterprint', restore);
-            setTimeout(() => window.print(), 50);
-        }
-
-        async function printOnSmallScreen() {
-            if (document.documentElement.classList.contains('studio-open')) toggleStudio(false);
-            showShareToast('Print taiyar ho raha hai…');
             try {
-                const count = document.querySelectorAll('#pagesWrapper > .page-container').length || 1;
-                const indexes = [];
-                for (let i = 0; i < count; i++) indexes.push(i);
-                const blob = await pdfBlobForPages(indexes);
-                const name = letterheadPdfName(indexes);
-                const file = new File([blob], name, { type: 'application/pdf' });
-                const touch = window.matchMedia('(pointer: coarse)').matches;
-                if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], title: letterheadTitle() });
-                    return;
-                }
-                const url = URL.createObjectURL(blob);
-                let frame = document.getElementById('lhPrintFrame');
-                if (!frame) {
-                    frame = document.createElement('iframe');
-                    frame.id = 'lhPrintFrame';
-                    frame.title = 'Print letterhead';
-                    frame.style.cssText = 'position:fixed;width:0;height:0;border:0;';
-                    document.body.appendChild(frame);
-                }
-                frame.onload = function() {
-                    try {
-                        frame.contentWindow.focus();
-                        frame.contentWindow.print();
-                    } catch (err) {
-                        downloadBlob(blob, name);
-                        showShareToast('PDF download ho gaya — usme se print karo');
-                    }
-                };
-                frame.src = url;
+                window.focus();
+                window.print();
             } catch (err) {
-                if (err && err.name === 'AbortError') return;
-                showShareToast('Print nahi ho paya. PDF try karo.');
+                restore();
+                showShareToast(uiMsg('printFail'));
             }
         }
 
@@ -6739,11 +6928,14 @@
             if (!panel) return;
             const stamp = document.getElementById('stampPanel');
             const ocr = document.getElementById('ocrPanel');
+            const template = document.getElementById('templatePanel');
             if (stamp) stamp.classList.remove('active');
             if (ocr) ocr.classList.remove('active');
+            if (template) template.classList.remove('active');
             const open = typeof force === 'boolean' ? force : !panel.classList.contains('active');
             panel.classList.toggle('active', open);
             if (open) renderLogoGallery();
+            syncPanelBackdrop();
         }
 
         function clampLogoSize(value) {
