@@ -1080,8 +1080,11 @@
 
         /* Page Container */
         .page-container {
+            box-sizing: border-box;
             width: 210mm;
+            height: 297mm;
             min-height: 297mm;
+            max-height: 297mm;
             margin: 0 auto 20px;
             background: white;
             box-shadow:
@@ -1089,10 +1092,11 @@
                 0 12px 40px -12px rgb(15 39 68 / .18),
                 0 4px 12px -4px rgb(15 39 68 / .08);
             border-radius: 2px;
-            --page-pad-x: 15mm;
-            --lh-edge: 5mm;
-            padding: 8mm var(--page-pad-x) 15mm var(--page-pad-x);
+            --page-pad-x: 7mm;
+            --lh-edge: 7mm;
+            padding: 8mm var(--page-pad-x) 12mm;
             position: relative;
+            overflow: visible;
             page-break-after: always;
         }
 
@@ -1103,8 +1107,8 @@
         /* Page Number */
         .page-number {
             position: absolute;
-            bottom: 8mm;
-            right: 15mm;
+            bottom: 6mm;
+            right: 7mm;
             font-size: 12px;
             color: #666;
         }
@@ -1191,7 +1195,7 @@
 
         .school-name {
             color: #c41e3a;
-            font-size: 28px;
+            font-size: 22pt;
             font-weight: 700;
             text-align: center;
             letter-spacing: 1px;
@@ -1306,13 +1310,17 @@
             padding: 0 1px;
         }
 
-        /* Content Area — keep compact on screen; grow with typing */
+        /* Content area matches print: same inset, type size and line spacing */
         .content-area {
-            min-height: 80mm;
-            margin-top: 20px;
-            padding: 10px;
-            line-height: 2;
+            min-height: 0;
+            margin-top: 8px;
+            padding: 0;
+            line-height: 1.45;
             font-size: 14px;
+        }
+
+        .edit-mode .content-area {
+            padding: 0;
         }
 
         .lh-grid-tools .toolbar-btn {
@@ -1623,7 +1631,7 @@
         @media print {
             @page {
                 size: A4;
-                margin: 8mm 5mm 10mm 5mm;
+                margin: 0;
             }
 
             html,
@@ -1679,12 +1687,14 @@
             html.embedded .page-container {
                 box-shadow: none !important;
                 margin: 0 auto !important;
-                padding: 0 !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                min-height: 0 !important;
-                height: auto !important;
-                overflow: visible !important;
+                padding: 8mm 7mm 12mm !important;
+                width: 210mm !important;
+                max-width: 210mm !important;
+                height: 297mm !important;
+                min-height: 297mm !important;
+                max-height: 297mm !important;
+                overflow: hidden !important;
+                zoom: 1 !important;
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
                 break-after: page !important;
@@ -1724,13 +1734,11 @@
             }
 
             .print-table tbody > tr > td {
-                padding: 0 2mm !important;
+                padding: 0 !important;
             }
 
             .letterhead {
                 border-bottom: 2px solid #c41e3a !important;
-                padding-bottom: 8px !important;
-                margin: 0 0 10px 0 !important;
             }
 
             .header-table,
@@ -1755,27 +1763,9 @@
                 color: #c41e3a !important;
             }
 
-            .school-name {
-                font-size: 22pt !important;
-                line-height: 1.2 !important;
-            }
-
-            .logo-cell {
-                width: 75px !important;
-            }
-
             .logo-placeholder {
                 border: none !important;
                 background: transparent !important;
-                width: 70px !important;
-                height: auto !important;
-            }
-
-            .logo-placeholder img,
-            .logo-cell img {
-                width: 65px !important;
-                height: auto !important;
-                max-height: 75px !important;
             }
 
             .contact-left-cell { width: 30% !important; text-align: left !important; }
@@ -1787,8 +1777,8 @@
             .footer-right { width: 33% !important; text-align: right !important; }
 
             .serial-date-table {
-                margin-top: 8px !important;
-                margin-bottom: 4px !important;
+                margin-top: 15px !important;
+                margin-bottom: 0 !important;
             }
 
             .print-footer td {
@@ -1808,10 +1798,10 @@
 
             .content-area {
                 min-height: 0 !important;
-                height: auto !important;
                 margin-top: 8px !important;
                 padding: 0 !important;
                 line-height: 1.45 !important;
+                font-size: 14px !important;
             }
             .content-area .lh-grid {
                 width: 100% !important;
@@ -2482,9 +2472,11 @@
         }
 
         html.embedded .page-container {
-            width: 100%;
-            max-width: 210mm;
+            width: 210mm;
+            max-width: none;
+            height: 297mm;
             min-height: 297mm;
+            max-height: 297mm;
             margin: 0 auto 16px;
             box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
         }
@@ -2702,12 +2694,15 @@
             }
 
             html.embedded .page-container {
-                width: 100%;
-                min-height: auto;
+                width: 210mm;
+                max-width: none;
+                height: 297mm;
+                min-height: 297mm;
+                max-height: 297mm;
                 margin-bottom: 12px;
-                --page-pad-x: 4mm;
-                padding: 5mm 4mm 12mm;
-                overflow-wrap: anywhere;
+                --page-pad-x: 7mm;
+                padding: 8mm 7mm 12mm;
+                overflow-wrap: normal;
             }
 
             html.embedded .print-table,
@@ -2764,12 +2759,12 @@
             }
 
             html.embedded .content-area {
-                min-height: 55mm;
-                margin-top: 12px;
-                padding: 6px 2px;
-                font-size: 12px;
-                line-height: 1.75;
-                overflow-wrap: anywhere;
+                min-height: 0;
+                margin-top: 8px;
+                padding: 0;
+                font-size: 14px;
+                line-height: 1.45;
+                overflow-wrap: normal;
             }
 
             html.embedded .page-number {
@@ -2814,9 +2809,11 @@
             .page-container {
                 width: 210mm;
                 max-width: none;
+                height: 297mm;
                 min-height: 297mm;
-                --page-pad-x: 15mm;
-                padding: 8mm 15mm 15mm;
+                max-height: 297mm;
+                --page-pad-x: 7mm;
+                padding: 8mm 7mm 12mm;
                 zoom: var(--mobile-page-fit, 1);
             }
 
@@ -2842,9 +2839,11 @@
             html.embedded .page-container {
                 width: 210mm;
                 max-width: none;
+                height: 297mm;
                 min-height: 297mm;
-                --page-pad-x: 15mm;
-                padding: 8mm 15mm 15mm;
+                max-height: 297mm;
+                --page-pad-x: 7mm;
+                padding: 8mm 7mm 12mm;
                 zoom: var(--mobile-page-fit, 1);
                 overflow-wrap: normal;
             }
@@ -2875,7 +2874,7 @@
             }
 
             html.embedded .school-name {
-                font-size: 28px;
+                font-size: 22pt;
                 letter-spacing: 1px;
                 overflow-wrap: normal;
             }
@@ -2902,17 +2901,17 @@
             }
 
             html.embedded .content-area {
-                min-height: 80mm;
-                margin-top: 20px;
-                padding: 10px;
+                min-height: 0;
+                margin-top: 8px;
+                padding: 0;
                 font-size: 14px;
-                line-height: 2;
+                line-height: 1.45;
                 overflow-wrap: normal;
             }
 
             html.embedded .page-number {
-                right: 15mm;
-                bottom: 8mm;
+                right: 7mm;
+                bottom: 6mm;
                 font-size: 12px;
             }
         }
@@ -2922,9 +2921,11 @@
         html.lh-exporting.embedded .page-container {
             width: 210mm !important;
             max-width: none !important;
+            height: 297mm !important;
             min-height: 297mm !important;
-            --page-pad-x: 15mm;
-            padding: 8mm 15mm 15mm !important;
+            max-height: 297mm !important;
+            --page-pad-x: 7mm;
+            padding: 8mm 7mm 12mm !important;
             zoom: 1 !important;
             overflow-wrap: normal !important;
         }
@@ -2962,9 +2963,13 @@
         }
 
         .lh-pdf-host .page-container {
+            box-sizing: border-box !important;
             width: 210mm !important;
             max-width: 210mm !important;
-            min-height: 296mm !important;
+            height: 297mm !important;
+            min-height: 297mm !important;
+            max-height: 297mm !important;
+            padding: 8mm 7mm 12mm !important;
             margin: 0 !important;
             box-shadow: none !important;
             transform: none !important;
@@ -5612,8 +5617,8 @@
                 '<title>Letterhead</title>' + styles +
                 '<style>' +
                 '@media screen{html.lh-print-view body{margin:0;padding:16px 0;background:#e6ebf2;}' +
-                'html.lh-print-view .page-container{width:210mm!important;max-width:none!important;min-height:297mm!important;' +
-                '--page-pad-x:15mm;padding:8mm 15mm 15mm!important;zoom:1!important;}}' +
+                'html.lh-print-view .page-container{width:210mm!important;max-width:none!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important;' +
+                '--page-pad-x:7mm;padding:8mm 7mm 12mm!important;zoom:1!important;}}' +
                 '</style></head><body>' + clone.outerHTML +
                 '<script>window.addEventListener("load",function(){' +
                 'var ready=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();' +
@@ -5809,9 +5814,13 @@
                 });
                 clone.style.zoom = '1';
                 clone.style.transform = 'none';
+                clone.style.boxSizing = 'border-box';
                 clone.style.width = '210mm';
                 clone.style.maxWidth = '210mm';
-                clone.style.minHeight = '296mm';
+                clone.style.height = '297mm';
+                clone.style.minHeight = '297mm';
+                clone.style.maxHeight = '297mm';
+                clone.style.padding = '8mm 7mm 12mm';
                 clone.style.pageBreakAfter = pos < picked.length - 1 ? 'always' : 'auto';
                 clone.style.pageBreakBefore = 'auto';
                 host.appendChild(clone);

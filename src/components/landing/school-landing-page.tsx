@@ -27,6 +27,7 @@ import {
 import { SchoolLogo } from "@/components/brand/school-logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { FooterHolidayCalendar } from "@/components/landing/footer-holiday-calendar";
+import { LandingHeroSlider } from "@/components/landing/landing-hero-slider";
 import { LandingExpertModal } from "@/components/landing/landing-expert-modal";
 import { useT } from "@/i18n/locale-provider";
 import {
@@ -37,6 +38,7 @@ import {
   type ContactFieldErrors,
 } from "@/lib/contact-support";
 import "@/components/landing/landing.css";
+import "@/components/landing/landing-hero-show.css";
 
 const PORTAL_ROLES = [
   { key: "school_admin", icon: Building2 },
@@ -56,8 +58,6 @@ const SERVICES = [
   { icon: FileText, key: "certificates" },
   { icon: Users, key: "students" },
 ] as const;
-
-const HERO_VIDEO_SRC = "/video/bgvideo.mp4";
 
 const HERO_STATS = [
   { valKey: "statModulesVal", labelKey: "statModules", icon: BookOpen },
@@ -192,7 +192,6 @@ export function SchoolLandingPage() {
   const [formErr, setFormErr] = useState("");
   const [fieldErrors, setFieldErrors] = useState<ContactFieldErrors>({});
   const [activeModule, setActiveModule] = useState<{ key: ServiceKey; index: number } | null>(null);
-  const heroVideoRef = useRef<HTMLVideoElement>(null);
 
   const errorForCode = (code?: ContactErrorCode, fallback?: string) => {
     if (!code) return fallback || t("landing.formError");
@@ -219,18 +218,6 @@ export function SchoolLandingPage() {
     fn();
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
-  }, []);
-
-  useEffect(() => {
-    const video = heroVideoRef.current;
-    if (!video) return;
-    video.muted = true;
-    const play = () => {
-      void video.play().catch(() => {});
-    };
-    play();
-    video.addEventListener("loadeddata", play);
-    return () => video.removeEventListener("loadeddata", play);
   }, []);
 
   async function onSubmit(e: FormEvent) {
@@ -308,68 +295,16 @@ export function SchoolLandingPage() {
         </div>
       </header>
 
-      <section className="lp-hero lp-hero--v2" aria-label={t("landing.productName")}>
-        <div className="lp-hero-media">
-          <video
-            ref={heroVideoRef}
-            className="lp-hero-video"
-            src={HERO_VIDEO_SRC}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            disablePictureInPicture
-            aria-hidden
-          />
-          <div className="lp-hero-shade" aria-hidden />
-          <div className="lp-hero-grain" aria-hidden />
-        </div>
-
-        <div className="lp-shell lp-hero-content landing-fade landing-fade--show">
-          <div className="lp-hero-panel">
-            <div className="lp-hero-crest">
-              <SchoolLogo size="xl" />
-            </div>
-            <p className="lp-hero-kicker">
-              <span className="lp-hero-dot" />
-              {t("landing.heroBadge")}
-            </p>
-            <h1 className="lp-hero-title">{t("landing.heroHeadline")}</h1>
-            <p className="lp-hero-brand">
-              {t("landing.productName")}
-              <span className="lp-hero-brand-sep" aria-hidden>
-                ·
-              </span>
-              {t("landing.productTag")}
-            </p>
-            <p className="lp-lede">{t("landing.heroDesc")}</p>
-
-            <ul className="lp-hero-stats" aria-label={t("landing.heroStatsLabel")}>
-              {HERO_STATS.map(({ valKey, labelKey, icon: StatIcon }) => (
-                <li key={labelKey} className="lp-hero-stat">
-                  <span className="lp-hero-stat-icon" aria-hidden>
-                    <StatIcon className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="lp-hero-stat-body">
-                    <span className="lp-hero-stat-val">{t(`landing.${valKey}`)}</span>
-                    <span className="lp-hero-stat-label">{t(`landing.${labelKey}`)}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            <div className="lp-cta-row">
-              <Link href="/login" className="lp-btn-primary">
-                <span>{t("landing.ctaPortal")}</span>
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a href="#modules" className="lp-btn-ghost">
-                {t("landing.ctaExplore")}
-              </a>
-            </div>
-          </div>
-        </div>
+      <section className="lp-hero lp-hero--banner" aria-label={t("landing.productName")}>
+        <LandingHeroSlider />
+        <ul className="lp-shell lp-banner-facts" aria-label={t("landing.heroStatsLabel")}>
+          {HERO_STATS.map(({ valKey, labelKey }) => (
+            <li key={labelKey}>
+              <strong>{t(`landing.${valKey}`)}</strong>
+              <span>{t(`landing.${labelKey}`)}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section id="modules" className="lp-section">

@@ -1,0 +1,286 @@
+================================================================================
+SHS — Absent (AB) marks
+CURL + UI RESPONSE
+================================================================================
+
+Replace:
+  BASE    = http://localhost:3000   or live site
+  TOKEN   = Bearer token from POST /api/auth/mobile/login
+  CLASS   = classId
+  EXAM    = examId
+  TERM    = mid1 | mid2 | mid3 | final
+  STUDENT = studentId
+  SUBJECT = subject code, e.g. MATH  (or the code returned by GET)
+
+Staff only: school_admin, teacher, clerk
+Header: Authorization: Bearer TOKEN
+Header: Accept: application/json
+Header: Content-Type: application/json   (POST only)
+
+Web UI (same APIs, login cookie — no Bearer):
+  Marks entry grid : BASE/results/term?classId=CLASS&term=TERM
+  Old marks entry  : BASE/results/entry?examId=EXAM
+  Marks sheet      : BASE/results/marks-sheet?classId=CLASS
+  Gun patrak       : BASE/results/gun-patrak?classId=CLASS&term=TERM
+  Result print     : BASE/results/print?examId=EXAM&classId=CLASS
+
+What AB does:
+  Checkbox AB under each subject.
+  isAbsent true  -> marks cleared, saved as absent, UI shows AB.
+  isAbsent false -> teacher can type marks again.
+  Stored per exam term in ExamResult.remarks JSON: { "absent": { "mid1": true } }
+  Final exam also sets ExamResult.isAbsent = true and marksObtained = 0.
+  Absent subject counts as 0 in the total. The cell itself prints AB, not 0.
+
+
+================================================================================
+1) LOAD MARKS GRID  (UI: /results/term)
+================================================================================
+
+----- CURL -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/results/term-marks?classId=CLASS&term=TERM"
+
+----- RESPONSE: 200 -----
+{
+  "class": {
+    "id": "CLASS",
+    "name": "5-A",
+    "standard": "5",
+    "section": "A"
+  },
+  "exam": { "id": "EXAM", "isPublished": false },
+  "term": {
+    "key": "mid1",
+    "labelEn": "Mid Exam 1",
+    "maxMarks": 80,
+    "internalMax": 20,
+    "published": false,
+    "locked": false
+  },
+  "students": [
+    {
+      "studentId": "STUDENT",
+      "rollNumber": "12",
+      "firstName": "Ravi",
+      "surname": "Patel",
+      "subjectMarks": [
+        {
+          "subjectCode": "MATH",
+          "subjectName": "Mathematics",
+          "subjectType": "numeric",
+          "termValue": null,
+          "internalValue": null,
+          "paperMax": 80,
+          "internalMax": 20,
+          "isAbsent": true
+        },
+        {
+          "subjectCode": "ENG",
+          "subjectName": "English",
+          "subjectType": "numeric",
+          "termValue": 54,
+          "internalValue": 16,
+          "paperMax": 80,
+          "internalMax": 20,
+          "isAbsent": false
+        }
+      ],
+      "obtained": 70,
+      "max": 200,
+      "percent": 35,
+      "grade": "D",
+      "result": "pass"
+    }
+  ],
+  "completion": { "complete": 1, "partial": 0, "pending": 0, "total": 1, "percent": 100 },
+  "editable": true
+}
+
+UI:
+  MATH cell is empty, amber, AB checkbox checked.
+  ENG cell shows 54 and 16, AB unchecked.
+  Absent subject is treated as filled, so completion can be 100%.
+
+
+================================================================================
+2) SAVE AB  (UI: tick AB, then Save)
+================================================================================
+
+----- CURL -----
+curl -sS -X POST -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" ^
+  -H "Accept: application/json" ^
+  "BASE/api/results/term-marks" ^
+  -d "{\"action\":\"save_marks\",\"examId\":\"EXAM\",\"classId\":\"CLASS\",\"term\":\"mid1\",\"students\":[{\"studentId\":\"STUDENT\",\"subjectMarks\":[{\"subjectCode\":\"MATH\",\"termValue\":null,\"internalValue\":null,\"isAbsent\":true},{\"subjectCode\":\"ENG\",\"termValue\":54,\"internalValue\":16,\"isAbsent\":false}]}]}"
+
+----- RESPONSE: 200 -----
+{
+  "success": true,
+  "saved": 2
+}
+
+Database:
+  ExamResult.remarks for MATH contains "absent": { "mid1": true }
+  Paper and internal for that term are null.
+  If term is final, ExamResult.isAbsent = true and marksObtained = 0.
+
+UI after reload:
+  Toast / green line: "Marks saved successfully!"
+  MATH shows AB. ENG keeps the numbers.
+
+
+================================================================================
+3) CLEAR AB AND ENTER MARKS
+================================================================================
+
+----- CURL -----
+curl -sS -X POST -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" ^
+  -H "Accept: application/json" ^
+  "BASE/api/results/term-marks" ^
+  -d "{\"action\":\"save_marks\",\"examId\":\"EXAM\",\"classId\":\"CLASS\",\"term\":\"mid1\",\"students\":[{\"studentId\":\"STUDENT\",\"subjectMarks\":[{\"subjectCode\":\"MATH\",\"termValue\":48,\"internalValue\":15,\"isAbsent\":false}]}]}"
+
+----- RESPONSE: 200 -----
+{
+  "success": true,
+  "saved": 1
+}
+
+UI:
+  AB unchecked. Inputs show 48 and 15.
+
+
+================================================================================
+4) OLD MARKS ENTRY  (UI: /results/entry?examId=EXAM)
+================================================================================
+
+One isAbsent flag for the whole subject row (not per mid term).
+
+----- CURL: load -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/results?examId=EXAM"
+
+----- RESPONSE: 200 (trimmed) -----
+{
+  "exam": {
+    "id": "EXAM",
+    "results": [
+      {
+        "studentId": "STUDENT",
+        "subjectId": "SUBJECT_ID",
+        "marksObtained": 0,
+        "achievementMarks": 0,
+        "graceMarks": 0,
+        "isAbsent": true
+      }
+    ]
+  }
+}
+
+----- CURL: save AB -----
+curl -sS -X POST -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" ^
+  -H "Accept: application/json" ^
+  "BASE/api/results" ^
+  -d "{\"action\":\"save_marks\",\"examId\":\"EXAM\",\"marks\":[{\"studentId\":\"STUDENT\",\"subjectId\":\"SUBJECT_ID\",\"marksObtained\":0,\"achievementMarks\":0,\"graceMarks\":0,\"maxMarks\":100,\"isAbsent\":true}]}"
+
+----- RESPONSE: 200 -----
+{
+  "success": true,
+  "count": 1
+}
+
+UI:
+  Obtained box disabled, placeholder AB, checkbox checked.
+  Uncheck AB, type marks, save with isAbsent false.
+
+
+================================================================================
+5) MARKS SHEET  (UI: /results/marks-sheet)
+================================================================================
+
+----- CURL -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/results/marks-sheet?classId=CLASS"
+
+----- RESPONSE: 200 (one cell) -----
+{
+  "students": [
+    {
+      "id": "STUDENT",
+      "rollNumber": "12",
+      "subjectInputs": [
+        {
+          "subject": { "code": "MATH", "name": "Mathematics" },
+          "scores": { "mid1": null },
+          "absent": { "mid1": true }
+        }
+      ],
+      "computed": {
+        "subjectCells": {
+          "MATH": { "mid1": "AB" }
+        }
+      }
+    }
+  ]
+}
+
+UI:
+  That exam row prints AB in amber, not a blank box and not 0.
+  Saving the sheet keeps the absent flag unless a mark above 0 is typed.
+
+
+================================================================================
+6) RESULT PRINT  (UI: /results/print and gun patrak)
+================================================================================
+
+----- CURL -----
+curl -sS -H "Authorization: Bearer TOKEN" -H "Accept: application/json" ^
+  "BASE/api/results/print?examId=EXAM&classId=CLASS"
+
+----- RESPONSE: 200 (one subject, trimmed) -----
+{
+  "subjects": [
+    {
+      "name": "Mathematics",
+      "theory1": null,
+      "internal1": null,
+      "absent1": true,
+      "theory2": 60,
+      "internal2": 18,
+      "absent2": false,
+      "isAbsent": false
+    }
+  ]
+}
+
+UI:
+  Progress card / pragati patrak: first exam cells show AB (theory, internal, total, grade).
+  Second exam shows the numbers.
+  Gun patrak slip (same term-marks data) prints AB in the marks column.
+  Class total counts that subject as 0.
+
+
+================================================================================
+7) ERRORS
+================================================================================
+
+401  { "error": "..." }                 not logged in
+403  { "error": "No timetable subjects assigned to you for this class" }
+400  { "error": "This exam term is locked. Unpublish to edit marks." }
+400  { "error": "classId required" }
+400  { "error": "Invalid or disabled exam term" }
+404  { "error": "Class not found" }
+
+UI when the term is published:
+  Grid is read-only. AB checkbox is disabled. Unpublish, then edit.
+
+
+================================================================================
+FIELD CHEAT SHEET
+================================================================================
+
+isAbsent          true / false on each subject in term-marks save and GET
+absent            same meaning; accepted if isAbsent is omitted
+termValue         paper marks; must be null when isAbsent is true
+internalValue     teacher marks; must be null when isAbsent is true
+ExamResult.isAbsent   database column; true only for the final exam
+remarks.absent    { "mid1": true, "final": true } inside ExamResult.remarks
