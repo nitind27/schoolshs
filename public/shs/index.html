@@ -1650,12 +1650,14 @@
             }
 
             .main-controls,
+            .editor-sticky-bar,
             .editor-toolbar,
             .app-chrome,
             .edit-indicator,
             .add-page-btn,
             .remove-page-btn,
             .voice-status-bar,
+            .logo-panel,
             .stamp-panel,
             .ocr-panel,
             .template-panel,
@@ -1676,27 +1678,39 @@
                 min-height: 0 !important;
                 flex: none !important;
                 padding: 0 !important;
+                margin: 0 !important;
+                background: #fff !important;
+                box-shadow: none !important;
             }
 
-            .pages-wrapper {
+            .pages-wrapper,
+            .pages-wrapper.zoomed {
                 max-width: 100% !important;
                 margin: 0 !important;
+                transform: none !important;
+                filter: none !important;
+                zoom: 1 !important;
             }
 
             .page-container,
             html.embedded .page-container {
                 box-shadow: none !important;
-                margin: 0 auto !important;
+                filter: none !important;
+                transform: none !important;
+                margin: 0 !important;
                 padding: 8mm 7mm 12mm !important;
                 width: 210mm !important;
                 max-width: 210mm !important;
                 height: 297mm !important;
                 min-height: 297mm !important;
                 max-height: 297mm !important;
-                overflow: hidden !important;
+                overflow: visible !important;
                 zoom: 1 !important;
-                break-inside: avoid !important;
-                page-break-inside: avoid !important;
+                background: #fff !important;
+                break-before: auto !important;
+                page-break-before: auto !important;
+                break-inside: auto !important;
+                page-break-inside: auto !important;
                 break-after: page !important;
                 page-break-after: always !important;
             }
