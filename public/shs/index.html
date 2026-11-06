@@ -3115,7 +3115,19 @@
 
             html.embedded .app-btn,
             html.embedded .app-tool-btn {
-                min-height: 36px;
+                min-height: 40px;
+                font-size: 12px;
+            }
+
+            html.embedded .toolbar-btn,
+            html.embedded .color-picker {
+                width: 40px;
+                height: 40px;
+                font-size: 15px;
+            }
+
+            html.embedded .app-btn-print {
+                grid-column: 1 / -1;
             }
         }
 
@@ -3136,6 +3148,9 @@
                 padding: 0;
                 border-right: none;
                 box-shadow: none;
+                overflow-x: hidden;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
                 transform: translateX(104%);
                 transition: transform 0.22s ease;
                 pointer-events: none;
@@ -3180,26 +3195,59 @@
             }
 
             html.embedded .app-chrome {
-                padding: 12px 12px 28px;
+                padding: 12px 12px 36px;
             }
 
             html.embedded .app-btn,
             html.embedded .app-tool-btn {
                 min-height: 44px;
-                font-size: 13px;
+                font-size: 14px;
+            }
+
+            html.embedded .app-btn-print {
+                grid-column: 1 / -1;
+                min-height: 48px;
+                font-size: 16px;
+            }
+
+            html.embedded .editor-toolbar {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+                padding: 12px;
+            }
+
+            html.embedded .toolbar-group {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                width: 100%;
+                padding: 0;
+                border: none;
             }
 
             html.embedded .toolbar-btn,
             html.embedded .color-picker {
-                width: 42px;
-                height: 42px;
+                width: 44px;
+                height: 44px;
+                flex: 0 0 44px;
+                font-size: 16px;
+                border-radius: 10px;
+            }
+
+            html.embedded .toolbar-btn.lh-table-open {
+                width: auto;
+                flex: 1 1 auto;
+                min-width: 72px;
+                padding: 0 12px;
             }
 
             html.embedded .toolbar-select {
                 min-width: 0;
                 max-width: none;
-                height: 42px;
-                font-size: 14px;
+                height: 44px;
+                font-size: 15px;
             }
 
             html.embedded .editor-scroll-area {
@@ -3221,7 +3269,7 @@
                 right: 0;
                 bottom: 0;
                 z-index: 240;
-                gap: 4px;
+                gap: 6px;
                 padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
                 background: #fff;
                 border-top: 1px solid #d8e0e8;
@@ -3233,7 +3281,13 @@
             }
 
             html.embedded .studio-dock button {
-                min-height: 48px;
+                min-height: 58px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
+                padding: 6px 2px;
                 border: none;
                 border-radius: 12px;
                 background: #f3f6f9;
@@ -3241,11 +3295,23 @@
                 font-family: var(--ui-font);
                 font-size: 11px;
                 font-weight: 700;
+                line-height: 1.1;
                 cursor: pointer;
+            }
+
+            html.embedded .studio-dock button b {
+                font-size: 18px;
+                font-weight: 700;
+                line-height: 1;
             }
 
             html.embedded .studio-dock .dock-primary {
                 background: var(--lh-ink);
+                color: #fff;
+            }
+
+            html.embedded .studio-dock .dock-print {
+                background: #14324a;
                 color: #fff;
             }
 
@@ -3586,11 +3652,11 @@
     </div>
 
     <nav class="studio-dock" aria-label="Letter tools">
-        <button type="button" class="dock-primary" onclick="toggleStudio(true)">Tools</button>
-        <button type="button" onclick="toggleStampPanel()">Stamp</button>
-        <button type="button" onclick="printDocument()">Print</button>
-        <button type="button" onclick="downloadAsPDF()">PDF</button>
-        <button type="button" onclick="saveLetterheadNow()">Save</button>
+        <button type="button" class="dock-primary" onclick="toggleStudio(true)"><b>☰</b>Tools</button>
+        <button type="button" class="dock-print" onclick="printDocument()"><b>⎙</b>Print</button>
+        <button type="button" onclick="saveLetterheadNow()"><b>☁</b>Save</button>
+        <button type="button" onclick="toggleStampPanel()"><b>✑</b>Stamp</button>
+        <button type="button" onclick="downloadAsPDF()"><b>⇩</b>PDF</button>
     </nav>
 
     <aside class="lh-table-panel" id="tablePanel" hidden>
@@ -6423,9 +6489,8 @@
         }, true);
 
         function printDocument() {
-            if (isMobileDevice()) {
-                printInNewWindow();
-                clearPrintPageMarks();
+            if (window.innerWidth <= 900) {
+                void printOnSmallScreen();
                 return;
             }
             document.body.classList.add('is-printing');
@@ -6436,6 +6501,46 @@
             };
             window.addEventListener('afterprint', restore);
             setTimeout(() => window.print(), 50);
+        }
+
+        async function printOnSmallScreen() {
+            if (document.documentElement.classList.contains('studio-open')) toggleStudio(false);
+            showShareToast('Print taiyar ho raha hai…');
+            try {
+                const count = document.querySelectorAll('#pagesWrapper > .page-container').length || 1;
+                const indexes = [];
+                for (let i = 0; i < count; i++) indexes.push(i);
+                const blob = await pdfBlobForPages(indexes);
+                const name = letterheadPdfName(indexes);
+                const file = new File([blob], name, { type: 'application/pdf' });
+                const touch = window.matchMedia('(pointer: coarse)').matches;
+                if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: letterheadTitle() });
+                    return;
+                }
+                const url = URL.createObjectURL(blob);
+                let frame = document.getElementById('lhPrintFrame');
+                if (!frame) {
+                    frame = document.createElement('iframe');
+                    frame.id = 'lhPrintFrame';
+                    frame.title = 'Print letterhead';
+                    frame.style.cssText = 'position:fixed;width:0;height:0;border:0;';
+                    document.body.appendChild(frame);
+                }
+                frame.onload = function() {
+                    try {
+                        frame.contentWindow.focus();
+                        frame.contentWindow.print();
+                    } catch (err) {
+                        downloadBlob(blob, name);
+                        showShareToast('PDF download ho gaya — usme se print karo');
+                    }
+                };
+                frame.src = url;
+            } catch (err) {
+                if (err && err.name === 'AbortError') return;
+                showShareToast('Print nahi ho paya. PDF try karo.');
+            }
         }
 
         function toLatinDigitsText(s) {
