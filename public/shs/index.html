@@ -1141,19 +1141,26 @@
             padding: 5px;
         }
 
+        :root {
+            --logo-size: 96px;
+        }
+
         .logo-cell {
-            width: 80px;
+            width: calc(var(--logo-size) + 16px);
             text-align: center;
         }
 
-        .logo-cell img {
-            width: 70px;
-            height: auto;
+        .logo-cell img,
+        .logo-placeholder img {
+            width: var(--logo-size) !important;
+            height: auto !important;
+            max-width: 100%;
         }
 
         .logo-placeholder {
-            width: 70px;
-            height: 80px;
+            width: var(--logo-size);
+            min-height: var(--logo-size);
+            height: auto;
             border: 2px dashed #c41e3a;
             display: flex;
             align-items: center;
@@ -1169,7 +1176,7 @@
             border: none;
             background: transparent;
             height: auto;
-            min-height: 70px;
+            min-height: 0;
         }
 
         .logo-placeholder:hover {
@@ -1187,6 +1194,31 @@
             font-size: 9px;
             color: #c41e3a;
             text-align: center;
+        }
+
+        .logo-size-ctl {
+            display: inline-flex;
+            align-items: center;
+            gap: 1px;
+            margin-left: auto;
+            background: #f3f6f9;
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            padding: 1px;
+        }
+
+        .logo-size-ctl .app-tool-btn {
+            min-width: 26px;
+            padding: 4px 6px;
+        }
+
+        .logo-size-ctl span {
+            min-width: 28px;
+            text-align: center;
+            font-family: var(--ui-font);
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--lh-ink);
         }
 
         .school-name-cell {
@@ -2885,19 +2917,6 @@
                 font-size: 10px;
             }
 
-            html.embedded .logo-cell {
-                width: 58px;
-            }
-
-            html.embedded .logo-cell img,
-            html.embedded .logo-placeholder {
-                width: 50px;
-            }
-
-            html.embedded .logo-placeholder {
-                height: 58px;
-            }
-
             html.embedded .school-name {
                 font-size: clamp(16px, 5.3vw, 20px);
                 letter-spacing: 0;
@@ -3025,19 +3044,6 @@
 
             html.embedded .header-top {
                 font-size: 13px;
-            }
-
-            html.embedded .logo-cell {
-                width: 80px;
-            }
-
-            html.embedded .logo-cell img,
-            html.embedded .logo-placeholder {
-                width: 70px;
-            }
-
-            html.embedded .logo-placeholder {
-                height: 80px;
             }
 
             html.embedded .school-name {
@@ -3240,6 +3246,11 @@
                 <button type="button" class="app-tool-btn" onclick="toggleLogoPanel()" title="Browse saved logos">Gallery</button>
                 <button type="button" class="app-tool-btn" onclick="changeLogo()" title="Upload a new logo">Upload</button>
                 <button type="button" class="app-tool-btn" onclick="resetDefaultLogo()" title="Use default SHS logo">Default</button>
+                <span class="logo-size-ctl" title="Logo size">
+                    <button type="button" class="app-tool-btn" onclick="setLogoSize(-8)" title="Smaller logo">−</button>
+                    <span id="logoSizeLabel">96</span>
+                    <button type="button" class="app-tool-btn" onclick="setLogoSize(8)" title="Larger logo">+</button>
+                </span>
             </div>
             <div class="app-tool-section section-page">
                 <span class="app-tool-label">Page</span>
@@ -3592,7 +3603,7 @@
                                     <tr>
                                         <td class="logo-cell">
                                             <div class="logo-placeholder has-logo" id="logoContainer" onclick="toggleLogoPanel()" title="Click to choose logo">
-                                                <img src="/shs/logo.png" style="width: 70px; height: auto;" alt="School Logo">
+                                                <img src="/shs/logo.png" alt="School Logo">
                                             </div>
                                         </td>
                                         <td class="school-name-cell">
@@ -3821,6 +3832,10 @@
             { id: 'mark', label: 'Mark', src: '/shs/logos/mark.png', builtin: true },
         ];
         let logoData = DEFAULT_LOGO_URL;
+        const LOGO_SIZE_MIN = 64;
+        const LOGO_SIZE_MAX = 180;
+        const LOGO_SIZE_DEFAULT = 96;
+        let logoSize = LOGO_SIZE_DEFAULT;
         let pageCount = 1;
         let applyingState = false;
         let shareSelection = null;
@@ -6283,6 +6298,7 @@
                 pageContents: pageContents,
                 pageCount: pageCount,
                 logo: logoData,
+                logoSize: logoSize,
                 stamps: stamps
             };
         }
@@ -6425,11 +6441,28 @@
             if (open) renderLogoGallery();
         }
 
+        function clampLogoSize(value) {
+            const n = Math.round(Number(value) || LOGO_SIZE_DEFAULT);
+            return Math.min(LOGO_SIZE_MAX, Math.max(LOGO_SIZE_MIN, n));
+        }
+
+        function applyLogoSize(next, persist) {
+            logoSize = clampLogoSize(next);
+            document.documentElement.style.setProperty('--logo-size', logoSize + 'px');
+            const label = document.getElementById('logoSizeLabel');
+            if (label) label.textContent = String(logoSize);
+            if (persist && !applyingState) saveToLocalStorage();
+        }
+
+        function setLogoSize(delta) {
+            applyLogoSize(logoSize + delta, true);
+        }
+
         function applyLogo(src, persist) {
             logoData = normalizeLogoSrc(src);
             document.querySelectorAll('.logo-placeholder, .logo-container').forEach((container) => {
                 container.innerHTML =
-                    `<img src="${logoData}" style="width: 70px; height: auto;" alt="School Logo" onerror="this.onerror=null;this.src='${DEFAULT_LOGO_URL}'">`;
+                    `<img src="${logoData}" alt="School Logo" onerror="this.onerror=null;this.src='${DEFAULT_LOGO_URL}'">`;
                 container.classList.add('has-logo');
                 container.style.border = 'none';
                 container.style.background = 'transparent';
@@ -6606,7 +6639,7 @@
             let logoHtml = '';
             if (logoData) {
                 // For Word compatibility, ensure proper image formatting
-                logoHtml = `<img src="${logoData}" width="70" height="auto" style="width:70px; height:auto;" alt="Logo">`;
+                logoHtml = `<img src="${logoData}" width="${logoSize}" style="width:${logoSize}px; height:auto;" alt="Logo">`;
             }
 
             // Create stamps HTML for Word
@@ -6921,6 +6954,7 @@
                 logoData = DEFAULT_LOGO_URL;
             }
             applyLogo(logoData, false);
+            applyLogoSize(typeof data.logoSize === 'number' ? data.logoSize : logoSize, false);
 
             if (data.stamps && data.stamps.length > 0) {
                 stamps = data.stamps;
@@ -7057,6 +7091,7 @@
             }
             void loadLetterheadFromServer().then(function() {
                 applyLogo(logoData || DEFAULT_LOGO_URL, false);
+                applyLogoSize(logoSize, false);
                 updateWordCount();
             });
         };
