@@ -1699,6 +1699,8 @@
             .share-menu,
             .share-toast,
             .lh-view-bar,
+            .studio-dock,
+            .studio-sheet-bar,
             .page-container.share-print-skip {
                 display: none !important;
             }
@@ -2696,6 +2698,7 @@
             max-height: 297mm;
             margin: 0 auto 16px;
             border-radius: 2px;
+            zoom: var(--mobile-page-fit, 1);
             box-shadow:
                 0 0 0 1px rgba(16, 36, 56, 0.06),
                 0 16px 36px -20px rgba(16, 36, 56, 0.38);
@@ -3089,6 +3092,179 @@
             }
         }
 
+        .studio-dock,
+        .studio-sheet-bar {
+            display: none;
+        }
+
+        /* Tablet: keep the side editor, give the sheet more of the width */
+        @media screen and (max-width: 1100px) and (min-width: 761px) {
+            html.embedded .editor-sticky-bar {
+                flex-basis: 228px;
+                width: 228px;
+                padding: 12px 10px 16px;
+            }
+
+            html.embedded .editor-scroll-area {
+                padding: 16px 12px 28px;
+            }
+
+            html.embedded .voice-status-bar.active {
+                left: 244px;
+            }
+
+            html.embedded .app-btn,
+            html.embedded .app-tool-btn {
+                min-height: 36px;
+            }
+        }
+
+        /* Phone: the letter fills the screen. Tools open as a full sheet. */
+        @media screen and (max-width: 760px) {
+            html.embedded body {
+                flex-direction: column;
+            }
+
+            html.embedded .editor-sticky-bar {
+                position: fixed;
+                inset: 0;
+                width: auto;
+                flex: none;
+                height: 100%;
+                max-height: none;
+                z-index: 280;
+                padding: 0;
+                border-right: none;
+                box-shadow: none;
+                transform: translateX(104%);
+                transition: transform 0.22s ease;
+                pointer-events: none;
+            }
+
+            html.embedded.studio-open .editor-sticky-bar {
+                transform: none;
+                pointer-events: auto;
+            }
+
+            html.embedded .studio-sheet-bar {
+                display: flex;
+                position: sticky;
+                top: 0;
+                z-index: 3;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 12px 14px;
+                background: #fff;
+                border-bottom: 1px solid #e4ebf1;
+            }
+
+            html.embedded .studio-sheet-title {
+                font-family: var(--ui-font);
+                font-size: 15px;
+                font-weight: 700;
+                color: var(--lh-ink);
+            }
+
+            html.embedded .studio-done {
+                min-height: 40px;
+                padding: 0 16px;
+                border: none;
+                border-radius: 999px;
+                background: var(--lh-ink);
+                color: #fff;
+                font-family: var(--ui-font);
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
+            html.embedded .app-chrome {
+                padding: 12px 12px 28px;
+            }
+
+            html.embedded .app-btn,
+            html.embedded .app-tool-btn {
+                min-height: 44px;
+                font-size: 13px;
+            }
+
+            html.embedded .toolbar-btn,
+            html.embedded .color-picker {
+                width: 42px;
+                height: 42px;
+            }
+
+            html.embedded .toolbar-select {
+                min-width: 0;
+                max-width: none;
+                height: 42px;
+                font-size: 14px;
+            }
+
+            html.embedded .editor-scroll-area {
+                overflow: auto;
+                padding: 12px 10px 88px;
+            }
+
+            html.embedded .add-page-btn {
+                width: 100%;
+                max-width: none;
+                min-height: 46px;
+            }
+
+            html.embedded .studio-dock {
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 240;
+                gap: 4px;
+                padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+                background: #fff;
+                border-top: 1px solid #d8e0e8;
+                box-shadow: 0 -10px 24px -18px rgba(16, 36, 56, 0.5);
+            }
+
+            html.embedded.studio-open .studio-dock {
+                display: none;
+            }
+
+            html.embedded .studio-dock button {
+                min-height: 48px;
+                border: none;
+                border-radius: 12px;
+                background: #f3f6f9;
+                color: #1c3348;
+                font-family: var(--ui-font);
+                font-size: 11px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
+            html.embedded .studio-dock .dock-primary {
+                background: var(--lh-ink);
+                color: #fff;
+            }
+
+            html.embedded .voice-status-bar.active {
+                left: 12px;
+                right: 12px;
+                bottom: 78px;
+            }
+
+            html.embedded .logo-panel,
+            html.embedded .stamp-panel,
+            html.embedded .ocr-panel,
+            html.embedded .template-panel {
+                width: min(100vw - 16px, 440px);
+                max-height: min(84dvh, 720px);
+                border-radius: 16px;
+            }
+        }
+
         /* PDF export: force the desktop A4 layout regardless of device width */
         html.lh-exporting .page-container,
         html.lh-exporting.embedded .page-container {
@@ -3174,20 +3350,32 @@
 
         function updateMobilePageFit() {
             const root = document.documentElement;
-            if (window.innerWidth > 900) {
-                root.style.removeProperty("--mobile-page-fit");
-                return;
-            }
-
             const workspace = document.querySelector(".editor-scroll-area");
             const availableWidth = Math.max(
                 240,
-                (workspace?.clientWidth || window.innerWidth) - 12
+                (workspace?.clientWidth || window.innerWidth) - 16
             );
             const a4WidthPx = 210 * (96 / 25.4);
             const fit = Math.min(1, availableWidth / a4WidthPx);
             root.style.setProperty("--mobile-page-fit", fit.toFixed(4));
         }
+
+        function toggleStudio(force) {
+            const root = document.documentElement;
+            const open = typeof force === "boolean" ? force : !root.classList.contains("studio-open");
+            root.classList.toggle("studio-open", open);
+            if (open) {
+                const bar = document.querySelector(".editor-sticky-bar");
+                if (bar) bar.scrollTop = 0;
+            }
+            requestAnimationFrame(updateMobilePageFit);
+        }
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && document.documentElement.classList.contains("studio-open")) {
+                toggleStudio(false);
+            }
+        });
 
         window.addEventListener("resize", updateMobilePageFit, { passive: true });
         window.addEventListener("DOMContentLoaded", updateMobilePageFit);
@@ -3198,6 +3386,10 @@
 
     <div class="editor-sticky-bar">
     <div class="app-chrome">
+        <div class="studio-sheet-bar">
+            <span class="studio-sheet-title">Editor</span>
+            <button type="button" class="studio-done" onclick="toggleStudio(false)">Done</button>
+        </div>
         <div class="app-header">
             <div class="app-brand">
                 <div class="app-brand-icon" aria-hidden="true">✉</div>
@@ -3392,6 +3584,14 @@
     </div>
     </div>
     </div>
+
+    <nav class="studio-dock" aria-label="Letter tools">
+        <button type="button" class="dock-primary" onclick="toggleStudio(true)">Tools</button>
+        <button type="button" onclick="toggleStampPanel()">Stamp</button>
+        <button type="button" onclick="printDocument()">Print</button>
+        <button type="button" onclick="downloadAsPDF()">PDF</button>
+        <button type="button" onclick="saveLetterheadNow()">Save</button>
+    </nav>
 
     <aside class="lh-table-panel" id="tablePanel" hidden>
         <div class="lh-table-head">

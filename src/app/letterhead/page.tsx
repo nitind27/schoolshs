@@ -36,9 +36,9 @@ export default function LetterheadPage() {
 
   return (
     <div className="letterhead-page-shell fixed inset-x-0 bottom-0 top-14 z-30 flex min-h-0 flex-col bg-[#e6ebf2] lg:left-[var(--shell-sidebar-w)]">
-      <div className="no-print flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2 shadow-sm">
+      <div className="no-print flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-1.5 shadow-sm sm:py-2">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <p className="hidden text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:block">
             Letterhead · school-wise (database)
           </p>
           <p className="truncate text-sm font-bold text-slate-900">
@@ -58,14 +58,17 @@ export default function LetterheadPage() {
                 : "bg-amber-50 text-amber-800 ring-1 ring-amber-200"
             }`}
           >
-            {meta.saved ? "Saved in DB" : "Not saved yet — edit & Save"}
+            <span className="sm:hidden">{meta.saved ? "Saved" : "Unsaved"}</span>
+            <span className="hidden sm:inline">
+              {meta.saved ? "Saved in DB" : "Not saved yet — edit & Save"}
+            </span>
           </span>
           <span className="hidden text-slate-500 sm:inline">{meta.message}</span>
         </div>
       </div>
       <iframe
         title="Letterhead Editor"
-        src="/shs/index.html?embed=1&v=20261106f"
+        src="/shs/index.html?embed=1&v=20261106g"
         className="block min-h-0 w-full flex-1 border-0 bg-[#e6ebf2]"
       />
     </div>
