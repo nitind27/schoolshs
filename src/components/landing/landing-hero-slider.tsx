@@ -6,27 +6,12 @@ import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 
 const SLIDES = [
-  {
-    image: "/shs/landing/banner-campus.jpg",
-    kicker: "landing.heroBadge",
-    title: "landing.heroHeadline",
-    body: "landing.heroDesc",
-  },
-  {
-    image: "/shs/landing/banner-results.jpg",
-    kicker: "landing.module_results",
-    title: "landing.module_results_desc",
-    body: "landing.module_results_point1",
-  },
-  {
-    image: "/shs/landing/banner-certificates.jpg",
-    kicker: "landing.module_certificates",
-    title: "landing.module_certificates_desc",
-    body: "landing.module_certificates_point1",
-  },
+  { image: "/banner/3.png", kind: "identity" },
+  { image: "/banner/2.png", kind: "campus" },
+  { image: "/banner/1.png", kind: "assembly" },
 ] as const;
 
-const AUTOPLAY_MS = 6500;
+const AUTOPLAY_MS = 5500;
 
 export function LandingHeroSlider() {
   const t = useT();
@@ -87,34 +72,38 @@ export function LandingHeroSlider() {
       >
         {SLIDES.map((slide, slideIndex) => {
           const active = slideIndex === index;
-          const Title = slideIndex === 0 ? "h1" : "h2";
           return (
             <article
               key={slide.image}
-              className={`lp-banner-slide${active ? " is-active" : ""}`}
+              className={`lp-banner-slide lp-banner-slide--${slide.kind}${active ? " is-active" : ""}`}
               aria-hidden={!active}
             >
-              <img src={slide.image} alt="" />
-              <div className="lp-banner-shade" />
-              <div className="lp-shell lp-banner-copy">
-                <div className="lp-banner-copy-inner">
-                  <p className="lp-banner-kicker">{t(slide.kicker)}</p>
-                  <Title>{t(slide.title)}</Title>
-                  <p className="lp-banner-body">{t(slide.body)}</p>
-                  <div className="lp-show-cta">
-                    <Link href="/login" className="lp-show-btn" tabIndex={active ? 0 : -1}>
-                      <span>{t("landing.ctaPortal")}</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                    <a href="#modules" className="lp-show-btn lp-show-btn--ghost" tabIndex={active ? 0 : -1}>
-                      {t("landing.ctaExplore")}
-                    </a>
-                  </div>
-                </div>
-              </div>
+              <img
+                src={slide.image}
+                alt={slide.kind === "identity" ? t("landing.productName") : ""}
+              />
             </article>
           );
         })}
+
+        <div className="lp-banner-shade" />
+
+        <div className="lp-shell lp-banner-copy">
+          <div className="lp-banner-copy-inner">
+            <p className="lp-banner-kicker">{t("landing.heroBadge")}</p>
+            <h1>{t("landing.heroHeadline")}</h1>
+            <p className="lp-banner-body">{t("landing.heroDesc")}</p>
+            <div className="lp-show-cta">
+              <Link href="/login" className="lp-show-btn">
+                <span>{t("landing.ctaPortal")}</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <a href="#modules" className="lp-show-btn lp-show-btn--ghost">
+                {t("landing.ctaExplore")}
+              </a>
+            </div>
+          </div>
+        </div>
 
         <button
           type="button"
@@ -140,7 +129,7 @@ export function LandingHeroSlider() {
               type="button"
               role="tab"
               aria-selected={slideIndex === index}
-              aria-label={t(slide.kicker)}
+              aria-label={`${slideIndex + 1}`}
               className={slideIndex === index ? "is-active" : ""}
               onClick={() => go(slideIndex)}
             />
