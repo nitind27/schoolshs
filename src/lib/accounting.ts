@@ -151,3 +151,79 @@ export function getFinancialYearDates(label: string): { startDate: Date; endDate
     endDate: new Date(startYear + 1, 2, 31),
   };
 }
+
+export type FyMonthRange = {
+  key: string;
+  from: string;
+  to: string;
+  year: number;
+  month: number;
+};
+
+/** April–March months for an Indian FY label such as 2026-27. Dates are calendar days (YYYY-MM-DD). */
+export function fyMonthRanges(label: string): FyMonthRange[] {
+  const match = String(label).match(/^(\d{4})-(\d{2}|\d{4})$/);
+  if (!match) return [];
+  const startYear = parseInt(match[1], 10);
+  if (!Number.isFinite(startYear)) return [];
+  const ranges: FyMonthRange[] = [];
+  for (let i = 0; i < 12; i++) {
+    const year = i < 9 ? startYear : startYear + 1;
+    const month = i < 9 ? i + 4 : i - 8;
+    const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const mm = String(month).padStart(2, "0");
+    ranges.push({
+      key: `${year}-${mm}`,
+      from: `${year}-${mm}-01`,
+      to: `${year}-${mm}-${String(last).padStart(2, "0")}`,
+      year,
+      month,
+    });
+  }
+  return ranges;
+}
+
+export function fyDateRange(label: string): { from: string; to: string } | null {
+  const months = fyMonthRanges(label);
+  if (!months.length) return null;
+  return { from: months[0].from, to: months[months.length - 1].to };
+}
+
+export function defaultFyMonth(label: string, today = new Date()): { from: string; to: string } {
+  const months = fyMonthRanges(label);
+  const key = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  const hit = months.find((m) => m.key === key);
+  if (hit) return { from: hit.from, to: hit.to };
+  if (months.length) return { from: months[0].from, to: months[0].to };
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, "0");
+  const last = new Date(Date.UTC(y, today.getMonth() + 1, 0)).getUTCDate();
+  return { from: `${y}-${m}-01`, to: `${y}-${m}-${String(last).padStart(2, "0")}` };
+}
+
+/** Opening amount sits on debit or credit. Stored amount is always >= 0. */
+export function openingOnSide(
+  openingBalance: number,
+  balanceType: string,
+): { debit: number; credit: number } {
+  const amount = Math.round((Number(openingBalance) || 0) * 100) / 100;
+  if (amount <= 0) return { debit: 0, credit: 0 };
+  if (balanceType === "credit") return { debit: 0, credit: amount };
+  return { debit: amount, credit: 0 };
+}
+
+export function isCashOrBankAccount(account: {
+  groupType: string;
+  accountType: string;
+  name: string;
+}): boolean {
+  if (account.groupType !== "assets") return false;
+  if (account.accountType === "cash" || account.accountType === "bank") return true;
+  return /cash in hand|bank/i.test(account.name);
+}
+
+export function parseIsoDay(value: string, endOfDay = false): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const d = new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}

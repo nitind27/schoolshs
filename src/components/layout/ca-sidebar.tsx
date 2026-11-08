@@ -10,6 +10,7 @@ import {
   BarChart3,
   ClipboardList,
   Briefcase,
+  CalendarRange,
 } from "lucide-react";
 import { useT } from "@/i18n/locale-provider";
 import { CaSchoolSwitcher } from "@/components/ca/school-switcher";
@@ -20,7 +21,9 @@ export function CaLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/ca", label: t("caNav.dashboard"), icon: LayoutDashboard, group: "Overview" },
     { href: "/accounting", label: t("caNav.booksOfAccount"), icon: BookOpen, group: "Accounts" },
+    { href: "/accounting/ledgers", label: t("accounting.ledgersPageTitle"), icon: BookOpen, group: "Accounts" },
     { href: "/accounting/vouchers", label: t("caNav.voucherRegister"), icon: ClipboardList, group: "Accounts" },
+    { href: "/accounting/monthly", label: t("accounting.monthCheckTitle"), icon: CalendarRange, group: "Accounts" },
     { href: "/accounting/day-book", label: t("accounting.dayBook"), icon: BookOpen, group: "Accounts" },
     { href: "/accounting/trial-balance", label: t("caNav.trialBalance"), icon: BarChart3, group: "Reports" },
     { href: "/accounting/reports", label: t("caNav.financialReports"), icon: Calculator, group: "Reports" },

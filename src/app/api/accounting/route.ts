@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAccountingAuth, AuthError } from "@/lib/auth";
-import { DEFAULT_ACCOUNTS, getFinancialYearDates } from "@/lib/accounting";
+import { DEFAULT_ACCOUNTS, getFinancialYearDates, isCashOrBankAccount } from "@/lib/accounting";
 
 export async function GET() {
   try {
@@ -56,12 +56,48 @@ export async function GET() {
         })
       : 0;
 
+    const openingAccounts = fy
+      ? await prisma.account.findMany({
+          where: { schoolId, financialYearId: fy.id, isActive: true },
+          select: { name: true, accountType: true, groupType: true, openingBalance: true, balanceType: true },
+        })
+      : [];
+
+    let openingDebit = 0;
+    let openingCredit = 0;
+    let withAmount = 0;
+    let cashInHand: number | null = null;
+    let cashName: string | null = null;
+    for (const acc of openingAccounts) {
+      const amount = acc.openingBalance || 0;
+      if (amount > 0) {
+        withAmount += 1;
+        if (acc.balanceType === "credit") openingCredit += amount;
+        else openingDebit += amount;
+      }
+      const isCash = acc.accountType === "cash" || /cash in hand/i.test(acc.name);
+      if (isCash && cashInHand == null) {
+        cashName = acc.name;
+        cashInHand = acc.balanceType === "credit" ? -amount : amount;
+      }
+    }
+
     return NextResponse.json({
       financialYear: fy,
       allFinancialYears,
       voucherStats,
       recentVouchers,
       pendingFlagged,
+      opening: {
+        debit: Math.round(openingDebit * 100) / 100,
+        credit: Math.round(openingCredit * 100) / 100,
+        withAmount,
+        cashInHand,
+        cashName,
+        hasCashAccount: openingAccounts.some(
+          (a) => a.accountType === "cash" || /cash in hand/i.test(a.name) || isCashOrBankAccount(a),
+        ),
+      },
       school: {
         id: schoolId,
         name: session.accountingSchoolName || session.schoolName,

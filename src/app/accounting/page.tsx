@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InfoModal } from "@/components/ui/info-modal";
 import { AccountingHelpContent } from "@/components/accounting/accounting-help-content";
+import { AccountingNav } from "@/components/accounting/accounting-nav";
 import { AddLedgerAccount } from "@/components/accounting/add-ledger-account";
 import { PageShell } from "@/components/layout/page-shell";
 import {
@@ -43,6 +44,13 @@ interface FyRow {
 }
 
 interface AccountingData {
+  opening?: {
+    debit: number;
+    credit: number;
+    withAmount: number;
+    cashInHand: number | null;
+    cashName: string | null;
+  };
   financialYear: {
     id: string;
     label: string;
@@ -327,6 +335,113 @@ export default function AccountingPage() {
             </div>
           )}
 
+          <AccountingNav current="home" />
+
+          {fy && accountCount > 0 && data?.opening && data.opening.withAmount === 0 && (
+            <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-amber-950">{t("accounting.homeOpeningMissing")}</p>
+              <Link href="/accounting/ledgers">
+                <Button size="sm">{t("accounting.homeOpeningOpen")}</Button>
+              </Link>
+            </div>
+          )}
+
+          {fy && accountCount > 0 && data?.opening && data.opening.withAmount > 0 && Math.abs(data.opening.debit - data.opening.credit) > 0.5 && (
+            <div className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-rose-900">{t("accounting.homeOpeningGap")}</p>
+              <Link href="/accounting/ledgers">
+                <Button size="sm" variant="outline">{t("accounting.homeOpeningOpen")}</Button>
+              </Link>
+            </div>
+          )}
+
+          {fy && data?.opening?.cashInHand != null && data.opening.withAmount > 0 && (
+            <p className="text-sm text-slate-600">
+              {t("accounting.homeOpeningCash", {
+                amount: formatIndianCurrency(data.opening.cashInHand),
+              })}
+            </p>
+          )}
+
+          <section className="grid gap-3 md:grid-cols-3">
+            <Link
+              href="/accounting/ledgers"
+              className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 transition hover:border-emerald-400"
+            >
+              <BookOpen className="h-5 w-5 text-emerald-700" />
+              <h2 className="mt-2 text-base font-bold text-slate-900">{t("accounting.homeWorkLedgers")}</h2>
+              <p className="mt-1 text-sm text-slate-600">{t("accounting.homeWorkLedgersDesc")}</p>
+            </Link>
+            <Link
+              href={canWrite && !fyLocked && step2Done ? "/accounting/vouchers/new" : "/accounting/vouchers"}
+              className="rounded-2xl border border-blue-200 bg-blue-50 p-4 transition hover:border-blue-400"
+            >
+              <Plus className="h-5 w-5 text-blue-700" />
+              <h2 className="mt-2 text-base font-bold text-slate-900">{t("accounting.homeWorkVoucher")}</h2>
+              <p className="mt-1 text-sm text-slate-600">{t("accounting.homeWorkVoucherDesc")}</p>
+            </Link>
+            <Link
+              href="/accounting/monthly"
+              className="rounded-2xl border border-violet-200 bg-violet-50 p-4 transition hover:border-violet-400"
+            >
+              <CalendarRange className="h-5 w-5 text-violet-700" />
+              <h2 className="mt-2 text-base font-bold text-slate-900">{t("accounting.homeWorkMonth")}</h2>
+              <p className="mt-1 text-sm text-slate-600">{t("accounting.homeWorkMonthDesc")}</p>
+            </Link>
+          </section>
+
+          {/* Stats — click a card to open that list */}
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Link href="/accounting/vouchers" className="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 p-5 text-white shadow-md transition hover:brightness-110">
+              <div className="mb-3 flex items-start justify-between">
+                <p className="text-xs font-medium text-white/70">
+                  {t("accounting.totalVouchers")}
+                </p>
+                <FileText className="h-4 w-4 text-white/80" />
+              </div>
+              <p className="text-3xl font-bold">{voucherCount}</p>
+              <p className="mt-1 text-xs text-white/60">{t("accounting.statThisFy")} · {t("accounting.statClickHint")}</p>
+            </Link>
+            <Link href="/accounting/ledgers" className="rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white shadow-md transition hover:brightness-110">
+              <div className="mb-3 flex items-start justify-between">
+                <p className="text-xs font-medium text-white/70">
+                  {t("accounting.ledgerAccounts")}
+                </p>
+                <BookOpen className="h-4 w-4 text-white/80" />
+              </div>
+              <p className="text-3xl font-bold">{accountCount}</p>
+              <p className="mt-1 text-xs text-white/60">
+                {t("accounting.statChartOfAccounts")} · {t("accounting.statClickHint")}
+              </p>
+            </Link>
+            <Link href="/accounting/vouchers?auditStatus=pending" className="rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-5 text-white shadow-md transition hover:brightness-110">
+              <div className="mb-3 flex items-start justify-between">
+                <p className="text-xs font-medium text-white/70">
+                  {t("accounting.pendingCaAudit")}
+                </p>
+                <Shield className="h-4 w-4 text-white/80" />
+              </div>
+              <p className="text-3xl font-bold">{pendingAudit}</p>
+              <p className="mt-1 text-xs text-white/60">
+                {t("accounting.statVouchersPending")} · {t("accounting.statClickHint")}
+              </p>
+            </Link>
+            <Link href="/accounting/vouchers?auditStatus=verified" className="rounded-2xl bg-gradient-to-br from-violet-600 to-purple-700 p-5 text-white shadow-md transition hover:brightness-110">
+              <div className="mb-3 flex items-start justify-between">
+                <p className="text-xs font-medium text-white/70">
+                  {t("accounting.verifiedAmount")}
+                </p>
+                <IndianRupee className="h-4 w-4 text-white/80" />
+              </div>
+              <p className="text-xl font-bold leading-tight">
+                {formatIndianCurrency(totalVerified)}
+              </p>
+              <p className="mt-1 text-xs text-white/60">
+                {t("accounting.statVerifiedTotal")} · {t("accounting.statClickHint")}
+              </p>
+            </Link>
+          </div>
+
           {/* ── Easy flow guide ── */}
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -507,7 +622,12 @@ export default function AccountingPage() {
                   {t("accounting.manageLedgersDesc")}
                 </p>
               </div>
-              <AddLedgerAccount onAdded={load} />
+              <div className="flex flex-wrap gap-2">
+                <Link href="/accounting/ledgers">
+                  <Button size="sm">{t("accounting.ledgersPageTitle")}</Button>
+                </Link>
+                <AddLedgerAccount onAdded={load} />
+              </div>
             </div>
           )}
 
@@ -700,58 +820,6 @@ export default function AccountingPage() {
             </div>
           )}
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 p-5 text-white shadow-md">
-              <div className="mb-3 flex items-start justify-between">
-                <p className="text-xs font-medium text-white/70">
-                  {t("accounting.totalVouchers")}
-                </p>
-                <FileText className="h-4 w-4 text-white/80" />
-              </div>
-              <p className="text-3xl font-bold">{voucherCount}</p>
-              <p className="mt-1 text-xs text-white/60">{t("accounting.statThisFy")}</p>
-            </div>
-            <div className="rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white shadow-md">
-              <div className="mb-3 flex items-start justify-between">
-                <p className="text-xs font-medium text-white/70">
-                  {t("accounting.ledgerAccounts")}
-                </p>
-                <BookOpen className="h-4 w-4 text-white/80" />
-              </div>
-              <p className="text-3xl font-bold">{accountCount}</p>
-              <p className="mt-1 text-xs text-white/60">
-                {t("accounting.statChartOfAccounts")}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-5 text-white shadow-md">
-              <div className="mb-3 flex items-start justify-between">
-                <p className="text-xs font-medium text-white/70">
-                  {t("accounting.pendingCaAudit")}
-                </p>
-                <Shield className="h-4 w-4 text-white/80" />
-              </div>
-              <p className="text-3xl font-bold">{pendingAudit}</p>
-              <p className="mt-1 text-xs text-white/60">
-                {t("accounting.statVouchersPending")}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-gradient-to-br from-violet-600 to-purple-700 p-5 text-white shadow-md">
-              <div className="mb-3 flex items-start justify-between">
-                <p className="text-xs font-medium text-white/70">
-                  {t("accounting.verifiedAmount")}
-                </p>
-                <IndianRupee className="h-4 w-4 text-white/80" />
-              </div>
-              <p className="text-xl font-bold leading-tight">
-                {formatIndianCurrency(totalVerified)}
-              </p>
-              <p className="mt-1 text-xs text-white/60">
-                {t("accounting.statVerifiedTotal")}
-              </p>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader>
@@ -764,6 +832,22 @@ export default function AccountingPage() {
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 {[
+                  {
+                    href: "/accounting/ledgers",
+                    label: t("accounting.ledgersPageTitle"),
+                    desc: t("accounting.manageLedgersDesc"),
+                    icon: BookOpen,
+                    color: "emerald",
+                    writeOnly: false,
+                  },
+                  {
+                    href: "/accounting/monthly",
+                    label: t("accounting.monthCheckTitle"),
+                    desc: t("accounting.monthCheckSubtitle"),
+                    icon: CalendarRange,
+                    color: "violet",
+                    writeOnly: false,
+                  },
                   {
                     href: "/accounting/vouchers",
                     label: t("accounting.voucherRegister"),

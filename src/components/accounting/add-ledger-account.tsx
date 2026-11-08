@@ -10,6 +10,7 @@ import {
   ACCOUNT_GROUPS,
   INDIAN_BANK_TEMPLATES,
   COMMON_SCHOOL_EXPENSE_TEMPLATES,
+  getGroupBalanceType,
 } from "@/lib/accounting";
 import { useT } from "@/i18n/locale-provider";
 
@@ -19,7 +20,14 @@ interface AddLedgerAccountProps {
   size?: "sm" | "default";
 }
 
-const EMPTY_FORM = { groupType: "expenses", name: "", code: "", template: "" };
+const EMPTY_FORM = {
+  groupType: "expenses",
+  name: "",
+  code: "",
+  template: "",
+  openingBalance: "",
+  balanceType: "debit",
+};
 
 export function AddLedgerAccount({ onAdded, size = "default" }: AddLedgerAccountProps) {
   const t = useT();
@@ -49,7 +57,14 @@ export function AddLedgerAccount({ onAdded, size = "default" }: AddLedgerAccount
   };
 
   const applyTemplate = (name: string, groupType: string) => {
-    setForm((f) => ({ ...f, name, groupType, template: name, code: "" }));
+    setForm((f) => ({
+      ...f,
+      name,
+      groupType,
+      template: name,
+      code: "",
+      balanceType: getGroupBalanceType(groupType),
+    }));
   };
 
   const submit = async () => {
@@ -67,6 +82,8 @@ export function AddLedgerAccount({ onAdded, size = "default" }: AddLedgerAccount
           name: form.name.trim(),
           groupType: form.groupType,
           code: form.code.trim() || undefined,
+          openingBalance: form.openingBalance === "" ? 0 : Number(form.openingBalance),
+          balanceType: form.balanceType,
         }),
       });
       const data = await res.json();
@@ -138,7 +155,14 @@ export function AddLedgerAccount({ onAdded, size = "default" }: AddLedgerAccount
                 <label className="text-sm font-medium text-slate-700">{t("accounting.group")}</label>
                 <Select
                   value={form.groupType}
-                  onChange={(e) => setForm({ ...form, groupType: e.target.value, template: "" })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      groupType: e.target.value,
+                      template: "",
+                      balanceType: getGroupBalanceType(e.target.value),
+                    })
+                  }
                   options={groupOptions}
                   emptyLabel=""
                 />
@@ -164,6 +188,36 @@ export function AddLedgerAccount({ onAdded, size = "default" }: AddLedgerAccount
               />
               <p className="text-xs text-slate-500 mt-1.5">{t("accounting.customAccountHint")}</p>
             </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700">
+                  {t("accounting.openingAmount")}{" "}
+                  <span className="text-slate-400 font-normal">({t("common.optional")})</span>
+                </label>
+                <Input
+                  className="mt-1"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.openingBalance}
+                  onChange={(e) => setForm({ ...form, openingBalance: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">{t("accounting.openingSide")}</label>
+                <Select
+                  value={form.balanceType}
+                  onChange={(e) => setForm({ ...form, balanceType: e.target.value })}
+                  options={[
+                    { value: "debit", label: t("accounting.debit") },
+                    { value: "credit", label: t("accounting.credit") },
+                  ]}
+                  hideEmptyOption
+                />
+              </div>
+            </div>
+            <p className="text-xs text-slate-500">{t("accounting.openingHintPlain")}</p>
           </div>
 
           {error && (

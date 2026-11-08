@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { formatIndianCurrency } from "@/lib/accounting";
+import { AccountingNav } from "@/components/accounting/accounting-nav";
 import { useT } from "@/i18n/locale-provider";
 
 type TbRow = {
@@ -73,6 +74,7 @@ export default function FinancialReportsPage() {
 
   return (
     <div className="space-y-6">
+      <AccountingNav current="reports" />
       <div className="flex items-center gap-4">
         <Link href="/accounting">
           <Button variant="outline" size="sm">

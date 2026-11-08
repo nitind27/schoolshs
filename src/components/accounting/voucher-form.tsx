@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Languages, Plus, Trash2 } from "lucide-react";
 import { VOUCHER_TYPES, PAYMENT_MODES } from "@/lib/accounting";
 import { useT } from "@/i18n/locale-provider";
 import { AddLedgerAccount } from "@/components/accounting/add-ledger-account";
@@ -72,6 +72,7 @@ export function VoucherForm({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
   const [form, setForm] = useState({
     voucherType: initial?.voucherType || "receipt",
     voucherDate: isoDate(initial?.voucherDate) || new Date().toISOString().slice(0, 10),
@@ -107,6 +108,41 @@ export function VoucherForm({
     fetch("/api/accounting/accounts")
       .then((r) => r.json())
       .then((d) => setAccounts(d.accounts || []));
+  };
+
+  const translatingRef = useRef(false);
+
+  const translateNarration = async (opts?: { quiet?: boolean; text?: string }) => {
+    const text = (opts?.text ?? form.narration).trim();
+    if (!text || translatingRef.current) return;
+    translatingRef.current = true;
+    setTranslating(true);
+    try {
+      const res = await fetch("/api/gujarati/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, mode: "text" }),
+      });
+      const data = (await res.json()) as { gujarati?: string; error?: string };
+      const gujarati = String(data.gujarati || "").trim();
+      const unchanged = gujarati.toLowerCase() === text.toLowerCase();
+      if (!res.ok || !gujarati || (unchanged && /[A-Za-z]/.test(text))) {
+        throw new Error(data.error || t("accounting.translateFailed"));
+      }
+      if (!unchanged) {
+        setForm((current) =>
+          current.narration.trim() === text ? { ...current, narration: gujarati } : current,
+        );
+        if (!opts?.quiet) toast.success(t("accounting.translateDone"));
+      }
+    } catch (e) {
+      if (!opts?.quiet) {
+        toast.error(e instanceof Error ? e.message : t("accounting.translateFailed"));
+      }
+    } finally {
+      translatingRef.current = false;
+      setTranslating(false);
+    }
   };
 
   const paymentModeOptions = PAYMENT_MODES.map((mode) => {
@@ -312,13 +348,35 @@ export function VoucherForm({
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="text-sm font-medium">{t("accounting.narration")}</label>
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+              <label className="text-sm font-medium">{t("accounting.narration")}</label>
+              {!disabled && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={translating || !form.narration.trim()}
+                  onClick={() => void translateNarration()}
+                >
+                  <Languages className="h-3.5 w-3.5" />
+                  {translating ? t("accounting.translating") : t("accounting.translateToGujarati")}
+                </Button>
+              )}
+            </div>
             <Textarea
               value={form.narration}
               onChange={(e) => setForm({ ...form, narration: e.target.value })}
+              onBlur={(e) => {
+                const text = e.currentTarget.value;
+                if (disabled || !/[A-Za-z]/.test(text)) return;
+                void translateNarration({ quiet: true, text });
+              }}
               placeholder={t("accounting.narrationPlaceholder")}
               disabled={disabled}
             />
+            {!disabled && (
+              <p className="mt-1 text-xs text-slate-500">{t("accounting.translateHint")}</p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -342,6 +400,13 @@ export function VoucherForm({
           )}
         </CardHeader>
         <CardContent className="space-y-3">
+          <p className="text-xs text-slate-500">
+            <Link href="/accounting/ledgers" className="font-semibold text-blue-700 underline">
+              {t("accounting.manageLedgersLink")}
+            </Link>
+            {" — "}
+            {t("accounting.manageAccountsHint")}
+          </p>
           {lines.map((line, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-end">
               <div className="col-span-5">

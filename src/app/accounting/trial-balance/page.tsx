@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { formatIndianCurrency } from "@/lib/accounting";
 import { useT } from "@/i18n/locale-provider";
 import { AddLedgerAccount } from "@/components/accounting/add-ledger-account";
+import { AccountingNav } from "@/components/accounting/accounting-nav";
 
 export default function TrialBalancePage() {
   const t = useT();
@@ -34,6 +35,7 @@ export default function TrialBalancePage() {
 
   return (
     <div className="space-y-6">
+      <AccountingNav current="tb" />
       <div className="flex items-center gap-4">
         <Link href="/accounting"><Button variant="outline" size="sm"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div>

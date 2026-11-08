@@ -77,7 +77,11 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     setLocaleState(next);
   }, []);
 
-  const t = useMemo(() => createTranslator(messages[locale]), [locale]);
+  const t = useCallback(
+    (key: string, params?: Record<string, string | number>) =>
+      createTranslator(messages[locale])(key, params),
+    [locale],
+  );
 
   const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
 

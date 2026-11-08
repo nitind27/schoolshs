@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/ui/date-field";
 import { PageLoader } from "@/components/ui/loader";
 import { formatIndianCurrency } from "@/lib/accounting";
+import { AccountingNav } from "@/components/accounting/accounting-nav";
 import { useT } from "@/i18n/locale-provider";
 import { ArrowLeft, BookMarked, Download } from "lucide-react";
 
@@ -32,8 +34,9 @@ function monthEndISO(d = new Date()) {
 
 export default function DayBookPage() {
   const t = useT();
-  const [dateFrom, setDateFrom] = useState(monthStartISO);
-  const [dateTo, setDateTo] = useState(monthEndISO);
+  const searchParams = useSearchParams();
+  const [dateFrom, setDateFrom] = useState(() => searchParams.get("from") || monthStartISO());
+  const [dateTo, setDateTo] = useState(() => searchParams.get("to") || monthEndISO());
   const [rows, setRows] = useState<DayRow[]>([]);
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
@@ -139,6 +142,7 @@ export default function DayBookPage() {
       }
     >
       <div className="space-y-4">
+        <AccountingNav current="day" />
         <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-3">
           <DateField
             label={t("reportsHub.filterDateFrom")}

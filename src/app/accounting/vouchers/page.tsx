@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Plus, ArrowLeft, Pencil, Trash2, Search } from "lucide-react";
 import { formatIndianCurrency } from "@/lib/accounting";
+import { AccountingNav } from "@/components/accounting/accounting-nav";
 import { useT } from "@/i18n/locale-provider";
 import { PAGE_SIZE } from "@/lib/pagination";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -44,6 +45,7 @@ function linesBalanced(lines?: VoucherLine[]) {
 export default function VouchersPage() {
   const t = useT();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { confirm, ConfirmDialog } = useConfirm();
   const [vouchers, setVouchers] = useState<VoucherRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -51,6 +53,7 @@ export default function VouchersPage() {
   const [loading, setLoading] = useState(true);
   const [fy, setFy] = useState<{ label: string; isLocked?: boolean } | null>(null);
   const [filter, setFilter] = useState("");
+  const [auditStatus, setAuditStatus] = useState(() => searchParams.get("auditStatus") || "");
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
   const [canWrite, setCanWrite] = useState(false);
@@ -68,6 +71,7 @@ export default function VouchersPage() {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     if (filter) params.set("type", filter);
+    if (auditStatus) params.set("auditStatus", auditStatus);
     if (q) params.set("q", q);
     fetch(`/api/accounting/vouchers?${params}`)
       .then((r) => r.json())
@@ -83,7 +87,7 @@ export default function VouchersPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, page, q]);
+  }, [filter, page, q, auditStatus]);
 
   const voucherTypeLabel = (type: string) => {
     const map: Record<string, string> = {
@@ -235,7 +239,9 @@ export default function VouchersPage() {
         )}
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <AccountingNav current="vouchers" />
+
+      <div className="flex flex-col gap-3">
         <div className="flex gap-2 flex-wrap">
           {filterTypes.map((type) => (
             <button
@@ -249,6 +255,28 @@ export default function VouchersPage() {
               }`}
             >
               {type ? voucherTypeLabel(type) : t("common.all")}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: "", label: t("accounting.auditFilterAll") },
+            { value: "pending", label: t("accounting.filterPending") },
+            { value: "verified", label: t("accounting.filterVerified") },
+            { value: "flagged", label: t("accounting.filterFlagged") },
+          ].map((item) => (
+            <button
+              key={item.value || "all-audit"}
+              type="button"
+              onClick={() => {
+                setAuditStatus(item.value);
+                setPage(1);
+              }}
+              className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                auditStatus === item.value ? "bg-amber-600 text-white" : "border bg-white"
+              }`}
+            >
+              {item.label}
             </button>
           ))}
         </div>
